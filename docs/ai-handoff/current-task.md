@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R5 完了** — R5b〜R5g 縦切り成立（本 §54）。次は **R6**。
-- **次の再開タスク:** **R6** Wave 間準備（handoff §54.8 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R5 完了** — R5b〜R5g 縦切り成立（本 §54）。**R6a 調査完了**（本 §56）。
+- **次の再開タスク:** **R6b** Wave 終了停止 + 仮 Wave 間準備 UI（handoff §56.9 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -4149,4 +4149,317 @@ loadGameData()
 回帰テストは報告 4 件、R5 module 対応 4 兵科、legacy 兵科、編成済み class、`classOrder` 未列挙 class を明示確認。
 
 **R5 完了判定:** 維持。§50 効果範囲設計は変更なし。  
-**次の再開タスク:** **R6** Wave 間準備。
+**次の再開タスク:** **R6b**（§56.9 参照）。
+
+---
+
+## 56. R6a — Wave 遷移・状態寿命の調査（2026-07-12）
+
+**目的:** R6 実装前提（Wave 間停止・編成/module 変更・Wave 状態破棄・作戦メモリ・checkpoint retry・最終 Wave 後作戦結果）を現行コード上で確定。production / JSON / テストは**未変更**。
+
+### 56.1 読んだファイル（6 件）
+
+1. `docs/ai-handoff/current-task.md` — R5 完了・§55 editor 修正を正本
+2. `src/battle/BattleEngine.ts` — Wave 遷移・戦闘状態の中心
+3. `src/game/GameSession.ts` — 画面遷移・Save・module 選択・engine 接続
+4. `src/battle/entities.ts` — Combatant 生成・`createEnemiesForStage`・`healAllAllies`
+5. `src/battle/types.ts` — `StageDef` / `StageWave` / `SaveGameState` / `CombatantState`
+6. `docs/plans/phase-roadmap.md` — R6 上位スコープ
+
+**補助参照（列挙外）:** `src/battle/partyCombatModuleSelection.ts`、`src/battle/enemyGroupSpawn.ts`、`src/battle/data/validateGameData.ts`（stage parse）、`src/progression/partyCompose.ts`、`src/game/gameScreen.ts`、`docs/spec/operation-loop.md`
+
+### 56.2 変更したファイル
+
+| ファイル | 変更 |
+|----------|------|
+| `docs/ai-handoff/current-task.md` | 本 §56、§2 次タスク更新 |
+| `docs/plans/phase-roadmap.md` | §R6 分割追記のみ（R6 目的・確定仕様は不変更） |
+
+---
+
+### 56.3 現行 Wave 遷移経路
+
+| 段階 | 所有者 | 関数 / 経路 | 備考 |
+|------|--------|-------------|------|
+| **stage 開始（出撃）** | `GameSession` | `handleStageSortie` → `save.stageProgress.currentStageId` 更新 → `stageDamageStats.resetForStage` → `engine.restartBattle` → `menuHost.open('party')` | 作戦ループ未実装。現状は「1 stage = 1 戦闘セッション」 |
+| **App 起動 / engine 構築** | `BattleEngine` ctor | `reloadBattlefield()` | `GameSession` ctor 内で `new BattleEngine(...)` 後即実行 |
+| **wave index 初期化** | `BattleEngine` | `reloadBattlefield` → `resolveStartWaveIndex()` → `this.waveIndex = startWaveIndex` | debug verify のみ `getLoopWaveIndex()` で開始 wave を固定。通常は **常に 0** |
+| **味方生成** | `BattleEngine` | `reloadBattlefield` → `createAlliesFromPartyState(getParty(), getSelectedCombatModuleId)` | **stage 開始 / restart 時のみ**新規生成 |
+| **wave 敵生成** | `BattleEngine` | `prepareWaveDeploy` / `prepareTrainingWave` → `spawnWaveEnemies` → `createEnemiesForStage(gameData, stageId, waveIndex, levelCurves)` | 敵のみ wave ごとに差し替え |
+| **戦闘開始** | `BattleEngine` | `startBattle` → `tryBeginTrainingEngage`（訓練 wave）または deploy 完了 → `beginEngaged` → `setupEngagedCombat` | `GameSession.start()` から呼ばれる |
+| **敵全滅判定** | `BattleEngine` | `tickRunning`（engaged 中）→ `checkBattleEnd` | `!enemies.some(isAlive)` |
+| **次 wave 判定** | `BattleEngine` | `checkBattleEnd` 内 `hasNextWave` = `waveIndex + 1 < stage.waves.length` かつ `!isPinnedWaveComplete()` | verify loop wave 固定時は最終 wave 扱いで victory へ |
+| **次 wave 自動生成** | `BattleEngine` | `beginEnemyWipeSettle(true)` → `pendingNextWaveIndex = waveIndex + 1` → 死亡演出 delay → `waveExitMarchActive` → `tickWaveExitMarch` → `beginWaveAnnouncement(next)` → `prepareWaveDeploy` | **停止点なし**。告知〜 deploy まで自動 |
+| **最終 wave 勝利** | `BattleEngine` → `GameSession` | `beginEnemyWipeSettle(false)` → `pendingVictoryTimer` → `applyVictoryTransition` → `emit(battleEnd, victory)` → `handleVictory` | 全 wave クリア = **stage クリア**扱い（作戦結果画面なし） |
+| **敗北** | `BattleEngine` → `GameSession` | `checkBattleEnd`（味方全滅）→ `applyDefeatTransition` → `handleDefeat` | 非 verify: `restartBattle` + 編成画面。verify+loop: 進行変更なし |
+| **restart** | `GameSession` / `BattleEngine` | `GameSession` 各所 → `engine.restartBattle`；`restartBattle` → `reloadBattlefield` | 編成変更・stage 変更・debug loop 等で共通 |
+| **reload** | `BattleEngine` | `reloadBattlefield` | `resetEntityIdCounter`、味方**再生成**、wave 0（または loop wave）から |
+| **respawn** | `BattleEngine` | `tick`（victory/defeat phase）→ `respawnAfterEnd` → `reloadBattlefield` | 勝利退場 march 完了後に **同一 stage を先頭 wave から再開**（verify 等で観測） |
+
+**wave index の所有者:** `BattleEngine` 私有フィールド `waveIndex`（`getSnapshot().waveIndex` で参照）。`GameSession` は debug 用 `loopWaveIndex` のみ（verify 限定）。**作戦用 `currentWaveIndex` / `clearedWaveCount` は未実装。**
+
+**BattleEngine と GameSession の責務境界（現状）:**
+
+| 領域 | BattleEngine | GameSession |
+|------|--------------|-------------|
+| wave index・接敵・skill tick | ○ | — |
+| Combatant runtime（HP / 位置 / CD / status） | ○ | — |
+| Save `party` 正本 | 読取のみ `getParty()` | ○ 所有・persist |
+| module 選択（R5d） | 読取 `getSelectedCombatModuleId` | ○ `PartyCombatModuleSelection` |
+| 画面（battle / formation / stageSelect） | — | ○ `setGameScreen` |
+| stage クリア・EXP・次 stage | イベント通知のみ | ○ `handleVictory` / `handleDefeat` |
+| 戦闘統計 HUD | コールバックで記録 | ○ `StageDamageStatsTracker` |
+
+**敵全滅 → 次 wave までの停止点:** 演出用 delay（`ENEMY_DEATH_SETTLE_DELAY_SEC`）と右退場 march のみ。**プレイヤー操作を待つ停止は存在しない。**
+
+**自動進行停止の最小差分挿入箇所（推奨）:**
+
+1. **第一候補:** `BattleEngine.tickWaveExitMarch` — 味方 off-screen 到達後、現行の `beginWaveAnnouncement(waveIndex)` の直前。ここで `emit('waveCleared')` 等とし `GameSession` が Wave 間準備へ遷移。
+2. **第二候補:** `checkBattleEnd` の `hasNextWave` 分岐 — `pendingNextWaveIndex` 設定後に engine tick を止め、退場演出だけ完了させて停止（演出と停止の分離がやや複雑）。
+
+**stage 直下 `enemyGroups` の 1 wave 扱い:**
+
+- `createEnemiesForStage`: `stage.enemyGroups` あり → **`waveIndex !== 0` なら空配列**、wave 0 のみ `createEnemiesFromEnemyGroups`
+- validate: `enemyGroups` ありなら `waves[0].enemies` 空配列を許可（placeholder 1 wave）
+- 実質 **1 stage = 1 wave 相当**（R5 縦切りと一致）
+
+**legacy `waves[].enemies` 経路:**
+
+- `stage.enemyGroups` なし → `stage.waves[waveIndex].enemies` を `templateId` + `spawnX` で `createEnemyFromTemplate`
+- 複数 wave は legacy stage `1` / `2` が実例（`data/stages.json`）
+
+**`waves[].enemyGroups` の型・実装:**
+
+- `StageWave` 型は `{ enemies: StageWaveEnemy[] }` **のみ**（`enemyGroups` フィールドなし）
+- validate / load **未対応**
+- R4 doc 上の正本は `waves[].enemyGroups` だが、**runtime は未実装**。現行は stage 直下 `enemyGroups` + 1 wave placeholder
+
+---
+
+### 56.4 状態所有表
+
+#### 作戦中に維持する候補
+
+| 項目 | 現所有者 | 生成 | 破棄・再初期化 | 混在リスク |
+|------|----------|------|----------------|------------|
+| party 編成 | `SaveGameState.party`（`GameSession.save`） | `createDefaultSave` / `tryUpdatePartySlot` | `loadSaveForMode`；重複時 default へ fallback | `BattleEngine.players` と **別オブジェクト**（restart で再同期） |
+| slot `selectedCombatModuleId` | `GameSession.partyCombatModuleSelection` | `setPartySlotCombatModule` | class 変更・slot 空で `clear`；**restart/defeat/victory では保持** | Save に無い。作戦状態候補として **そのまま流用可** |
+| `currentWaveIndex` | `BattleEngine.waveIndex` | `reloadBattlefield` / `prepareWaveDeploy` | `restartBattle` で 0（または loop wave） | 作戦進行と戦闘が **同一 engine 内**に混在 |
+| `clearedWaveCount` | **未実装** | — | — | — |
+| 将来 `passiveIds` | **未実装** | — | — | — |
+| 未使用リソース | **未実装** | — | — | — |
+| checkpoint | **未実装** | — | — | spec のみ [operation-loop.md §8](../spec/operation-loop.md#8-wave-開始チェックポイント) |
+| retry 用 snapshot | **未実装** | — | — | — |
+
+#### Wave ごとに破棄するもの（spec 上）
+
+| 項目 | 現所有者 | 生成 | 現行の wave 間挙動 | 混在 |
+|------|----------|------|-------------------|------|
+| Combatant（味方） | `BattleEngine.players` | `reloadBattlefield` のみ | **wave 間は同一オブジェクトを再利用** | 作戦 HP と wave 戦闘が同一 Combatant |
+| Combatant（敵） | `BattleEngine.enemies` | `spawnWaveEnemies` 毎回 | **新規生成**（ID も再採番） | — |
+| HP | `CombatantState.hp` | `createAllyFromMember` / enemy 生成 | **wave 間維持**（全滅味方は corpse 非表示のみ） | **R3 全回復と不一致** |
+| Barrier | `CombatantState.barrierHp` | 戦闘中付与 | **wave 間維持** | 同上 |
+| statusEffects | `CombatantState.statusEffects` | 戦闘中付与 | **wave 間維持**（tick は継続） | 同上 |
+| DoT / HoT / CC | statusEffects 内 | 同上 | **維持** | 同上 |
+| 位置・facing | `battleX` 等 / snapshot `facingSign` | deploy / engaged | deploy で battleX 再配置。**engaged 系フィールドは waveStart で一部 reset なし** | 同一 Combatant |
+| skill / basic CD | `CombatantState.cooldowns` | `createCooldowns` + `initializeSkillCooldowns` | **wave 間維持**（reload 時のみ再生成） | 同上 |
+| attack timer | cooldown `remaining` | 同上 | **維持** | 同上 |
+| 一時 stat 補正 | statusEffects / aura 同期 | `syncContinuousPassiveAuras` 等 | **維持** | 同上 |
+| target / movement state | `EngagedCompositionTracker`、approach state | `setupEngagedCombat` | wave 開始で `clearEngagedVisualState`。**tracker は engine 寿命で持続** | engine 私有 |
+| damage / heal counters（HUD 用） | `StageDamageStatsTracker`（GameSession） | stage 開始 | **stage 単位で蓄積**（wave リセットなし） | 作戦統計と wave が混在 |
+| projectile / 進行 effect runtime | `pendingHitQueue`、`placedFields`、`SkillSequenceRunner` | executor | wipe settle で runner clear。**placedFields は wave 間で残存しうる**（`reloadBattlefield` のみ clear） | engine 私有 |
+
+**作戦状態と Wave 戦闘状態の混在箇所:**
+
+1. **`BattleEngine` 単体** — `waveIndex`・`players`（HP/CD/status）・deploy 状態が stage 全体寿命
+2. **`GameSession.save.party`** — 永続編成と戦闘中 `syncPartyBuilds` / `restartBattle` が直結
+3. **`StageDamageStatsTracker`** — stage 通算統計（wave 単位リセットなし）
+
+---
+
+### 56.5 R5 `partyCombatModuleSelection` 寿命
+
+| 質問 | 結果 |
+|------|------|
+| battle reload 後 | **残る**（`restartBattle` / `reloadBattlefield` は selection を触らない） |
+| stage 変更後 | **残る**（`handleStageSortie` / `setLoopStage` でも clear なし） |
+| defeat / victory 後 | **残る**（`handleDefeat` / `handleVictory` でも clear なし） |
+| class 変更時のみ clear | **ほぼ yes** — `tryUpdatePartySlot` で classId 変更時 `clearSelectedCombatModuleId`；slot 空でも clear |
+| Wave 間維持として利用可 | **yes** — Save 非統合メモリとして R6 作戦状態へそのまま移管可能 |
+| 将来 `OperationState` へ移す変更範囲 | `GameSession` の 4 API（set/get/clear/reset）と `BattleEngine` ctor の `getSelectedCombatModuleId` 参照元を `OperationState` に差し替え。`syncPartyBuilds` の module 解決経路は不変 |
+| 戦闘中変更の gate | 現状 `setPartySlotCombatModule` → 即 `engine.syncPartyBuilds()`（`phase === 'running'` なら CD 再生成）。**gate は `GameSession.setPartySlotCombatModule` / `updateMemberBuild` / `tryUpdatePartySlot` の入口**で「Wave 間準備中のみ許可」が最小 |
+
+**UI:** 正式 module UI は未接続。テスト・debug 経由の `GameSession.setPartySlotCombatModule` のみ。
+
+---
+
+### 56.6 party と Save
+
+| 項目 | 現状 |
+|------|------|
+| party 編成の正本 | `SaveGameState.party`（4 slot `PartySlotState[]`） |
+| `tryUpdatePartySlot` 成功時 persist | **あり** — 常に `persistSave()` |
+| battle への sync | class 変更時 `engine.restartBattle()`（味方 Combatant 全再生成）。build のみ変更は `syncPartyBuilds()` |
+| Wave 間一時編成 vs 恒久 Save | **区別不可** — 編成 API は常に Save を更新 |
+| retry 用に必要な snapshot | 最低限: `party` 深いコピー + `partyCombatModuleSelection` 全 slot + `currentWaveIndex` + `clearedWaveCount`（未実装）+ 将来パッシブ/リソース |
+| 重複禁止ヘルパー | `validatePartyClassAssignment` / `validatePartyClassIds`（`partyCompose.ts`）— Wave 間準備でも **そのまま再利用可** |
+| 重複 Save fallback との競合 | `loadSaveForMode` で重複 party は **default party に置換して save**。Operation checkpoint はメモリのみなら競合しないが、**Wave 準備中の編成を Save に直書きすると checkpoint と乖離** |
+
+**Save schema 変更なしで R6 を成立させる障害:**
+
+1. **編成の即 persist** — checkpoint「出撃確定」モデルと矛盾。Wave 間の試行錯誤が Save を汚す
+2. **`clearedWaveCount` / checkpoint フィールドが Save に無い** — OperationState を **セッションメモリ**で持つ必要（spec 整合）
+3. **module 選択が Save に無い** — セッション再起動で消失（許容）。作戦中は `PartyCombatModuleSelection` を OperationState へ移管で足りる
+4. **現行 victory = stage クリア** — 複数 wave 作戦の「最終結果」と「stage 進行」が未分離
+
+---
+
+### 56.7 Wave 間リセット表
+
+**現行の次 wave 処理: 味方 Combatant は再利用、敵のみ新規生成。**
+
+| 対象 | 分類 | 根拠 |
+|------|------|------|
+| HP 全回復 | **明示的初期化が必要** | `healAllAllies` は存在するが **production 未呼び出し**。wave 間 HP 維持 |
+| Barrier 解除 | **明示的初期化が必要** | 同上 |
+| DoT / HoT 解除 | **明示的初期化が必要** | `statusEffects` 維持 |
+| CC 解除 | **明示的初期化が必要** | 同上 |
+| 位置・facing 初期化 | **明示的初期化が必要**（味方） | `placePartyOffScreenForDeploy` で battleX のみ。HP0・engaged フィールドは残存 |
+| skill / basic CD 初期化 | **明示的初期化が必要** | reload 時のみ `initializeSkillCooldowns`。wave 間は維持 |
+| 一時 stat 補正解除 | **明示的初期化が必要** | status / aura 維持 |
+| target / approach state 解除 | **明示的初期化が必要** | `clearEngagedVisualState` + deploy 再配置。`EngagedCompositionTracker` は engine 寿命 |
+| damage / heal counters 解除 | **BattleEngine 外に残存** | `StageDamageStatsTracker` は stage 通算 |
+| projectile 等 runtime 破棄 | **明示的初期化が必要** | wipe で `skillSequenceRunner.clearAll`。`placedFields` / `pendingHitQueue` は wave deploy で未 clear |
+| 敵 Combatant | **新 Combatant 生成で自然にリセット** | `spawnWaveEnemies` |
+| 味方 Combatant オブジェクト | **再利用**（新規生成ではない） | `this.players` は `reloadBattlefield` 以外差し替えなし |
+| 作戦内パッシブ | **未実装概念** | R8 |
+| checkpoint 復元 | **未実装概念** | R6 後半 |
+
+**R3 仕様（Wave 間全回復）との差分:** 現行は **長期消耗モデルに近い**（味方 HP・状態を wave 間で持ち越し）。R6 で「次 Wave 開始」経路に `healAllAllies` + status clear + CD re-init を **明示追加**するか、味方も **再生成**するかの設計判断が必要（再生成なら module 選択の再適用経路は既存 `createAlliesFromPartyState` で足りる）。
+
+---
+
+### 56.8 retry / checkpoint（現行と R3 三種）
+
+| 現行 API | 実装 | 触る状態 |
+|----------|------|----------|
+| `restartBattle` | 全 state 破棄 → `reloadBattlefield`（wave 0、味方再生成） | engine 全域 + 味方 Combatant 新規 |
+| `reloadBattlefield` | 上記の本体 | `waveIndex`、enemies、players、passive stageStart、placedFields clear |
+| `handleDefeat` | 非 verify: `restartBattle` + 編成画面。verify+loop: ログのみ | Save stage 進行は verify で rollback あり |
+| `respawnAfterEnd` | victory/defeat 後タイマー満了 → `reloadBattlefield` | 先頭 wave から同一 stage 再開 |
+| save 再読込 | `loadSaveForMode`（verify 切替・起動時） | `save` 差し替え。`partyCombatModuleSelection` は **セッション存続** |
+| party 再生成 | `createAlliesFromPartyState`（restart 経路） | Save party + module 選択から |
+| stage 再生成 | `handleStageSortie` / `setLoopStage` → `restartBattle` | `currentStageId` 変更 |
+
+**R3 三種リトライ — 流用と不足:**
+
+| リトライ種別 | 流用可能な現行処理 | 不足状態 |
+|--------------|-------------------|----------|
+| **同設定再戦**（現在 Wave 即再戦） | `restartBattle` の敵再 spawn 部分に相当する `prepareWaveDeploy(currentWave)`；味方 reset は `healAllAllies` + status/CD clear の新規ヘルパー | checkpoint からの party/module 復元；**現 wave index の保持**（restart は 0 に戻る）；作戦中パッシブ（未実装） |
+| **準備へ戻る**（Wave 間準備） | `tickWaveExitMarch` 完了後の停止＋`setGameScreen('formation')`；`tryUpdatePartySlot` + module API | `OperationState`；checkpoint snapshot；**wave 自動進行の停止**；clearedWave 維持 |
+| **作戦最初から** | `reloadBattlefield` + OperationState 初期化；`handleStageSortie` に近いが **clearedWave / パッシブ / リソースも reset** | 作戦状態全体；初期準備画面；stage 進行との分離 |
+
+**checkpoint（出撃確定）:** 未実装。候補は `handleStageSortie` 確定後または Wave 間準備の「次 Wave 出撃」確定時に `structuredClone(party)` + module map + wave index + cleared count を **メモリ**へ保存。
+
+---
+
+### 56.9 画面状態の接続候補
+
+**現行 `GameScreen`:** `'battle' | 'formation' | 'stageSelect'`（`gameScreen.ts`）
+
+| 将来画面 | 追加要否 | 接続案 |
+|----------|----------|--------|
+| `battle` | 既存 | 現状どおり |
+| `waveEnd` | **任意**（演出専用） | `BattleEngine` の wipe settle / exit march 中は **battle のまま** tick 継続でも可。独立 screen は必須ではない |
+| `wavePreparation` | **実質必要** | 既存 `formation` を **流用可能** — `DomFormationScreenHost` / `MetaMenuOverlay`（`presentation: 'formation-screen'`）。差分: 敵 preview・module 選択 UI・「次 Wave 出撃」CTA・通常編成との **モードフラグ** |
+| `operationResult` | **必要**（最終 wave 後） | 現行 `handleVictory` → `stageSelect` を作戦完了時のみ分岐。新 screen または stageSelect 上の結果モーダル |
+
+**確認事項:**
+
+| 項目 | 結論 |
+|------|------|
+| 既存 party 画面の Wave 間流用 | **可** — `menuHost.open('party')` と同系。モード引数で Wave 間限定 UI を足す |
+| 通常編成との差分 | 敵情報表示・出撃確定・retry 導線・編成変更が **checkpoint へ反映されるタイミング** |
+| BattleEngine tick を止める場所 | `GameSession.tick` — `currentScreen !== 'battle'` または新フラグ `operationPhase !== 'waveCombat'`。現状も formation / stageSelect で engine tick 停止済み |
+| 次 Wave 再開 API | **`GameSession.startNextWave()`**（新規）→ `BattleEngine.beginNextWaveFromPreparation()` 等。内部で `beginWaveAnnouncement(pendingNextWaveIndex)` |
+| GameSession が遷移を所有すべきか | **yes** — engine は battle イベント発火のみ。screen / OperationState は GameSession |
+| BattleEngine に UI 状態を持たせない | **可能** — 現行も `phase` は battle 結果用のみ。Wave 間は GameSession + screen で足りる |
+
+---
+
+### 56.10 Stage / Wave データ現状
+
+| 項目 | 現状 |
+|------|------|
+| `StageDef.waves` | `StageWave[]` — 各 `{ enemies: { templateId, spawnX }[] }` |
+| `waves[].enemyGroups` | **型・validate・spawn すべて未実装** |
+| stage 直下 `enemyGroups` normalize | validate で parse → `StageDef.enemyGroups`。`waves[0].enemies` 空許可 |
+| `createEnemiesForStage(waveIndex)` | 引数あり。**直下 `enemyGroups` は wave 0 のみ**。legacy は任意 index |
+| R5e `selectedCombatModuleId` を wave group で保持 | **stage 直下 `StageEnemyGroup` では実装済み**。`waves[].enemyGroups` は schema 候補のみ |
+| R6 最小縦切りの schema 変更候補（実装しない） | ① `StageWave` に `enemyGroups?: StageEnemyGroup[]` 追加 ② validate ③ `createEnemiesForStage` を wave 優先に分岐 ④ 移行: 直下 `enemyGroups` → `waves[0].enemyGroups` normalize（editor / migration は R9） |
+
+**R6 最小データ:** legacy 複数 wave stage `1` で縦切り可能（`waves[].enemies` のみ）。`enemyGroups` 複数 wave は **schema + spawn 変更後**。
+
+---
+
+### 56.11 R6 推奨分割（依存順）
+
+| ID | 目的 | 主な変更範囲 | 前提 | 完了条件 | 対象外 |
+|----|------|-------------|------|----------|--------|
+| **R6a** | Wave 遷移・状態寿命の確定 | handoff | R5 完了 | 本 §56 | 実装 |
+| **R6b** | Wave 終了停止 + 仮次 Wave 開始 | `BattleEngine.tickWaveExitMarch`、`GameSession` イベント・`startNextWave`、debug ボタン可 | R6a | 敵全滅後 **自動で次 wave に入らない**。仮 UI/ debug で次 Wave 開始可 | 正式 UI・HP 全回復 |
+| **R6c** | OperationState 最小型 | 新 `OperationState`（メモリ）、`GameSession` が wave index / clearedCount / module map 所有 | R6b | engine の作戦進行が Session 経由 | Save schema・パッシブ |
+| **R6d** | Wave 状態リセット + 次 Wave 生成 | `prepareWaveDeploy` 前後、`healAllAllies` 等ヘルパー配線、placedFields clear | R6c | 次 Wave 開始時 HP/CC/CD/敵が R3 通りリセット | 味方 Combatant 再生成方式の最適化は後回し可 |
+| **R6e** | Wave 間準備 screen（formation 流用） | `GameSession.setGameScreen` 拡張 or wave prep モード、`menuHost`、編成/module gate | R6c | Wave 間のみ編成・module 変更可。戦闘中は拒否 | 敵詳細 UI・i18n 本実装 |
+| **R6f** | checkpoint（出撃確定）メモリ | `OperationState` snapshot、出撃確定 API | R6e | 次 Wave 出撃時に snapshot 保存（メモリ） | 3 種 retry 完全実装 |
+| **R6g** | 複数 Wave `enemyGroups` spawn | `types` / validate / `createEnemiesForStage` | R6d 動作確認後でも可 | wave index ごとに `waves[n].enemyGroups` または正規化後データで spawn | editor・全面 migration |
+| **R6h** | 最終 Wave → 作戦結果 | `checkBattleEnd` 最終分岐、`handleVictory` 分離、`operationResult` screen 仮 | R6b〜d | 最終 wave のみ作戦結果へ。中間 wave は Wave 間準備 | 恒久報酬設計 |
+| **R6i** | retry 3 種（最小） | defeat / wave prep からの分岐 | R6f checkpoint | 同設定再戦・準備へ戻る・作戦最初からが **debug または最小 UI** で各 1 経路 | R7 倍速・演出 |
+| **R6j** | 統合テスト | 2 wave legacy stage `1` + module 選択 + stop/resume | R6b〜h | 自動テストで wave 停止→準備→次 wave→最終結果 | 全兵科・全 stage |
+
+**最初の手動操作確認地点（早期）:** **R6b 完了時** — Stage `1` 等で Wave 1 クリア後、自動 Wave 2 告知が走らず停止し、debug/仮ボタンで Wave 2 を開始できる。
+
+**次の 1 タスク:** **R6b** — `tickWaveExitMarch` 停止 + `GameSession.startNextWave` + 仮トリガー。
+
+**主な実装リスク:**
+
+1. 味方 Combatant **再利用**前提のため、R3 全回復は「再生成」より **明示 reset ヘルパー**の設計が必要
+2. `tryUpdatePartySlot` の即 persist が checkpoint と衝突 — Wave 間は OperationState 編集 + 出撃時 Save 同期の二段が安全
+3. 現行 `handleVictory` = stage クリア — 中間 wave と最終 wave の分岐漏れが進行破壊リスク
+4. `stage.enemyGroups` と multi-wave の組み合わせは現行 spawn が空配列 — R6g なしでは **legacy wave のみ**で縦切り
+5. `StageDamageStatsTracker` の wave 単位リセット方針未決（作戦通算のままか wave リセットか）
+
+---
+
+### 56.12 §55 editor 問題の handoff 区分（R6 へ混ぜない）
+
+**確認済み（§55 正本）:**
+
+- editor validate への `combatModules` 追加
+- classes 先行 fetch
+- 15 class picker 回帰テスト
+
+**未特定（再発時調査へ送る）:**
+
+- 報告「4 兵科だけ欠けて見えた」直接原因（一覧母集団二重 filter 以外の単独原因は未確定）
+
+---
+
+### 56.13 完了報告サマリ（§13 対応）
+
+1. **読んだファイル:** §56.1 の 6 件
+2. **変更したファイル:** `docs/ai-handoff/current-task.md`、`docs/plans/phase-roadmap.md`（R6 分割追記）
+3. **現行 Wave 遷移:** §56.3
+4. **wave index 所有者:** `BattleEngine.waveIndex`（verify 時開始 index のみ `GameSession.loopWaveIndex`）
+5. **作戦状態候補の現所有者:** Save.party、PartyCombatModuleSelection、未実装（clearedWave/checkpoint/passive/リソース）
+6. **Wave 戦闘状態の現所有者:** BattleEngine（players/enemies/runtime）
+7. **Wave 間リセット表:** §56.7
+8. **module 選択寿命:** §56.5
+9. **party / Save:** §56.6
+10. **retry / checkpoint 流用:** §56.8
+11. **screen 接続:** §56.9
+12. **Stage / Wave schema:** §56.10
+13. **R6 推奨分割:** §56.11
+14. **最初の手動確認地点:** R6b（Wave 停止 + 仮次 Wave 開始）
+15. **主なリスク:** §56.11 末尾
+16. **次の 1 タスク:** **R6b**
