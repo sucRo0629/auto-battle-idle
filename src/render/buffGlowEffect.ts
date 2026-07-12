@@ -4,6 +4,12 @@ const BUFF_GLOW_DURATION_MS = 800;
 
 let spriteBuffer: HTMLCanvasElement | null = null;
 
+export function __setSpriteBufferForTest(
+  buffer: HTMLCanvasElement | null,
+): void {
+  spriteBuffer = buffer;
+}
+
 /** 透過を保持したままスプライトを白く光らせて描画する */
 export function drawSpriteWithBuffGlow(
   targetCtx: CanvasRenderingContext2D,
@@ -14,6 +20,9 @@ export function drawSpriteWithBuffGlow(
   glowR: number,
   glowG: number,
   glowB: number,
+  /** layout 箱の左上（BattleCanvas.drawSprite の x / spriteDrawY と同じ） */
+  layoutOriginX: number,
+  layoutOriginY: number,
 ): void {
   if (intensity <= 0) {
     drawSprite(targetCtx);
@@ -24,12 +33,15 @@ export function drawSpriteWithBuffGlow(
   const bufferCtx = getSpriteBuffer(pixelSize);
   drawSprite(bufferCtx);
   applyBuffGlow(bufferCtx, pixelSize, intensity, glowR, glowG, glowB);
+  targetCtx.save();
+  targetCtx.translate(layoutOriginX, layoutOriginY);
   blitSpriteBufferAtLayoutFoot(
     targetCtx,
     spriteBuffer!,
     pixelSize,
     layoutSize,
   );
+  targetCtx.restore();
 }
 
 function getSpriteBuffer(size: number): CanvasRenderingContext2D {

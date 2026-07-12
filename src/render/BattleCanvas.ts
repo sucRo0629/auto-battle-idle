@@ -678,6 +678,8 @@ export class BattleCanvas implements IBattleRenderer {
         this.theme.buffGlowR,
         this.theme.buffGlowG,
         this.theme.buffGlowB,
+        x,
+        y,
       );
     } else {
       drawLocalSprite(ctx);
