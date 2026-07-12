@@ -237,6 +237,7 @@ export class GameSession {
           ),
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
         canUseOperationRetry: () => this.canUseOperationRetry(),
+        shouldShowDefeatRetry: () => this.shouldShowDefeatRetry(),
         onRetryCurrentWave: () => this.retryCurrentWaveFromCheckpoint(),
         onReturnToFormationPrep: () => this.returnToFormationPrep(),
         onRestartOperationFromWaveZero: () => this.restartOperationFromWaveZero(),
@@ -399,6 +400,7 @@ export class GameSession {
       this.suppressOperationWaveReload = false;
     }
     this.setGameScreen('battle');
+    this.view.setBattlePaused(false);
     return true;
   }
 
@@ -412,6 +414,7 @@ export class GameSession {
     this.clearOperationResult();
     this.operationState?.endWavePrepEditing();
     this.menuHost.open('party');
+    this.view.setBattlePaused(false);
     return true;
   }
 
@@ -429,7 +432,19 @@ export class GameSession {
     if (!this.beginOperation(stageId, 0)) return false;
     this.engine.restartBattle();
     this.menuHost.open('party');
+    this.view.setBattlePaused(false);
     return true;
+  }
+
+  /** R7c: verify OFF 敗北後に release retry UI を表示するか */
+  shouldShowDefeatRetry(): boolean {
+    return (
+      !this.verifyMode &&
+      this.currentScreen === 'battle' &&
+      this.operationState !== null &&
+      this.operationState.isDefeated &&
+      this.canUseOperationRetry()
+    );
   }
 
   isVerifyMode(): boolean {
@@ -875,8 +890,7 @@ export class GameSession {
     }
 
     console.log(`[progress] Defeat at ${failedStageName} (retry)`);
-    this.engine.restartBattle();
-    this.menuHost.open('party');
+    this.view.setBattlePaused(true);
   }
 
   private handleVictory(survivingPartyIndices: number[]): void {

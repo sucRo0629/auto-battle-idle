@@ -90,6 +90,8 @@ export interface VerifyModeControls {
   getCurrentStageId?: () => string;
   /** R6i: 作戦 retry API が利用可能か */
   canUseOperationRetry?: () => boolean;
+  /** R7c: verify OFF 敗北後の release retry UI 表示 */
+  shouldShowDefeatRetry?: () => boolean;
   onRetryCurrentWave?: () => boolean;
   onReturnToFormationPrep?: () => boolean;
   onRestartOperationFromWaveZero?: () => boolean;
@@ -121,6 +123,7 @@ export class BattleView {
   private readonly pauseButton: HTMLButtonElement;
   private readonly pauseOverlayEl: HTMLElement;
   private readonly pausePlateEl: HTMLElement;
+  private readonly defeatRetryOverlayEl: HTMLElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
@@ -259,6 +262,56 @@ export class BattleView {
     this.pausePlateEl.className = "battle-pause-plate game-panel-surface";
     battlePauseOverlay.appendChild(this.pausePlateEl);
 
+    const defeatRetryOverlay = document.createElement("div");
+    defeatRetryOverlay.className = "battle-defeat-retry-overlay";
+    defeatRetryOverlay.hidden = true;
+    defeatRetryOverlay.setAttribute("aria-hidden", "true");
+    this.defeatRetryOverlayEl = defeatRetryOverlay;
+
+    const defeatRetryPlate = document.createElement("div");
+    defeatRetryPlate.className =
+      "battle-defeat-retry-plate game-panel-surface";
+
+    const defeatRetryTitle = document.createElement("div");
+    defeatRetryTitle.className = "battle-defeat-retry-title";
+    defeatRetryTitle.textContent = "敗北";
+    defeatRetryPlate.appendChild(defeatRetryTitle);
+
+    const defeatRetryActions = document.createElement("div");
+    defeatRetryActions.className = "battle-defeat-retry-actions";
+
+    const defeatRetryButtons: Array<{ text: string; run: () => boolean }> = [
+      {
+        text: "現在Waveを同設定で再戦",
+        run: () => verifyModeControls?.onRetryCurrentWave?.() ?? false,
+      },
+      {
+        text: "準備へ戻る",
+        run: () => verifyModeControls?.onReturnToFormationPrep?.() ?? false,
+      },
+      {
+        text: "作戦をWave 0からやり直す",
+        run: () =>
+          verifyModeControls?.onRestartOperationFromWaveZero?.() ?? false,
+      },
+    ];
+
+    for (const action of defeatRetryButtons) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "battle-defeat-retry-button game-ui-button";
+      button.textContent = action.text;
+      button.addEventListener("click", () => {
+        if (action.run()) {
+          this.syncDefeatRetryOverlay();
+        }
+      });
+      defeatRetryActions.appendChild(button);
+    }
+
+    defeatRetryPlate.appendChild(defeatRetryActions);
+    defeatRetryOverlay.appendChild(defeatRetryPlate);
+
     const battleDebugOverlay = document.createElement("div");
     battleDebugOverlay.className = "battle-debug-overlay";
     battleDebugOverlay.setAttribute("aria-hidden", "true");
@@ -338,6 +391,7 @@ export class BattleView {
       battleLaneLayer,
       battleFxLayer,
       battlePauseOverlay,
+      defeatRetryOverlay,
       battleHudLayer,
       battleTopInfo,
       battleDebugOverlay,
@@ -603,9 +657,37 @@ export class BattleView {
       this.syncExpandedEnemyGroups();
     }
     this.battleRoot.classList.toggle("battle-root--paused", paused);
-    this.pauseOverlayEl.hidden = !paused;
-    this.pauseOverlayEl.setAttribute("aria-hidden", paused ? "false" : "true");
+    this.syncPauseOverlayVisibility();
     this.syncPauseChrome();
+  }
+
+  private syncPauseOverlayVisibility(): void {
+    const defeatRetryVisible = this.isDefeatRetryVisible();
+    const showPauseOverlay = this.battlePaused && !defeatRetryVisible;
+    this.pauseOverlayEl.hidden = !showPauseOverlay;
+    this.pauseOverlayEl.setAttribute(
+      "aria-hidden",
+      showPauseOverlay ? "false" : "true",
+    );
+  }
+
+  private isDefeatRetryVisible(): boolean {
+    return this.verifyModeControls?.shouldShowDefeatRetry?.() === true;
+  }
+
+  private syncDefeatRetryOverlay(): void {
+    const visible = this.verifyModeControls?.shouldShowDefeatRetry?.() ?? false;
+    this.defeatRetryOverlayEl.hidden = !visible;
+    this.defeatRetryOverlayEl.setAttribute(
+      "aria-hidden",
+      visible ? "false" : "true",
+    );
+    this.pauseButton.disabled = visible;
+    if (visible && !this.battlePaused) {
+      this.setBattlePaused(true);
+      return;
+    }
+    this.syncPauseOverlayVisibility();
   }
 
   private onEnemyGroupClick(
@@ -654,6 +736,7 @@ export class BattleView {
   }
 
   toggleBattlePaused(): void {
+    if (this.isDefeatRetryVisible()) return;
     this.setBattlePaused(!this.battlePaused);
   }
 
@@ -1136,6 +1219,7 @@ export class BattleView {
     }
 
     this.refreshMemberStatsPanel();
+    this.syncDefeatRetryOverlay();
   }
 
   setMenuButtonDisabled(disabled: boolean): void {

@@ -202,7 +202,7 @@ describe('GameSession stageSelect → party → battle wire', () => {
     expect(session.getSaveState().stageProgress.currentStageId).toBe(initialStageId);
   });
 
-  it('verify OFF defeat opens formation with same currentStageId', () => {
+  it('verify OFF defeat stays on battle with retry UI and same currentStageId', () => {
     setVerifyModeEnabled(false);
     session = createSession();
     const gameData = tryLoadGameData();
@@ -228,10 +228,14 @@ describe('GameSession stageSelect → party → battle wire', () => {
     triggerDefeat(session);
 
     expect(session.getSaveState().stageProgress.currentStageId).toBe(secondStage.id);
-    expect(session.getCurrentScreen()).toBe('formation');
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.shouldShowDefeatRetry()).toBe(true);
+    expect(
+      container.querySelector('.battle-defeat-retry-overlay'),
+    ).not.toBeNull();
     expect(
       container.querySelector('.skill-menu-return-to-battle-button'),
-    ).not.toBeNull();
+    ).toBeNull();
   });
 
   it('verify ON defeat stays on battle (auto-respawn path preserved)', () => {

@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R7b 完了** — 倍速 simulation（本 §70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R7c — 敗北時 retry 正式導線**（§69.7）。**R7a 完了** — 反復プレイ調査・4 タスク分割（§69）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R7c 完了** — 敗北時 retry 正式導線（本 §71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R7d — Wave 準備 retry + spec 整合**（§69.7）。**R7a 完了** — 反復プレイ調査・4 タスク分割（§69）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5527,3 +5527,86 @@ R7「反復プレイ」を実装可能な小タスクへ分割する。**product
 ### 70.6 次タスク
 
 **R7c — 敗北時 retry 正式導線**（release でも operation retry 3 種到達・legacy defeat 自動 restart 置換）。
+
+---
+
+## 71. R7c — 敗北時 retry 正式導線（2026-07-12 完了）
+
+### 71.1 目的
+
+verify OFF の通常プレイで敗北後に retry 3 種へ到達できる正式導線を追加し、既存の自動 `restartBattle` + formation 遷移を置換する。
+
+### 71.2 読んだファイル（6 件）
+
+| ファイル | 用途 |
+| -------- | ---- |
+| `docs/ai-handoff/current-task.md` | R7c 要件・§69.7 分割 |
+| `src/game/GameSession.ts` | `handleDefeat`・R6i retry API |
+| `src/ui/BattleView.ts` | 戦闘 HUD・pause overlay 所有者 |
+| `src/ui/DebugMenuPanel.ts` | verify ON retry 既存経路 |
+| `src/game/operationRetry.test.ts` | retry API テストパターン |
+| `docs/plans/phase-roadmap.md` | R7 分割表 |
+
+### 71.3 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/GameSession.ts` | verify OFF 敗北で pause のみ・`shouldShowDefeatRetry`・retry 成功時 unpause |
+| `src/ui/BattleView.ts` | release 用 `battle-defeat-retry-overlay`（3 ボタン） |
+| `src/styles/battle-view.css` | defeat retry overlay 最小スタイル |
+| `src/game/gameSessionDefeatRetry.test.ts` | R7c 8 項目テスト（新規） |
+| `src/game/gameSessionWire.test.ts` | verify OFF 敗北期待値更新 |
+| `docs/ai-handoff/current-task.md` | 本 §71・ヘッダ更新 |
+| `docs/plans/phase-roadmap.md` | R7c 完了・次タスク R7d |
+
+### 71.4 敗北後の画面状態（verify OFF）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| screen | `battle` 維持 |
+| engine | `phase === 'defeat'` のまま tick 停止 |
+| pause | `view.setBattlePaused(true)` |
+| OperationState | `isDefeated === true`、インスタンス保持 |
+| `currentStageId` | 変更なし（rollback なし） |
+| formation | 自動遷移しない |
+
+### 71.5 retry UI の所有者と表示条件
+
+| 項目 | 内容 |
+| ---- | ---- |
+| **所有者** | `BattleView`（`battle-defeat-retry-overlay`） |
+| **表示条件** | `GameSession.shouldShowDefeatRetry()` — `!verifyMode && currentScreen === 'battle' && operationState.isDefeated && canUseOperationRetry()` |
+| **verify ON** | 非表示（従来 `DebugMenuPanel` のみ） |
+
+### 71.6 3 操作の配線先
+
+| UI ラベル | GameSession API |
+| --------- | --------------- |
+| 現在Waveを同設定で再戦 | `retryCurrentWaveFromCheckpoint()` |
+| 準備へ戻る | `returnToFormationPrep()` |
+| 作戦をWave 0からやり直す | `restartOperationFromWaveZero()` |
+
+### 71.7 verify ON / OFF の差
+
+| モード | 敗北後 |
+| ------ | ------ |
+| verify OFF | battle 停止 + release retry overlay |
+| verify ON（通常） | stage rollback ログのみ、battle 維持、DebugMenu retry |
+| verify ON + loop stage | 進行変更なし、battle 維持、DebugMenu retry |
+
+### 71.8 失敗時の扱い
+
+API が `false` を返した場合、screen・`isDefeated`・overlay 表示を維持（UI を閉じない）。
+
+### 71.9 テスト結果
+
+| スイート | 結果 |
+| -------- | ---- |
+| `gameSessionDefeatRetry.test.ts` | **8 pass / 8** |
+| `operationRetry.test.ts` | **7 pass / 7** |
+| `gameSessionWire.test.ts` | **8 pass / 8** |
+| **合計** | **23 pass / 23** |
+
+### 71.10 次タスク
+
+**R7d — Wave 準備 retry + spec 整合**（`wavePrep` から retry・`returnToFormationPrep` vs wavePrep 分岐）。

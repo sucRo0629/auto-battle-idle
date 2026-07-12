@@ -19,7 +19,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / normalize / editor API / legacy 移行（**設計のみ**） | **完了** |
 | **R5** | 最小縦切り — 少数兵科・各 2 戦闘方式・active/gauge なし・秒単位攻撃間隔・固定優先ターゲット・同一兵科禁止・敵戦闘方式指定・最小データ schema・単一 Wave または最小作戦で戦闘成立 | **完了** |
 | **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | **R6f 完了** → R6g 次 |
-| **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | **R7b 完了** → R7c 次 |
+| **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | **R7c 完了** → R7d 次 |
 | **R8** | 作戦内パッシブ — リソース消費・任意取得・巻き戻し、**戦闘中表示整理**、**範囲パッシブ runtime 判定 + プレースホルダ範囲描画**（正式 VFX は後続） | 未着手 |
 | **R9** | エディタ実装 — クラス / 戦闘方式 / パッシブ / 敵 / Stage・Wave 各エディタ + validate / migration | 未着手 |
 | **R10** | 新複数 Wave 作戦の試作 — 旧 7 ステージ移植ではなく新仕様専用作戦。繰り返し遊べるかを評価 | 未着手 |
@@ -299,7 +299,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R6i** | retry 3 種（最小経路） | **完了（§67）** — GameSession retry API + debug 配線 |
 | **R6j** | 統合テスト（2 wave + stop/resume） | **完了（§68）** — legacy stage `1` 縦切り自動テスト |
 
-**次タスク:** R7c — 敗北時 retry 正式導線
+**次タスク:** R7d — Wave 準備 retry + spec 整合
 
 ---
 
@@ -311,7 +311,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 - 作戦最初からの再試行
 - 確認ダイアログなし（方針 — [operation-loop.md §9](../spec/operation-loop.md#9-リトライ導線r7-接続)）
 
-**R7a 調査完了（2026-07-12）:** [current-task.md §69](../ai-handoff/current-task.md#69-r7a--反復プレイ調査タスク分割2026-07-12-完了)。**R7b 完了（2026-07-12）:** [current-task.md §70](../ai-handoff/current-task.md#70-r7b--倍速-simulation2026-07-12-完了) — `GameSession` tick gate で 1/2/4 倍。retry 3 種 API は R6i 済みだが UI は verify 専用 `DebugMenuPanel` のみ。release 敗北は legacy auto-restart。
+**R7a 調査完了（2026-07-12）:** [current-task.md §69](../ai-handoff/current-task.md#69-r7a--反復プレイ調査タスク分割2026-07-12-完了)。**R7b 完了（2026-07-12）:** [current-task.md §70](../ai-handoff/current-task.md#70-r7b--倍速-simulation2026-07-12-完了) — `GameSession` tick gate で 1/2/4 倍。**R7c 完了（2026-07-12）:** [current-task.md §71](../ai-handoff/current-task.md#71-r7c--敗北時-retry-正式導線2026-07-12-完了) — verify OFF 敗北で retry 3 種 UI・legacy auto-restart 廃止。
 
 ### R7 実装分割（依存順・handoff §69.7）
 
@@ -319,11 +319,11 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | ---- | ---- | -------- |
 | **R7a** | 調査・4 タスク分割 | **完了（§69）** |
 | **R7b** | 倍速 1 / 2 / 4 倍（`GameSession.tick` multiplier） | **完了（§70）** — API + tick テスト |
-| **R7c** | 敗北時 retry 正式導線（release 含む・legacy defeat 置換） | verify OFF でも 3 種 retry |
+| **R7c** | 敗北時 retry 正式導線（release 含む・legacy defeat 置換） | **完了（§71）** — verify OFF 敗北で retry 3 種 |
 | **R7d** | Wave 準備 retry + 「準備へ戻る」spec 整合（`wavePrep`） | wavePrep から retry・formation 分岐 |
 | **R7e** | 作戦結果後再戦 + verify/release 勝利導線統一 | `operationResult` → rematch |
 
-**次タスク:** **R7c** — 敗北時 retry 正式導線（release 含む・legacy defeat 置換）。
+**次タスク:** **R7d** — Wave 準備 retry + spec 整合（`wavePrep` から retry・formation 分岐）。
 
 ---
 
