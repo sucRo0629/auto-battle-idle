@@ -1,5 +1,54 @@
 # 進行・育成
 
+**R3 注記（2026-07-12）:** 新作戦ループの進行正本は **§進行の 3 層（R3）** と [operation-loop.md](operation-loop.md)。Wave 作戦ループ・作戦状態 / 戦闘状態・リトライ・作戦途中セーブ方針はそちらを優先する。
+
+---
+
+## 進行の 3 層（R3）
+
+新作戦ループでは、進行を次の 3 層に分離する。**レベル・EXP を進行の中心に置かない。**
+
+| 層 | 内容 | 正本 |
+| -- | ---- | ---- |
+| **作戦外進行** | 作戦選択、クリア記録、兵科解禁など将来の恒久報酬 | 本書 §作戦外進行 |
+| **作戦内進行** | 現在 Wave、クリア済み Wave、作戦内リソース、取得パッシブ、Wave 開始チェックポイント | [operation-loop.md](operation-loop.md) |
+| **Wave 戦闘** | 一時的な combat state、勝敗判定、Wave 終了時破棄 | [operation-loop.md §5](operation-loop.md#5-wave-戦闘) + [battle-field.md](battle-field.md) |
+
+### 作戦外進行（R3 方針）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 作戦選択 | **任意選択**。選択順は固定しない |
+| クリア記録 | 作戦完了時に恒久記録へ反映する候補（具体は後続） |
+| 兵科解禁等 | 恒久報酬として設計。旧 `unlockClassIdsOnClear`（例: demo 弩砲士）を **そのまま継承しない** |
+| セーブ | 作戦 **途中** は保存しない。作戦 **完了時** のみ既存 Save へ反映する設計候補 |
+
+**参考として残す:** 既存 7 ステージの非一本道選択、`clearedStageIds` の考え方は作戦選択 UI の参考にできる（[stage-selection-ui.md](stage-selection-ui.md)）。
+
+**新仕様の原則:**
+
+- 作戦内では **Wave 順** に進む
+- 作戦敗北で **別作戦の選択状態を巻き戻さない**
+
+### Legacy — 旧線形ステージ進行（新作戦ループの正本から外す）
+
+以下は **Phase 2 放置 MVP / Phase 6d 目標** の記述。**R3 以降の作戦ループ正本ではない。**
+
+| 旧仕様 | 扱い |
+| ------ | ---- |
+| ステージ勝利で自動的に次ステージへ進む一本道 | legacy |
+| 敗北で前ステージへ戻る rollback | legacy（リトライは [operation-loop.md §9](operation-loop.md#9-リトライ導線r7-接続)） |
+| `currentStageId` を線形進行位置として扱うこと | legacy |
+| Level / EXP 報酬を進行の中心とすること | 廃止方向（R1） |
+| Instant Lv20 / Level Sync | legacy（R1 廃止方向） |
+| 旧ローグライク解禁条件 | 採用しない（[operation-loop.md §13](operation-loop.md#13-旧ローグライク仕様との関係)） |
+
+---
+
+## Legacy — Phase 1〜12 進行仕様（現行コード資産）
+
+> 以下は **2026-07-12 方針転換前** の Phase 記述と、現行 production が参照しうる Save / EXP / Stage Records の説明。**新作戦ループ（R3）の正本ではない。** 実装追随は R5 以降。
+
 **Phase 1** で存在するものと、以降のフェーズで追加するもの。
 
 ## Phase 1（完了）
@@ -12,7 +61,9 @@
 
 ## Phase 2 — プレイヤー成長とステージ（完了）
 
-### ステージ進行
+### ステージ進行（Legacy）
+
+> **R3:** 新作戦ループでは [operation-loop.md](operation-loop.md) の作戦選択・Wave 順進行が正本。本節は legacy。
 
 - `stages.json` に順序付きステージを定義。
 

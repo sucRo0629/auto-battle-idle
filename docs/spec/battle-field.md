@@ -8,6 +8,44 @@
 
 **現行コードとの関係：** 軸向き・用語・パイプラインは本書が正本。実装が追いつくまで [combat.md](combat.md) の座標節（旧記述）と不一致があり得る。
 
+**Wave 作戦ループ（R3）:** 複数 Wave を通した作戦の上位進行・作戦状態 / 戦闘状態の分離・Wave 間準備・リトライは **[operation-loop.md](operation-loop.md)** が正本。本書 §3.4・§4.1 の BattlePhase FSM は **legacy 実装説明**（後続実装で置換）。
+
+---
+
+## Wave 作戦と legacy BattlePhase
+
+### 新仕様 — 作戦状態と Wave 戦闘の境界
+
+| 層 | 保持内容 | 正本 |
+| -- | -------- | ---- |
+| **作戦状態** | 編成、戦闘方式、作戦内パッシブ、クリア済み Wave、チェックポイント等 | [operation-loop.md §3.1](operation-loop.md#31-作戦状態複数-wave-を通して保持) |
+| **Wave 戦闘** | Combatant、HP、Barrier、DoT、位置、Attack timer 等 | [operation-loop.md §3.2](operation-loop.md#32-戦闘状態wave-開始時に生成wave-終了時に破棄または初期化) |
+
+**混在禁止:** 作戦状態と戦闘状態を同一オブジェクトへ無制限に混在させない（[operation-loop.md §3](operation-loop.md#3-作戦状態と戦闘状態の分離)）。
+
+### 新仕様 — Wave 開始・終了時の責務（上位）
+
+| タイミング | 責務 |
+| ---------- | ---- |
+| **Wave 開始** | 作戦状態から編成・戦闘方式・作戦内パッシブを読み、Wave 固有敵編成で **戦闘状態を新規構築**。続いて接敵・自動戦闘（本書 §3〜§4 の sim 節） |
+| **Wave 勝利** | 戦闘 sim 停止 → 戦闘状態破棄 → 作戦状態へクリア記録 → Wave 間準備または作戦結果 |
+| **Wave 敗北** | 戦闘状態破棄 → チェックポイント復元 → 再試行導線（作戦即終了しない） |
+| **Wave 間** | HP 全回復ほか戦闘状態リセット。編成・戦闘方式・パッシブは作戦状態で維持（[operation-loop.md §7](operation-loop.md#7-wave-間の回復状態リセット)） |
+
+### Legacy — 現行の自動 Wave 遷移
+
+現行 production の 1 Wave 内 FSM は **§3.4 Wave ライフサイクル** および **§4.1 BattlePhase FSM** を参照。
+
+```
+WaveAnnouncement + PartyDeploy → Engaged → PostCombatSettle
+  → （次 Wave あり）VictoryExit → WaveAnnouncement + PartyDeploy …
+  → （最終 Wave）VictoryExit → ステージクリア
+```
+
+- **Wave 間準備が存在しない。** 勝利後は自動で次 Wave の PartyDeploy へ進む。
+- **`WavePreparation` を BattlePhase enum へ追加するとは確定しない。** 準備画面は戦闘外ゲーム状態として実装する可能性が高い（[operation-loop.md §2](operation-loop.md#2-上位ループ)）。
+- 後続 **R5〜R7** で、上記 legacy 自動遷移を [operation-loop.md](operation-loop.md) の上位ループへ置換する。
+
 ---
 
 ## 1. 用語
@@ -243,7 +281,9 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 分類用途の `isMeleeRangePx` / `isMeleeUnit` は本書の距離計算・layout 正本から除外し、[combat.md](combat.md) / [classes-and-skills.md](classes-and-skills.md) に委譲する。
 
-### 3.4 Wave ライフサイクル
+### 3.4 Wave ライフサイクル（Legacy — 現行実装）
+
+> **新仕様の上位ループ**（初期準備 / Wave 間準備 / 作戦結果）は [operation-loop.md](operation-loop.md)。本節は **legacy 自動 Wave 遷移** の 1 Wave 内説明。
 
 1. **`WaveAnnouncement` + `PartyDeploy`（同時）** — Wave 告知表示中に、味方を画面左外から **隊形アンカー** へ、敵を画面右外から **spawn 位置** へ移動
 2. **接敵** — 告知 fade-out 開始から 250ms 経過 **かつ** PartyDeploy 到達後に `Engaged`（**layout bake なし**。味方・敵とも deploy 終点から自動接近で接敵）
@@ -260,7 +300,9 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ## 4. フェーズと移動
 
-### 4.1 BattlePhase FSM
+### 4.1 BattlePhase FSM（Legacy — 現行実装）
+
+> Wave 間準備・作戦結果は BattlePhase に含めない新設計。[operation-loop.md](operation-loop.md) §2・[Wave 作戦と legacy BattlePhase](#wave-作戦と-legacy-battlephase) 参照。
 
 | Phase                | 概要                                                                                    |
 | -------------------- | --------------------------------------------------------------------------------------- |
@@ -1192,6 +1234,7 @@ A-/F- で代替した旧 I-\*（§4.6 カメラ、§3.3 隊形順、振動 sign-
 
 ## 関連ドキュメント
 
+- [operation-loop.md](operation-loop.md) — **Wave 作戦ループ**（作戦状態 / 戦闘状態、Wave 間準備、リトライ）
 - [combat.md](combat.md) — ダメージ、CD、脅威、ステータス（座標節は本書へ委譲）
 - [ui-visual-rules.md](ui-visual-rules.md) — 全 UI 共通ビジュアル
 - [party-formation-ui.md](party-formation-ui.md) — 編成画面

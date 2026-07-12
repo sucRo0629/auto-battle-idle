@@ -9,12 +9,26 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R2 完了** — 詳細戦闘・兵科仕様の文書更新（[phase-roadmap.md](../plans/phase-roadmap.md)）。
-- **次の再開タスク:** **R3 — Wave 作戦ループ**の**文書更新**。
-- **R3 対象候補:** `docs/spec/battle-field.md`、`docs/spec/progression.md`、必要なら新規作戦ループ spec
-- **未確定（R2 完了時点）:** 各兵科 2 方式の**正式名称**・倍率・Hit 数・対象数・射程・攻撃間隔、DoT 詳細、一時効果の最終採否、Wave 間 HP 回復 / 方式持ち越し、作戦内パッシブ個数・コスト、非 M1 兵科、データスキーマ、エディタ仕様。
+- **新ロードマップ現在地:** **R3 完了** — Wave 作戦ループの文書更新（[phase-roadmap.md](../plans/phase-roadmap.md)）。
+- **次の再開タスク:** **R4 — データスキーマとエディタ設計**（**設計のみ**。production 実装・全面エディタ実装には進まない）。
+- **R3 で確定した spec:** [operation-loop.md](../spec/operation-loop.md)（新規）、[battle-field.md](../spec/battle-field.md)、[progression.md](../spec/progression.md)
+- **R3 確定事項:** 作戦状態 / 戦闘状態の分離、初期準備 / Wave 戦闘 / Wave 間準備 / 作戦結果のループ、Wave 間 **HP 全回復**、戦闘方式は次 Wave へ持ち越し（準備で変更可）、Wave 開始チェックポイント（出撃確定時点）、3 種リトライ、作戦途中セーブなし、旧線形 stage progression を legacy 化
+- **未確定（R3 完了時点）:** 作戦内リソース入手、パッシブ取り消し、恒久報酬、作戦結果画面、敵側方式・パッシブ schema、timeout、作戦放棄、UI レイアウト、Save schema、実装所有者 — 一覧は [operation-loop.md §14](../spec/operation-loop.md#14-未確定事項r4-以降へ)
 - **保留:** 移動阻害・移動速度差・ノックバック等の**移動系効果**は、将来の**作戦内パッシブ候補**として保留（R8 で再検討）。
-- **今回の doc 作業（R2）:** production code、データ JSON、テスト、エディタは**未変更**。`battle-field.md` / `progression.md` も**未変更**。
+- **今回の doc 作業（R3）:** production code、データ JSON、テスト、エディタは**未変更**。
+
+### R3 で確定した作戦ループ（spec 反映済）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 上位ループ | 初期準備 → Wave 戦闘 → Wave 終了 → Wave 間準備 → … → 作戦結果 |
+| 状態分離 | 作戦状態（複数 Wave 保持）と戦闘状態（Wave 単位生成・破棄）。同一オブジェクトへ無制限混在禁止 |
+| Wave 間リセット | HP 全回復、Barrier / DoT / HoT / CC / 位置 / Attack timer / 一時効果 / 戦闘カウンタ / 一時オブジェクト |
+| Wave 間維持 | 編成、戦闘方式、作戦内パッシブ、未使用リソース、クリア済み Wave |
+| チェックポイント | 出撃確定時点。出撃前の取得・消費は再試行でも維持 |
+| リトライ 3 種 | 同設定再戦 / 準備へ戻る / 作戦最初から（確認ダイアログなし） |
+| 途中セーブ | 初期縦切りでは実装しない（メモリ保持のみ） |
+| legacy | BattlePhase 自動 Wave 遷移、線形 stage progression、EXP 中心進行 |
 
 ### R2 で確定した詳細方針（spec 反映済）
 
@@ -28,7 +42,7 @@
 | 双刃士 | 低 HP 優先。固定 2 Hit 廃止。方式 A 背後回り込み / 方式 B 投げナイフ（候補） |
 | DoT | 自然消滅なし・スタック・Wave リセット候補（詳細は R5 前） |
 | 一時効果 | 残す/廃止/保留の 3 分類。R5 試作前に再確認 |
-| Wave リセット | HP/Barrier/DoT/CC/位置等は候補。詳細は R3 |
+| Wave リセット | HP 全回復ほか — **R3 確定**（[operation-loop.md §7](../spec/operation-loop.md#7-wave-間の回復状態リセット)） |
 | M1 兵科表 | 9 兵科の方式 **候補** を [classes-and-skills.md §M1](../spec/classes-and-skills.md#m1-兵科--新仕様候補r2) に整理（数値未確定） |
 
 ### R1 で更新した上位設計の要点
@@ -66,8 +80,8 @@
 - [docs/combat-architecture.md](../combat-architecture.md) — **R1 更新済**（§0 = 上位戦闘正本）
 - [docs/system-mechanics.md](../system-mechanics.md) — **R1 更新済**（§0 = 共通メカニクス上位正本。§Player Level 以降 legacy 多）
 - [docs/class-philosophy.md](../class-philosophy.md) — **R1 更新済**（§0 = 兵科設計原則）
-- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R2 反映済:** combat / stats / classes-and-skills）
-- **R3 更新候補:** [battle-field.md](../spec/battle-field.md)、[progression.md](../spec/progression.md)、必要なら新規作戦ループ spec
+- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R3 反映済:** operation-loop / battle-field / progression）
+- **R4 更新候補:** データスキーマ設計 doc（未作成）、[classes-and-skills.md](../spec/classes-and-skills.md) schema 節（R4）
 
 ## 4. v0.3.2 確定方針（要約）— **凍結・legacy handoff**
 

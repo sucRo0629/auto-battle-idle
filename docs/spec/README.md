@@ -6,16 +6,19 @@
 
 **用語：** スキルは習得した時点で常時使用可能。スキルの付け替え・セット・装備変更は行わない。将来のアイテムのみ「装備」。詳細は [classes-and-skills.md](classes-and-skills.md#用語スキル習得-vs-装備)。
 
-**R2 注記（2026-07-12）:** [stats.md](stats.md)、[combat.md](combat.md)、[classes-and-skills.md](classes-and-skills.md) は **§現行方針（R2）** と **Legacy** を分離済み。Wave 作戦ループは **R3** で [battle-field.md](battle-field.md) / [progression.md](progression.md) へ反映予定。
+**R2 注記（2026-07-12）:** [stats.md](stats.md)、[combat.md](combat.md)、[classes-and-skills.md](classes-and-skills.md) は **§現行方針（R2）** と **Legacy** を分離済み。
+
+**R3 注記（2026-07-12）:** [operation-loop.md](operation-loop.md) が Wave 作戦ループの正本。[battle-field.md](battle-field.md) / [progression.md](progression.md) に legacy 分離と 3 層進行を反映済み。
 
 | ファイル | 内容 |
 |----------|------|
+| [operation-loop.md](operation-loop.md) | **作戦ループ**（R3）— 作戦状態 / 戦闘状態、Wave 間準備、チェックポイント、リトライ、途中セーブ方針 |
 | [stats.md](stats.md) | 兵科基礎ステ、攻撃間隔（R2）。Legacy: Lv 成長、growthPresets、attackSpeedTier |
 | [combat.md](combat.md) | Attack / Hit、攻撃間隔、戦闘方式、DoT・一時効果（R2）。Legacy: ダメージパイプライン、CD、gauge |
-| [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘画面 UI / HUD**、戦闘中統計 UI |
+| [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘画面 UI / HUD**、戦闘中統計 UI。Legacy: BattlePhase 自動 Wave 遷移 |
 | [classes-and-skills.md](classes-and-skills.md) | 兵科・戦闘方式・作戦内パッシブ（R2 候補）、M1 方式表。Legacy: 旧スキル JSON スキーマ・UI 用語辞書 |
 | [i18n-en.md](i18n-en.md) | **英語 i18n 文案方針**（Phase 4e — M1 直前）— スキル効果文・用語・表記統一・スキルカード英語 |
-| [progression.md](progression.md) | EXP、レベル、セーブ、Stage Records、Phase 2〜12 |
+| [progression.md](progression.md) | 進行 3 層（R3）、作戦外進行。Legacy: EXP、レベル、セーブ、Stage Records、Phase 2〜12 |
 | [party-formation-ui.md](party-formation-ui.md) | パーティ編成メニュー（`SkillMenuPanel`）の画面設計 — Phase 4d |
 | [ui-fonts.md](ui-fonts.md) | **UI フォント方針**（M PLUS 1p、`--font-body`） |
 | [ui-visual-rules.md](ui-visual-rules.md) | **全 UI 共通ビジュアル**（Web アプリ風禁止・HUD プレート推奨） |

@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R2 完了**（詳細戦闘・兵科 spec）。次は **R3 — Wave 作戦ループ**（文書更新）。
+**現在地:** **R3 完了**（Wave 作戦ループ spec）。次は **R4 — データスキーマとエディタ設計**（設計のみ）。
 
 ---
 
@@ -15,8 +15,8 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R0** | 方針転換の正本化 — 旧 M1 路線凍結、維持・廃止・再設計・保留の整理、legacy 扱い、新実装順の確定 | **完了** |
 | **R1** | 上位戦闘設計 — 戦闘方式、兵科責務、旧 active / gauge / level 廃止、Wave 方式選択、作戦内パッシブ方針 | **完了** |
 | **R2** | 詳細戦闘・兵科仕様 — 攻撃間隔、Attack / Hit、方式効果形状、各兵科 2 方式（具体は未確定） | **完了** |
-| **R3** | Wave 作戦ループ — 初期準備 → Wave 戦闘 → Wave 間準備 → 次 Wave → 最終結果 | 未着手 |
-| **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave（**設計のみ**、全面実装は R9） | 未着手 |
+| **R3** | Wave 作戦ループ — 初期準備 → Wave 戦闘 → Wave 間準備 → 次 Wave → 最終結果 | **完了** |
+| **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / normalize / editor API / legacy 移行（**設計のみ**） | 未着手 |
 | **R5** | 最小縦切り — 少数兵科・新戦闘方式で戦闘成立（移動系メカニクスは含めない） | 未着手 |
 | **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | 未着手 |
 | **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | 未着手 |
@@ -195,23 +195,29 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 ---
 
-## R3 — Wave 作戦ループ
+## R3 — Wave 作戦ループ（完了）
 
-**対象 doc 候補:** [battle-field.md](../spec/battle-field.md)、[progression.md](../spec/progression.md)、必要なら新規作戦ループ spec
+**対象 doc:** [operation-loop.md](../spec/operation-loop.md)（新規）、[battle-field.md](../spec/battle-field.md)、[progression.md](../spec/progression.md)
 
-**内容:**
+**確定内容:**
 
-- 初期準備、Wave 戦闘、Wave 間準備、次 Wave、最終結果
-- 作戦中状態（メモリ保持、途中セーブなし）
-- Wave 単位のリセット
-- 最終 Wave 判定
-- 旧 EXP / ステージ進行モデルからの切り離し方針
+- 作戦状態 / 戦闘状態の分離、混在禁止原則
+- 上位ループ: 初期準備 → Wave 戦闘 → Wave 終了 → Wave 間準備 → … → 作戦結果
+- Wave 間 HP **全回復**（各 Wave を独立編成問題として扱う）
+- 戦闘方式は次 Wave へ **保持**（準備画面で変更可）
+- Wave 開始チェックポイント（出撃確定時点）
+- 3 種リトライ（同設定再戦 / 準備へ戻る / 作戦最初から）— R7 実装接続
+- 作戦途中セーブ **なし**
+- 旧線形 stage progression を legacy 化
+- legacy BattlePhase 自動 Wave 遷移を battle-field に分離記載
+
+**production code / JSON / test / editor:** 未変更。
 
 ---
 
 ## R4 — データスキーマとエディタ設計
 
-**ゴール:** 新データ形状とエディタ責務を**設計で先に固定**する。全面的なエディタ実装は **R9**。
+**ゴール:** 新データ形状とエディタ責務を **設計で先に固定** する。**R4 では設計のみ** — production 実装・全面エディタ実装には進まない。実装は **R9**。
 
 | 設計対象 | 備考 |
 | -------- | ---- |
@@ -220,6 +226,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | passive | 作戦内パッシブ |
 | enemy group | 敵編成 |
 | stage / wave | 作戦・Wave 構成 |
+| run / operation state | 作戦状態・チェックポイント・作戦内進行（[operation-loop.md](../spec/operation-loop.md) §3） |
 | validate / normalize | スキーマ検証 |
 | editor API | 読み書き・preview |
 | legacy 移行方針 | 旧 skills / stages / classes の参照・廃止経路 |
