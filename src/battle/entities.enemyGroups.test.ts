@@ -251,7 +251,8 @@ describe('createEnemiesForStage enemyGroups path', () => {
         .map((cd) => cd.skillId);
     };
 
-    expect(activeIdsAt(0)).toHaveLength(2);
+    // Lv0: active_1 only (2nd active unlocks at Lv1 — efbbab2)
+    expect(activeIdsAt(0)).toHaveLength(1);
     expect(activeIdsAt(9)).toHaveLength(2);
     expect(activeIdsAt(10)).toHaveLength(3);
     expect(activeIdsAt(19)).toHaveLength(3);

@@ -10,11 +10,18 @@ import {
 import { expandEnemyGroups } from './enemyGroupSpawn.ts';
 import { loadLevelCurves, getBasicCooldownRate } from '../progression/levelGrowth.ts';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
+import { getEffectiveAttackSpeedMultiplier } from './combatMath.ts';
 import { resolveSelectedCombatModuleId } from './data/resolveCombatModuleBasic.ts';
 import { initializeSkillCooldowns, resetCooldownAfterFire } from './skillTrigger.ts';
 import { SkillExecutor } from './skills/SkillExecutor.ts';
 import { SkillSequenceRunner } from './skills/skillSequence.ts';
-import type { BattleEventListener, CombatantState, GameData, StageDef } from './types.ts';
+import type {
+  BattleEventListener,
+  CombatantState,
+  GameData,
+  StageDef,
+  StatusEffect,
+} from './types.ts';
 import { R5_COMBAT_MODULE_CLASS_IDS } from './types.ts';
 
 const levelCurves = loadLevelCurves(levelCurvesJson);
@@ -286,6 +293,92 @@ describe('combat module basic attack (R5c)', () => {
 
     tickCooldowns(createMinimalEngine(gameData), [enemy], 1);
     expect(basicCd.remaining).toBeCloseTo(2);
+  });
+
+  function withAttackSpeedEffect(
+    unit: CombatantState,
+    effect: Pick<StatusEffect, 'multiplier' | 'kind'>,
+  ): void {
+    unit.statusEffects.push({
+      id: 'test_attack_speed',
+      kind: effect.kind,
+      stat: 'attackSpeed',
+      multiplier: effect.multiplier,
+      durationSec: 999,
+      remainingSec: 999,
+      sourceId: unit.id,
+    });
+  }
+
+  it('module basic uses effective attackSpeed buff without attackSpeedTier', () => {
+    const gameData = loadGameData();
+    const preset = gameData.classRegistry.at_swordsman!;
+    const ally = createAllyFromMember(
+      mockMember('at_swordsman'),
+      preset,
+      levelCurves,
+      gameData,
+    );
+    withAttackSpeedEffect(ally, { kind: 'buff', multiplier: 1.5 });
+    expect(getEffectiveAttackSpeedMultiplier(ally)).toBeCloseTo(1.5);
+
+    const basicCd = ally.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    basicCd.remaining = 3;
+
+    const tierRate = getBasicCooldownRate(
+      preset.attackSpeedTier ?? 'normal',
+      levelCurves,
+    );
+    expect(tierRate).not.toBe(1);
+
+    tickCooldowns(createMinimalEngine(gameData), [ally], 1);
+    expect(basicCd.remaining).toBeCloseTo(3 - 1.5);
+  });
+
+  it('module basic uses effective attackSpeed debuff without attackSpeedTier', () => {
+    const gameData = loadGameData();
+    const preset = gameData.classRegistry.sp_cleric!;
+    const ally = createAllyFromMember(
+      mockMember('sp_cleric'),
+      preset,
+      levelCurves,
+      gameData,
+    );
+    withAttackSpeedEffect(ally, { kind: 'debuff', multiplier: 0.5 });
+    expect(getEffectiveAttackSpeedMultiplier(ally)).toBeCloseTo(0.5);
+
+    const basicCd = ally.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    basicCd.remaining = 3;
+
+    tickCooldowns(createMinimalEngine(gameData), [ally], 1);
+    expect(basicCd.remaining).toBeCloseTo(2.5);
+  });
+
+  it('legacy basic still applies attackSpeedTier and effective attackSpeed together', () => {
+    const gameData = loadGameData();
+    const preset = gameData.classRegistry.df_paladin!;
+    const stage = stageWithEnemyGroup('df_paladin');
+    const spec = expandEnemyGroups(stage)[0]!;
+    const enemy = createEnemyFromClassGroup(
+      spec,
+      preset,
+      gameData,
+      levelCurves,
+    );
+    withAttackSpeedEffect(enemy, { kind: 'buff', multiplier: 1.2 });
+
+    const basicCd = enemy.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    basicCd.remaining = 10;
+
+    const tierRate = getBasicCooldownRate(
+      preset.attackSpeedTier ?? 'normal',
+      levelCurves,
+    );
+    const speedMul = getEffectiveAttackSpeedMultiplier(enemy);
+    expect(tierRate * speedMul).not.toBe(1);
+
+    tickCooldowns(createMinimalEngine(gameData), [enemy], 1);
+    expect(basicCd.remaining).toBeCloseTo(10 - tierRate * speedMul);
   });
 
   it('executes physical, magic, and heal module actions through SkillExecutor.tryExecute', () => {

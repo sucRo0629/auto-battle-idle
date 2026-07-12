@@ -3468,7 +3468,7 @@ basic スロットのみ差し替え。旧 basic は active 枠へ入れず二�
 | 正本 | `CombatModuleDef.attackIntervalSec` | module JSON |
 | 実行時 skill | 合成 `ActiveSkillDef.trigger.value` | `synthesizeCombatModuleSkill` |
 | 初回 CD | `initializeSkillCooldowns`（BattleEngine `initBattlePassiveState` / wave spawn / syncPartyBuilds） | `remaining = trigger.value`（= attackIntervalSec） |
-| CD tick | `BattleEngine.tickCooldowns` | module basic は `attackSpeedTier` 倍率を**バイパス**（rate = 1） |
+| CD tick | `BattleEngine.tickCooldowns` | module basic: `rate = getEffectiveAttackSpeedMultiplier(unit)`（`attackSpeedTier` **非適用**）。legacy basic: `rate = basicRate × speedMul` |
 | 発火後 | `SkillExecutor.tryExecute` → `resetCooldownAfterFire` | `remaining = trigger.value`（= attackIntervalSec） |
 
 旧 `trigger.value = 2` 秒・`attackSpeedTier` は legacy 継続（削除なし）。
@@ -3479,7 +3479,7 @@ basic スロットのみ差し替え。旧 basic は active 枠へ入れず二�
 
 1. Combatant 生成 → basic `cooldowns[].skillId` = 選択 module ID
 2. 戦闘開始 / Wave spawn → `initializeSkillCooldowns`（初回待機 = attackIntervalSec）
-3. 毎 tick → `tickCooldowns`（module basic は tier 非適用）→ `runUnitSkills`
+3. 毎 tick → `tickCooldowns`（module basic は tier 非適用・一時 attackSpeed 補正は適用）→ `runUnitSkills`
 4. basic `remaining <= 0` → **`SkillExecutor.tryExecute(actor, basicCd, ...)`**（既存経路）
 5. 成功 → `resetCooldownAfterFire`（次周期 = attackIntervalSec）
 
@@ -3496,8 +3496,64 @@ SkillExecutor 専用第二実行系は追加していない。
 
 ### 49.7 テスト
 
-- **新規:** `src/battle/combatModuleBasicAttack.test.ts`（11 件）
+- **新規:** `src/battle/combatModuleBasicAttack.test.ts`（14 件）
 - **更新:** `src/battle/healBasicAttack.test.ts` — sp_cleric の module basic heal を許容
+
+---
+
+### 49.9 R5c 補正（2026-07-12）
+
+**目的:** module basic の CD tick が `rate = 1` 固定で一時 attackSpeed 補正までバイパスしていた件の修正。`entities.enemyGroups.test.ts` の df_paladin Lv0 active 件数不一致の調査。
+
+**読んだファイル（6 件）:**
+
+1. `docs/ai-handoff/current-task.md` — §49 R5c 完了状態・§50 設計文書
+2. `src/battle/BattleEngine.ts` — `tickCooldowns`
+3. `src/battle/combatMath.ts` — `getEffectiveAttackSpeedMultiplier`
+4. `src/battle/combatModuleBasicAttack.test.ts`
+5. `src/battle/entities.enemyGroups.test.ts`
+6. `data/classes.json`（df_paladin skills、shell grep）
+
+**変更ファイル:**
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/battle/BattleEngine.ts` | module basic CD tick: tier 非適用・`getEffectiveAttackSpeedMultiplier` 適用 |
+| `src/battle/combatModuleBasicAttack.test.ts` | attackSpeed buff/debuff・legacy 併用テスト 3 件追加 |
+| `src/battle/entities.enemyGroups.test.ts` | df_paladin Lv0 active 期待 2→1（commit efbbab2 反映） |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+**CD 進行式（確定）:**
+
+| 経路 | 式 |
+| ---- | -- |
+| legacy basic | `basicRate × getEffectiveAttackSpeedMultiplier(unit)` — `basicRate = getBasicCooldownRate(attackSpeedTier, levelCurves)` |
+| combat module basic | `getEffectiveAttackSpeedMultiplier(unit)` — `attackSpeedTier` 非適用 |
+
+`attackIntervalSec` は初回 CD / 発火後周期の**基礎値**（`trigger.value` / `resetCooldownAfterFire`）。毎 tick 書き換えない。
+
+**attackSpeed 補正の接続経路:**
+
+- 戦闘中 buff/debuff: `CombatantState.statusEffects[]` の `stat: 'attackSpeed'` + `multiplier`
+- 集約: `aggregateStatEffects` → `computeEffectiveStat(1, agg)` = `getEffectiveAttackSpeedMultiplier`
+- 将来の作戦内パッシブ attackSpeed 補正も同一 `statusEffects` 経路へ接続可能（R8 実装時）
+
+**df_paladin Lv0 active 件数:**
+
+- 現行 `data/classes.json`: Lv0 は `df_paladin_active_1` のみ（1 件）。Lv1 で `df_paladin_active_2` 追加。
+- 原因: commit **efbbab2**（2026-07-03「2つ目のスキルをLv1取得に変更」）。R5c 退行ではない。
+- `injectSynthesizedCombatModuleSkills` の legacy active registry 副作用なし。
+- **判定:** production データが正。test 期待値を Lv0=1 に更新。
+
+**テスト結果（47/47 pass）:**
+
+- `combatModuleBasicAttack.test.ts`（14）
+- `battleEngine.enemyAttackSpeedTier.test.ts`（2）
+- `entities.enemyGroups.test.ts`（12）
+- `healBasicAttack.test.ts`（10）
+- `validateGameData.combatModules.test.ts`（9）
+
+**R5c 完了判定:** 本補正後、R5c 完了扱い可。次は R5d。
 
 ---
 

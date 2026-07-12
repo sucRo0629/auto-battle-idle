@@ -2352,16 +2352,12 @@ export class BattleEngine {
           cd.slotKind === "basic" &&
           this.gameData.combatModuleRegistry[cd.skillId] !== undefined;
         const speedMul =
-          cd.slotKind === "active"
-            ? 1
-            : isModuleBasic
-              ? 1
-              : getEffectiveAttackSpeedMultiplier(unit);
+          cd.slotKind === "active" ? 1 : getEffectiveAttackSpeedMultiplier(unit);
         const rate =
           cd.slotKind === "active"
             ? 1
             : isModuleBasic
-              ? 1
+              ? speedMul
               : basicRate * speedMul;
         cd.remaining = Math.max(0, cd.remaining - deltaTime * rate);
         if (
