@@ -598,7 +598,7 @@ Class Summary は **右ペイン上部** に表示する。左ペイン Class Se
 
 ### 7.2 リスト内容
 
-解禁済みクラス（`unlockedClassIds`）を `classOrder` 順で表示。未解禁クラスは出さない。選択済みクラスは `--active` でハイライト。同一クラス 2 人編成は `selectedClassIds` の toggle により不可。4 人選択済み時の未選択クラスは追加不可表示にするが、hover / focus で右ペイン詳細確認は可能にする。
+`GameData.classRegistry` に存在する全クラスを `classOrder` 順で表示する。`classOrder` 未列挙の有効クラスも末尾へ残す。`unlockedClassIds` や `combatModuleIds` の有無を一覧の表示条件にはしない。選択済みクラスも除外せず `--active` でハイライトする。同一クラス 2 人編成は `selectedClassIds` の toggle により不可。4 人選択済み時の未選択クラスは追加不可表示にするが、hover / focus で右ペイン詳細確認は可能にする。
 
 ### 7.3 グループ化
 

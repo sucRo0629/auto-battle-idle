@@ -29,7 +29,7 @@ import {
   compareByClassListOrder,
   sortClassIdsByListOrder,
 } from "../battle/data/classListOrder.ts";
-import { createMemberFromClass, getAssignableClassIds, PARTY_DUPLICATE_CLASS_MESSAGE, validatePartyClassAssignment } from "../progression/partyCompose.ts";
+import { createMemberFromClass, PARTY_DUPLICATE_CLASS_MESSAGE, validatePartyClassAssignment } from "../progression/partyCompose.ts";
 import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
 import { resolveMemberBasicAttackDisplay } from "../progression/memberBasicAttackDisplay.ts";
@@ -67,6 +67,13 @@ const ATTACKER_SUB_ROLES: AttackerSubRole[] = [
   "shooter",
   "caster",
 ];
+
+export function getClassSelectionVisibleClassIds(gameData: GameData): ClassId[] {
+  return sortClassIdsByListOrder(
+    Object.keys(gameData.classRegistry),
+    gameData.classOrder,
+  );
+}
 
 function roleLabel(role: Role): string {
   return t(`role.${role}`);
@@ -125,7 +132,6 @@ export class SkillMenuPanel {
   private readonly formationNoteEl: HTMLElement;
   private readonly unsubscribeLocale: () => void;
   private readonly draftParty: PartySlotState[];
-  private readonly unlockedClassIds: ClassId[];
   private readonly isVerifyMode: () => boolean;
   private selectedClassIds: ClassId[];
   private focusedClassId: ClassId | null = null;
@@ -137,12 +143,11 @@ export class SkillMenuPanel {
     private readonly gameData: GameData,
     private readonly levelCurves: LevelCurvesConfig,
     sourceParty: PartySlotState[],
-    unlockedClassIds: ClassId[],
+    _unlockedClassIds: ClassId[],
     private readonly callbacks: SkillMenuPanelCallbacks,
     options: SkillMenuPanelOptions = {}
   ) {
     this.isVerifyMode = options.isVerifyMode ?? (() => false);
-    this.unlockedClassIds = [...unlockedClassIds];
     this.draftParty = Array.from({ length: PARTY_SLOT_COUNT }, (_, index) => {
       const member = sourceParty[index];
       return member
@@ -332,10 +337,7 @@ export class SkillMenuPanel {
   }
 
   private getPickerVisibleClassIds(): ClassId[] {
-    return sortClassIdsByListOrder(
-      this.unlockedClassIds,
-      this.gameData.classOrder
-    );
+    return getClassSelectionVisibleClassIds(this.gameData);
   }
 
   private focusClass(classId: ClassId): void {
@@ -1175,25 +1177,13 @@ export class SkillMenuPanel {
     return iconWrap;
   }
 
-  private getArchiveAssignableClassIds(): ClassId[] {
-    return getAssignableClassIds(
-      this.draftParty,
-      this.unlockedClassIds,
-      this.getSelectedSlotIndex(),
-      this.gameData.classOrder,
-    );
-  }
-
   private renderClassArchive(): void {
     this.classArchiveListEl.replaceChildren();
     this.classArchiveListEl.appendChild(this.createPickerRoleBlocks());
   }
 
   private createPickerRoleBlocks(): HTMLElement {
-    const assignableSet = new Set(this.getArchiveAssignableClassIds());
-    const visible = this.getPickerVisibleClassIds().filter((classId) =>
-      assignableSet.has(classId)
-    );
+    const visible = this.getPickerVisibleClassIds();
     const blocks = document.createElement("div");
     blocks.className = "skill-menu-picker-role-blocks";
 

@@ -4115,3 +4115,38 @@ loadGameData()
 - **R5d 既知:** 同一 module 再設定でも cooldown 再生成
 
 **R5g 完了判定:** 本節時点で R5g 完了。**R5 全体完了。** 次は **R6**。
+
+## 55. ゲーム内クラス選択一覧の欠落修正（2026-07-12）
+
+対象は開発用 `editor.html` ではなく、ゲーム内編成画面 `SkillMenuPanel` のクラス選択一覧。
+
+### 55.1 根本原因
+
+`SkillMenuPanel.createPickerRoleBlocks()` が一覧母集団を二重に絞っていた。
+
+1. `getPickerVisibleClassIds()` が `unlockedClassIds` のみ返し、runtime registry に存在する未解禁 class を非表示
+2. さらに R5f の slot 向け `getAssignableClassIds()` を一覧表示へ誤流用し、他 slot で編成済みの class まで非表示
+
+報告 4 件には、現在の編成・Save の `unlockedClassIds` による除外が混在し得る。`combatModuleIds` の有無、role、category、classId alias は直接原因ではない。
+
+### 55.2 修正
+
+- 一覧母集団を `GameData.classRegistry` 全件へ変更し、`classOrder` 順へソート
+- `classOrder` 未列挙 class は末尾に保持
+- `getAssignableClassIds()` による表示除外を削除
+- 編成済み class は非表示にせず active 表示。同一 class 重複禁止は既存 toggle / validation で維持
+- module 対応 4 兵科と module 未対応 legacy class を同じ一覧へ表示
+
+修正後の全 classId（15）:
+`df_guardian`, `df_paladin`, `df_duelist`, `at_swordsman`, `at_assassin`, `at_lancer`, `at_ranger`, `at_ballista`, `at_hunter`, `at_sorcerer`, `at_sigilist`, `at_conductor`, `sp_cleric`, `sp_wardweaver`, `sp_alchemist`
+
+### 55.3 変更・テスト
+
+- `src/ui/SkillMenuPanel.ts`
+- `src/ui/skillMenuClassList.test.ts`
+- `docs/spec/party-formation-ui.md`
+
+回帰テストは報告 4 件、R5 module 対応 4 兵科、legacy 兵科、編成済み class、`classOrder` 未列挙 class を明示確認。
+
+**R5 完了判定:** 維持。§50 効果範囲設計は変更なし。  
+**次の再開タスク:** **R6** Wave 間準備。
