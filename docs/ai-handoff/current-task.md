@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R7d 完了** — Wave 準備 retry + spec 整合（本 §72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R7e — 作戦結果後再戦 + 遷移統一**（§69.7）。**R7a 完了** — 反復プレイ調査・4 タスク分割（§69）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R7e 完了** — 作戦結果後再戦 + 遷移統一（本 §73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R8 — 作戦内パッシブ**（[phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)）。**R7 完了** — R7a〜e（§69〜73）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5693,6 +5693,105 @@ API が `false` を返した場合、現在 screen・Wave 準備編集状態を�
 | `gameSessionDefeatRetry.test.ts` | **8 pass / 8** |
 | **合計** | **39 pass / 39** |
 
-### 72.11 次タスク
+### 72.11 次タスク（完了）
 
-**R7e — 作戦結果後再戦 + 遷移統一**（`operationResult` から同一 stage 再開・勝利後導線）。
+~~**R7e — 作戦結果後再戦 + 遷移統一**~~ → §73 完了。
+
+---
+
+## 73. R7e — 作戦結果後再戦 + 遷移統一（2026-07-12 完了）
+
+### 73.1 目的
+
+作戦完了（最終 Wave 勝利）後に最小の作戦結果 UI を表示し、同一 stage 再戦またはステージ選択へ戻る正式導線を追加。verify OFF の勝利後即 `stageSelect` 遷移を廃止し、verify ON の debug loop を維持。
+
+### 73.2 読んだファイル（6 件）
+
+| ファイル | 用途 |
+| -------- | ---- |
+| `docs/ai-handoff/current-task.md` | R7e 要件・§69.7 分割 |
+| `src/game/GameSession.ts` | `operationResult`・`handleVictory`・勝利後遷移 |
+| `src/ui/BattleView.ts` | 敗北 retry overlay パターン |
+| `src/game/operationResult.test.ts` | R6h 確定パターン |
+| `src/game/gameSessionWire.test.ts` | verify ON/OFF 勝利導線 |
+| `docs/plans/phase-roadmap.md` | R7 分割表 |
+
+### 73.3 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/GameSession.ts` | `shouldShowVictoryResult`・`rematchSameStageFromResult`・`returnToStageSelectAfterVictory`・verify OFF 勝利後停止 |
+| `src/ui/BattleView.ts` | `battle-victory-result-overlay`（2 ボタン） |
+| `src/styles/battle-view.css` | 作戦結果 overlay 最小スタイル |
+| `src/game/gameSessionVictoryResult.test.ts` | R7e 10 項目テスト（新規） |
+| `src/game/gameSessionWire.test.ts` | verify OFF 勝利期待値更新 |
+| `docs/spec/operation-loop.md` | §10 作戦完了導線（R7e 最小 UI） |
+| `docs/ai-handoff/current-task.md` | 本 §73・ヘッダ更新 |
+| `docs/plans/phase-roadmap.md` | R7e 完了・次タスク R8 |
+
+### 73.4 作戦結果 UI の所有者と表示条件
+
+| 項目 | 内容 |
+| ---- | ---- |
+| **所有者** | `BattleView`（`battle-victory-result-overlay`） |
+| **表示条件** | `GameSession.shouldShowVictoryResult()` — `!verifyMode && currentScreen === 'battle' && operationResult.outcome === 'victory'` |
+| **表示内容** | `outcome`（victory）・`stageId`・`reachedWaveIndex`（0 始まり） |
+| **verify ON** | 非表示（従来どおり battle 維持・loop 進行） |
+
+### 73.5 最終勝利から結果表示までの経路
+
+`checkBattleEnd` → `battleEnd(victory)` → `handleVictory` → `tryFinalizeOperationResult(victory)` → `markCompleted` + `clearOperation` → `applyVictoryRewards`（EXP・clearedStageIds）→ verify OFF なら `setBattlePaused(true)` + 結果 overlay 同期（`stageSelect` へは遷移しない）。
+
+### 73.6 同一ステージ再戦の状態遷移
+
+| 操作 | API | 遷移 |
+| ---- | --- | ---- |
+| 同じステージで再戦 | `rematchSameStageFromResult()` | `operationResult` クリア → `beginOperation(stageId, 0)` + 新 checkpoint → `engine.restartBattle()` → `formation`（自動 battle 開始なし） |
+
+`beginOperation` 失敗時は保存した `operationResult` を復元し UI・状態を維持。
+
+### 73.7 ステージ選択へ戻る際の状態整理
+
+| 操作 | API | 遷移 |
+| ---- | --- | ---- |
+| ステージ選択へ | `returnToStageSelectAfterVictory()` | `operationResult` 破棄・`wavePrepSuspended` 解除 → `stageSelect` |
+
+作戦完了時点で `OperationState` / checkpoint は既に `clearOperation()` 済み。`operationResult` のみ残存していたため明示的に破棄。
+
+### 73.8 verify ON / OFF の差
+
+| モード | 最終勝利後 |
+| ------ | ---------- |
+| verify OFF | battle 停止 + 作戦結果 overlay（再戦 / ステージ選択） |
+| verify ON | 結果 UI 非表示・battle 維持・`advanceCurrentStage` + loop 進行（従来どおり） |
+
+敗北後は R7c の defeat retry UI を維持（勝利結果 UI は表示しない）。
+
+### 73.9 報酬・クリア記録の適用順
+
+1. `tryFinalizeOperationResult`
+2. `markCompleted` + `clearOperation`
+3. `applyVictoryRewards`（EXP・Lv・`clearedStageIds`・verify ON 時 `currentStageId` 進行）
+4. 作戦結果 UI 表示（verify OFF）
+
+### 73.10 失敗時の扱い
+
+| API | 失敗条件 | 挙動 |
+| --- | -------- | ---- |
+| `rematchSameStageFromResult` | `beginOperation` 失敗 | `operationResult` 復元・battle + overlay 維持 |
+| `returnToStageSelectAfterVictory` | 結果 UI 非表示時 | `false`・状態不変 |
+
+### 73.11 テスト結果
+
+| スイート | 結果 |
+| -------- | ---- |
+| `gameSessionVictoryResult.test.ts` | **10 pass / 10** |
+| `operationResult.test.ts` | **10 pass / 10** |
+| `operationRetry.test.ts` | **7 pass / 7** |
+| `gameSessionWire.test.ts` | **8 pass / 8** |
+| `gameSessionDefeatRetry.test.ts` | **8 pass / 8** |
+| **合計** | **43 pass / 43** |
+
+### 73.12 次タスク
+
+**R8 — 作戦内パッシブ**（runtime 適用・戦闘中表示 — [phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)）。

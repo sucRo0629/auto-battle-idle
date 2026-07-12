@@ -247,6 +247,10 @@ export class GameSession {
         onRetryCurrentWave: () => this.retryCurrentWaveFromCheckpoint(),
         onReturnToFormationPrep: () => this.returnToFormationPrep(),
         onRestartOperationFromWaveZero: () => this.restartOperationFromWaveZero(),
+        shouldShowVictoryResult: () => this.shouldShowVictoryResult(),
+        getOperationResultForDisplay: () => this.getOperationResultForDisplay(),
+        onRematchSameStage: () => this.rematchSameStageFromResult(),
+        onReturnToStageSelect: () => this.returnToStageSelectAfterVictory(),
       },
     );
     this.setGameScreen(this.verifyMode ? 'battle' : 'stageSelect');
@@ -492,6 +496,73 @@ export class GameSession {
       this.operationState.isDefeated &&
       this.canUseOperationRetry()
     );
+  }
+
+  /** R7e: verify OFF 最終勝利後に作戦結果 UI を表示するか */
+  shouldShowVictoryResult(): boolean {
+    return (
+      !this.verifyMode &&
+      this.currentScreen === 'battle' &&
+      this.operationResult?.outcome === 'victory'
+    );
+  }
+
+  /** R7e: 作戦結果 UI 表示用の最小フィールド */
+  getOperationResultForDisplay(): {
+    stageId: string;
+    outcome: string;
+    reachedWaveIndex: number;
+  } | null {
+    const result = this.operationResult;
+    if (result === null) return null;
+    return {
+      stageId: result.stageId,
+      outcome: result.outcome,
+      reachedWaveIndex: result.reachedWaveIndex,
+    };
+  }
+
+  /**
+   * R7e: 作戦結果から同一 stage を Wave 0 で再戦する。
+   * operationResult をクリアし新 OperationState + checkpoint を作って formation へ遷移する。
+   */
+  rematchSameStageFromResult(): boolean {
+    if (!this.shouldShowVictoryResult()) return false;
+
+    const stageId = this.operationResult!.stageId;
+    const savedResult = cloneOperationResult(this.operationResult!);
+    this.wavePrepSuspended = false;
+
+    this.save.stageProgress.currentStageId = stageId;
+    this.stageDamageStats.resetForStage(stageId);
+    if (!this.beginOperation(stageId, 0)) {
+      this.operationResult = savedResult;
+      return false;
+    }
+    this.engine.restartBattle();
+    this.persistSave();
+    if (this.menuHost.isOpen()) {
+      this.menuHost.close();
+    }
+    this.menuHost.open('party');
+    this.view.setBattlePaused(false);
+    this.view.refreshVictoryResultOverlay();
+    return true;
+  }
+
+  /**
+   * R7e: 作戦結果からステージ選択へ戻る。
+   * operationResult を破棄し次の出撃に影響しない状態へ整理する。
+   */
+  returnToStageSelectAfterVictory(): boolean {
+    if (!this.shouldShowVictoryResult()) return false;
+
+    this.wavePrepSuspended = false;
+    this.clearOperationResult();
+    this.view.setBattlePaused(false);
+    this.setGameScreen('stageSelect');
+    this.view.refreshVictoryResultOverlay();
+    return true;
   }
 
   isVerifyMode(): boolean {
@@ -1020,7 +1091,9 @@ export class GameSession {
     console.log(progressLog);
 
     if (!this.verifyMode) {
-      this.setGameScreen('stageSelect');
+      this.view.setBattlePaused(true);
+      this.view.refreshVictoryResultOverlay();
+      return;
     }
   }
 

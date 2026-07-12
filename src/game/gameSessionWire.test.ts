@@ -60,6 +60,15 @@ function createSession(): GameSession {
   return new GameSession(loaded.data, container);
 }
 
+function clickVictoryResultButton(label: string): void {
+  const buttons = document.body.querySelectorAll<HTMLButtonElement>(
+    '.battle-victory-result-button',
+  );
+  const button = [...buttons].find((entry) => entry.textContent === label);
+  if (!button) throw new Error(`Victory result button not found: ${label}`);
+  button.click();
+}
+
 describe('GameSession stageSelect → party → battle wire', () => {
   let session: GameSession | null = null;
 
@@ -131,15 +140,14 @@ describe('GameSession stageSelect → party → battle wire', () => {
     expect(session.getSaveState().stageProgress.currentStageId).toBe(targetStage.id);
   });
 
-  it('verify OFF returns to stageSelect after victory with same currentStageId', () => {
+  it('verify OFF shows victory result UI after final victory (not immediate stageSelect)', () => {
     setVerifyModeEnabled(false);
     session = createSession();
     const gameData = tryLoadGameData();
     if (!gameData.ok) throw new Error(gameData.error);
 
     const firstStage = gameData.data.stages[0];
-    const secondStage = gameData.data.stages[1];
-    if (!firstStage || !secondStage) throw new Error('Need at least 2 stages');
+    if (!firstStage) throw new Error('Need at least 1 stage');
 
     expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
 
@@ -151,11 +159,20 @@ describe('GameSession stageSelect → party → battle wire', () => {
     expect(session.getCurrentScreen()).toBe('battle');
 
     triggerVictory(session);
+    session.view.refreshVictoryResultOverlay();
 
     expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
     expect(session.getSaveState().stageProgress.clearedStageIds).toContain(
       firstStage.id,
     );
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.shouldShowVictoryResult()).toBe(true);
+    expect(document.body.querySelector('.battle-victory-result-overlay')?.hidden).toBe(
+      false,
+    );
+
+    clickVictoryResultButton('ステージ選択へ');
+
     expect(session.getCurrentScreen()).toBe('stageSelect');
     const selectedItem = container.querySelector(
       '.stage-selection-list-item--selected',

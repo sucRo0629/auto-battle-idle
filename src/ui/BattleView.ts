@@ -95,6 +95,15 @@ export interface VerifyModeControls {
   onRetryCurrentWave?: () => boolean;
   onReturnToFormationPrep?: () => boolean;
   onRestartOperationFromWaveZero?: () => boolean;
+  /** R7e: verify OFF 最終勝利後の作戦結果 UI 表示 */
+  shouldShowVictoryResult?: () => boolean;
+  getOperationResultForDisplay?: () => {
+    stageId: string;
+    outcome: string;
+    reachedWaveIndex: number;
+  } | null;
+  onRematchSameStage?: () => boolean;
+  onReturnToStageSelect?: () => boolean;
 }
 
 function resolveSkillRangePxFromSnapshot(
@@ -124,6 +133,8 @@ export class BattleView {
   private readonly pauseOverlayEl: HTMLElement;
   private readonly pausePlateEl: HTMLElement;
   private readonly defeatRetryOverlayEl: HTMLElement;
+  private readonly victoryResultOverlayEl: HTMLElement;
+  private readonly victoryResultSummaryEl: HTMLElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
@@ -312,6 +323,55 @@ export class BattleView {
     defeatRetryPlate.appendChild(defeatRetryActions);
     defeatRetryOverlay.appendChild(defeatRetryPlate);
 
+    const victoryResultOverlay = document.createElement("div");
+    victoryResultOverlay.className = "battle-victory-result-overlay";
+    victoryResultOverlay.hidden = true;
+    victoryResultOverlay.setAttribute("aria-hidden", "true");
+    this.victoryResultOverlayEl = victoryResultOverlay;
+
+    const victoryResultPlate = document.createElement("div");
+    victoryResultPlate.className =
+      "battle-victory-result-plate game-panel-surface";
+
+    const victoryResultTitle = document.createElement("div");
+    victoryResultTitle.className = "battle-victory-result-title";
+    victoryResultTitle.textContent = "作戦結果";
+    victoryResultPlate.appendChild(victoryResultTitle);
+
+    this.victoryResultSummaryEl = document.createElement("div");
+    this.victoryResultSummaryEl.className = "battle-victory-result-summary";
+    victoryResultPlate.appendChild(this.victoryResultSummaryEl);
+
+    const victoryResultActions = document.createElement("div");
+    victoryResultActions.className = "battle-victory-result-actions";
+
+    const victoryResultButtons: Array<{ text: string; run: () => boolean }> = [
+      {
+        text: "同じステージで再戦",
+        run: () => verifyModeControls?.onRematchSameStage?.() ?? false,
+      },
+      {
+        text: "ステージ選択へ",
+        run: () => verifyModeControls?.onReturnToStageSelect?.() ?? false,
+      },
+    ];
+
+    for (const action of victoryResultButtons) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "battle-victory-result-button game-ui-button";
+      button.textContent = action.text;
+      button.addEventListener("click", () => {
+        if (action.run()) {
+          this.syncVictoryResultOverlay();
+        }
+      });
+      victoryResultActions.appendChild(button);
+    }
+
+    victoryResultPlate.appendChild(victoryResultActions);
+    victoryResultOverlay.appendChild(victoryResultPlate);
+
     const battleDebugOverlay = document.createElement("div");
     battleDebugOverlay.className = "battle-debug-overlay";
     battleDebugOverlay.setAttribute("aria-hidden", "true");
@@ -392,6 +452,7 @@ export class BattleView {
       battleFxLayer,
       battlePauseOverlay,
       defeatRetryOverlay,
+      victoryResultOverlay,
       battleHudLayer,
       battleTopInfo,
       battleDebugOverlay,
@@ -639,6 +700,8 @@ export class BattleView {
     );
     this.pauseButton.setAttribute("aria-pressed", paused ? "true" : "false");
     this.pausePlateEl.textContent = t("battle.pausePlate");
+    this.pauseButton.disabled =
+      this.isDefeatRetryVisible() || this.isVictoryResultVisible();
   }
 
   isBattlePaused(): boolean {
@@ -662,8 +725,9 @@ export class BattleView {
   }
 
   private syncPauseOverlayVisibility(): void {
-    const defeatRetryVisible = this.isDefeatRetryVisible();
-    const showPauseOverlay = this.battlePaused && !defeatRetryVisible;
+    const blockPauseOverlay =
+      this.isDefeatRetryVisible() || this.isVictoryResultVisible();
+    const showPauseOverlay = this.battlePaused && !blockPauseOverlay;
     this.pauseOverlayEl.hidden = !showPauseOverlay;
     this.pauseOverlayEl.setAttribute(
       "aria-hidden",
@@ -675,19 +739,45 @@ export class BattleView {
     return this.verifyModeControls?.shouldShowDefeatRetry?.() === true;
   }
 
+  private isVictoryResultVisible(): boolean {
+    return this.verifyModeControls?.shouldShowVictoryResult?.() === true;
+  }
+
   private syncDefeatRetryOverlay(): void {
-    const visible = this.verifyModeControls?.shouldShowDefeatRetry?.() ?? false;
+    const visible = this.isDefeatRetryVisible();
     this.defeatRetryOverlayEl.hidden = !visible;
     this.defeatRetryOverlayEl.setAttribute(
       "aria-hidden",
       visible ? "false" : "true",
     );
-    this.pauseButton.disabled = visible;
     if (visible && !this.battlePaused) {
       this.setBattlePaused(true);
       return;
     }
     this.syncPauseOverlayVisibility();
+    this.syncPauseChrome();
+  }
+
+  private syncVictoryResultOverlay(): void {
+    const visible = this.isVictoryResultVisible();
+    this.victoryResultOverlayEl.hidden = !visible;
+    this.victoryResultOverlayEl.setAttribute(
+      "aria-hidden",
+      visible ? "false" : "true",
+    );
+    if (visible) {
+      const result = this.verifyModeControls?.getOperationResultForDisplay?.();
+      if (result) {
+        this.victoryResultSummaryEl.textContent =
+          `outcome: ${result.outcome}\nstageId: ${result.stageId}\nreachedWaveIndex: ${result.reachedWaveIndex}`;
+      }
+      if (!this.battlePaused) {
+        this.setBattlePaused(true);
+        return;
+      }
+    }
+    this.syncPauseOverlayVisibility();
+    this.syncPauseChrome();
   }
 
   private onEnemyGroupClick(
@@ -1154,6 +1244,8 @@ export class BattleView {
   }
 
   tick(deltaMs: number): void {
+    this.syncDefeatRetryOverlay();
+    this.syncVictoryResultOverlay();
     if (this.battlePaused) {
       this.refreshMemberStatsPanel();
       return;
@@ -1219,7 +1311,11 @@ export class BattleView {
     }
 
     this.refreshMemberStatsPanel();
-    this.syncDefeatRetryOverlay();
+  }
+
+  /** R7e: 勝利結果 overlay の表示状態を即時反映 */
+  refreshVictoryResultOverlay(): void {
+    this.syncVictoryResultOverlay();
   }
 
   setMenuButtonDisabled(disabled: boolean): void {
