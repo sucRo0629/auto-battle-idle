@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6g-2 完了** — `createEnemiesForStage` の Wave 単位 spawn（本 §63）。**R6g-1 完了**（§62）。**R6f 完了**（§61）。**R6e 完了**（§60）。**R6d 完了**（§59）。
-- **次の再開タスク:** **R6g-3 — BattleEngine / GameSession spawn 接続**（handoff §63 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R6g-3 完了** — BattleEngine / GameSession spawn 接続（本 §64）。**R6g-2 完了**（§63）。**R6g-1 完了**（§62）。**R6f 完了**（§61）。**R6e 完了**（§60）。**R6d 完了**（§59）。
+- **次の再開タスク:** **R6g-4 — `stages.json` / editor 移行**（handoff §64 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5066,10 +5066,56 @@ party / module / stageId / currentWaveIndex / clearedWaveCount を checkpoint �
 
 ### 63.6 未実装（R6g-3 以降）
 
-- `BattleEngine` / `GameSession` spawn 接続
+- ~~`BattleEngine` / `GameSession` spawn 接続~~ — R6g-3 完了（§64）
 - `stages.json` / editor 移行
 - schema 正規化による敵生成方式の一本化
 
 ### 63.7 次タスク
 
-**R6g-3 — BattleEngine / GameSession spawn 接続**
+**R6g-3 — BattleEngine / GameSession spawn 接続** — §64 参照。
+
+---
+
+## 64. R6g-3 — BattleEngine / GameSession spawn 接続（2026-07-12 完了）
+
+### 64.1 目的
+
+BattleEngine / GameSession の Wave 開始処理を、`waveIndex` に対応する `createEnemiesForStage` 呼び出しへ接続し、R6g-2 の spawn 規則が実戦闘フローで使われることを検証する。
+
+### 64.2 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/battle/battleEngine.waveSpawn.test.ts` | R6g-3 統合テスト 5 件（新規） |
+| `docs/ai-handoff/current-task.md` | 本 §64 |
+
+**production code 変更なし** — 接続は既存実装で成立していた（`spawnWaveEnemies` → `createEnemiesForStage(..., this.waveIndex, ...)`）。R6g-2 の entities 側対応を待っていた経路の検証が本タスクの主成果。
+
+### 64.3 Wave 開始 → 敵生成の接続経路
+
+1. **初回 / restart:** `reloadBattlefield` → `resolveStartWaveIndex()` → `beginWaveAnnouncement(waveIndex)` → `prepareWaveDeploy(waveIndex)` → `spawnWaveEnemies()` → `createEnemiesForStage(gameData, stageId, waveIndex, levelCurves)`
+2. **次 Wave:** `startNextWave()` → `prepareAlliesForNextWave()` → `beginWaveAnnouncement(nextWaveIndex)` → 上記と同経路
+3. **training dummy Wave:** `prepareTrainingWave(waveIndex)` → `spawnWaveEnemies()`（同上）
+4. **GameSession:** `startNextWave()` / `confirmWavePrepAndStartNextWave()` が `engine.startNextWave()` を委譲。成功時 `operationState.syncCurrentWaveIndex(engine.getSnapshot().waveIndex)`
+
+### 64.4 waveIndex の所有者と更新タイミング
+
+| 所有者 | 更新タイミング |
+| ------ | -------------- |
+| **BattleEngine** `waveIndex` | `beginWaveAnnouncement` / `prepareWaveDeploy` / `prepareTrainingWave` で当該 Wave 開始直前。`reloadBattlefield` 初回は `resolveStartWaveIndex()`（verify loop wave ピン時のみ非 0） |
+| **OperationState** `currentWaveIndex` | 作戦開始 `beginOperation(initialWaveIndex)`、中間 Wave 待機中は据え置き、`startNextWave` 成功後に `syncCurrentWaveIndex`、敗北 retry / checkpoint 復元 / `markCompleted` で別途更新 |
+| **pendingNextWaveIndex**（BattleEngine） | 中間 Wave 全滅時のみ `waveIndex + 1` をセット。`startNextWave` 成功または Wave deploy 開始で null 化。**spawn は行わない** |
+
+### 64.5 テスト
+
+- `battleEngine.waveSpawn.test.ts`: Wave 0 spawn、startNextWave 後 Wave 1 切替、awaiting 中の非 spawn、最終 Wave 後の非 spawn、legacy `waves[].enemies` 回帰
+- 関連回帰: `entities.enemyGroups.test.ts`、`battleEngine.awaitingNextWave.test.ts` — **36 pass / 36**（R6g-3 実行分）
+
+### 64.6 未実装（R6g-4 以降）
+
+- `stages.json` / editor 移行
+- schema 正規化による敵生成方式の一本化
+
+### 64.7 次タスク
+
+**R6g-4 — `stages.json` / editor 移行**
