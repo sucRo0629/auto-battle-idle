@@ -9,12 +9,27 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R1 完了** — 上位戦闘設計の文書更新（[phase-roadmap.md](../plans/phase-roadmap.md)）。
-- **次の再開タスク:** **R2 — 詳細戦闘・兵科仕様**の**文書更新**。
-- **R2 対象候補:** `docs/spec/combat.md`、`docs/spec/stats.md`、`docs/spec/classes-and-skills.md`
-- **未確定（R1 完了時点）:** 個別兵科の**具体的 2 戦闘方式**・数値・作戦内パッシブ候補・Attack / Hit 処理順。
+- **新ロードマップ現在地:** **R2 完了** — 詳細戦闘・兵科仕様の文書更新（[phase-roadmap.md](../plans/phase-roadmap.md)）。
+- **次の再開タスク:** **R3 — Wave 作戦ループ**の**文書更新**。
+- **R3 対象候補:** `docs/spec/battle-field.md`、`docs/spec/progression.md`、必要なら新規作戦ループ spec
+- **未確定（R2 完了時点）:** 各兵科 2 方式の**正式名称**・倍率・Hit 数・対象数・射程・攻撃間隔、DoT 詳細、一時効果の最終採否、Wave 間 HP 回復 / 方式持ち越し、作戦内パッシブ個数・コスト、非 M1 兵科、データスキーマ、エディタ仕様。
 - **保留:** 移動阻害・移動速度差・ノックバック等の**移動系効果**は、将来の**作戦内パッシブ候補**として保留（R8 で再検討）。
-- **今回の doc 作業（R1）:** production code、データ JSON、テスト、エディタ、**spec 本文**（combat / stats / classes-and-skills / battle-field / progression）は**未変更**。
+- **今回の doc 作業（R2）:** production code、データ JSON、テスト、エディタは**未変更**。`battle-field.md` / `progression.md` も**未変更**。
+
+### R2 で確定した詳細方針（spec 反映済）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| Attack | 1 回の行動単位。間隔到達 → 方式に従い対象選択・移動・射程・Hit 列実行 |
+| Hit | Attack 内の命中単位。複数 Hit 可。係数・分配は戦闘方式側。Barrier は HP 同様 |
+| 攻撃間隔 | 秒単位。兵科基礎値。方式が上書き可。Hit 数と独立。Tier 廃止 |
+| 戦闘方式 | 兵科 2 方式。単体/複数統一なし。倍率違いのみ禁止。優先ターゲット・属性は兵科固定 |
+| 魔術師 | RES 無視廃止方向。単純魔法攻撃。最近傍優先。2 方式で形状差 |
+| 双刃士 | 低 HP 優先。固定 2 Hit 廃止。方式 A 背後回り込み / 方式 B 投げナイフ（候補） |
+| DoT | 自然消滅なし・スタック・Wave リセット候補（詳細は R5 前） |
+| 一時効果 | 残す/廃止/保留の 3 分類。R5 試作前に再確認 |
+| Wave リセット | HP/Barrier/DoT/CC/位置等は候補。詳細は R3 |
+| M1 兵科表 | 9 兵科の方式 **候補** を [classes-and-skills.md §M1](../spec/classes-and-skills.md#m1-兵科--新仕様候補r2) に整理（数値未確定） |
 
 ### R1 で更新した上位設計の要点
 
@@ -51,8 +66,8 @@
 - [docs/combat-architecture.md](../combat-architecture.md) — **R1 更新済**（§0 = 上位戦闘正本）
 - [docs/system-mechanics.md](../system-mechanics.md) — **R1 更新済**（§0 = 共通メカニクス上位正本。§Player Level 以降 legacy 多）
 - [docs/class-philosophy.md](../class-philosophy.md) — **R1 更新済**（§0 = 兵科設計原則）
-- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R2 以降で新方針へ順次反映**）
-- **R2 更新候補:** [combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)、[classes-and-skills.md](../spec/classes-and-skills.md)
+- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R2 反映済:** combat / stats / classes-and-skills）
+- **R3 更新候補:** [battle-field.md](../spec/battle-field.md)、[progression.md](../spec/progression.md)、必要なら新規作戦ループ spec
 
 ## 4. v0.3.2 確定方針（要約）— **凍結・legacy handoff**
 

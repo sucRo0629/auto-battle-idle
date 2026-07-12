@@ -6,12 +6,14 @@
 
 **用語：** スキルは習得した時点で常時使用可能。スキルの付け替え・セット・装備変更は行わない。将来のアイテムのみ「装備」。詳細は [classes-and-skills.md](classes-and-skills.md#用語スキル習得-vs-装備)。
 
+**R2 注記（2026-07-12）:** [stats.md](stats.md)、[combat.md](combat.md)、[classes-and-skills.md](classes-and-skills.md) は **§現行方針（R2）** と **Legacy** を分離済み。Wave 作戦ループは **R3** で [battle-field.md](battle-field.md) / [progression.md](progression.md) へ反映予定。
+
 | ファイル | 内容 |
 |----------|------|
-| [stats.md](stats.md) | 基礎ステ（Lv1）、成長段階、growthPresets、SPD（attackSpeedTier） |
-| [combat.md](combat.md) | ダメージ、回復、CD、ステータス効果 |
+| [stats.md](stats.md) | 兵科基礎ステ、攻撃間隔（R2）。Legacy: Lv 成長、growthPresets、attackSpeedTier |
+| [combat.md](combat.md) | Attack / Hit、攻撃間隔、戦闘方式、DoT・一時効果（R2）。Legacy: ダメージパイプライン、CD、gauge |
 | [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘画面 UI / HUD**、戦闘中統計 UI |
-| [classes-and-skills.md](classes-and-skills.md) | ロール、クラス、スキル JSON スキーマ、**UI 用語辞書**、**ゲーム用語表（表示分類）**、**スプライト・演出アセット** |
+| [classes-and-skills.md](classes-and-skills.md) | 兵科・戦闘方式・作戦内パッシブ（R2 候補）、M1 方式表。Legacy: 旧スキル JSON スキーマ・UI 用語辞書 |
 | [i18n-en.md](i18n-en.md) | **英語 i18n 文案方針**（Phase 4e — M1 直前）— スキル効果文・用語・表記統一・スキルカード英語 |
 | [progression.md](progression.md) | EXP、レベル、セーブ、Stage Records、Phase 2〜12 |
 | [party-formation-ui.md](party-formation-ui.md) | パーティ編成メニュー（`SkillMenuPanel`）の画面設計 — Phase 4d |
