@@ -9,17 +9,32 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R0 完了**（方針転換の正本化 — [phase-roadmap.md](../plans/phase-roadmap.md)）。
-- **次の再開タスク:** **R1 — 上位戦闘設計**の**文書更新**（対象候補: `combat-architecture.md`、`system-mechanics.md`、`class-philosophy.md`）。
-- **未確定（R0 時点）:** 個別兵科の**戦闘方式**・数値・R5 縦切り対象兵科。
-- **保留:** 移動阻害・移動速度差・ノックバック等の**移動系効果**は、将来の**作戦内パッシブ候補**として保留。**現在の実装対象ではない**（R5 最小縦切りにも含めない。R8 で再検討）。
-- **今回の doc 作業:** production code、データ JSON、テスト、**spec 本文**は**未変更**。
+- **新ロードマップ現在地:** **R1 完了** — 上位戦闘設計の文書更新（[phase-roadmap.md](../plans/phase-roadmap.md)）。
+- **次の再開タスク:** **R2 — 詳細戦闘・兵科仕様**の**文書更新**。
+- **R2 対象候補:** `docs/spec/combat.md`、`docs/spec/stats.md`、`docs/spec/classes-and-skills.md`
+- **未確定（R1 完了時点）:** 個別兵科の**具体的 2 戦闘方式**・数値・作戦内パッシブ候補・Attack / Hit 処理順。
+- **保留:** 移動阻害・移動速度差・ノックバック等の**移動系効果**は、将来の**作戦内パッシブ候補**として保留（R8 で再検討）。
+- **今回の doc 作業（R1）:** production code、データ JSON、テスト、エディタ、**spec 本文**（combat / stats / classes-and-skills / battle-field / progression）は**未変更**。
+
+### R1 で更新した上位設計の要点
+
+| 項目 | 内容 |
+| ---- | ---- |
+| ゲーム核 | 4 人編成、直接操作なし、Wave 事前準備、解法型戦闘 |
+| 戦闘方式 | Wave ごとに兵科へ選択。各兵科 2 方式（共通単体/複数分類なし） |
+| 兵科固定 | 優先ターゲット・基本ロール・基本処理対象・原則ダメージ属性 |
+| 攻撃間隔 | 秒単位。旧 attackSpeed Tier 廃止方向。Hit 数と分離 |
+| 作戦内パッシブ | 直接選択取得。作戦中維持→終了リセット。挙動変化優先 |
+| 編成制限 | 味方同一兵科禁止。敵は同一兵科複数可 |
+| 廃止方向 | 共通 Lv / EXP / 4 枠 active-passive / スキルゲージ / Instant Lv20 / Level Sync |
+| Kill/Flow/Survival | 3 レイヤー維持。方式・射程・回復/防護へ再解釈 |
+| 魔術師 | RES 無視廃止方向。具体は R2 |
 
 ### 新しい直近目標（要約）
 
 プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は**新試作成立後**。
 
-主な設計転換: 旧 active / passive 4 枠・gauge・Lv 成長・EXP 廃止方向、Wave ごとの**戦闘方式**選択、味方**同一兵科禁止**、秒単位**攻撃間隔**、**作戦内パッシブ**（任意取得）、Wave 間準備を含む作戦ループ。詳細は [phase-roadmap.md](../plans/phase-roadmap.md)。
+主な設計転換: 旧 active / passive 4 枠・gauge・Lv 成長・EXP 廃止方向、Wave ごとの**戦闘方式**選択、味方**同一兵科禁止**、秒単位**攻撃間隔**、**作戦内パッシブ**（任意取得）、Wave 間準備を含む作戦ループ。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) および [combat-architecture.md §0](../combat-architecture.md#0-現行上位方針r1)。
 
 ### legacy 扱い
 
@@ -33,10 +48,11 @@
 ## 3. 参照すべき正本
 
 - [docs/plans/phase-roadmap.md](../plans/phase-roadmap.md) — **R0〜R10**（現行開発順の正本）
-- [docs/combat-architecture.md](../combat-architecture.md) — R1 更新候補
-- [docs/system-mechanics.md](../system-mechanics.md) — R1 更新候補
-- [docs/class-philosophy.md](../class-philosophy.md) — R1 更新候補
-- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R1 以降で新方針へ順次反映**。R0 では spec 本文未変更）
+- [docs/combat-architecture.md](../combat-architecture.md) — **R1 更新済**（§0 = 上位戦闘正本）
+- [docs/system-mechanics.md](../system-mechanics.md) — **R1 更新済**（§0 = 共通メカニクス上位正本。§Player Level 以降 legacy 多）
+- [docs/class-philosophy.md](../class-philosophy.md) — **R1 更新済**（§0 = 兵科設計原則）
+- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R2 以降で新方針へ順次反映**）
+- **R2 更新候補:** [combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)、[classes-and-skills.md](../spec/classes-and-skills.md)
 
 ## 4. v0.3.2 確定方針（要約）— **凍結・legacy handoff**
 
