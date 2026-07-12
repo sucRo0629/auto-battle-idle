@@ -16,6 +16,8 @@
 
 **R2 注記:** 本節が新戦闘・兵科仕様の正本。**§Legacy — 旧スキル枠** 以降の basic + passive×4 + active×4 表は現行 production データの説明。[skill-finalization-table.md](../plans/skill-finalization-table.md) は **参照資料のみ**。正本として引用しない。
 
+**R4 注記（2026-07-12）:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態の **データ責務分離・validate・エディタ責務・legacy 移行方針** は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) を正本とする。本書はゲームルールと M1 方式 **候補** の正本のまま。具体的な JSON フィールド名・型は R5 で subset 確定。
+
 ### 兵科の主要構造
 
 | レイヤ | 内容 |

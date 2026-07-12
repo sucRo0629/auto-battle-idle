@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R3 完了**（Wave 作戦ループ spec）。次は **R4 — データスキーマとエディタ設計**（設計のみ）。
+**現在地:** **R4 完了**（データスキーマとエディタ設計 doc）。次は **R5 — 最小縦切り**（実装）。
 
 ---
 
@@ -16,8 +16,8 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R1** | 上位戦闘設計 — 戦闘方式、兵科責務、旧 active / gauge / level 廃止、Wave 方式選択、作戦内パッシブ方針 | **完了** |
 | **R2** | 詳細戦闘・兵科仕様 — 攻撃間隔、Attack / Hit、方式効果形状、各兵科 2 方式（具体は未確定） | **完了** |
 | **R3** | Wave 作戦ループ — 初期準備 → Wave 戦闘 → Wave 間準備 → 次 Wave → 最終結果 | **完了** |
-| **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / normalize / editor API / legacy 移行（**設計のみ**） | 未着手 |
-| **R5** | 最小縦切り — 少数兵科・新戦闘方式で戦闘成立（移動系メカニクスは含めない） | 未着手 |
+| **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / normalize / editor API / legacy 移行（**設計のみ**） | **完了** |
+| **R5** | 最小縦切り — 少数兵科・各 2 戦闘方式・active/gauge なし・秒単位攻撃間隔・固定優先ターゲット・同一兵科禁止・敵戦闘方式指定・最小データ schema・単一 Wave または最小作戦で戦闘成立 | 未着手 |
 | **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | 未着手 |
 | **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | 未着手 |
 | **R8** | 作戦内パッシブ — リソース消費・任意取得・Wave 再試行時巻き戻し（移動系保留アイデアの再検討） | 未着手 |
@@ -139,7 +139,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 ### エディタ（新仕様への改修対象 — 実装は R9）
 
-設計対象（R4）: クラスデータ、戦闘方式データ、作戦内パッシブデータ、敵グループデータ、Stage / Wave データ、validate、normalize、editor API、テキスト整形、legacy データの扱い。
+設計対象（R4 完了）: [combat-data-schema-refactor.md](combat-data-schema-refactor.md) — クラス、戦闘方式、作戦内パッシブ、敵グループ、Stage / Wave、validate、normalize、editor API、テキスト整形、legacy 移行方針。
 
 対象エディタ: クラスエディタ、スキル / **戦闘方式**エディタ、敵エディタ、ステージ / Wave エディタ。
 
@@ -215,38 +215,49 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 ---
 
-## R4 — データスキーマとエディタ設計
+## R4 — データスキーマとエディタ設計（完了）
 
-**ゴール:** 新データ形状とエディタ責務を **設計で先に固定** する。**R4 では設計のみ** — production 実装・全面エディタ実装には進まない。実装は **R9**。
+**対象 doc:** [combat-data-schema-refactor.md](combat-data-schema-refactor.md)（新規）
 
-| 設計対象 | 備考 |
-| -------- | ---- |
-| class | 兵科基礎値（攻撃間隔、ロール、属性、優先ターゲット等） |
-| combat module | 戦闘方式（内部名候補） |
-| passive | 作戦内パッシブ |
-| enemy group | 敵編成 |
-| stage / wave | 作戦・Wave 構成 |
-| run / operation state | 作戦状態・チェックポイント・作戦内進行（[operation-loop.md](../spec/operation-loop.md) §3） |
-| validate / normalize | スキーマ検証 |
-| editor API | 読み書き・preview |
-| legacy 移行方針 | 旧 skills / stages / classes の参照・廃止経路 |
+**ゴール:** 新データ形状とエディタ責務を **設計で先に固定** する。**R4 では設計のみ** — production 実装・全面エディタ実装には進まない。実装は **R5**（最小縦切り）〜 **R9**（エディタ）。
+
+**確定内容（要約）:**
+
+- 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の **責務分離**
+- 味方同一兵科禁止、敵は `count` 複数可。敵 scale はグループ側
+- 新 Stage 正本: `waves[].enemyGroups`。直下 `enemyGroups` は legacy 省略記法
+- 作戦状態はメモリのみ（R5）。checkpoint は作戦復元用、BattleEngine 完全コピーではない
+- validate 層（マスタ / Stage / 編成 / 作戦状態）、normalize / migration 方針（新規少数データ作成を推奨）
+- エディタ責務分離。SkillEditorStep → CombatModuleEditor 改修を **推奨案**
+- R5 最小 schema の必須 / 後回し一覧
+
+**production code / JSON / test / editor:** 未変更。
 
 ---
 
 ## R5 — 最小縦切り
 
-**ゴール:** **少数兵科**（対象は R0 未確定）だけで、新戦闘方式による戦闘を成立させる。
+**ゴール:** **少数兵科**だけで、新戦闘方式による戦闘を成立させる。
+
+**目的:**
+
+- 少数兵科
+- 各 2 戦闘方式
+- active / gauge なし
+- 秒単位攻撃間隔
+- 固定優先ターゲット
+- 同一兵科禁止（味方）
+- 敵戦闘方式指定
+- 最小データ schema
+- 単一 Wave または最小作戦で戦闘成立
 
 **確認項目:**
 
 - 戦闘方式選択
-- active / gauge なし戦闘
-- 秒単位の攻撃間隔
-- 同一兵科禁止（味方）
-- 優先ターゲット固定
+- module を通常行動として `BattleEngine` が実行
 - 旧レベル成長・EXP への非依存
 
-**スコープ外:** 移動阻害、移動速度差、ノックバック、Wave 間準備 UI、作戦内パッシブ、作戦途中セーブ、倍速・リトライ。
+**スコープ外（R5 に含めない）:** 移動阻害、作戦内パッシブ、全面エディタ改修、legacy 全面移行、Wave 間準備 UI、作戦途中セーブ、倍速・リトライ、Wave 報酬、Save 統合。
 
 ---
 
@@ -330,7 +341,7 @@ R10 複数 Wave 試作 → 試作成立判定
 （試作成立後）コンテンツ・診断・presentation・公開
 ```
 
-R5 は R4 の設計を前提にしつつ、doc 未完了分は縦切り用の最小 subset で先行可（R1〜R3 の必須項目が揃ってから着手）。
+R5 は R4 の設計（[combat-data-schema-refactor.md](combat-data-schema-refactor.md) §16 最小 schema）を前提に着手する。
 
 ---
 

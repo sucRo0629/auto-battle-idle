@@ -2,7 +2,9 @@
 
 実装（legacy）：`src/battle/combatMath.ts`, `SkillExecutor.ts`, `damageDelay.ts`
 
-**R2 注記:** 本書 **§現行方針（R2）** が新戦闘ルールの正本。**§Legacy 仕様** 以降は現行 production 実装の説明。型名・JSON フィールド名の確定は **R4** へ送る。上位構造は [combat-architecture.md §0](../combat-architecture.md#0-現行上位方針r1)。
+**R2 注記:** 本書 **§現行方針（R2）** が新戦闘ルールの正本。**§Legacy 仕様** 以降は現行 production 実装の説明。上位構造は [combat-architecture.md §0](../combat-architecture.md#0-現行上位方針r1)。
+
+**R4 注記（2026-07-12）:** 戦闘方式・Attack / Hit の **データ責務**（兵科 vs module）、validate、R5 最小 schema は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) を正本とする。具体的な型名・JSON フィールド名は **R5** で subset 確定。
 
 ---
 

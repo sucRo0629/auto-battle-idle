@@ -9,13 +9,35 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R3 完了** — Wave 作戦ループの文書更新（[phase-roadmap.md](../plans/phase-roadmap.md)）。
-- **次の再開タスク:** **R4 — データスキーマとエディタ設計**（**設計のみ**。production 実装・全面エディタ実装には進まない）。
-- **R3 で確定した spec:** [operation-loop.md](../spec/operation-loop.md)（新規）、[battle-field.md](../spec/battle-field.md)、[progression.md](../spec/progression.md)
-- **R3 確定事項:** 作戦状態 / 戦闘状態の分離、初期準備 / Wave 戦闘 / Wave 間準備 / 作戦結果のループ、Wave 間 **HP 全回復**、戦闘方式は次 Wave へ持ち越し（準備で変更可）、Wave 開始チェックポイント（出撃確定時点）、3 種リトライ、作戦途中セーブなし、旧線形 stage progression を legacy 化
-- **未確定（R3 完了時点）:** 作戦内リソース入手、パッシブ取り消し、恒久報酬、作戦結果画面、敵側方式・パッシブ schema、timeout、作戦放棄、UI レイアウト、Save schema、実装所有者 — 一覧は [operation-loop.md §14](../spec/operation-loop.md#14-未確定事項r4-以降へ)
-- **保留:** 移動阻害・移動速度差・ノックバック等の**移動系効果**は、将来の**作戦内パッシブ候補**として保留（R8 で再検討）。
-- **今回の doc 作業（R3）:** production code、データ JSON、テスト、エディタは**未変更**。
+- **新ロードマップ現在地:** **R4 完了** — データスキーマとエディタ設計（[phase-roadmap.md](../plans/phase-roadmap.md)）。
+- **次の再開タスク:** **R5 — 最小縦切り**（少数兵科・各 2 戦闘方式・最小 schema で戦闘成立。**実装 Phase**）。
+- **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
+- **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
+- **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
+- **保留:** 移動阻害・移動速度差・ノックバック等は将来の**作戦内パッシブ候補**（R8）。
+- **今回の doc 作業（R4）:** production code、データ JSON、テスト、エディタは**未変更**。
+
+### R4 で確定したデータ責務（doc 反映済）
+
+| レイヤ | 責務 |
+| ------ | ---- |
+| 兵科 | 基礎ステ、秒単位攻撃間隔、ロール、前衛 / 後衛、固定優先ターゲット、固定属性、方式 pool ×2、パッシブ pool |
+| 戦闘方式 | 通常行動全体（Hit 構造、対象、射程、効果形状、間隔上書き）。優先ターゲットは **持たない**（兵科固定） |
+| 作戦内パッシブ | 別データ。R5 では schema のみ、実装後回し |
+| 敵グループ | classId + count + selectedCombatModuleId + scale + passiveIds（任意）。同一 group 内は同一方式 |
+| Stage / Wave | 正本は `waves[].enemyGroups`。直下 enemyGroups は legacy 省略記法 |
+| 作戦状態 | メモリのみ。編成・方式・パッシブ・checkpoint。Combatant 含まない |
+| Wave 戦闘状態 | BattleEngine 側。Wave 終了で破棄 |
+
+### R5 最小 schema（必須 vs 後回し）
+
+| 必須 | 後回し |
+| ---- | ------ |
+| 少数兵科 + 各 2 方式 | 作戦内パッシブ実装 |
+| 秒単位攻撃間隔、固定優先ターゲット | パッシブエディタ、Wave 報酬 |
+| 敵 group の module 指定 | Save 統合、migration 完全対応 |
+| Stage 内 Wave 定義 | 全面エディタ改修、非 M1 兵科 |
+| 味方同一兵科禁止、作戦状態（メモリ） | 移動系効果、Wave 間準備 UI |
 
 ### R3 で確定した作戦ループ（spec 反映済）
 
@@ -76,12 +98,12 @@
 
 ## 3. 参照すべき正本
 
-- [docs/plans/phase-roadmap.md](../plans/phase-roadmap.md) — **R0〜R10**（現行開発順の正本）
+- [docs/plans/phase-roadmap.md](../plans/phase-roadmap.md) — **R0〜R10**（現行開発順の正本。**R4 完了 → R5**）
+- [docs/plans/combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) — **R4 正本**（データ責務・エディタ・validate / migration）
 - [docs/combat-architecture.md](../combat-architecture.md) — **R1 更新済**（§0 = 上位戦闘正本）
 - [docs/system-mechanics.md](../system-mechanics.md) — **R1 更新済**（§0 = 共通メカニクス上位正本。§Player Level 以降 legacy 多）
 - [docs/class-philosophy.md](../class-philosophy.md) — **R1 更新済**（§0 = 兵科設計原則）
-- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R3 反映済:** operation-loop / battle-field / progression）
-- **R4 更新候補:** データスキーマ設計 doc（未作成）、[classes-and-skills.md](../spec/classes-and-skills.md) schema 節（R4）
+- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R4 反映済**）
 
 ## 4. v0.3.2 確定方針（要約）— **凍結・legacy handoff**
 

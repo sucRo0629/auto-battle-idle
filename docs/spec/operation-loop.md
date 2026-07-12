@@ -1,6 +1,6 @@
 # 作戦ループ（Wave 作戦）
 
-実装：**R4 以降で確定**（本書は上位仕様のみ。具体的な型・所有クラス・実装ファイルは送らない）
+実装：**R5 以降**（本書は上位仕様のみ。データ責務は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)。具体的な型・所有クラス・実装ファイルは R5 へ送る）
 
 本ドキュメントは **複数 Wave を通した 1 回の攻略単位（作戦）** の進行正本。座標・接敵・BattlePhase FSM の legacy 説明は [battle-field.md](battle-field.md)。Attack / Hit・DoT・一時効果の戦闘ルールは [combat.md](combat.md)。作戦外の恒久進行は [progression.md](progression.md)。
 
@@ -20,7 +20,7 @@
 
 **採用しない正本用語:** 「ラン」「ローグライク」「ノード」など旧 [roguelike-mode.md](roguelike-mode.md) 由来の呼び方。
 
-内部名称（クラス名・enum・Save キー等）は **未確定**。R4 でデータスキーマと合わせて設計する。
+内部名称（クラス名・enum・Save キー等）は **R5 実装時に subset 確定**（データ責務は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)）。
 
 ---
 
@@ -354,6 +354,8 @@ R7 で実装予定の 3 種類。作戦状態・チェックポイントと整�
 
 ## 14. 未確定事項（R4 以降へ）
 
+**R4 注記（2026-07-12）:** データ責務・作戦 / 戦闘状態境界・validate / migration・エディタ責務は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) を正本とする。以下は **R4 完了後も未確定** の項目。
+
 | 項目 | 送り先 |
 | ---- | ------ |
 | 作戦内リソースの入手量とタイミング | R8 |
@@ -362,14 +364,14 @@ R7 で実装予定の 3 種類。作戦状態・チェックポイントと整�
 | 恒久報酬・解禁設計 | R10 以降 |
 | 作戦結果画面の内容 | R6 / R7 |
 | 次 Wave 敵情報の開示範囲 | R6 |
-| 敵側戦闘方式・パッシブのデータ構造 | R4 |
-| Wave 数の上限 | R4 / R10 |
+| Wave 数の上限 | R10 |
 | timeout 時の扱い | R7 |
 | 作戦放棄 | R7 |
 | UI レイアウト・操作手順 | R6 |
-| Save schema | R4 |
-| データスキーマ（stage / wave / operation state） | R4 |
-| 具体的な実装所有者（GameSession / BattleEngine 外の状態機械等） | R4 / R5 |
+| Save schema（作戦外のみ） | R5 後 |
+| 具体的 TypeScript 型名・JSON 分割 | R5 |
+| 具体的な実装所有者（GameSession / BattleEngine 外の状態機械等） | R5 |
+| checkpoint 実装方式 | R5 / R6 |
 
 ---
 
@@ -378,4 +380,5 @@ R7 で実装予定の 3 種類。作戦状態・チェックポイントと整�
 - [battle-field.md](battle-field.md) — 座標・隊形・legacy BattlePhase
 - [progression.md](progression.md) — 作戦外 / 作戦内 / Wave 戦闘の 3 層
 - [combat.md](combat.md) — Attack / Hit、Wave 間リセット候補（R3 確定は本書 §7）
-- [phase-roadmap.md](../plans/phase-roadmap.md) — R3 完了 → R4 データスキーマ
+- [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) — R4 データ責務・エディタ設計
+- [phase-roadmap.md](../plans/phase-roadmap.md) — R4 完了 → R5 最小縦切り
