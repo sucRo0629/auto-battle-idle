@@ -6090,7 +6090,9 @@ API が `false` を返した場合、現在 screen・Wave 準備編集状態を�
 
 ### 78.4 テスト
 
-`operationPassiveHudDisplay` / `statusEffectDisplay`（R8e 追加 2 + 関連 1 既存失敗）/ `operationPassiveInjection` / `wavePrepScreen` / `operationCheckpoint` / `operationRetry` — **124 passed, 1 pre-existing failed**（`STATUS_DISPLAY_CATEGORY_LABELS` 欠落カテゴリ）
+`operationPassiveHudDisplay` / `statusEffectDisplay` / `operationPassiveInjection` / `wavePrepScreen` / `operationCheckpoint` / `operationRetry` — **全件 pass**。
+
+R8e-fix（2026-07-13）: `defines a display label for every badge slot category` の失敗を解消。`STATUS_BADGE_SLOT_ORDER` の `moveSpeed`（有効な runtime stat カテゴリ）に用語辞書エントリが無く `STATUS_DISPLAY_CATEGORY_LABELS.moveSpeed` が undefined だった。`gameTermGlossary.ts`（`GameTermId` union・`moveSpeed` エントリ `title: 移動速度`・`STATUS_EFFECT_STAT_TERM_ID`）と `gameTermGlossaryEn.ts`（`Move Speed`）を追加。常時 stat 補正非表示・条件付き passive・DoT・CC・一時 buff/debuff の表示規則は不変。表示規則は §78.1 のまま。
 
 ### 78.5 次タスク
 

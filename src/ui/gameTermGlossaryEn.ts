@@ -192,6 +192,7 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   def: { title: "DEF" },
   res: { title: "RES" },
   attackSpeed: { title: "Attack Speed" },
+  moveSpeed: { title: "Move Speed" },
   damageDelay: {
     title: "Damage Delay",
     description:

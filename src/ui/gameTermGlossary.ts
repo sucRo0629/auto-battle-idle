@@ -48,6 +48,7 @@ export type GameTermId =
   | "def"
   | "res"
   | "attackSpeed"
+  | "moveSpeed"
   | "damageDelay"
   | "basicAttackTransform"
   | "lastStandGuts"
@@ -422,6 +423,11 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     statusCategory: "attackSpeed",
   },
   {
+    id: "moveSpeed",
+    title: { ja: "移動速度" },
+    statusCategory: "moveSpeed",
+  },
+  {
     id: "damageDelay",
     title: { ja: "ダメージ遅延" },
     description: {
@@ -602,6 +608,7 @@ const STATUS_EFFECT_STAT_TERM_ID: Record<StatusEffectStat, GameTermId> = {
   def: "def",
   res: "res",
   attackSpeed: "attackSpeed",
+  moveSpeed: "moveSpeed",
 };
 
 /** スキル説明などでの StatusEffectStat 表示名 */
