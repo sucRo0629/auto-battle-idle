@@ -288,7 +288,9 @@ describe('Wave prep screen (R6e)', () => {
     const afterPlayers = asBattleEngineInternals(engine).players;
     expect(afterPlayers).not.toBe(beforePlayers);
     expect(afterPlayers[0].hp).toBe(afterPlayers[0].maxHp);
-    expect(afterPlayers[0].statusEffects).toEqual([]);
+    expect(afterPlayers[0].statusEffects.some((effect) => effect.id === 'test')).toBe(
+      false,
+    );
     const afterCd = afterPlayers[0].cooldowns.find((c) => c.slotKind === 'basic');
     expect(afterCd?.remaining).toBe(
       resolveSkillTrigger(gameData.skillRegistry.actives[afterCd!.skillId]!)

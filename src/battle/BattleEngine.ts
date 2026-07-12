@@ -7,6 +7,7 @@ import {
   resetEntityIdCounter,
   resetPerWaveCombatantFlags,
 } from "./entities.ts";
+import { mergeOperationPassivesIntoBuild } from "./mergeOperationPassivesIntoBuild.ts";
 import {
   applyDamageToTarget,
   applyHealToTarget,
@@ -238,6 +239,8 @@ export interface BattleEngineOptions {
   getBattleXDebugEnabled?: () => boolean;
   /** R5d: party slot ごとの選択 combat module ID（未指定 = default A） */
   getSelectedCombatModuleId?: (slotIndex: number) => string | undefined;
+  /** R8d: slot ごとの作戦内取得パッシブ ID（味方 spawn 時のみマージ） */
+  getAcquiredOperationPassiveIds?: (slotIndex: number) => readonly string[];
   /** R6c: battlefield 再読込（restart / respawn）通知。OperationState 同期用。 */
   onBattlefieldReload?: () => void;
 }
@@ -324,6 +327,9 @@ export class BattleEngine {
   private readonly getSelectedCombatModuleId?: (
     slotIndex: number,
   ) => string | undefined;
+  private readonly getAcquiredOperationPassiveIds?: (
+    slotIndex: number,
+  ) => readonly string[];
   private readonly onBattlefieldReload?: () => void;
 
   constructor(
@@ -340,6 +346,7 @@ export class BattleEngine {
     this.getLoopWaveIndex = options.getLoopWaveIndex;
     this.getBattleXDebugEnabled = options.getBattleXDebugEnabled;
     this.getSelectedCombatModuleId = options.getSelectedCombatModuleId;
+    this.getAcquiredOperationPassiveIds = options.getAcquiredOperationPassiveIds;
     this.onBattlefieldReload = options.onBattlefieldReload;
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
       getBattleTimeSec: () => this.battleTimeSec,
@@ -721,6 +728,7 @@ export class BattleEngine {
       this.getParty(),
       this.levelCurves,
       this.getSelectedCombatModuleId,
+      this.getAcquiredOperationPassiveIds,
     );
     this.stageId = this.getStageId();
     const startWaveIndex =
@@ -776,6 +784,7 @@ export class BattleEngine {
       this.getParty(),
       this.levelCurves,
       this.getSelectedCombatModuleId,
+      this.getAcquiredOperationPassiveIds,
     );
     for (const ally of this.players) {
       const previousStageTriggers =
@@ -792,6 +801,7 @@ export class BattleEngine {
       }
       initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives);
     }
+    this.syncContinuousPassiveAuras();
     this.clearEngagedVisualState();
   }
 
@@ -1825,6 +1835,12 @@ export class BattleEngine {
       if (!preset) continue;
 
       ally.build = structuredClone(member.build);
+      mergeOperationPassivesIntoBuild(
+        ally.build,
+        member.classId,
+        this.getAcquiredOperationPassiveIds?.(slotIndex) ?? [],
+        this.gameData.skillRegistry.passives,
+      );
       const activeSkillIds = resolveBattleActiveSkillIdsForMember(
         member,
         this.gameData,

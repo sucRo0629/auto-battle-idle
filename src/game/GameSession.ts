@@ -229,6 +229,8 @@ export class GameSession {
           this.verifyMode && this.battleXDebugDisplayEnabled,
         getSelectedCombatModuleId: (slotIndex) =>
           this.resolveCombatModuleSelection().getSelectedCombatModuleId(slotIndex),
+        getAcquiredOperationPassiveIds: (slotIndex) =>
+          this.getOperationAcquiredPassiveIds(slotIndex),
         onBattlefieldReload: () => this.handleBattlefieldReload(),
       },
     );

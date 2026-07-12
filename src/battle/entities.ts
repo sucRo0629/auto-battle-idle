@@ -40,6 +40,7 @@ import {
 } from '../progression/skillBuild.ts';
 import { resolveLearnedSkills } from '../progression/skillUnlocks.ts';
 import { resolveBasicAttackSkillIdFromGameData } from './data/resolveCombatModuleBasic.ts';
+import { mergeOperationPassivesIntoBuild } from './mergeOperationPassivesIntoBuild.ts';
 
 let idCounter = 0;
 
@@ -160,6 +161,7 @@ export function createAlliesFromPartyState(
   party: PartySlotState[],
   curves: LevelCurvesConfig,
   getSelectedCombatModuleId?: (slotIndex: number) => string | undefined,
+  getAcquiredOperationPassiveIds?: (slotIndex: number) => readonly string[],
 ): CombatantState[] {
   const validation = validatePartyClassIds(party);
   if (!validation.ok) {
@@ -172,7 +174,7 @@ export function createAlliesFromPartyState(
     if (!preset) {
       throw new Error(`Class not found: ${member.classId}`);
     }
-    allies.push({
+    const ally = {
       ...createAllyFromMember(
         member,
         preset,
@@ -181,7 +183,14 @@ export function createAlliesFromPartyState(
         getSelectedCombatModuleId?.(slotIndex),
       ),
       partySlotIndex: slotIndex,
-    });
+    };
+    mergeOperationPassivesIntoBuild(
+      ally.build,
+      member.classId,
+      getAcquiredOperationPassiveIds?.(slotIndex) ?? [],
+      gameData.skillRegistry.passives,
+    );
+    allies.push(ally);
   });
   return allies;
 }
