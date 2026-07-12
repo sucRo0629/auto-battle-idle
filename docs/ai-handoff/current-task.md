@@ -15,6 +15,7 @@
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
 - **保留:** 移動阻害・移動速度差・ノックバック等は将来の**作戦内パッシブ候補**（R8）。
+- **R8 表示方針（2026-07-12 doc 確定）:** 常時 stat 補正は状態アイコン非表示。条件付き発動は発動中のみ。DoT/CC/一時デバフは従来どおり。Barrier は HP バーのみ。範囲・オーラ系はフィールド上プレースホルダ範囲表示（判定と同一 runtime データ）。正式 VFX は試作成立後。active 廃止による自動削減には依存しない — [phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)、[combat.md §作戦内パッシブの戦闘中表示](../spec/combat.md#作戦内パッシブの戦闘中表示r8-方針)、[battle-field.md §範囲系](../spec/battle-field.md#9-範囲系オーラ系効果のフィールド表示r8-方針)。
 - **今回の doc 作業（R5a）:** production code、データ JSON、テスト、エディタは**未変更**。調査結果は §47。
 - **今回の実装（R5b）:** §48。BattleEngine / SkillExecutor / Combatant 生成 / UI / editor / Save は未接続。
 - **今回の実装（R5c）:** §49。対象 4 兵科の先頭 module を通常行動として SkillExecutor 接続。UI / editor / Save / 作戦ループ / 方式 B 選択 / 敵 selectedCombatModuleId は未接続。
@@ -3510,4 +3511,28 @@ SkillExecutor 専用第二実行系は追加していない。
 - 全兵科への combat module 移行
 
 **次の再開タスク:** R5d「作戦ループ」
+
+---
+
+## 50. R8 作戦内パッシブ — 戦闘中表示方針（2026-07-12 doc のみ）
+
+**スコープ:** ロードマップ・spec 更新のみ。production code / JSON / UI / VFX 実装は未着手。
+
+### 50.1 確定方針（要約）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 常時パッシブ stat 補正 | 状態アイコン **原則非表示** |
+| 条件付き発動 | **発動中のみ** 状態アイコン |
+| DoT / CC / 一時デバフ | 従来どおり状態アイコン |
+| Barrier | HP バー残量のみ。状態アイコン **なし** |
+| 範囲・オーラ系 | フィールド上プレースホルダ範囲（R8 必須）。対象全員へ status 付与は **確定仕様にしない** |
+| 正式 VFX | 試作成立後。R8 完了条件はプレースホルダで判定範囲を視覚確認できること |
+
+### 50.2 更新した doc
+
+- [phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)
+- [combat-data-schema-refactor.md §5.6](../plans/combat-data-schema-refactor.md#56-戦闘中表示r8-doc-反映--2026-07-12)
+- [combat.md §作戦内パッシブの戦闘中表示](../spec/combat.md#作戦内パッシブの戦闘中表示r8-方針)
+- [battle-field.md §範囲系・オーラ系効果のフィールド表示](../spec/battle-field.md#9-範囲系オーラ系効果のフィールド表示r8-方針)
 

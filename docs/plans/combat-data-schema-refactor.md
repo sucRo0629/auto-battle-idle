@@ -146,6 +146,25 @@
 
 旧 passive JSON から **手作業で候補を選別**。`passive → run passive` の一括変換は **しない**。
 
+### 5.6 戦闘中表示（R8 doc 反映 — 2026-07-12）
+
+作戦内パッシブの **runtime 適用** と **視認性** は R8 のスコープ。本節はデータ schema ではなく表示・runtime 方針の参照先を固定する。
+
+| トピック | 正本 |
+| -------- | ---- |
+| 状態アイコン対象の整理（効果種別） | [combat.md §作戦内パッシブの戦闘中表示](../spec/combat.md#作戦内パッシブの戦闘中表示r8-方針) |
+| Barrier — HP バーのみ、状態アイコン非表示 | 同上 + [combat.md §バリア](../spec/combat.md#バリア) |
+| 範囲系・オーラ系 — フィールド範囲表示 | [battle-field.md §範囲系・オーラ系効果のフィールド表示](../spec/battle-field.md#9-範囲系オーラ系効果のフィールド表示r8-方針) |
+| R8 完了条件・VFX 後送 | [phase-roadmap.md §R8](phase-roadmap.md#r8--作戦内パッシブ) |
+
+**R8 に含める:** 範囲パッシブの runtime 判定、プレースホルダ範囲描画、表示範囲と効果対象の一致検証（テストまたは診断）。
+
+**R8 に含めない / 後送:** 正式 VFX 素材、プレースホルダの polish（試作成立後の presentation / VFX フェーズ）。
+
+**採用しない確定仕様:** 既存 status system へ範囲内対象全員を一時 status として付与する方式。
+
+**R8 実装前に判断する:** aura 解決の所有モジュール、tick 更新、プレースホルダ描画 API、passive effect schema の範囲形状フィールド詳細。
+
 ---
 
 ## 6. 敵グループデータ（Enemy Group）
@@ -538,6 +557,8 @@ R4 では **実装しない**。順序候補:
 | JSON ファイル分割（`classes.json` vs `modules/` 等） | R5 |
 | module effect schema 詳細 | R5 試作 |
 | passive effect schema 詳細 | R8 |
+| 作戦内パッシブの戦闘中表示・範囲プレースホルダ | **R8 doc 確定** — [combat.md §作戦内パッシブの戦闘中表示](../spec/combat.md#作戦内パッシブの戦闘中表示r8-方針)、[battle-field.md](../spec/battle-field.md#9-範囲系オーラ系効果のフィールド表示r8-方針)。runtime 詳細は R8 実装前 |
+| 範囲パッシブ正式 VFX | 試作成立後（presentation / VFX） |
 | 既存 `SkillExecutor` 再利用範囲 | **R5a 確定** — 新 executor 不要。module → ActiveSkillDef 合成後 basic スロットで `tryExecute` 再利用（[current-task.md §47.9](../ai-handoff/current-task.md#479-skillexecutor-再利用判断)） |
 | 旧 SkillEditor の最終存廃 | R9 |
 | 敵テンプレ最終存廃 | R9 |
