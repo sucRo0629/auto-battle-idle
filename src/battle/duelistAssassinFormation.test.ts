@@ -10,6 +10,7 @@ import {
   asBattleEngineInternals,
   advanceUntil,
   advanceUntilNearEnemyFrontVanguard,
+  installLegacyWaveAutoAdvance,
   reachWave1Engage,
   reachWave2Engage,
   SCREEN_MIN_X,
@@ -74,11 +75,13 @@ function createDuelistAssassinWave2RegressionEngine(): BattleEngine {
   for (const slot of save.party) {
     if (slot) slot.progress.level = 12;
   }
-  return new BattleEngine(
-    gameData,
-    loadLevelCurves(levelCurvesJson),
-    () => save.party,
-    () => save.stageProgress.currentStageId,
+  return installLegacyWaveAutoAdvance(
+    new BattleEngine(
+      gameData,
+      loadLevelCurves(levelCurvesJson),
+      () => save.party,
+      () => save.stageProgress.currentStageId,
+    ),
   );
 }
 
@@ -112,21 +115,18 @@ function createGuardAssassinWave2RegressionEngine(): BattleEngine {
   for (const slot of save.party) {
     if (slot) slot.progress.level = 12;
   }
-  return new BattleEngine(
-    gameData,
-    loadLevelCurves(levelCurvesJson),
-    () => save.party,
-    () => save.stageProgress.currentStageId,
+  return installLegacyWaveAutoAdvance(
+    new BattleEngine(
+      gameData,
+      loadLevelCurves(levelCurvesJson),
+      () => save.party,
+      () => save.stageProgress.currentStageId,
+    ),
   );
 }
 
 function advanceToWave2Engaged(engine: BattleEngine): void {
-  const reached = advanceUntil(
-    engine,
-    (snap) => snap.waveIndex === 1 && snap.engaged,
-    120_000,
-  );
-  expect(reached).not.toBeNull();
+  reachWave2Engage(engine);
 }
 
 function triggerShadowBlade(engine: BattleEngine): void {

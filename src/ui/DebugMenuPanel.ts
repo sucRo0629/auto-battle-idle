@@ -17,6 +17,10 @@ export interface DebugMenuControls {
   onLoopStageChange: (stageId: string | null) => void;
   onLoopWaveChange: (waveIndex: number | null) => void;
   onPlayerLevelChange: (level: number) => void;
+  /** R6b: 中間 Wave 終了待機中のみ true */
+  isAwaitingNextWave?: () => boolean;
+  /** R6b: 次 Wave 開始（待機中のみ成功） */
+  onStartNextWave?: () => boolean;
 }
 
 export class DebugMenuPanel {
@@ -71,6 +75,11 @@ export class DebugMenuPanel {
     this.rowsHost.replaceChildren();
 
     this.rowsHost.append(this.createBattleXDebugToggleRow());
+
+    const awaitingNextWave = this.controls.isAwaitingNextWave?.() ?? false;
+    if (awaitingNextWave) {
+      this.rowsHost.append(this.createStartNextWaveRow());
+    }
 
     const stageRow = document.createElement('div');
     stageRow.className = 'debug-menu-stage-row';
@@ -232,6 +241,25 @@ export class DebugMenuPanel {
       row.appendChild(list);
     }
 
+    return row;
+  }
+
+  private createStartNextWaveRow(): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'debug-menu-start-next-wave-row';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'debug-menu-start-next-wave-button';
+    button.textContent = '次Wave開始';
+    button.addEventListener('click', () => {
+      const started = this.controls.onStartNextWave?.() ?? false;
+      if (started) {
+        this.refresh();
+      }
+    });
+
+    row.appendChild(button);
     return row;
   }
 

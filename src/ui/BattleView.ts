@@ -392,6 +392,8 @@ export class BattleView {
           verifyModeControls?.onPlayerLevelChange?.(level);
           this.debugMenu.refresh();
         },
+        isAwaitingNextWave: () => this.engine.getSnapshot().awaitingNextWave,
+        onStartNextWave: () => this.engine.startNextWave(),
       },
       () => {
         setDebugMenuDockOpen(false);

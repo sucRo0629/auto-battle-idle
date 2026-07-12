@@ -11,6 +11,7 @@ describe('resolveRuntimeBattlePhase', () => {
         partyDeployActive: false,
         postCombatSettling: false,
         waveExitMarchActive: false,
+        awaitingNextWave: false,
         victoryAwaitExitMarch: false,
       }),
     ).toBe('WaveAnnouncement');
@@ -23,6 +24,7 @@ describe('resolveRuntimeBattlePhase', () => {
         partyDeployActive: true,
         postCombatSettling: false,
         waveExitMarchActive: false,
+        awaitingNextWave: false,
         victoryAwaitExitMarch: false,
       }),
     ).toBe('PartyDeploy');
@@ -35,6 +37,7 @@ describe('resolveRuntimeBattlePhase', () => {
         partyDeployActive: false,
         postCombatSettling: false,
         waveExitMarchActive: false,
+        awaitingNextWave: false,
         victoryAwaitExitMarch: false,
       }),
     ).toBe('Engaged');
@@ -47,6 +50,7 @@ describe('resolveRuntimeBattlePhase', () => {
         partyDeployActive: false,
         postCombatSettling: true,
         waveExitMarchActive: false,
+        awaitingNextWave: false,
         victoryAwaitExitMarch: false,
       }),
     ).toBe('PostCombatSettle');
@@ -59,8 +63,22 @@ describe('resolveRuntimeBattlePhase', () => {
         partyDeployActive: false,
         postCombatSettling: false,
         waveExitMarchActive: true,
+        awaitingNextWave: false,
         victoryAwaitExitMarch: false,
       }),
     ).toBe('VictoryExit');
+
+    expect(
+      resolveRuntimeBattlePhase({
+        phase: 'running',
+        engaged: false,
+        waveAnnouncementActive: false,
+        partyDeployActive: false,
+        postCombatSettling: false,
+        waveExitMarchActive: false,
+        awaitingNextWave: true,
+        victoryAwaitExitMarch: false,
+      }),
+    ).toBe('AwaitingNextWave');
   });
 });

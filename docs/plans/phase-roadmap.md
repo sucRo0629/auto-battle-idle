@@ -18,7 +18,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R3** | Wave 作戦ループ — 初期準備 → Wave 戦闘 → Wave 間準備 → 次 Wave → 最終結果 | **完了** |
 | **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / normalize / editor API / legacy 移行（**設計のみ**） | **完了** |
 | **R5** | 最小縦切り — 少数兵科・各 2 戦闘方式・active/gauge なし・秒単位攻撃間隔・固定優先ターゲット・同一兵科禁止・敵戦闘方式指定・最小データ schema・単一 Wave または最小作戦で戦闘成立 | **完了** |
-| **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | **R6a 完了** → R6b 次 |
+| **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | **R6b 完了** → R6c 次 |
 | **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | 未着手 |
 | **R8** | 作戦内パッシブ — リソース消費・任意取得・巻き戻し、**戦闘中表示整理**、**範囲パッシブ runtime 判定 + プレースホルダ範囲描画**（正式 VFX は後続） | 未着手 |
 | **R9** | エディタ実装 — クラス / 戦闘方式 / パッシブ / 敵 / Stage・Wave 各エディタ + validate / migration | 未着手 |
@@ -289,7 +289,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 | ID | 内容 | 手動確認 |
 |----|------|----------|
-| **R6b** | Wave 終了停止 + 仮次 Wave 開始 API | **最初の確認地点:** Wave1 クリア後に自動 Wave2 へ進まず、仮操作で Wave2 開始 |
+| **R6b** | Wave 終了停止 + 仮次 Wave 開始 API | **完了（§57）** — Wave1 クリア後停止、Debug「次Wave開始」 |
 | **R6c** | OperationState 最小型（メモリ・wave index / clearedCount / module） | — |
 | **R6d** | Wave 状態リセット（HP/CC/CD/runtime）+ 次 Wave 敵生成 | 次 Wave で味方 HP 全回復 |
 | **R6e** | Wave 間準備 screen（formation 流用・編成/module gate） | Wave 間のみ編成変更可 |
@@ -299,7 +299,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R6i** | retry 3 種（最小経路） | — |
 | **R6j** | 統合テスト（2 wave + stop/resume） | — |
 
-**次タスク:** R6b
+**次タスク:** R6c
 
 ---
 

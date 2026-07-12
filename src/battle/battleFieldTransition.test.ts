@@ -384,6 +384,7 @@ describe(
 
     it("T-Phase3d-02: iron guard battleX does not jump after test_to_ranged becomes sole enemy", () => {
       const engine = createStage1Wave2ToRangedOnlyRegressionEngine();
+      reachWave2Engage(engine);
       const reached = advanceUntil(
         engine,
         (snap) => {
@@ -432,6 +433,7 @@ describe(
 
     it("T-Phase3d-03: iron guard does not exceed approach speed while overlap resolves after test_to_ranged remains", () => {
       const engine = createStage1Wave2ToRangedOnlyRegressionEngine();
+      reachWave2Engage(engine);
       const reached = advanceUntil(
         engine,
         (snap) => {
@@ -506,22 +508,22 @@ describe(
           expect(after.worldOffsetX).toBeGreaterThanOrEqual(marchStartOffset);
         }
 
-        if (
-          sawWaveExitMarch &&
-          after.waveAnnouncementActive &&
-          after.waveIndex === 1
-        ) {
+        if (sawWaveExitMarch && after.awaitingNextWave) {
           const maxX = Math.max(
             ...before.allies.filter((a) => a.hp > 0).map((a) => a.battleX),
           );
           expect(maxX).toBeGreaterThan(marchStartX);
           expect(before.worldOffsetX).toBeGreaterThan(marchStartOffset);
+          expect(after.waveAnnouncementActive).toBe(false);
+          expect(engine.startNextWave()).toBe(true);
+          expect(engine.getSnapshot().waveAnnouncementActive).toBe(true);
+          expect(engine.getSnapshot().waveIndex).toBe(1);
           return;
         }
       }
       expect(sawWaveExitMarch).toBe(true);
       expect.fail(
-        "wave exit march did not complete before wave 2 announcement",
+        "wave exit march did not complete before awaiting next wave",
       );
     });
 

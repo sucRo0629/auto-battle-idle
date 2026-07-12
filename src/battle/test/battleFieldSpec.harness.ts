@@ -58,7 +58,26 @@ export function screenX(
   return unit.battleX;
 }
 
-export function createStage1Engine(options?: { reliableWaveClear?: boolean }) {
+/**
+ * 既存 wave2 回帰テスト用: tick 後に中間 Wave 待機へ入ったら自動で startNextWave。
+ * R6b 待機検証テストでは使用しないこと。
+ */
+export function installLegacyWaveAutoAdvance(engine: BattleEngine): BattleEngine {
+  const originalTick = engine.tick.bind(engine);
+  engine.tick = (deltaTime: number) => {
+    originalTick(deltaTime);
+    if (engine.getSnapshot().awaitingNextWave) {
+      engine.startNextWave();
+    }
+  };
+  return engine;
+}
+
+export function createStage1Engine(options?: {
+  reliableWaveClear?: boolean;
+  /** 中間 Wave 待機後に自動 startNextWave（wave2 回帰用。R6b 待機テストでは false） */
+  legacyAutoWaveAdvance?: boolean;
+}) {
   const gameData = structuredClone(loadGameData());
   if (options?.reliableWaveClear) {
     const stage = gameData.stages.find((s) => s.id === "1");
@@ -83,6 +102,9 @@ export function createStage1Engine(options?: { reliableWaveClear?: boolean }) {
     () => save.stageProgress.currentStageId,
   );
   engine.startBattle();
+  if (options?.legacyAutoWaveAdvance) {
+    installLegacyWaveAutoAdvance(engine);
+  }
   return engine;
 }
 
@@ -144,7 +166,7 @@ export function createStage1Wave2MeleeOnlyEngine() {
     () => save.stageProgress.currentStageId,
   );
   engine.startBattle();
-  return engine;
+  return installLegacyWaveAutoAdvance(engine);
 }
 
 export function createStage1Wave2ToRangedOnlyRegressionEngine() {
@@ -181,7 +203,7 @@ export function createStage1Wave2ToRangedOnlyRegressionEngine() {
     () => save.stageProgress.currentStageId,
   );
   engine.startBattle();
-  return engine;
+  return installLegacyWaveAutoAdvance(engine);
 }
 
 export type BattleSnapshot = ReturnType<BattleEngine["getSnapshot"]>;
@@ -265,6 +287,32 @@ export function reachWave1Engage(engine: BattleEngine): {
   throw new Error("wave 1 engagement did not occur");
 }
 
+export function reachAwaitingNextWave(
+  engine: BattleEngine,
+  maxTicks = 200_000,
+): BattleSnapshot {
+  waitForEngaged(engine);
+  for (let i = 0; i < maxTicks; i++) {
+    engine.tick(TICK_DT);
+    const snap = engine.getSnapshot();
+    if (snap.awaitingNextWave) return snap;
+    if (snap.phase === "victory" || snap.phase === "defeat") {
+      throw new Error(
+        `battle ended (${snap.phase}) instead of awaiting next wave`,
+      );
+    }
+  }
+  throw new Error("awaiting next wave state not reached");
+}
+
+export function killAllEnemies(engine: BattleEngine): void {
+  const { enemies } = asBattleEngineInternals(engine);
+  for (const enemy of enemies) {
+    enemy.hp = 0;
+    enemy.isAlive = false;
+  }
+}
+
 export function reachWave2Engage(
   engine: BattleEngine,
   maxTicks = 200_000,
@@ -273,6 +321,9 @@ export function reachWave2Engage(
   let preEngage: BattleSnapshot | null = null;
   for (let i = 0; i < maxTicks; i++) {
     const before = engine.getSnapshot();
+    if (before.awaitingNextWave) {
+      engine.startNextWave();
+    }
     if (
       before.waveIndex === 1 &&
       !before.engaged &&
@@ -289,6 +340,11 @@ export function reachWave2Engage(
       !before.engaged
     ) {
       return after;
+    }
+    if (after.phase === "victory" || after.phase === "defeat") {
+      throw new Error(
+        `battle ended (${after.phase}) before wave 2 engagement`,
+      );
     }
   }
   throw new Error("wave 2 engagement did not occur");

@@ -465,6 +465,15 @@ export class GameSession {
     }
   }
 
+  /** R6b: 中間 Wave 終了待機中のみ次 Wave を開始（Save / 進行は変更しない） */
+  startNextWave(): boolean {
+    return this.engine.startNextWave();
+  }
+
+  isAwaitingNextWave(): boolean {
+    return this.engine.getSnapshot().awaitingNextWave;
+  }
+
   tick(deltaSec: number, deltaMs: number): void {
     const simulationPaused =
       this.view.isBattlePaused() ||

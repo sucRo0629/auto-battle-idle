@@ -13,7 +13,7 @@ import {
 
 describe('stun movement', () => {
   it('blocks engaged auto-approach while stunned', () => {
-    const engine = createStage1Engine({ reliableWaveClear: true });
+    const engine = createStage1Engine({ reliableWaveClear: true, legacyAutoWaveAdvance: true });
     reachWave1Engage(engine);
     const internal = asBattleEngineInternals(engine);
     const enemy = internal.enemies.find((unit) => unit.isAlive);

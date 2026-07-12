@@ -205,7 +205,7 @@ describe('engage visual sync & overtaking', () => {
   });
 
   it('stage 1 wave 2 victory wipe: last ranged corpse stays on screen on settle', () => {
-    const engine = createStage1Engine({ reliableWaveClear: true });
+    const engine = createStage1Engine({ reliableWaveClear: true, legacyAutoWaveAdvance: true });
     waitForEngaged(engine);
 
     for (let i = 0; i < 200_000; i++) {

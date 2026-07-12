@@ -7,6 +7,7 @@ export type RuntimeBattlePhase =
   | 'Engaged'
   | 'PostCombatSettle'
   | 'VictoryExit'
+  | 'AwaitingNextWave'
   | 'Defeat'
   | 'Respawn'
   | 'Idle';
@@ -18,6 +19,7 @@ export interface RuntimeBattlePhaseInput {
   partyDeployActive: boolean;
   postCombatSettling: boolean;
   waveExitMarchActive: boolean;
+  awaitingNextWave: boolean;
   victoryAwaitExitMarch: boolean;
 }
 
@@ -29,6 +31,7 @@ export function resolveRuntimeBattlePhase(
   if (input.phase === 'victory') {
     return input.victoryAwaitExitMarch ? 'VictoryExit' : 'Respawn';
   }
+  if (input.awaitingNextWave) return 'AwaitingNextWave';
   if (input.postCombatSettling) return 'PostCombatSettle';
   if (input.waveExitMarchActive) return 'VictoryExit';
   if (input.waveAnnouncementActive) return 'WaveAnnouncement';

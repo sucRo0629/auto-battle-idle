@@ -13,7 +13,7 @@ import {
 
 describe('knockback movement lock', () => {
   it('blocks engaged auto-approach while move locked', () => {
-    const engine = createStage1Engine({ reliableWaveClear: true });
+    const engine = createStage1Engine({ reliableWaveClear: true, legacyAutoWaveAdvance: true });
     reachWave1Engage(engine);
     const internal = asBattleEngineInternals(engine);
     const enemy = internal.enemies.find((unit) => unit.isAlive);

@@ -253,6 +253,8 @@ export class BattleEngine {
   private pendingNextWaveIndex: number | null = null;
   /** 次 Wave へ: 死亡演出後の右退場 march（VictoryExit と同速度） */
   private waveExitMarchActive = false;
+  /** 中間 Wave 終了後: 次 Wave 開始待機（退場 march 完了後） */
+  private awaitingNextWave = false;
   /** Wave 開始: 告知オーバーレイ（PartyDeploy と同時進行） */
   private waveAnnouncementActive = false;
   private waveAnnouncementElapsedMs = 0;
@@ -616,6 +618,7 @@ export class BattleEngine {
       partyDeployActive: this.partyDeployActive,
       postCombatSettling: this.isPostCombatSettling(),
       waveExitMarchActive: this.waveExitMarchActive,
+      awaitingNextWave: this.awaitingNextWave,
       victoryAwaitExitMarch,
     });
   }
@@ -1207,6 +1210,7 @@ export class BattleEngine {
     this.waveAdvanceDelayTimer = 0;
     this.pendingNextWaveIndex = null;
     this.waveExitMarchActive = false;
+    this.awaitingNextWave = false;
     this.partyDeployActive = false;
     this.partyDeployPrepared = false;
     this.partyDeploySettled = false;
@@ -1267,6 +1271,7 @@ export class BattleEngine {
 
   private shouldSuppressCombatSkills(): boolean {
     return (
+      this.awaitingNextWave ||
       this.waveAnnouncementActive ||
       this.partyDeployActive ||
       (this.partyDeploySettled && !this.engaged) ||
@@ -1318,16 +1323,15 @@ export class BattleEngine {
     }
   }
 
-  /** 次 Wave 前: Victory と同様の右退場 → 完了後に Wave 告知 */
+  /** 次 Wave 前: 死亡演出後の右退場 → 完了後に待機（R6b: 自動告知しない） */
   private tickWaveExitMarch(deltaTime: number): void {
     this.syncDeadEnemyCorpseBattleXForDebug();
     this.updateVictoryExitMarch(deltaTime, true);
     if (!this.areAlliesOffScreen(true)) return;
 
     this.waveExitMarchActive = false;
-    const waveIndex = this.pendingNextWaveIndex;
-    if (waveIndex !== null) {
-      this.beginWaveAnnouncement(waveIndex);
+    if (this.pendingNextWaveIndex !== null) {
+      this.awaitingNextWave = true;
     }
   }
 
@@ -1686,6 +1690,25 @@ export class BattleEngine {
     this.tryBeginTrainingEngage();
   }
 
+  /**
+   * 中間 Wave 終了待機中のみ: 次 Wave 告知・配置を開始する（R6b）。
+   * waveIndex は beginWaveAnnouncement 内で pendingNextWaveIndex へ更新する。
+   */
+  startNextWave(): boolean {
+    if (this.phase !== "running") return false;
+    if (!this.awaitingNextWave) return false;
+    if (this.waveExitMarchActive) return false;
+    if (this.waveAnnouncementActive) return false;
+    if (this.partyDeployActive) return false;
+    if (this.pendingNextWaveIndex === null) return false;
+
+    const nextWaveIndex = this.pendingNextWaveIndex;
+    this.awaitingNextWave = false;
+    this.pendingNextWaveIndex = null;
+    this.beginWaveAnnouncement(nextWaveIndex);
+    return true;
+  }
+
   syncPartyBuilds(): void {
     if (this.phase !== "running") return;
 
@@ -1746,6 +1769,7 @@ export class BattleEngine {
       alliesOffScreen: this.areAlliesOffScreen(this.waveExitMarchActive),
       victoryUseTimerFade: this.phase === "victory",
       victoryAwaitExitMarch,
+      awaitingNextWave: this.awaitingNextWave,
       players: this.players.map((c) => this.toSnapshot(c)),
       allies: this.players.map((c) => this.toSnapshot(c)),
       enemies: this.enemies.map((c) => this.toSnapshot(c)),
@@ -1906,6 +1930,9 @@ export class BattleEngine {
   }
 
   private tickRunning(deltaTime: number): void {
+    if (this.awaitingNextWave) {
+      return;
+    }
     this.tickIndex += 1;
     this.battleTimeSec += deltaTime;
     if (this.isBattleXDebugEnabled()) {
@@ -2529,6 +2556,7 @@ export class BattleEngine {
         this.waveIndex + 1 < stage.waves.length;
       if (hasNextWave) {
         if (
+          this.awaitingNextWave ||
           this.pendingNextWaveIndex !== null ||
           this.partyDeployActive ||
           this.waveAdvanceDelayTimer > 0 ||

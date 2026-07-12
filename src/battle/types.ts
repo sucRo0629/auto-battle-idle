@@ -1923,6 +1923,8 @@ export interface BattleSnapshot {
   victoryUseTimerFade: boolean;
   /** Victory（全員生存）: 退出 march 完了までオーバーレイ非表示 */
   victoryAwaitExitMarch: boolean;
+  /** 中間 Wave 終了後: 次 Wave 開始待機（R6b） */
+  awaitingNextWave: boolean;
   /** プレイヤー側ユニット（ランタイム正本） */
   players: CombatantSnapshot[];
   /** @deprecated players */

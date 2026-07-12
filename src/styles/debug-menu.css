@@ -165,6 +165,25 @@
   background: rgba(74, 144, 217, 0.35);
 }
 
+.debug-menu-start-next-wave-row {
+  padding: 4px 0;
+}
+
+.debug-menu-start-next-wave-button {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 4px;
+  background: rgba(74, 144, 217, 0.25);
+  color: var(--app-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.debug-menu-start-next-wave-button:hover {
+  background: rgba(74, 144, 217, 0.45);
+}
+
 .debug-menu-stage-info {
   display: flex;
   flex-direction: column;

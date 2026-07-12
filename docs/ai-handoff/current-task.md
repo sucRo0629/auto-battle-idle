@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R5 完了** — R5b〜R5g 縦切り成立（本 §54）。**R6a 調査完了**（本 §56）。
-- **次の再開タスク:** **R6b** Wave 終了停止 + 仮 Wave 間準備 UI（handoff §56.9 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R6b 完了** — Wave 中間停止 + 仮次 Wave 開始（本 §57）。**R6a 調査完了**（§56）。
+- **次の再開タスク:** **R6c** 最小 OperationState（handoff §57.9 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -4462,4 +4462,123 @@ loadGameData()
 13. **R6 推奨分割:** §56.11
 14. **最初の手動確認地点:** R6b（Wave 停止 + 仮次 Wave 開始）
 15. **主なリスク:** §56.11 末尾
-16. **次の 1 タスク:** **R6b**
+16. **次の 1 タスク:** **R6c**
+
+---
+
+## 57. R6b — Wave 終了停止 + 仮次 Wave 開始（2026-07-12）
+
+**目的:** 中間 Wave 終了後に自動進行を止め、`startNextWave()` で明示再開できる最小経路を追加。OperationState・HP 全回復・正式 UI は未実装。
+
+### 57.1 読んだファイル（6 件）
+
+1. `docs/ai-handoff/current-task.md` — R5 完了・§56 R6a 正本
+2. `src/battle/BattleEngine.ts` — Wave 遷移・tick 中心
+3. `src/game/GameSession.ts` — Session 接続
+4. `src/battle/battlePhase.ts` — RuntimeBattlePhase
+5. `src/battle/test/battleFieldSpec.harness.ts` — 回帰テスト harness
+6. `src/ui/DebugMenuPanel.ts` — verify 仮トリガー
+
+### 57.2 変更したファイル
+
+| ファイル | 変更 |
+|----------|------|
+| `src/battle/BattleEngine.ts` | `awaitingNextWave`、`tickWaveExitMarch` 停止、`startNextWave()`、tick 凍結 |
+| `src/battle/battlePhase.ts` | `RuntimeBattlePhase: AwaitingNextWave` |
+| `src/battle/types.ts` | `BattleSnapshot.awaitingNextWave` |
+| `src/game/GameSession.ts` | `startNextWave()` / `isAwaitingNextWave()` |
+| `src/ui/DebugMenuPanel.ts` | verify 時「次Wave開始」ボタン |
+| `src/ui/BattleView.ts` | debug コントロール配線 |
+| `src/battle/test/battleFieldSpec.harness.ts` | `reachAwaitingNextWave`、`reachWave2Engage` 更新、`installLegacyWaveAutoAdvance` |
+| `src/battle/test/demoStageSim.harness.ts` | シミュ終了まで `startNextWave` |
+| `src/battle/battleEngine.awaitingNextWave.test.ts` | R6b 必須テスト（新規） |
+| `src/battle/battlePhase.test.ts` | AwaitingNextWave FSM |
+| `src/battle/battleFieldTransition.test.ts` | T-wave-exit-01 / Phase3d 更新 |
+| 他 wave2 回帰テスト数件 | `legacyAutoWaveAdvance` 等 |
+| `docs/ai-handoff/current-task.md` | 本 §57 |
+| `docs/plans/phase-roadmap.md` | R6b 完了・次 R6c |
+
+### 57.3 待機状態
+
+- **フィールド:** `BattleEngine` 私有 `awaitingNextWave: boolean`
+- **FSM:** `RuntimeBattlePhase = 'AwaitingNextWave'`
+- **snapshot:** `BattleSnapshot.awaitingNextWave`
+- **意味:** 中間 Wave の敵退場 march 完了後、次 Wave 開始待ち。最終 Wave 勝利・敗北・退場中とは別。
+
+### 57.4 自動進行を止めた箇所
+
+- **`tickWaveExitMarch`:** 味方 off-screen 到達後、従来の `beginWaveAnnouncement(pendingNextWaveIndex)` を呼ばず `awaitingNextWave = true` のみ設定。`pendingNextWaveIndex` は保持。
+- **`tickRunning`:** `awaitingNextWave` 時は冒頭で return（tickIndex / battleTimeSec / CD / status / 戦闘処理すべて停止）。
+
+### 57.5 Wave index 更新タイミング
+
+| タイミング | `waveIndex` | `pendingNextWaveIndex` |
+|------------|-------------|------------------------|
+| 中間 Wave 敵全滅 | 完了 Wave（例: 0）維持 | `waveIndex + 1` を設定 |
+| 退場 march 完了 → 待機 | 同上 | 同上（保持） |
+| `startNextWave()` 成功 | **`beginWaveAnnouncement(next)` 内で `waveIndex = next` に更新** | クリア後に告知開始 |
+| 最終 Wave 全滅 | 従来どおり victory（待機なし） | — |
+
+二重 increment なし。`startNextWave` は `pendingNextWaveIndex` を一度だけ消費。
+
+### 57.6 API
+
+**BattleEngine**
+
+```ts
+startNextWave(): boolean
+```
+
+- 成功条件: `phase === 'running'` かつ `awaitingNextWave` かつ `pendingNextWaveIndex !== null`、退場/告知/deploy 中でない
+- 成功時: `beginWaveAnnouncement(pendingNextWaveIndex)` を既存経路で呼ぶ
+
+**GameSession**
+
+```ts
+startNextWave(): boolean
+isAwaitingNextWave(): boolean
+```
+
+- engine へ委譲のみ。Save / party persist / stage 進行 / victory reward は触らない。
+
+### 57.7 仮操作（verify 限定）
+
+1. `npm run dev` で起動
+2. **verify ON**（画面上部 verify バッジ）
+3. Debug メニュー（戦闘画面「Debug」）を開く
+4. 中間 Wave 終了待機中のみ **「次Wave開始」** ボタン表示
+5. クリック → `engine.startNextWave()` → Wave 告知・敵生成へ
+
+**手動確認用 stage:** legacy multi-wave **Stage `1`**（`data/stages.json`）。Debug で周回ステージ `Stage 1`、周回 Wave `全Wave` を選択。
+
+**コンソール代替:** `gameSession.startNextWave()`（verify 中・待機後）。
+
+### 57.8 待機中に停止する処理
+
+ally/enemy action、skill/basic CD、status duration、DoT/HoT、移動、target selection、BattlePhase 自動遷移、次 Wave 告知・敵生成（すべて `tickRunning` 早期 return）。
+
+### 57.9 R6b で維持した Wave 戦闘状態（リセットなし）
+
+味方 HP / Barrier / statusEffects / cooldown / 位置 / facing / 一時 stat 補正 — wave 間でそのまま凍結・再利用（§56.7 現行どおり）。
+
+### 57.10 最終 Wave
+
+`hasNextWave === false` 分岐は変更なし → `applyVictoryTransition` → `GameSession.handleVictory`（1 回）。中間 Wave で victory reward なし。
+
+### 57.11 待機解除境界
+
+`restartBattle` / `reloadBattlefield` / `clearPendingWaveAdvance` / `applyVictoryTransition` / `applyDefeatTransition` で `awaitingNextWave` クリア。stage 変更・verify 切替・Session 再生成も `restartBattle` 経由で安全。
+
+### 57.12 テスト
+
+- 新規: `src/battle/battleEngine.awaitingNextWave.test.ts`（中間停止・startNextWave・最終 victory・reset・module 回帰・GameSession wire）
+- 更新: `battleFieldTransition` T-wave-exit-01、wave2 harness、demo sim tick ループ
+- **R6b 関連バンドル 66 件 pass**（`battleEngine.awaitingNextWave` + wave 遷移回帰）
+
+### 57.13 次タスク
+
+**R6c — 最小 OperationState**（メモリで wave index / clearedCount / module map を GameSession 側に集約）。R6b では OperationState なしで待機可能だったため先行実装なし。
+
+### 57.14 完了判定
+
+**R6b 完了扱い可** — 中間 Wave 停止・明示再開・最終 victory 維持・必須テスト・verify 仮トリガー成立。

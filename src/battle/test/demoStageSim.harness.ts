@@ -513,6 +513,9 @@ export function runDemoStageBattle(
 
   for (; tickCount < maxTicks; tickCount++) {
     engine.tick(TICK_DT);
+    if (engine.getSnapshot().awaitingNextWave) {
+      engine.startNextWave();
+    }
     if (rangerBasicTracker) {
       const snap = engine.getSnapshot();
       rangerBasicTracker.recordTick(

@@ -88,7 +88,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
   });
 
   it('I-§4.1-06a: victory / wipe transition — ally battleX single-tick jump bounded', () => {
-    const engine = createStage1Engine({ reliableWaveClear: true });
+    const engine = createStage1Engine({ reliableWaveClear: true, legacyAutoWaveAdvance: true });
     waitForEngaged(engine);
 
     const prevScreenX = new Map<string, number>();
@@ -166,7 +166,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
   });
 
   it('I-§4.1-05: Wave 1 clear → Wave 2 PartyDeploy — ally battleX jump bounded', () => {
-    const engine = createStage1Engine({ reliableWaveClear: true });
+    const engine = createStage1Engine({ reliableWaveClear: true, legacyAutoWaveAdvance: true });
 
     let ticksAfterWave1Clear = 0;
     let tracking = false;
@@ -220,7 +220,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
   });
 
   it('I-§4.1-06b: Wave 2 enemy wipe tick — ally battleX jump stays under 20px', () => {
-    const engine = createStage1Engine({ reliableWaveClear: true });
+    const engine = createStage1Engine({ reliableWaveClear: true, legacyAutoWaveAdvance: true });
     waitForEngaged(engine);
 
     let maxWipeJump = 0;
@@ -303,7 +303,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
   });
 
   it('I-Victory-03: victory preserves pre-wipe engaged ally battleX (no formation snap)', () => {
-    const engine = createStage1Engine({ reliableWaveClear: true });
+    const engine = createStage1Engine({ reliableWaveClear: true, legacyAutoWaveAdvance: true });
     waitForEngaged(engine);
 
     const preVictoryBattleX = new Map<string, number>();
@@ -340,6 +340,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     const gameData = loadGameData();
     const stage1 = gameData.stages.find((s) => s.id === '1');
     if (stage1?.waves[0]) {
+      stage1.waves = stage1.waves.slice(0, 1);
       stage1.waves[0].enemies = [{ templateId: 'stage1_1', spawnX: 120 }];
     }
     const wave1Enemy = gameData.enemyRegistry.stage1_1;
