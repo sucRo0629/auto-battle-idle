@@ -265,15 +265,15 @@ describe('ally combat module selection (R5d)', () => {
     );
   });
 
-  it('8. same class in different party slots can hold independent selections', () => {
+  it('8. different party slots hold independent module selections (R5f: distinct classIds)', () => {
     const gameData = loadGameData();
     const selection = new PartyCombatModuleSelection();
     selection.setSelectedCombatModuleId(0, 'df_guardian_mod_nearest_strike');
-    selection.setSelectedCombatModuleId(1, 'df_guardian_mod_guard_focus');
+    selection.setSelectedCombatModuleId(1, 'at_swordsman_mod_pierce_slash');
 
     const party: PartySlotState[] = [
       mockMember('df_guardian'),
-      mockMember('df_guardian'),
+      mockMember('at_swordsman'),
       null,
       null,
     ];
@@ -288,7 +288,7 @@ describe('ally combat module selection (R5d)', () => {
       'df_guardian_mod_nearest_strike',
     );
     expect(allies[1]?.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
-      'df_guardian_mod_guard_focus',
+      'at_swordsman_mod_pierce_slash',
     );
   });
 

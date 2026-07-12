@@ -29,6 +29,10 @@ import {
 } from '../progression/levelGrowth.ts';
 import { resolveBattleActiveSkillIds } from '../progression/battleActiveSkills.ts';
 import {
+  validatePartyClassIds,
+  type PartyValidationResult,
+} from '../progression/partyCompose.ts';
+import {
   getUnlockedActiveSlotCount,
   getUnlockedSkillSlotCount,
   MAX_ACTIVE_SLOTS,
@@ -138,12 +142,28 @@ function copyTraits(traits: NormalizedEntityTraits): NormalizedEntityTraits {
   return copyNormalizedTraits(traits);
 }
 
+export class PartyDuplicateClassError extends Error {
+  readonly reason = 'duplicateClass' as const;
+
+  constructor(public readonly validation: PartyValidationResult) {
+    super(
+      validation.duplicateClassId
+        ? `Party contains duplicate classId: ${validation.duplicateClassId}`
+        : 'Party contains duplicate classId',
+    );
+  }
+}
+
 export function createAlliesFromPartyState(
   gameData: GameData,
   party: PartySlotState[],
   curves: LevelCurvesConfig,
   getSelectedCombatModuleId?: (slotIndex: number) => string | undefined,
 ): CombatantState[] {
+  const validation = validatePartyClassIds(party);
+  if (!validation.ok) {
+    throw new PartyDuplicateClassError(validation);
+  }
   const allies: CombatantState[] = [];
   party.forEach((member, slotIndex) => {
     if (!member) return;

@@ -1494,7 +1494,7 @@ export function configureDoubleMeleeParty(
   save: SaveGameState,
   gameData: GameData,
 ): void {
-  save.party[3] = createMemberFromClass('at_swordsman', gameData);
+  save.party[3] = createMemberFromClass('at_assassin', gameData);
 }
 
 /** Diagnostic: ranger slot → assassin (finish/backline vs ch1_05-style targets). */
@@ -1505,13 +1505,12 @@ export function configureAssassinInsteadOfRangerParty(
   save.party[3] = createMemberFromClass('at_assassin', gameData);
 }
 
-/** Diagnostic: cleric + ranger both → assassin (double finish on ch1_05). */
+/** Diagnostic: cleric + ranger both → assassin (R5f: single assassin; double same-class removed). */
 export function configureAssassinDoubleFinishParty(
   save: SaveGameState,
   gameData: GameData,
 ): void {
   save.party[2] = createMemberFromClass('at_assassin', gameData);
-  save.party[3] = createMemberFromClass('at_assassin', gameData);
 }
 
 /** Diagnostic: cleric slot → swordsman (no-healer swordsman control for assassin comparison). */
@@ -1519,6 +1518,7 @@ export function configureNoHealerSwordsmanParty(
   save: SaveGameState,
   gameData: GameData,
 ): void {
+  save.party[1] = createMemberFromClass('at_ranger', gameData);
   save.party[2] = createMemberFromClass('at_swordsman', gameData);
 }
 
@@ -1527,6 +1527,7 @@ export function configureSwordsmanInsteadOfRangerParty(
   save: SaveGameState,
   gameData: GameData,
 ): void {
+  save.party[1] = createMemberFromClass('at_assassin', gameData);
   save.party[3] = createMemberFromClass('at_swordsman', gameData);
 }
 

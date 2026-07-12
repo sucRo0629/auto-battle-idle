@@ -43,6 +43,11 @@ import {
   formatExpGrantLog,
   formatLevelUpLog,
 } from '../progression/victoryRewards.ts';
+import {
+  validatePartyClassAssignment,
+  validatePartyClassIds,
+  type PartyClassAssignmentResult,
+} from '../progression/partyCompose.ts';
 import { createMenuHost, type MenuHost } from '../platform/menuHost.ts';
 import { SaveManager } from '../save/SaveManager.ts';
 import { BattleView } from '../ui/BattleView.ts';
@@ -336,13 +341,53 @@ export class GameSession {
     this.clearPartySlotCombatModule(slotIndex);
   }
 
-  updatePartySlot(slotIndex: number, member: PartySlotState): void {
-    if (slotIndex < 0 || slotIndex >= this.save.party.length) return;
-    this.save.party[slotIndex] = member
-      ? structuredClone(member)
-      : null;
+  tryUpdatePartySlot(
+    slotIndex: number,
+    member: PartySlotState,
+  ): PartyClassAssignmentResult {
+    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) {
+      return { ok: false };
+    }
+
+    const classId = member?.classId ?? null;
+    const validation = validatePartyClassAssignment(
+      this.save.party,
+      slotIndex,
+      classId,
+    );
+    if (!validation.ok) {
+      return validation;
+    }
+
+    const current = this.save.party[slotIndex];
+    const currentClassId = current?.classId ?? null;
+    const nextClassId = member?.classId ?? null;
+
+    if (currentClassId === nextClassId) {
+      if (member) {
+        this.save.party[slotIndex] = structuredClone(member);
+        this.persistSave();
+      } else if (current !== null) {
+        this.save.party[slotIndex] = null;
+        this.partyCombatModuleSelection.clearSelectedCombatModuleId(slotIndex);
+        this.persistSave();
+        this.engine.restartBattle();
+      }
+      return { ok: true };
+    }
+
+    if (nextClassId !== null) {
+      this.partyCombatModuleSelection.clearSelectedCombatModuleId(slotIndex);
+    }
+
+    this.save.party[slotIndex] = member ? structuredClone(member) : null;
     this.persistSave();
     this.engine.restartBattle();
+    return { ok: true };
+  }
+
+  updatePartySlot(slotIndex: number, member: PartySlotState): void {
+    this.tryUpdatePartySlot(slotIndex, member);
   }
 
   setPlayerLevel(level: number): void {
@@ -448,6 +493,10 @@ export class GameSession {
     const loaded = this.saveManager.load(storageKey);
     const save = loaded ?? createDefaultSave(this.gameData, partyId);
     reconcilePartyBuilds(save.party, this.gameData);
+    if (!validatePartyClassIds(save.party).ok) {
+      const defaultSave = createDefaultSave(this.gameData, partyId);
+      save.party = defaultSave.party;
+    }
     const resolvedStageId = resolveKnownStageId(
       this.gameData.stages,
       save.stageProgress.currentStageId,

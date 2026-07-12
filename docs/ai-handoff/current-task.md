@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R5e 完了** — 敵 group combat module 指定（本 §52）。次は **R5f**。
-- **次の再開タスク:** **R5f**（handoff §52.8 参照）。
+- **新ロードマップ現在地:** **R5f 完了** — 味方 classId 重複禁止（本 §53）。次は **R5g**。
+- **次の再開タスク:** **R5g**（handoff §53.8 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -21,6 +21,7 @@
 - **今回の実装（R5c）:** §49。対象 4 兵科の先頭 module を通常行動として SkillExecutor 接続。UI / editor / Save / 作戦ループ / 方式 B 選択 / 敵 selectedCombatModuleId は未接続。
 - **今回の実装（R5d）:** §51。味方 4 slot ごとの module A/B 選択（実行中メモリのみ）。Save / UI / 敵 / 作戦ループは未接続。
 - **今回の実装（R5e）:** §52。敵 `enemyGroups[].selectedCombatModuleId` 接続。味方 R5d / Save / UI / 作戦ループは未変更。
+- **今回の実装（R5f）:** §53。味方 party 内 classId 重複禁止（編成 API / UI 候補 / 戦闘生成境界）。敵・Save schema・module 正式 UI は未変更。
 
 ### R4 で確定したデータ責務（doc 反映済）
 
@@ -3894,3 +3895,83 @@ StageEnemyGroup.selectedCombatModuleId
 - **R5d 既知:** 同一 module 再設定でも cooldown 再生成（R5e では最適化しない）
 
 **R5e 完了判定:** 本節時点で R5e 完了。次は R5f。
+
+---
+
+## 53. R5f — 味方 classId 重複禁止（2026-07-12）
+
+**目的:** 味方 4 人編成で同一 `classId` を複数 slot に置けないよう、編成候補・編成変更 API・戦闘開始（味方生成）境界で保証。敵 group / 敵生成には適用しない。
+
+### 53.1 読んだファイル
+
+1. `docs/ai-handoff/current-task.md` — §49 R5c / §50 / §51 R5d / §52 R5e 完了状態
+2. `src/progression/partyCompose.ts`
+3. `src/game/GameSession.ts`
+4. `src/battle/entities.ts`
+5. `src/ui/SkillMenuPanel.ts`
+6. `src/battle/allyCombatModuleSelection.test.ts`
+
+### 53.2 変更したファイル
+
+| ファイル | 変更 |
+|----------|------|
+| `src/progression/partyCompose.ts` | 重複判定ヘルパー・`PartyClassAssignmentResult` 型・`getAssignableClassIds` 正規化対応 |
+| `src/game/GameSession.ts` | `tryUpdatePartySlot`（拒否 + module clear）、load 時 duplicate fallback |
+| `src/battle/entities.ts` | `createAlliesFromPartyState` 境界 validate、`PartyDuplicateClassError` |
+| `src/ui/SkillMenuPanel.ts` | `getAssignableClassIds` による archive 候補フィルタ、`syncDraftPartyToSelection` 防御 |
+| `src/battle/test/demoStageSim.harness.ts` | 重複編成を作っていた diagnostic configure を R5f 準拠へ最小修正 |
+| `src/battle/allyCombatModuleSelection.test.ts` | テスト 8 を distinct classId の slot 独立選択へ更新 |
+| `src/progression/partyClassDuplicate.test.ts` | **新規** R5f 必須テスト 24 件 |
+| `docs/ai-handoff/current-task.md` | 本 §53 |
+
+### 53.3 重複判定の正本
+
+`src/progression/partyCompose.ts`:
+
+- `normalizePartyClassId` — `migrateLegacyClassId` 再利用（legacy alias は同一兵科として判定）
+- `collectUsedPartyClassIds` / `findDuplicatePartyClassIds`
+- `validatePartyClassIds` — party 全体
+- `validatePartyClassAssignment` — slot 単位（空 slot・同一 slot 再選択は許可）
+- `getAssignableClassIds` — UI 候補（編集中 slot 自身の class は残す）
+- `PARTY_DUPLICATE_CLASS_MESSAGE` — `'同じ兵科は編成できません'`（i18n 本実装は後続）
+
+### 53.4 境界での拒否
+
+| 境界 | 挙動 |
+|------|------|
+| **編成変更 API** | `GameSession.tryUpdatePartySlot` — `validatePartyClassAssignment` で拒否。`updatePartySlot` は結果を無視して呼ぶだけ（既存 callback 互換）。拒否時は party 不変・persist なし |
+| **戦闘生成** | `createAlliesFromPartyState` — `validatePartyClassIds` 失敗時 `PartyDuplicateClassError` を throw。`BattleEngine.reloadBattlefield` 経由で防御 |
+| **既存 Save load** | `loadSaveForMode` — duplicate 検出時 `createDefaultSave` の party へ fallback（schema version 変更なし・自動 class 置換 migration なし） |
+| **敵** | **変更なし** — `createEnemiesForStage` / `expandEnemyGroups` / `count > 1` は従来どおり |
+
+### 53.5 UI 候補
+
+- `SkillMenuPanel.getArchiveAssignableClassIds()` → `getAssignableClassIds(draftParty, unlocked, focusedSlot, classOrder)`
+- 他 slot 使用中 class は archive から**除外**（編集中 slot 自身の class は残る）
+- 未解放 class 非表示は従来どおり `unlockedClassIds` 経由
+- `syncDraftPartyToSelection` で API 直前にも `validatePartyClassAssignment`（belt-and-suspenders）
+
+### 53.6 class 変更時の module 選択
+
+**採用:** classId が変わった slot の `selectedCombatModuleId` を **clear**（`PartyCombatModuleSelection.clearSelectedCombatModuleId`）。resolver fallback より無効状態を残さない方を採用。
+
+- 同一 classId の再設定（`tryUpdatePartySlot`）では module 選択を clear せず、`restartBattle` も起動しない
+- 他 slot の module 選択には影響しない
+
+### 53.7 テスト
+
+- `src/progression/partyClassDuplicate.test.ts` — 24 pass（必須 22 + legacy alias + restartBattle）
+- `src/battle/allyCombatModuleSelection.test.ts` — テスト 8 更新後 15 pass
+
+### 53.8 R5g 以降へ送る未接続事項
+
+- module 選択の正式 UI / CombatModuleEditor（味方・敵）
+- Save 永続化・Wave 間保持・checkpoint
+- 作戦ループ・作戦状態全体・作戦内パッシブ（R8）
+- 全兵科への combat module 移行
+- `waves[].enemyGroups` 正本切替
+- **R5f UI:** `party.duplicateClass` i18n キー本実装・正式エラー表示
+- **R5f diagnostic:** `configureAssassinDoubleFinishParty` 等の旧「同一 class 2 体」診断 composition の R5g 再設計（現状は valid party へ最小差し替えのみ）
+- **R5d 既知:** 同一 module 再設定でも cooldown 再生成
+
+**R5f 完了判定:** 本節時点で R5f 完了。次は R5g。

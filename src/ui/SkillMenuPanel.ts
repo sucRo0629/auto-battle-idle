@@ -29,7 +29,7 @@ import {
   compareByClassListOrder,
   sortClassIdsByListOrder,
 } from "../battle/data/classListOrder.ts";
-import { createMemberFromClass } from "../progression/partyCompose.ts";
+import { createMemberFromClass, getAssignableClassIds, PARTY_DUPLICATE_CLASS_MESSAGE, validatePartyClassAssignment } from "../progression/partyCompose.ts";
 import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
 import { resolveMemberBasicAttackDisplay } from "../progression/memberBasicAttackDisplay.ts";
@@ -393,6 +393,17 @@ export class SkillMenuPanel {
 
     nextParty.forEach((member, index) => {
       const current = this.draftParty[index];
+      if (member) {
+        const validation = validatePartyClassAssignment(
+          this.draftParty,
+          index,
+          member.classId,
+        );
+        if (!validation.ok) {
+          this.selectionFeedback = PARTY_DUPLICATE_CLASS_MESSAGE;
+          return;
+        }
+      }
       if (current?.classId === member?.classId) {
         this.draftParty[index] = member;
         return;
@@ -1164,13 +1175,25 @@ export class SkillMenuPanel {
     return iconWrap;
   }
 
+  private getArchiveAssignableClassIds(): ClassId[] {
+    return getAssignableClassIds(
+      this.draftParty,
+      this.unlockedClassIds,
+      this.getSelectedSlotIndex(),
+      this.gameData.classOrder,
+    );
+  }
+
   private renderClassArchive(): void {
     this.classArchiveListEl.replaceChildren();
     this.classArchiveListEl.appendChild(this.createPickerRoleBlocks());
   }
 
   private createPickerRoleBlocks(): HTMLElement {
-    const visible = this.getPickerVisibleClassIds();
+    const assignableSet = new Set(this.getArchiveAssignableClassIds());
+    const visible = this.getPickerVisibleClassIds().filter((classId) =>
+      assignableSet.has(classId)
+    );
     const blocks = document.createElement("div");
     blocks.className = "skill-menu-picker-role-blocks";
 
