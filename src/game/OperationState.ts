@@ -10,6 +10,10 @@ import {
   validatePartyClassIds,
   type PartyClassAssignmentResult,
 } from '../progression/partyCompose.ts';
+import {
+  applyCheckpointModulesToSelection,
+  type OperationCheckpointSnapshot,
+} from './OperationCheckpoint.ts';
 
 export interface OperationStateReadonlyView {
   readonly stageId: string;
@@ -290,5 +294,40 @@ export class OperationState {
   /** テスト用: module map が元選択と別参照であることの検証 */
   getCombatModuleSelectionReference(): PartyCombatModuleSelection {
     return this.combatModuleSelection;
+  }
+
+  /**
+   * R6f: 検証済み checkpoint から party / module / Wave 進行を復元し、
+   * 再戦可能な active 状態へ正規化する。呼出前に validate が通っていること。
+   */
+  tryRestoreFromCheckpoint(snapshot: OperationCheckpointSnapshot): boolean {
+    if (snapshot.stageId !== this.stageId) {
+      return false;
+    }
+
+    const nextParty = normalizePartySlots(
+      snapshot.party.map((slot) => (slot ? structuredClone(slot) : null)),
+    );
+    if (!validatePartyClassIds(nextParty).ok) {
+      return false;
+    }
+
+    this.partySlots.length = 0;
+    for (const slot of nextParty) {
+      this.partySlots.push(slot);
+    }
+
+    applyCheckpointModulesToSelection(
+      this.combatModuleSelection,
+      snapshot.combatModuleSelection,
+    );
+
+    this.currentWaveIndexValue = snapshot.currentWaveIndex;
+    this.clearedWaveCountValue = snapshot.clearedWaveCount;
+    this.endWavePrepEditing();
+    this.isActiveValue = true;
+    this.isCompletedValue = false;
+    this.isDefeatedValue = false;
+    return true;
   }
 }

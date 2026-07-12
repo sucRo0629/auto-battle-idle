@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6e 完了** — Wave 間準備 screen と作戦中 party/module 変更（本 §60）。**R6d 完了**（§59）。**R6c 完了**（§58）。
-- **次の再開タスク:** **R6f** checkpoint（出撃確定・メモリ snapshot）（handoff §60.13 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R6f 完了** — 出撃確定時 checkpoint メモリ snapshot 基盤（本 §61）。**R6e 完了**（§60）。**R6d 完了**（§59）。
+- **次の再開タスク:** **R6g** 複数 Wave `waves[].enemyGroups` spawn（handoff §61.11 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -4904,3 +4904,82 @@ ally/enemy action、skill/basic CD、status duration、DoT/HoT、移動、target
 ### 60.11 次タスク
 
 **R6f — checkpoint（出撃確定・メモリ snapshot）**。Wave 間準備確定時または出撃確定 API で OperationState snapshot をメモリ保持し、retry 3 種の土台とする。
+
+---
+
+## 61. R6f — 出撃確定時 checkpoint メモリ snapshot 基盤（2026-07-12）
+
+**目的:** Wave 戦闘開始直前の作戦設定をメモリ checkpoint として生成・保持・取得・復元できる API を成立させ、後続 retry（R6i）が安全に利用できる土台とする。retry UI・敗北画面・Save 永続化・統計巻き戻しは未実装。
+
+### 61.1 checkpoint 所有者
+
+- **型・純粋関数:** `src/game/OperationCheckpoint.ts`（snapshot 生成 / clone / validation / OperationState 復元 orchestration）
+- **commit 済み保持:** `GameSession` private `operationCheckpoint`（メモリのみ）
+- **復元先:** `OperationState.tryRestoreFromCheckpoint`
+- **BattleEngine / SaveManager は非所有**
+
+### 61.2 checkpoint に含む / 含まない
+
+| 含む | 含まない |
+| ---- | -------- |
+| stageId | Combatant / HP / Barrier |
+| currentWaveIndex | buff / debuff / DoT / HoT / CC |
+| clearedWaveCount | cooldown / position / facing |
+| party 4slot（deep clone） | pending hit / field / sequence 等 runtime |
+| slot ごと selectedCombatModuleId | StageDamageStatsTracker |
+| operationExtras（将来パッシブ・未使用リソース用 `{}`） | battleTimeSec / DOM / SaveData |
+
+### 61.3 取得・更新タイミング（GameSession 配線）
+
+| 経路 | 順序 |
+| ---- | ---- |
+| **初回出撃** | validation → `OperationState.begin` → checkpoint commit → `engine.restartBattle` |
+| **次 Wave 確定成功** | `engine.startNextWave` 成功 → wave index 同期 → checkpoint commit（最新 party/module） |
+| **次 Wave 開始失敗** | 旧 checkpoint 維持・wavePrep / OperationState / wave index 非進行 |
+
+Wave 間準備での編集のみでは checkpoint **更新しない**（「次の Wave へ」確定成功時のみ）。
+
+### 61.4 公開 API（GameSession）
+
+- `hasOperationCheckpoint()` / `getOperationCheckpoint()`（clone 返却）
+- `buildOperationCheckpointCandidate()` / `tryCommitOperationCheckpoint(candidate)`
+- `tryRestoreOperationFromCheckpoint(source?)` — 不正時無変更失敗
+- `clearOperationCheckpoint()` — `clearOperation` / 最終勝利 / stageSelect 中断 / 新作戦開始時
+
+敗北時は checkpoint **保持**。既存敗北導線から復元は**未接続**。
+
+### 61.5 復元対象
+
+party / module / stageId / currentWaveIndex / clearedWaveCount を checkpoint 値へ。active=true・completed=false・defeated=false へ正規化。Combatant 再生成・画面遷移は後続 GameSession 処理向け。
+
+### 61.6 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/OperationCheckpoint.ts` | 新規 — snapshot 型・生成・clone・validation・復元 |
+| `src/game/OperationState.ts` | `tryRestoreFromCheckpoint` |
+| `src/game/GameSession.ts` | ライフサイクル配線・公開 API |
+| `src/game/operationCheckpoint.test.ts` | 新規 — R6f テスト 22 |
+| `docs/ai-handoff/current-task.md` | 本 §61 |
+| `docs/plans/phase-roadmap.md` | R6f 完了・次 R6g |
+
+### 61.7 テスト
+
+- R6f + R6e–R6b 関連: **93 pass / 93**（`operationCheckpoint.test.ts` 22 + `wavePrepScreen.test.ts` 16 + `operationState.test.ts` 36 + `battleEngine.waveReset.test.ts` 15 + `battleEngine.awaitingNextWave.test.ts` 4）
+- フルスイート: **1748 pass / 60 fail / 6 worker error（19 failed files / 273）**。R6f 起因の失敗なし。失敗分類は R6e 時点と同系 + Vitest `onTaskUpdate` timeout
+
+### 61.8 手動確認
+
+- 未実施（自動テストで生成・保持・更新・破棄・非破壊・復元・Save 非変更・R6e/R6d 回帰を固定）
+
+### 61.9 スコープ外維持
+
+- retry 3 種 UI/実行（R6i）、敗北画面正式 UI、checkpoint Save 永続化、StageDamageStats / battleTimeSec 巻き戻し、作戦内パッシブ、Wave 報酬、R6h 作戦結果画面
+
+### 61.10 完了判定
+
+**R6f 完了扱い可。** 出撃確定・次 Wave 確定成功時の checkpoint commit、敗北保持・勝利/中断破棄、deep snapshot API、OperationState 復元が後続 retry から利用可能。
+
+### 61.11 次タスク
+
+**R6g — 複数 Wave `waves[].enemyGroups` spawn**（schema 候補）。legacy multi-wave で先行可。

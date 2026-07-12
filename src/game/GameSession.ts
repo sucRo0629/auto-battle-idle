@@ -53,6 +53,13 @@ import { SaveManager } from '../save/SaveManager.ts';
 import { BattleView } from '../ui/BattleView.ts';
 import type { GameScreen } from './gameScreen.ts';
 import { OperationState, type OperationStateReadonlyView } from './OperationState.ts';
+import {
+  cloneCheckpointSnapshot,
+  createCheckpointFromOperationState,
+  restoreOperationStateFromCheckpoint,
+  validateCheckpointSnapshot,
+  type OperationCheckpointSnapshot,
+} from './OperationCheckpoint.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import { WavePrepScreenHost } from './WavePrepScreenHost.ts';
 import '../styles/game-shell.css';
@@ -84,6 +91,8 @@ export class GameSession {
   private readonly preOperationModuleSelection = new PartyCombatModuleSelection();
   /** R6c: 作戦単位のメモリ専用状態（Save 非統合） */
   private operationState: OperationState | null = null;
+  /** R6f: 出撃確定時点の作戦 snapshot（メモリのみ・Save 非統合） */
+  private operationCheckpoint: OperationCheckpointSnapshot | null = null;
 
   constructor(
     private readonly gameData: GameData,
@@ -270,6 +279,73 @@ export class GameSession {
 
   getClearedWaveCount(): number | null {
     return this.operationState?.clearedWaveCount ?? null;
+  }
+
+  /** R6f: 有効な checkpoint が存在するか */
+  hasOperationCheckpoint(): boolean {
+    return this.operationCheckpoint !== null;
+  }
+
+  /** R6f: checkpoint の readonly deep clone（内部状態を外部から書き換え不可） */
+  getOperationCheckpoint(): OperationCheckpointSnapshot | null {
+    return this.operationCheckpoint
+      ? cloneCheckpointSnapshot(this.operationCheckpoint)
+      : null;
+  }
+
+  /**
+   * R6f: 現在の OperationState から checkpoint 候補を生成（未 commit）。
+   * 作戦未開始時は null。
+   */
+  buildOperationCheckpointCandidate(): OperationCheckpointSnapshot | null {
+    if (this.operationState === null) return null;
+    return createCheckpointFromOperationState(this.operationState);
+  }
+
+  /**
+   * R6f: 検証済み checkpoint 候補を commit する。
+   * 不正候補は破棄せず commit しない（既存 checkpoint も維持）。
+   */
+  tryCommitOperationCheckpoint(
+    candidate: OperationCheckpointSnapshot,
+  ): boolean {
+    const waveCount = this.resolveOperationStageWaveCount(candidate.stageId);
+    if (
+      !validateCheckpointSnapshot(candidate, this.gameData, {
+        expectedStageId: candidate.stageId,
+        waveCount,
+      })
+    ) {
+      return false;
+    }
+    this.operationCheckpoint = cloneCheckpointSnapshot(candidate);
+    return true;
+  }
+
+  /**
+   * R6f: checkpoint から OperationState の party / module / Wave 進行を復元。
+   * 引数省略時は commit 済み checkpoint を使用。Combatant / 画面は復元しない。
+   */
+  tryRestoreOperationFromCheckpoint(
+    source?: OperationCheckpointSnapshot,
+  ): boolean {
+    if (this.operationState === null) return false;
+    const snapshot = source ?? this.operationCheckpoint;
+    if (snapshot === null) return false;
+
+    const waveCount = this.resolveOperationStageWaveCount(snapshot.stageId);
+    const result = restoreOperationStateFromCheckpoint(
+      this.operationState,
+      snapshot,
+      this.gameData,
+      waveCount,
+    );
+    return result.ok;
+  }
+
+  /** R6f: checkpoint を破棄（OperationState 自体は維持） */
+  clearOperationCheckpoint(): void {
+    this.operationCheckpoint = null;
   }
 
   isVerifyMode(): boolean {
@@ -596,14 +672,15 @@ export class GameSession {
 
   /** R6b: 中間 Wave 終了待機中のみ次 Wave を開始（Save / 進行は変更しない） */
   startNextWave(): boolean {
+    if (this.operationState === null) return false;
+
     const started = this.engine.startNextWave();
     if (started) {
-      if (this.operationState !== null) {
-        this.operationState.syncCurrentWaveIndex(
-          this.engine.getSnapshot().waveIndex,
-        );
-        this.operationState.endWavePrepEditing();
-      }
+      this.operationState.syncCurrentWaveIndex(
+        this.engine.getSnapshot().waveIndex,
+      );
+      this.operationState.endWavePrepEditing();
+      this.commitCheckpointFromCurrentOperationState();
       if (this.currentScreen === 'wavePrep') {
         this.setGameScreen('battle');
       }
@@ -788,6 +865,7 @@ export class GameSession {
   private clearOperation(): void {
     this.operationState?.endWavePrepEditing();
     this.operationState = null;
+    this.clearOperationCheckpoint();
   }
 
   /** R6e: 中間 Wave クリア後に Wave 間準備 screen を開く */
@@ -797,8 +875,21 @@ export class GameSession {
     this.setGameScreen('wavePrep');
   }
 
-  /** R6c: 出撃確定時に OperationState を初期化（メモリ専用 snapshot） */
-  private beginOperation(stageId: string, initialWaveIndex = 0): void {
+  private resolveOperationStageWaveCount(stageId: string): number {
+    const stage = getStageById(this.gameData.stages, stageId);
+    return stage?.waves.length ?? 0;
+  }
+
+  /** R6f: 現在 OperationState から checkpoint を生成して commit */
+  private commitCheckpointFromCurrentOperationState(): boolean {
+    if (this.operationState === null) return false;
+    const candidate = createCheckpointFromOperationState(this.operationState);
+    return this.tryCommitOperationCheckpoint(candidate);
+  }
+
+  /** R6f: 出撃確定時に OperationState 初期化 + checkpoint commit */
+  private beginOperation(stageId: string, initialWaveIndex = 0): boolean {
+    this.clearOperationCheckpoint();
     const next = OperationState.begin({
       stageId,
       party: this.save.party,
@@ -808,9 +899,23 @@ export class GameSession {
     if (next === null) {
       console.warn('[operation] Invalid party snapshot; operation not started');
       this.clearOperation();
-      return;
+      return false;
     }
     this.operationState = next;
+    const candidate = createCheckpointFromOperationState(next);
+    const waveCount = this.resolveOperationStageWaveCount(stageId);
+    if (
+      !validateCheckpointSnapshot(candidate, this.gameData, {
+        expectedStageId: stageId,
+        waveCount,
+      })
+    ) {
+      console.warn('[operation] Invalid checkpoint candidate; operation not started');
+      this.clearOperation();
+      return false;
+    }
+    this.operationCheckpoint = cloneCheckpointSnapshot(candidate);
+    return true;
   }
 
   private resolveOperationStartWaveIndex(): number {
