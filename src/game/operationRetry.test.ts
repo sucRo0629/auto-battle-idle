@@ -234,7 +234,7 @@ describe('Operation retry (R6i)', () => {
     expect(session.retryCurrentWaveFromCheckpoint()).toBe(true);
     expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
     expect(op.getAcquiredOperationPassiveIds(1)).toEqual([]);
-    expect(op.getUnspentResource()).toBe(5);
+    expect(op.getUnspentResource()).toBe(6);
     expect(session.getOperationCheckpoint()).toEqual(checkpoint);
   });
 
@@ -263,12 +263,30 @@ describe('Operation retry (R6i)', () => {
 
     expect(session.returnToFormationPrep()).toBe(true);
     expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
-    expect(op.getUnspentResource()).toBe(4);
+    expect(op.getUnspentResource()).toBe(5);
     expect(session.isWavePrepSuspendedForFormation()).toBe(true);
 
     expect(session.returnToWavePrepFromFormation()).toBe(true);
     expect(session.getCurrentScreen()).toBe('wavePrep');
     expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
-    expect(op.getUnspentResource()).toBe(4);
+    expect(op.getUnspentResource()).toBe(5);
+  });
+
+  it('R8c retry restores checkpoint acquired via public API', () => {
+    const passiveId = 'df_guardian_passive_2';
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(session.tryAcquireOperationPassive(0, passiveId)).toBe(true);
+    expect(session.confirmWavePrepAndStartNextWave()).toBe(true);
+    const checkpoint = session.getOperationCheckpoint();
+    expect(checkpoint?.acquiredOperationPassives).toEqual([
+      { slotIndex: 0, passiveIds: [passiveId] },
+    ]);
+
+    triggerDefeat(session);
+
+    expect(session.retryCurrentWaveFromCheckpoint()).toBe(true);
+    expect(session.getOperationAcquiredPassiveIds(0)).toEqual([passiveId]);
+    expect(session.getOperationUnspentResource()).toBe(0);
   });
 });

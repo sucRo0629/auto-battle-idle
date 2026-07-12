@@ -38,6 +38,8 @@ export interface OperationCheckpointSnapshot {
   readonly combatModuleSelection: readonly OperationCheckpointModuleEntry[];
   readonly acquiredOperationPassives: readonly OperationCheckpointPassiveEntry[];
   readonly unspentResource: number;
+  /** R8c: リソース付与済み clearedWaveCount（Wave ごと 1 回付与の重複防止）。 */
+  readonly lastResourceGrantClearedWaveCount: number;
   readonly operationExtras: Readonly<Record<string, unknown>>;
 }
 
@@ -116,6 +118,8 @@ export function createCheckpointFromOperationState(
       ),
     ),
     unspentResource: state.getUnspentResource(),
+    lastResourceGrantClearedWaveCount:
+      state.getLastResourceGrantClearedWaveCount(),
     operationExtras: {},
   };
 }
@@ -134,6 +138,8 @@ export function cloneCheckpointSnapshot(
       snapshot.acquiredOperationPassives,
     ),
     unspentResource: snapshot.unspentResource,
+    lastResourceGrantClearedWaveCount:
+      snapshot.lastResourceGrantClearedWaveCount,
     operationExtras: structuredClone(snapshot.operationExtras),
   };
 }
@@ -219,6 +225,14 @@ export function validateCheckpointSnapshot(
     return false;
   }
 
+  if (
+    !Number.isInteger(snapshot.lastResourceGrantClearedWaveCount) ||
+    snapshot.lastResourceGrantClearedWaveCount < 0 ||
+    snapshot.lastResourceGrantClearedWaveCount > snapshot.clearedWaveCount
+  ) {
+    return false;
+  }
+
   return true;
 }
 
@@ -267,7 +281,10 @@ export function applyCheckpointPassivesAndResource(
   entries: readonly OperationCheckpointPassiveEntry[],
   setUnspentResource: (value: number) => void,
   unspentResource: number,
+  setLastResourceGrantClearedWaveCount: (value: number) => void,
+  lastResourceGrantClearedWaveCount: number,
 ): void {
   acquired.replaceFromEntries(entries);
   setUnspentResource(unspentResource);
+  setLastResourceGrantClearedWaveCount(lastResourceGrantClearedWaveCount);
 }

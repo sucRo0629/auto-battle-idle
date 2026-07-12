@@ -643,3 +643,33 @@ describe('OperationState operation passives and resource (R8b)', () => {
     expect(op.getPartySnapshot()[0]?.build.learnedPassiveIds).toEqual(before);
   });
 });
+
+describe('OperationState wave prep resource grant (R8c)', () => {
+  const loaded = tryLoadGameData();
+  if (!loaded.ok) throw new Error(loaded.error);
+  const save = createDefaultSave(loaded.data, 'demo');
+
+  function beginOp(): OperationState {
+    return OperationState.begin({
+      stageId: '1',
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+  }
+
+  it('1. does not grant before any wave is cleared', () => {
+    const op = beginOp();
+    expect(op.tryGrantWavePrepResource(1)).toBe(false);
+    expect(op.getUnspentResource()).toBe(0);
+  });
+
+  it('2. grants once per clearedWaveCount', () => {
+    const op = beginOp();
+    op.recordWaveCleared(0);
+    expect(op.tryGrantWavePrepResource(1)).toBe(true);
+    expect(op.getUnspentResource()).toBe(1);
+    expect(op.getLastResourceGrantClearedWaveCount()).toBe(1);
+    expect(op.tryGrantWavePrepResource(1)).toBe(false);
+    expect(op.getUnspentResource()).toBe(1);
+  });
+});

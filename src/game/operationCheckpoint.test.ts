@@ -360,7 +360,7 @@ describe('Operation checkpoint (R6f)', () => {
     expect(checkpoint?.acquiredOperationPassives).toEqual([
       { slotIndex: 0, passiveIds: ['op_passive_prep'] },
     ]);
-    expect(checkpoint?.unspentResource).toBe(2);
+    expect(checkpoint?.unspentResource).toBe(3);
   });
 
   it('R8b invalid checkpoint passive data fails restore', () => {
@@ -460,6 +460,13 @@ describe('OperationCheckpoint unit (R6f)', () => {
           ...snapshot,
           acquiredOperationPassives: [{ slotIndex: 0, passiveIds: ['dup', 'dup'] }],
         },
+        gameData,
+        { expectedStageId: '1', waveCount: 2 },
+      ),
+    ).toBe(false);
+    expect(
+      validateCheckpointSnapshot(
+        { ...snapshot, lastResourceGrantClearedWaveCount: 99 },
         gameData,
         { expectedStageId: '1', waveCount: 2 },
       ),

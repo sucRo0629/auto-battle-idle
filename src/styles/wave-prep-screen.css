@@ -20,6 +20,11 @@
   font-family: var(--font-body, inherit);
 }
 
+.wave-prep-screen__resource {
+  margin: 0;
+  font-family: var(--font-ui, inherit);
+}
+
 .wave-prep-screen__slots {
   display: flex;
   flex-direction: column;
@@ -27,6 +32,14 @@
 }
 
 .wave-prep-screen__slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--game-panel-border, #444);
+}
+
+.wave-prep-screen__slot-header {
   display: grid;
   grid-template-columns: 5rem 1fr 1fr;
   gap: 0.5rem;
@@ -38,7 +51,8 @@
 }
 
 .wave-prep-screen__class-select,
-.wave-prep-screen__module-select {
+.wave-prep-screen__module-select,
+.wave-prep-screen__passive-select {
   width: 100%;
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--game-panel-border, #444);
@@ -46,6 +60,28 @@
   background: var(--game-panel-bg, #111);
   color: inherit;
   font-family: var(--font-ui, inherit);
+}
+
+.wave-prep-screen__passive-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-left: 5.5rem;
+}
+
+.wave-prep-screen__passive-acquired {
+  font-family: var(--font-ui, inherit);
+  font-size: 0.9rem;
+}
+
+.wave-prep-screen__passive-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.wave-prep-screen__passive-acquire {
+  flex-shrink: 0;
 }
 
 .wave-prep-screen__confirm {

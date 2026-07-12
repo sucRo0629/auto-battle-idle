@@ -61,6 +61,8 @@ export class OperationState {
   private wavePrepEditable = false;
   private readonly acquiredOperationPassives: OperationAcquiredPassives;
   private unspentResourceValue = 0;
+  /** R8c: リソース付与済みの clearedWaveCount 上限（Wave ごと 1 回付与）。 */
+  private lastResourceGrantClearedWaveCountValue = 0;
 
   private constructor(
     stageId: string,
@@ -130,6 +132,28 @@ export class OperationState {
   /** R8b: 作戦内未使用リソース残高。 */
   getUnspentResource(): number {
     return this.unspentResourceValue;
+  }
+
+  /** R8c: リソース付与済みの clearedWaveCount。 */
+  getLastResourceGrantClearedWaveCount(): number {
+    return this.lastResourceGrantClearedWaveCountValue;
+  }
+
+  /**
+   * R8c: 中間 Wave クリア後の Wave 間準備で、clearedWaveCount ごとに 1 回だけリソースを付与する。
+   * 初回出撃前（clearedWaveCount === 0）では付与しない。
+   */
+  tryGrantWavePrepResource(grantAmount: number): boolean {
+    if (!isValidResourceDelta(grantAmount)) return false;
+    if (this.clearedWaveCountValue <= 0) return false;
+    if (
+      this.clearedWaveCountValue <= this.lastResourceGrantClearedWaveCountValue
+    ) {
+      return false;
+    }
+    if (!this.tryAddUnspentResource(grantAmount)) return false;
+    this.lastResourceGrantClearedWaveCountValue = this.clearedWaveCountValue;
+    return true;
   }
 
   /** R8b: 作戦内パッシブ ID を slot に追加（同一 slot 内重複不可）。 */
@@ -384,6 +408,10 @@ export class OperationState {
         this.unspentResourceValue = value;
       },
       snapshot.unspentResource,
+      (value) => {
+        this.lastResourceGrantClearedWaveCountValue = value;
+      },
+      snapshot.lastResourceGrantClearedWaveCount,
     );
 
     this.currentWaveIndexValue = snapshot.currentWaveIndex;

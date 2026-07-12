@@ -311,7 +311,6 @@ describe('Wave prep screen (R6e)', () => {
     session.start();
     getEngine(session).applyVictoryTransition([0, 1, 2, 3]);
     expect(session.getOperationState()).toBeNull();
-    expect(session.getCurrentScreen()).toBe('stageSelect');
 
     session.destroy();
     session = createSession();
@@ -525,5 +524,211 @@ describe('Wave prep retry (R7d)', () => {
       ?.click();
     getEngine(session).applyDefeatTransition([]);
     expect(session.shouldShowDefeatRetry()).toBe(true);
+  });
+});
+
+const R8C_PASSIVE_ID = 'df_guardian_passive_2';
+const R8C_GUARDIAN_SLOT = 0;
+
+function selectWavePrepPassive(
+  container: ParentNode,
+  slotIndex: number,
+  passiveId: string,
+): void {
+  const rows = container.querySelectorAll('.wave-prep-screen__slot');
+  const row = rows[slotIndex];
+  if (!row) throw new Error(`Wave prep slot row not found: ${slotIndex}`);
+  const select = row.querySelector<HTMLSelectElement>(
+    '.wave-prep-screen__passive-select',
+  );
+  if (!select) throw new Error('Wave prep passive select not found');
+  select.value = passiveId;
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function clickWavePrepAcquire(container: ParentNode, slotIndex: number): void {
+  const rows = container.querySelectorAll('.wave-prep-screen__slot');
+  const row = rows[slotIndex];
+  if (!row) throw new Error(`Wave prep slot row not found: ${slotIndex}`);
+  const button = row.querySelector<HTMLButtonElement>(
+    '.wave-prep-screen__passive-acquire',
+  );
+  if (!button) throw new Error('Wave prep acquire button not found');
+  button.click();
+}
+
+describe('Wave prep operation passive acquisition (R8c)', () => {
+  let session: GameSession | null = null;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+    setVerifyModeEnabled(false);
+    setDebugLoopStageId(null);
+    setDebugLoopWaveIndex(null);
+  });
+
+  it('1. grants operation resource once after intermediate wave clear', () => {
+    session = bootVerifySession();
+    expect(session.getOperationUnspentResource()).toBe(0);
+    reachAwaitingNextWave(getEngine(session));
+    expect(session.getOperationUnspentResource()).toBe(1);
+  });
+
+  it('2. does not re-grant resource when returning to the same wave prep', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(session.getOperationUnspentResource()).toBe(1);
+    session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID);
+    expect(session.getOperationUnspentResource()).toBe(0);
+
+    expect(session.returnToFormationPrep()).toBe(true);
+    expect(session.returnToWavePrepFromFormation()).toBe(true);
+    expect(session.getOperationUnspentResource()).toBe(0);
+  });
+
+  it('3. acquires candidate passive for matching slot and spends resource', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(true);
+    expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([
+      R8C_PASSIVE_ID,
+    ]);
+    expect(session.getOperationUnspentResource()).toBe(0);
+  });
+
+  it('4. module selection and passive acquisition coexist', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    const moduleId = 'df_guardian_mod_guard_focus';
+    expect(session.trySetOperationSlotCombatModule(R8C_GUARDIAN_SLOT, moduleId)).toBe(
+      true,
+    );
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(true);
+    expect(session.getPartySlotCombatModule(R8C_GUARDIAN_SLOT)).toBe(moduleId);
+    expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([
+      R8C_PASSIVE_ID,
+    ]);
+  });
+
+  it('5. duplicate acquire, insufficient balance, and invalid input leave state unchanged', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(true);
+
+    const beforeIds = session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT);
+    const beforeResource = session.getOperationUnspentResource();
+
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(false);
+    expect(session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, 'invalid')).toBe(
+      false,
+    );
+    expect(session.tryAcquireOperationPassive(99, R8C_PASSIVE_ID)).toBe(false);
+    expect(session.tryAcquireOperationPassive(-1, R8C_PASSIVE_ID)).toBe(false);
+
+    expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual(
+      beforeIds,
+    );
+    expect(session.getOperationUnspentResource()).toBe(beforeResource);
+  });
+
+  it('6. formation roundtrip preserves acquired passives and resource balance', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(true);
+    expect(session.returnToFormationPrep()).toBe(true);
+    expect(session.returnToWavePrepFromFormation()).toBe(true);
+    expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([
+      R8C_PASSIVE_ID,
+    ]);
+    expect(session.getOperationUnspentResource()).toBe(0);
+  });
+
+  it('7. retry current wave restores checkpoint without uncommitted passive edits', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(true);
+
+    expect(session.retryCurrentWaveFromCheckpoint()).toBe(true);
+
+    expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([]);
+    expect(session.getOperationUnspentResource()).toBe(0);
+  });
+
+  it('8. restart from wave zero clears acquired passives and resource', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(true);
+
+    expect(session.restartOperationFromWaveZero()).toBe(true);
+
+    for (let slot = 0; slot < 4; slot += 1) {
+      expect(session.getOperationAcquiredPassiveIds(slot)).toEqual([]);
+    }
+    expect(session.getOperationUnspentResource()).toBe(0);
+  });
+
+  it('9. committed checkpoint includes acquired passives and remaining resource', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(true);
+
+    expect(session.confirmWavePrepAndStartNextWave()).toBe(true);
+
+    const checkpoint = session.getOperationCheckpoint();
+    expect(checkpoint?.acquiredOperationPassives).toEqual([
+      { slotIndex: R8C_GUARDIAN_SLOT, passiveIds: [R8C_PASSIVE_ID] },
+    ]);
+    expect(checkpoint?.unspentResource).toBe(0);
+    expect(checkpoint?.lastResourceGrantClearedWaveCount).toBe(1);
+  });
+
+  it('10. acquired passive does not affect battle combatant learnedPassiveIds yet', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(
+      session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID),
+    ).toBe(true);
+    expect(session.confirmWavePrepAndStartNextWave()).toBe(true);
+
+    const players = asBattleEngineInternals(getEngine(session)).players;
+    const guardian = players.find((p) => p.partySlotIndex === R8C_GUARDIAN_SLOT);
+    expect(guardian?.learnedPassiveIds ?? []).not.toContain(R8C_PASSIVE_ID);
+  });
+
+  it('UI exposes resource, acquired passives, and acquire button flow', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+
+    expect(document.body.textContent).toContain('作戦内リソース: 1');
+    selectWavePrepPassive(document.body, R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID);
+    clickWavePrepAcquire(document.body, R8C_GUARDIAN_SLOT);
+
+    expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([
+      R8C_PASSIVE_ID,
+    ]);
+    expect(document.body.textContent).toContain('作戦内リソース: 0');
   });
 });

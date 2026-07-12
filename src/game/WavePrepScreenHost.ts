@@ -19,6 +19,11 @@ export interface WavePrepScreenHostCallbacks {
     member: PartySlotState,
   ) => PartyClassAssignmentResult;
   onModuleChanged: (slotIndex: number, moduleId: string) => boolean;
+  getUnspentOperationResource: () => number;
+  getAcquiredOperationPassiveIds: (slotIndex: number) => readonly string[];
+  getOperationPassiveCandidates: (slotIndex: number) => readonly string[];
+  getPassiveDisplayName: (passiveId: string) => string;
+  onAcquireOperationPassive: (slotIndex: number, passiveId: string) => boolean;
   onConfirmNextWave: () => boolean;
   shouldShowRetryActions: () => boolean;
   onRetryCurrentWave: () => boolean;
@@ -26,12 +31,15 @@ export interface WavePrepScreenHostCallbacks {
   onRestartOperationFromWaveZero: () => boolean;
 }
 
-/** R6e: Wave 間準備の最小 DOM UI（正式デザインは後続）。 */
+/** R6e / R8c: Wave 間準備の最小 DOM UI（正式デザインは後続）。 */
 export class WavePrepScreenHost {
   private root: HTMLElement | null = null;
   private statusEl: HTMLElement | null = null;
+  private resourceEl: HTMLElement | null = null;
   private retrySection: HTMLElement | null = null;
   private slotRows: HTMLElement[] = [];
+  /** slot ごとの未確定 passive 選択（取得ボタンまで消費しない）。 */
+  private readonly pendingPassiveSelection = new Map<number, string>();
 
   constructor(
     private readonly host: HTMLElement,
@@ -56,12 +64,15 @@ export class WavePrepScreenHost {
     const view = this.callbacks.getOperationView();
     if (!view) {
       this.statusEl!.textContent = '作戦データなし';
+      this.resourceEl!.textContent = '';
       return;
     }
 
     const nextWaveNumber = view.currentWaveIndex + 2;
     this.statusEl!.textContent =
       `Wave ${view.currentWaveIndex + 1} クリア — 次は Wave ${nextWaveNumber}`;
+    this.resourceEl!.textContent =
+      `作戦内リソース: ${this.callbacks.getUnspentOperationResource()}`;
 
     for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
       this.refreshSlotRow(slotIndex, view);
@@ -76,8 +87,10 @@ export class WavePrepScreenHost {
     this.root?.remove();
     this.root = null;
     this.statusEl = null;
+    this.resourceEl = null;
     this.retrySection = null;
     this.slotRows = [];
+    this.pendingPassiveSelection.clear();
   }
 
   private build(): void {
@@ -90,6 +103,9 @@ export class WavePrepScreenHost {
 
     this.statusEl = document.createElement('p');
     this.statusEl.className = 'wave-prep-screen__status';
+
+    this.resourceEl = document.createElement('p');
+    this.resourceEl.className = 'wave-prep-screen__resource';
 
     const slotsHost = document.createElement('div');
     slotsHost.className = 'wave-prep-screen__slots';
@@ -116,6 +132,7 @@ export class WavePrepScreenHost {
     this.root.append(
       title,
       this.statusEl,
+      this.resourceEl,
       slotsHost,
       confirmButton,
       this.retrySection,
@@ -170,6 +187,10 @@ export class WavePrepScreenHost {
   private createSlotRow(slotIndex: number): HTMLElement {
     const row = document.createElement('div');
     row.className = 'wave-prep-screen__slot';
+    row.dataset.slotIndex = String(slotIndex);
+
+    const header = document.createElement('div');
+    header.className = 'wave-prep-screen__slot-header';
 
     const label = document.createElement('span');
     label.className = 'wave-prep-screen__slot-label';
@@ -187,7 +208,43 @@ export class WavePrepScreenHost {
       this.handleModuleChange(slotIndex, moduleSelect);
     });
 
-    row.append(label, classSelect, moduleSelect);
+    header.append(label, classSelect, moduleSelect);
+
+    const passiveSection = document.createElement('div');
+    passiveSection.className = 'wave-prep-screen__passive-section';
+
+    const acquiredEl = document.createElement('div');
+    acquiredEl.className = 'wave-prep-screen__passive-acquired';
+
+    const passiveControls = document.createElement('div');
+    passiveControls.className = 'wave-prep-screen__passive-controls';
+
+    const passiveSelect = document.createElement('select');
+    passiveSelect.className = 'wave-prep-screen__passive-select';
+    passiveSelect.addEventListener('change', () => {
+      const passiveId = passiveSelect.value;
+      if (passiveId) {
+        this.pendingPassiveSelection.set(slotIndex, passiveId);
+      } else {
+        this.pendingPassiveSelection.delete(slotIndex);
+      }
+      acquireButton.disabled =
+        passiveId === '' ||
+        this.callbacks.getUnspentOperationResource() <= 0;
+    });
+
+    const acquireButton = document.createElement('button');
+    acquireButton.type = 'button';
+    acquireButton.className =
+      'wave-prep-screen__passive-acquire game-ui-button';
+    acquireButton.textContent = 'パッシブ取得';
+    acquireButton.addEventListener('click', () => {
+      this.handleAcquirePassive(slotIndex, passiveSelect);
+    });
+
+    passiveControls.append(passiveSelect, acquireButton);
+    passiveSection.append(acquiredEl, passiveControls);
+    row.append(header, passiveSection);
     return row;
   }
 
@@ -204,7 +261,24 @@ export class WavePrepScreenHost {
     const moduleSelect = row.querySelector<HTMLSelectElement>(
       '.wave-prep-screen__module-select',
     );
-    if (!classSelect || !moduleSelect) return;
+    const acquiredEl = row.querySelector<HTMLElement>(
+      '.wave-prep-screen__passive-acquired',
+    );
+    const passiveSelect = row.querySelector<HTMLSelectElement>(
+      '.wave-prep-screen__passive-select',
+    );
+    const acquireButton = row.querySelector<HTMLButtonElement>(
+      '.wave-prep-screen__passive-acquire',
+    );
+    if (
+      !classSelect ||
+      !moduleSelect ||
+      !acquiredEl ||
+      !passiveSelect ||
+      !acquireButton
+    ) {
+      return;
+    }
 
     const member = view.party[slotIndex];
     const currentClassId = member?.classId ?? null;
@@ -250,12 +324,58 @@ export class WavePrepScreenHost {
     } else {
       moduleSelect.disabled = true;
     }
+
+    const acquiredIds =
+      this.callbacks.getAcquiredOperationPassiveIds(slotIndex);
+    if (acquiredIds.length > 0) {
+      const labels = acquiredIds.map((id) =>
+        this.callbacks.getPassiveDisplayName(id),
+      );
+      acquiredEl.textContent = `取得済み: ${labels.join(' / ')}`;
+    } else {
+      acquiredEl.textContent = '取得済み: なし';
+    }
+
+    const acquiredSet = new Set(acquiredIds);
+    const selectableCandidates = this.callbacks
+      .getOperationPassiveCandidates(slotIndex)
+      .filter((passiveId) => !acquiredSet.has(passiveId));
+
+    passiveSelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent =
+      selectableCandidates.length > 0 ? '候補を選択' : '候補なし';
+    passiveSelect.appendChild(placeholder);
+
+    for (const passiveId of selectableCandidates) {
+      const option = document.createElement('option');
+      option.value = passiveId;
+      option.textContent = this.callbacks.getPassiveDisplayName(passiveId);
+      passiveSelect.appendChild(option);
+    }
+
+    const pending = this.pendingPassiveSelection.get(slotIndex);
+    if (pending && selectableCandidates.includes(pending)) {
+      passiveSelect.value = pending;
+    } else {
+      this.pendingPassiveSelection.delete(slotIndex);
+      passiveSelect.value = '';
+    }
+
+    const canAcquire =
+      selectableCandidates.length > 0 &&
+      passiveSelect.value !== '' &&
+      this.callbacks.getUnspentOperationResource() > 0;
+    passiveSelect.disabled = selectableCandidates.length === 0;
+    acquireButton.disabled = !canAcquire;
   }
 
   private handleClassChange(
     slotIndex: number,
     classSelect: HTMLSelectElement,
   ): void {
+    this.pendingPassiveSelection.delete(slotIndex);
     const classId = classSelect.value as ClassId;
     const member = createMemberFromClass(classId, this.gameData);
     const result = this.callbacks.onPartySlotChanged(slotIndex, member);
@@ -281,6 +401,23 @@ export class WavePrepScreenHost {
       this.refresh();
       return;
     }
+    this.refresh();
+  }
+
+  private handleAcquirePassive(
+    slotIndex: number,
+    passiveSelect: HTMLSelectElement,
+  ): void {
+    const passiveId = passiveSelect.value;
+    if (!passiveId) return;
+
+    if (!this.callbacks.onAcquireOperationPassive(slotIndex, passiveId)) {
+      this.statusEl!.textContent = 'パッシブを取得できませんでした';
+      this.refresh();
+      return;
+    }
+
+    this.pendingPassiveSelection.delete(slotIndex);
     this.refresh();
   }
 }

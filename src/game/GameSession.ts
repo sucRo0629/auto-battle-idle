@@ -67,6 +67,12 @@ import {
 } from './OperationCheckpoint.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import { WavePrepScreenHost } from './WavePrepScreenHost.ts';
+import {
+  getOperationPassiveCandidatesForClass,
+  isOperationPassiveCandidateForClass,
+  OPERATION_PASSIVE_ACQUIRE_COST,
+  WAVE_CLEAR_OPERATION_RESOURCE_GRANT,
+} from './operationPassiveCatalog.ts';
 import '../styles/game-shell.css';
 import levelCurvesJson from '../../data/levelCurves.json';
 
@@ -174,6 +180,15 @@ export class GameSession {
           this.tryUpdateOperationPartySlot(slotIndex, member),
         onModuleChanged: (slotIndex, moduleId) =>
           this.trySetOperationSlotCombatModule(slotIndex, moduleId),
+        getUnspentOperationResource: () => this.getOperationUnspentResource(),
+        getAcquiredOperationPassiveIds: (slotIndex) =>
+          this.getOperationAcquiredPassiveIds(slotIndex),
+        getOperationPassiveCandidates: (slotIndex) =>
+          this.getOperationPassiveCandidates(slotIndex),
+        getPassiveDisplayName: (passiveId) =>
+          this.gameData.skillRegistry.passives[passiveId]?.name ?? passiveId,
+        onAcquireOperationPassive: (slotIndex, passiveId) =>
+          this.tryAcquireOperationPassive(slotIndex, passiveId),
         onConfirmNextWave: () => this.confirmWavePrepAndStartNextWave(),
         shouldShowRetryActions: () => this.shouldShowWavePrepRetry(),
         onRetryCurrentWave: () => this.retryCurrentWaveFromCheckpoint(),
@@ -886,6 +901,73 @@ export class GameSession {
     );
   }
 
+  /** R8c: 作戦内未使用リソース残高（作戦未開始時は 0）。 */
+  getOperationUnspentResource(): number {
+    return this.operationState?.getUnspentResource() ?? 0;
+  }
+
+  /** R8c: slot ごとの取得済み作戦内パッシブ ID。 */
+  getOperationAcquiredPassiveIds(slotIndex: number): readonly string[] {
+    return this.operationState?.getAcquiredOperationPassiveIds(slotIndex) ?? [];
+  }
+
+  /** R8c: slot の兵科に対する取得候補 passive ID（未取得のみ UI で選択可）。 */
+  getOperationPassiveCandidates(slotIndex: number): readonly string[] {
+    if (this.operationState === null) return [];
+    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) return [];
+
+    const member = this.operationState.getPartySnapshot()[slotIndex];
+    if (!member?.classId) return [];
+
+    return getOperationPassiveCandidatesForClass(member.classId);
+  }
+
+  /**
+   * R8c: Wave 間準備中に作戦内リソースを消費してパッシブを取得する。
+   * 残高不足・重複・不正 slot / passive ID は false（状態不変）。
+   */
+  tryAcquireOperationPassive(
+    slotIndex: number,
+    passiveId: string,
+  ): boolean {
+    if (!this.canEditOperationFormation() || this.operationState === null) {
+      return false;
+    }
+    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) return false;
+    if (typeof passiveId !== 'string' || passiveId.trim().length === 0) {
+      return false;
+    }
+
+    const member = this.operationState.getPartySnapshot()[slotIndex];
+    if (!member?.classId) return false;
+
+    const classId = member.classId;
+    if (!isOperationPassiveCandidateForClass(classId, passiveId)) return false;
+    if (!this.gameData.skillRegistry.passives[passiveId]) return false;
+
+    const acquired = this.operationState.getAcquiredOperationPassiveIds(slotIndex);
+    if (acquired.includes(passiveId)) return false;
+
+    if (
+      this.operationState.getUnspentResource() < OPERATION_PASSIVE_ACQUIRE_COST
+    ) {
+      return false;
+    }
+
+    if (
+      !this.operationState.trySpendUnspentResource(OPERATION_PASSIVE_ACQUIRE_COST)
+    ) {
+      return false;
+    }
+    if (
+      !this.operationState.tryAddAcquiredOperationPassiveId(slotIndex, passiveId)
+    ) {
+      this.operationState.tryAddUnspentResource(OPERATION_PASSIVE_ACQUIRE_COST);
+      return false;
+    }
+    return true;
+  }
+
   /** R6e: Wave 間準備を確定し次 Wave を開始する */
   confirmWavePrepAndStartNextWave(): boolean {
     if (this.currentScreen !== 'wavePrep') return false;
@@ -1174,6 +1256,9 @@ export class GameSession {
   /** R6e: 中間 Wave クリア後に Wave 間準備 screen を開く */
   private openWavePrepScreen(): void {
     if (this.operationState === null || !this.isAwaitingNextWave()) return;
+    this.operationState.tryGrantWavePrepResource(
+      WAVE_CLEAR_OPERATION_RESOURCE_GRANT,
+    );
     this.operationState.beginWavePrepEditing();
     this.setGameScreen('wavePrep');
   }
