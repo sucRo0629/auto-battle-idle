@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6j 完了** — 統合テスト（本 §68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R7b — 倍速 simulation**（本 §69.11 推奨）。**R7a 完了** — 反復プレイ調査・4 タスク分割（§69）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R7b 完了** — 倍速 simulation（本 §70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R7c — 敗北時 retry 正式導線**（§69.7）。**R7a 完了** — 反復プレイ調査・4 タスク分割（§69）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5471,3 +5471,59 @@ R7「反復プレイ」を実装可能な小タスクへ分割する。**product
 ### 69.11 最初に実装する 1 タスク（推奨）
 
 **R7b** — 理由: (1) 既存 player 挙動と衝突しない、(2) `GameSession.tick` の単一 gate で完結、(3) multiplier 単体の自動テストが可能。retry 正式 UI（R7c–e）は spec 分岐（formation vs wavePrep・result rematch）の判断が R7b と独立。
+
+---
+
+## 70. R7b — 倍速 simulation（2026-07-12 完了）
+
+### 70.1 目的
+
+`GameSession.tick` に 1 / 2 / 4 倍の simulation speed を追加。Save 永続化・正式 UI・アニメーション個別制御はスコープ外。
+
+### 70.2 読んだファイル（6 件）
+
+| ファイル | 用途 |
+| -------- | ---- |
+| `docs/ai-handoff/current-task.md` | R7b 要件・§69 方針 |
+| `src/game/GameSession.ts` | tick gate・所有者 |
+| `src/game/operationIntegration.test.ts` | pause / tick テストパターン |
+| `src/game/operationRetry.test.ts` | retry テストパターン |
+| `docs/plans/phase-roadmap.md` | R7 分割表 |
+| `src/game/gameSessionWire.test.ts` | session テスト harness |
+
+### 70.3 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/GameSession.ts` | `SimulationSpeed` 型・`simulationSpeed` フィールド・`getSimulationSpeed` / `trySetSimulationSpeed`・tick 乗算 |
+| `src/game/gameSessionSimulationSpeed.test.ts` | R7b 7 項目テスト（新規） |
+| `docs/ai-handoff/current-task.md` | 本 §70・ヘッダ更新 |
+| `docs/plans/phase-roadmap.md` | R7b 完了・次タスク R7c |
+
+### 70.4 API・tick 適用
+
+| 項目 | 内容 |
+| ---- | ---- |
+| **型** | `SimulationSpeed = 1 \| 2 \| 4`（export） |
+| **所有者** | `GameSession` private `simulationSpeed`（初期 1） |
+| **取得** | `getSimulationSpeed(): SimulationSpeed` |
+| **変更** | `trySetSimulationSpeed(speed: number): speed is SimulationSpeed` — 許可値以外は false・状態不変 |
+| **tick 順** | pause 判定 → `currentScreen === 'battle'` かつ非 pause なら `engine.tick(deltaSec * simulationSpeed)` → `view.tick(deltaMs)`（描画 delta は未加速） |
+| **pause** | pause 中は engine tick スキップ（倍率無関係で 0 進行） |
+| **リセット** | なし（Wave 切替・retry・restartBattle でも倍率維持）。Save 非永続 |
+
+### 70.5 テスト結果
+
+| スイート | 結果 |
+| -------- | ---- |
+| `gameSessionSimulationSpeed.test.ts` | **7 pass / 7** |
+| `operationIntegration.test.ts` | **1 pass / 1**（pause/resume 回帰） |
+| `operationRetry.test.ts` | **7 pass / 7** |
+| `operationState.test.ts` | **36 pass / 36** |
+| `operationCheckpoint.test.ts` | **22 pass / 22** |
+| `wavePrepScreen.test.ts` | **16 pass / 16** |
+| **合計** | **89 pass / 89** |
+
+### 70.6 次タスク
+
+**R7c — 敗北時 retry 正式導線**（release でも operation retry 3 種到達・legacy defeat 自動 restart 置換）。

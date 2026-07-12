@@ -72,6 +72,15 @@ import levelCurvesJson from '../../data/levelCurves.json';
 
 const AUTO_SAVE_INTERVAL_MS = 60_000;
 
+/** R7b: 許可 simulation 倍率（1 / 2 / 4 のみ） */
+export type SimulationSpeed = 1 | 2 | 4;
+
+const ALLOWED_SIMULATION_SPEEDS: readonly SimulationSpeed[] = [1, 2, 4];
+
+function isSimulationSpeed(value: number): value is SimulationSpeed {
+  return (ALLOWED_SIMULATION_SPEEDS as readonly number[]).includes(value);
+}
+
 export class GameSession {
   private readonly saveManager = new SaveManager();
   private readonly levelCurves: LevelCurvesConfig;
@@ -102,6 +111,8 @@ export class GameSession {
   private operationResult: OperationResult | null = null;
   /** R6i: checkpoint 再戦中は onBattlefieldReload による Wave 進行巻き戻しを抑止 */
   private suppressOperationWaveReload = false;
+  /** R7b: battle simulation 倍率（Save 非永続・初期 1 倍） */
+  private simulationSpeed: SimulationSpeed = 1;
 
   constructor(
     private readonly gameData: GameData,
@@ -765,12 +776,24 @@ export class GameSession {
     return this.engine.getSnapshot().awaitingNextWave;
   }
 
+  /** R7b: 現在の simulation 倍率（1 / 2 / 4） */
+  getSimulationSpeed(): SimulationSpeed {
+    return this.simulationSpeed;
+  }
+
+  /** R7b: simulation 倍率を変更する。許可値以外は false（状態不変）。 */
+  trySetSimulationSpeed(speed: number): speed is SimulationSpeed {
+    if (!isSimulationSpeed(speed)) return false;
+    this.simulationSpeed = speed;
+    return true;
+  }
+
   tick(deltaSec: number, deltaMs: number): void {
     const simulationPaused =
       this.view.isBattlePaused() ||
       (this.verifyMode && this.view.isBattleXDebugReplayPaused());
     if (this.currentScreen === 'battle' && !simulationPaused) {
-      this.engine.tick(deltaSec);
+      this.engine.tick(deltaSec * this.simulationSpeed);
     }
     this.view.tick(deltaMs);
   }
