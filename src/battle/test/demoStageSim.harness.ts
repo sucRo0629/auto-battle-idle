@@ -1489,7 +1489,7 @@ export function configurePaladinTankParty(
   save.party[0] = createMemberFromClass('df_paladin', gameData);
 }
 
-/** Double melee — no back-line reach for ranged-heavy stages. */
+/** Double melee counter — ranger slot → assassin (R5f: distinct classes; two melee without duplicate classId). */
 export function configureDoubleMeleeParty(
   save: SaveGameState,
   gameData: GameData,
@@ -1505,7 +1505,11 @@ export function configureAssassinInsteadOfRangerParty(
   save.party[3] = createMemberFromClass('at_assassin', gameData);
 }
 
-/** Diagnostic: cleric + ranger both → assassin (R5f: single assassin; double same-class removed). */
+/**
+ * Legacy diagnostic (R5g Category B): formerly cleric+ranger → assassin (same class ×2).
+ * R5f duplicate ban: single assassin in cleric slot only. Intent = finish-role spotlight in healer slot.
+ * For dual-finish with distinct classes use assassin + swordsman via separate configure helpers.
+ */
 export function configureAssassinDoubleFinishParty(
   save: SaveGameState,
   gameData: GameData,

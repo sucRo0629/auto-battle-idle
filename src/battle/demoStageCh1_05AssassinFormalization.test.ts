@@ -153,13 +153,13 @@ describe('demo_ch1_05 at_assassin formalization diagnostic', () => {
     }
   });
 
-  it('assassin-double-finish spotlight probe (diagnostic only)', () => {
+  it('assassin-finish-cleric-slot spotlight probe (legacy diagnostic, single assassin)', () => {
     const result = runDemoStageBattle(STAGE_ID, {
       gameData,
       configureSave: configureAssassinDoubleFinishParty,
     });
     const row = buildCh1_05SlotComparisonRow(
-      'assassin-double-finish',
+      'assassin-finish-cleric-slot',
       2,
       'at_assassin',
       result,

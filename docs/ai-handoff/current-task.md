@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R5f 完了** — 味方 classId 重複禁止（本 §53）。次は **R5g**。
-- **次の再開タスク:** **R5g**（handoff §53.8 参照）。
+- **新ロードマップ現在地:** **R5 完了** — R5b〜R5g 縦切り成立（本 §54）。次は **R6**。
+- **次の再開タスク:** **R6** Wave 間準備（handoff §54.8 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -22,6 +22,7 @@
 - **今回の実装（R5d）:** §51。味方 4 slot ごとの module A/B 選択（実行中メモリのみ）。Save / UI / 敵 / 作戦ループは未接続。
 - **今回の実装（R5e）:** §52。敵 `enemyGroups[].selectedCombatModuleId` 接続。味方 R5d / Save / UI / 作戦ループは未変更。
 - **今回の実装（R5f）:** §53。味方 party 内 classId 重複禁止（編成 API / UI 候補 / 戦闘生成境界）。敵・Save schema・module 正式 UI は未変更。
+- **今回の実装（R5g）:** §54。R5 統合テスト・縦切り確認・旧 diagnostic 整理・pre-existing 失敗分類。production 新機能追加なし。
 
 ### R4 で確定したデータ責務（doc 反映済）
 
@@ -3975,3 +3976,142 @@ StageEnemyGroup.selectedCombatModuleId
 - **R5d 既知:** 同一 module 再設定でも cooldown 再生成
 
 **R5f 完了判定:** 本節時点で R5f 完了。次は R5g。
+
+---
+
+## 54. R5g — R5 統合テスト・縦切り確認（2026-07-12）
+
+**目的:** R5b〜R5f の load / validate / module 合成 / 味方 A/B 選択 / 敵 group 指定 / attackIntervalSec / 重複禁止 / legacy 共存を、1 本の統合シナリオと関連 subset で縦切り確認。新機能・正式 UI・Save 統合はスコープ外。
+
+### 54.1 読んだファイル
+
+1. `docs/ai-handoff/current-task.md` — §48〜§53 R5b〜R5f 完了・§50 効果範囲設計（変更なし）
+2. `src/battle/r5CombatModuleIntegration.test.ts`（新規作成）
+3. `src/battle/allyCombatModuleSelection.test.ts` / `enemyGroupCombatModule.test.ts` / `combatModuleBasicAttack.test.ts`
+4. `src/battle/BattleEngine.ts` / `src/battle/entities.ts` / `src/battle/data/loadGameData.ts`
+5. `src/battle/test/demoStageSim.harness.ts` / `src/progression/partyClassDuplicate.test.ts`
+6. `docs/plans/phase-roadmap.md` — R6 次 Phase
+
+### 54.2 変更したファイル
+
+| ファイル | 変更 |
+|----------|------|
+| `src/battle/r5CombatModuleIntegration.test.ts` | **新規** R5g 統合テスト 7 件（必須 20 項目を 7 describe に集約） |
+| `src/battle/test/demoStageSim.harness.ts` | 旧重複 diagnostic コメント整理（Category A/B 明記） |
+| `src/battle/demoStageCh1_05AssassinFormalization.test.ts` | legacy diagnostic テスト名更新 |
+| `docs/ai-handoff/current-task.md` | 本 §54 |
+
+**production コード修正:** なし（統合テストで不具合未検出）。
+
+### 54.3 統合シナリオ（fixture stage `r5_integration_test`）
+
+**味方（重複なし 4 兵科）:** `df_guardian` / `at_swordsman` / `at_sorcerer` / `sp_cleric`
+
+| slot | class | module 選択 |
+|------|-------|-------------|
+| 0 | df_guardian | B (`df_guardian_mod_guard_focus`) |
+| 1 | at_swordsman | 未指定 → A (`at_swordsman_mod_single_slash`) |
+| 2 | at_sorcerer | B (`at_sorcerer_mod_twin_bolt`) |
+| 3 | sp_cleric | B (`sp_cleric_mod_party_mend`) |
+
+**敵 group（6 体）:**
+
+| group | module | 備考 |
+|-------|--------|------|
+| df_guardian ×1 | A 明示 | `df_guardian_mod_nearest_strike` |
+| at_sorcerer ×1 | B | `at_sorcerer_mod_twin_bolt` |
+| at_swordsman ×1 | 未指定 → A | |
+| at_swordsman ×2 | B | `at_swordsman_mod_pierce_slash`、同一 group 共有 |
+| df_paladin ×1 | legacy basic | `df_paladin_basic_attack` |
+
+**戦闘検証:** 物理 / 魔法 / heal / multiLock 複数 hit / party heal 複数対象 / interval 差（2.5s < 3s < 4s）/ legacy basic 発火 / 二重発火なし。
+
+**fixture のみ:** `structuredClone(loadGameData())` へ stage 注入。`waves[0].enemies` に `test_dummy` で training fast-start。接敵後 HP/ATK パッチで早期終了回避（production balance JSON 不変更）。
+
+### 54.4 load → SkillExecutor 経路
+
+```
+loadGameData()
+  → parseAndValidateGameDataJson / combatModuleRegistry + skillRegistry.actives 合成
+  → PartyCombatModuleSelection（味方 slot A/B）
+  → createAlliesFromPartyState（重複 validate）
+  → createEnemiesForStage / expandEnemyGroups（敵 group module）
+  → BattleEngine 構築 → reloadBattlefield → prepareTrainingWave → spawnWaveEnemies
+  → initializeSkillCooldowns
+  → startBattle → beginEngaged
+  → tick(deltaTime) → tickCooldowns → runUnitSkills → SkillExecutor.tryExecute
+  → damage / heal イベント
+```
+
+**省略した production 境界:** カスタム stage の gameData 注入のみ。Save / 正式 UI / Wave 間準備は未経由。
+
+### 54.5 確認結果（要約）
+
+| 項目 | 結果 |
+|------|------|
+| 味方 A/B 選択 | 未指定→A、B 指定 slot 独立、interval 初回 CD・発火後周期、敵と非干渉 |
+| 敵 group module | A 明示 / B / 未指定→A、同一 group 共有、legacy enemy basic、味方選択と非干渉 |
+| attackIntervalSec / attackSpeed | module basic は tier 非依存・有効倍率のみ；legacy は tier×倍率 |
+| 味方重複禁止 | `PartyDuplicateClassError` at `createAlliesFromPartyState`；敵同一 class 複数 OK |
+| legacy 共存 | df_paladin enemy は `df_paladin_basic_attack`；module と二重発火なし |
+| validate / fallback | 不正 enemy module は validate 拒否；不正 runtime 味方選択は A fallback |
+
+### 54.6 旧重複 diagnostic 整理
+
+| helper | 分類 | 対応 |
+|--------|------|------|
+| `configureDoubleMeleeParty` | **A** | 既に distinct class（ranger→assassin）。「近接2人」意図を重複なしで維持 |
+| `configureAssassinDoubleFinishParty` | **B** | 旧「同一 assassin ×2」は不可。cleric slot 単体 finish probe として legacy diagnostic 隔離。コメント更新 |
+| `configureAssassinInsteadOfRangerParty` | **A** | 単体 assassin 差し替え。重複なし |
+| `configureSwordsmanInsteadOfRangerParty` | **A** | assassin + swordsman。distinct |
+| `configureNoHealerSwordsmanParty` | **A** | healer なし比較。distinct |
+
+**Category C（balance assertion・R5 無関係）:** `demoStageBalance.puzzle.test.ts` 等 — 本 R5g では未修正（§54.7 参照）。
+
+### 54.7 テスト実行
+
+| スコープ | 結果 |
+|----------|------|
+| **新規 R5 統合** | `r5CombatModuleIntegration.test.ts` — **7 pass** |
+| **R5 subset**（R5b〜R5f 関連 8 ファイル） | **97 pass** |
+| **フルスイート** | **1638 pass / 60 fail / 7 worker timeout**（R5 起因の回帰 **0**） |
+
+### 54.8 フルスイート失敗分類（60 + worker 7）
+
+| 分類 | 件数（目安） | 代表 |
+|------|-------------|------|
+| R5 変更による回帰 | **0** | — |
+| 味方重複禁止で obsolete | **0** | 重複編成テストは R5f で更新済み |
+| 旧 active / skill 表示 schema 依存 | **~22** | `formatSkillText.test.ts`、`skillCardDisplay.test.ts`、`at*SkillUnlocks.test.ts`、`assassinMultiHitBasic.test.ts` |
+| 旧 demo balance / diagnostic 依存 | **~24** | `demoStageBalance.puzzle.test.ts`、`demoStageAssassinVsSwordsman.test.ts`、`demoStageCh1_05AssassinFormalization.test.ts`、approach/badge 系 |
+| i18n / UI 期待値の既存不一致 | **~12** | `t.test.ts`、`partyHudStatusBadgeHits.dom.test.ts`、`StageSelectionPanel.test.ts`（fixture に combatModules 未同梱） |
+| worker timeout / infrastructure | **7** | `onTaskUpdate` timeout |
+| その他 | **~2** | `previewLayout.test.ts`、`statusEffectDisplay.test.ts` |
+
+**R5g で修正した不具合:** なし。
+
+### 54.9 R5 全体完了判定
+
+**R5 完了扱い可。** R5b〜R5g で以下が縦切り成立:
+
+- CombatModule 最小型 + 4 兵科 × 8 module + load/validate
+- module → 合成通常行動 → SkillExecutor（秒単位 `attackIntervalSec`、attackSpeed 分離）
+- 味方 slot module A/B 選択（メモリのみ）
+- 敵 group `selectedCombatModuleId`
+- 味方 classId 重複禁止 / 敵重複許可
+- legacy class / legacy basic 共存
+
+**§50 効果範囲設計:** 変更なし（R8 doc のみのまま）。
+
+### 54.10 R6 以降へ送る未接続事項
+
+- module 選択の正式 UI / CombatModuleEditor（味方・敵）
+- Save 永続化・Wave 間保持・checkpoint
+- **R6:** Wave 間準備（自動 Wave 進行停止、編成・方式変更、Wave 状態リセット）
+- 作戦ループ・作戦状態全体・作戦内パッシブ（R8）
+- 全兵科への combat module 移行
+- `waves[].enemyGroups` 正本切替
+- **R5f UI:** `party.duplicateClass` i18n 本実装
+- **R5d 既知:** 同一 module 再設定でも cooldown 再生成
+
+**R5g 完了判定:** 本節時点で R5g 完了。**R5 全体完了。** 次は **R6**。
