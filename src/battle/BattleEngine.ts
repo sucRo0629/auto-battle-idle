@@ -736,6 +736,64 @@ export class BattleEngine {
     this.onBattlefieldReload?.();
   }
 
+  /**
+   * R6d: 次 Wave 用に味方と Wave 戦闘 runtime を作り直す。
+   * 作戦通算の battleTimeSec / tickIndex / worldOffsetX と Stage 内発動回数は維持する。
+   */
+  private prepareAlliesForNextWave(): void {
+    const stageTriggerLimitsBySlot = new Map<
+      number,
+      {
+        classId: string;
+        remaining: Record<string, number> | undefined;
+      }
+    >();
+    for (const ally of this.players) {
+      if (ally.partySlotIndex === undefined) continue;
+      stageTriggerLimitsBySlot.set(
+        ally.partySlotIndex,
+        {
+          classId: ally.classId,
+          remaining: ally.activeStageRemainingTriggers
+            ? { ...ally.activeStageRemainingTriggers }
+            : undefined,
+        },
+      );
+    }
+
+    this.pendingHitQueue = [];
+    this.placedFields = [];
+    this.skillSequenceRunner.clearAll();
+    this.trainingWaveReadyToEngage = false;
+    this.engaged = false;
+    this.clearEngagedVisualState();
+    this.partyDeployTargets.clear();
+    this.enemyDeployTargets.clear();
+
+    this.players = createAlliesFromPartyState(
+      this.gameData,
+      this.getParty(),
+      this.levelCurves,
+      this.getSelectedCombatModuleId,
+    );
+    for (const ally of this.players) {
+      const previousStageTriggers =
+        ally.partySlotIndex === undefined
+          ? undefined
+          : stageTriggerLimitsBySlot.get(ally.partySlotIndex);
+      if (
+        previousStageTriggers?.classId === ally.classId &&
+        previousStageTriggers.remaining !== undefined
+      ) {
+        ally.activeStageRemainingTriggers = {
+          ...previousStageTriggers.remaining,
+        };
+      }
+      initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives);
+    }
+    this.clearEngagedVisualState();
+  }
+
   private resolveStartWaveIndex(): number {
     const stage = this.gameData.stages.find((s) => s.id === this.stageId);
     const waveCount = stage?.waves.length ?? 0;
@@ -1702,7 +1760,7 @@ export class BattleEngine {
   }
 
   /**
-   * 中間 Wave 終了待機中のみ: 次 Wave 告知・配置を開始する（R6b）。
+   * 中間 Wave 終了待機中のみ: 味方・Wave runtime を reset して次 Wave を開始する。
    * waveIndex は beginWaveAnnouncement 内で pendingNextWaveIndex へ更新する。
    */
   startNextWave(): boolean {
@@ -1714,6 +1772,17 @@ export class BattleEngine {
     if (this.pendingNextWaveIndex === null) return false;
 
     const nextWaveIndex = this.pendingNextWaveIndex;
+    const stage = this.gameData.stages.find((item) => item.id === this.stageId);
+    if (
+      stage === undefined ||
+      nextWaveIndex !== this.waveIndex + 1 ||
+      nextWaveIndex < 0 ||
+      nextWaveIndex >= stage.waves.length
+    ) {
+      return false;
+    }
+
+    this.prepareAlliesForNextWave();
     this.awaitingNextWave = false;
     this.pendingNextWaveIndex = null;
     this.beginWaveAnnouncement(nextWaveIndex);

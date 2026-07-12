@@ -139,7 +139,7 @@ export class GameSession {
     this.engine = new BattleEngine(
       gameData,
       this.levelCurves,
-      () => this.save.party,
+      () => this.resolveBattleParty(),
       () => this.save.stageProgress.currentStageId,
       {
         onDamageApplied: (actor, target, amount) => {
@@ -724,6 +724,14 @@ export class GameSession {
     const waveCount = stage?.waves.length ?? 0;
     if (loopWave < 0 || loopWave >= waveCount) return 0;
     return loopWave;
+  }
+
+  /**
+   * 作戦中の Combatant 生成元は OperationState snapshot。
+   * 作戦開始前だけ Save party を参照する。
+   */
+  private resolveBattleParty(): PartySlotState[] {
+    return this.operationState?.getPartySnapshot() ?? this.save.party;
   }
 
   /**

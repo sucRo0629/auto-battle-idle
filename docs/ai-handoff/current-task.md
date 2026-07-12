@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6c 完了** — 最小 OperationState（本 §58）。**R6b 完了**（§57）。**R6a 調査完了**（§56）。
-- **次の再開タスク:** **R6d** Wave 間状態リセット（handoff §58.13 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R6d 完了** — Wave 間状態リセット（本 §59）。**R6c 完了**（§58）。**R6b 完了**（§57）。**R6a 調査完了**（§56）。
+- **次の再開タスク:** **R6e** Wave 間準備 screen と作戦中 party/module 変更（handoff §59.13 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -4710,3 +4710,119 @@ ally/enemy action、skill/basic CD、status duration、DoT/HoT、移動、target
 ### 58.13 次タスク
 
 **R6d — Wave 間状態リセット**（味方 HP 全回復・Barrier/status/CC/CD 解除・位置/facing 再配置・一時 runtime 破棄）。`prepareWaveDeploy` 前後配線。
+
+---
+
+## 59. R6d — Wave 間状態リセット（2026-07-12）
+
+**目的:** R6b の中間 Wave 待機状態を維持したまま、`startNextWave()` 成功時だけ次 Wave 用の味方 Combatant と Wave 戦闘 runtime を初期化する。正式 Wave 間準備 UI・作戦中編成変更・checkpoint・retry は未実装。
+
+### 59.1 実装判断
+
+- **採用:** 味方 Combatant を作戦 party/module snapshot から新規生成して `BattleEngine.players` を差し替える。
+- **不採用:** 旧 Combatant へ HP / Barrier / status / CD / 位置を個別代入する方式。現存 runtime フィールド追加時の reset 漏れと、R6e の party/module 差し替えへの重複実装を避けるため。
+- **生成元:** `GameSession.resolveBattleParty()`。作戦中は `OperationState.party` snapshot、作戦前のみ `SaveGameState.party`。module は従来どおり `resolveCombatModuleSelection()` 経由で作戦中の OperationState 選択を参照。
+- `createAlliesFromPartyState` を再利用するため、4 slot 順・class 重複 validate・基礎 stat 再計算・module/legacy basic 解決・`partySlotIndex` は既存単一経路を維持。
+
+### 59.2 reset タイミングと API
+
+経路:
+
+`GameSession.startNextWave`
+→ `BattleEngine.startNextWave`
+→ 全成功条件と pending index 妥当性を検証
+→ **`prepareAlliesForNextWave()`**
+→ `awaitingNextWave` / pending を消費
+→ `beginWaveAnnouncement(next)`
+→ `prepareWaveDeploy`
+→ 次 Wave 敵生成
+
+- 待機突入時には reset しない。前 Wave 終了状態は tick とともに凍結。
+- reset は次 Wave index 更新・告知・敵生成より前。
+- 待機中でない、二重呼び出し、victory/defeat、退場/告知/deploy 中、pending null、`current + 1` でない pending、stage 範囲外 pending は `false`。失敗時は Combatant と runtime を変更しない。
+- 最終 Wave 勝利経路には reset を挟まない。
+
+### 59.3 味方 Combatant
+
+新規生成により次を初期化:
+
+- HP = 一時 maxHP status のない基礎 `maxHp`、`isAlive = true`、`corpseVisible = true`。4人全員復帰。heal API / heal event / heal counter は不使用。
+- `barrierHp = 0`。独立 Barrier tier/layer runtime は現実装にない。`wardBarrier` は `statusEffects` 内の一時 buff なので同時に破棄。
+- `statusEffects = []`。buff / debuff / DoT / HoT / stun / hold / attackSpeed補正 / stack / duration / source / tickを全破棄。
+- `delayedDamagePool` / `damageDelayTickSec`、rear assault access / hold offset、engaged lane / display anchor、Wave内 passive counter・発動済み flag、herbal/idle/next outgoing 等の Combatant 一時 runtime は新オブジェクトに存在しない。
+- build / learned passive・active / class traits / module 固定効果は party snapshot から再構築。
+- `activeStageRemainingTriggers` は作戦（Stage）内 counter のため、**同じ slot・同じ class の場合だけ値をコピーして維持**。Wave内 counterとは区別。
+
+### 59.4 cooldown / action runtime
+
+- 新Combatantの cooldown listを選択中module/legacy basicとbuildから再作成し、`initializeSkillCooldowns` で全 basic/active の初回 `remaining` を trigger値へ戻す。
+- module basic は合成skillの `attackIntervalSec`。初回値も同値。module判定のため attackSpeedTier 非適用規則は既存 `tickCooldowns` のまま。
+- legacy basic は従来skill trigger値と既存attackSpeedTier規則を維持。
+- active stored charge / fire holdを初期化。
+- `SkillSequenceRunner.clearAll()` で pending sequence、skill move、use lock、presentation/anim lock、active effect gaugeを破棄。
+
+### 59.5 位置 / facing / target
+
+- 新Combatantは `battleX = 0` から既存 `placePartyOffScreenForDeploy` → `resolvePartyDeployTargets` の初期配置経路へ入る。
+- `EngagedCompositionTracker`、frontline anchor、rear assault、engaged lane/depth、display anchorをclear。旧敵IDを参照するstatus/sequence/pending hitも破棄。
+- facing は保存値ではなく新しい敵との配置から `resolveFacingSign` で再計算。
+- `worldOffsetX` はユニット座標/target cacheではなく背景スクロールの作戦内表示連続量なので維持。
+
+### 59.6 破棄した BattleEngine runtime
+
+- `pendingHitQueue`
+- `placedFields`
+- `SkillSequenceRunner` 全状態（sequence / move / lock / effect gauge）
+- engaged composition / front line anchor / display anchor / rear assault access
+- party/enemy deploy target map
+- training engage pending flag
+- 旧味方 Combatant 全参照
+
+敵 wipe settle / exit march は待機突入時点で完了済み。成功時に awaiting/pending を一度だけ消費し、次敵は reset 完了後に既存 `spawnWaveEnemies()` で差し替える。BattleEngineには別のpopup queue / combat event queue / projectile objectはなく、eventは同期通知。VFXは旧Combatant IDに紐づくうえ、死亡settle+退出後に次Waveへ進む。
+
+### 59.7 維持する作戦状態・統計
+
+- **OperationState:** 同一インスタンスの stageId、party snapshot、module選択、currentWaveIndex、clearedWaveCount、active/completed/defeatedを維持。成功後はR6cどおりcurrentWaveIndexだけ同期。
+- **Save:** 変更・persist追加なし。
+- **StageDamageStatsTracker:** GameSession所有・party slot集計なので旧Combatant ID非依存。Wave間resetなし、stage/operation通算を維持。resetによるheal記録なし。
+- **battleTimeSec:** stage/operation通算時刻として維持。待機中はR6bどおり停止し、次Wave開始後に再開。
+- **tickIndex / battleX debug trace:** 作戦内debug時系列として維持。
+- **Wave内counter:** 新Combatant生成によりreset。Stage内 `activeStageRemainingTriggers` のみ同class/slotで維持。
+
+### 59.8 変更したファイル
+
+| ファイル | 変更 |
+|----------|------|
+| `src/battle/BattleEngine.ts` | `prepareAlliesForNextWave`、成功条件後reset、invalid pending拒否 |
+| `src/game/GameSession.ts` | 作戦中Combatant生成元をOperationState party snapshotへ切替 |
+| `src/battle/battleEngine.waveReset.test.ts` | R6d reset/失敗境界/位置/module/legacy/runtimeテスト |
+| `src/game/operationState.test.ts` | OperationState / Save / module / stage統計維持テスト |
+| `docs/ai-handoff/current-task.md` | 本 §59 |
+| `docs/plans/phase-roadmap.md` | R6d完了・次R6e |
+
+### 59.9 テスト
+
+- R6d + R6b + R6c 関連: **55 pass / 55**
+- `npm run build`: 既存の広範な TypeScript error で失敗。今回変更ファイル由来の未使用importは除去済み。代表既存error: skill effect union narrowing、旧test fixtureの`CombatantState`不足、既存`BattleEngine.getPlayerPlacementInputs`未使用。
+- フルスイート: **1710 pass / 60 fail / 8 worker error（19 failed files / 271）**。R6d 3ファイル（4 + 15 + 36 = 55件）はフル実行内でもpass。失敗数・代表分類はR5g時点と同系の既存不一致（status/glossary、skill表示・unlock、demo balance、StageSelection fixtureのcombatModules不足、approach期待値）とVitest `onTaskUpdate` timeout。R6d起因の失敗なし、既存失敗の無差別修正なし。
+
+### 59.10 手動確認
+
+- 起動: 既存 `npm run dev`（`http://localhost:5173/`）
+- verify: **ON**
+- stage: **Stage 1 / 全Wave**
+- debug menuを開き、Stage 1 / 全Wave、Wave 1・2一覧、Lv20設定を確認。
+- ブラウザ確認時間内に自然戦闘がWave 1待機へ到達しなかったため、「次Wave開始」ボタン表示・押下、HP/Barrier/status/CDの前後目視、最終Wave完走は未確認。これらは `battleEngine.waveReset.test.ts` と既存GameSession wireテストで、待機中維持→Debugと同じ`GameSession.startNextWave`経路→全reset→Wave 2生成→最終victoryまで固定。
+
+### 59.11 スコープ外維持
+
+- 正式Wave間準備UI、作戦中party/module編集、checkpoint、retry、Save schema/localStorage、`waves[].enemyGroups`、作戦結果画面、R8 passiveは未着手。
+- 最終Wave勝利時の `markCompleted()` 後 `clearOperation()` は変更なし。R6h後続事項。
+
+### 59.12 完了判定
+
+**R6d 完了扱い可。** resetは成功した`startNextWave`だけで一度実行され、味方再生成・一時runtime破棄・Operation/統計維持・失敗時不変・legacy multi-wave進行を自動テストで固定。
+
+### 59.13 次タスク
+
+**R6e — Wave間準備screenと作戦中party/module変更**。Wave間準備画面、OperationState.party/module編集、次Wave開始ボタン、戦闘中変更禁止を初めて接続する。

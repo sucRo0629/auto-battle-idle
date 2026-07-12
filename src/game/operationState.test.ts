@@ -3,13 +3,14 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PartyCombatModuleSelection } from '../battle/partyCombatModuleSelection.ts';
+import { StageDamageStatsTracker } from '../battle/stageDamageStats.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import { setDebugLoopStageId, setDebugLoopWaveIndex } from '../dev/debugLoopStage.ts';
 import { SaveManager } from '../save/SaveManager.ts';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
-import type { PartySlotState } from '../battle/types.ts';
+import type { GameData, PartySlotState } from '../battle/types.ts';
 import { OperationState } from './OperationState.ts';
 import { GameSession } from './GameSession.ts';
 import {
@@ -401,6 +402,44 @@ describe('OperationState wave sync (R6c)', () => {
     reachAwaitingNextWave(getEngine(session!));
     const op = (session as unknown as { operationState: OperationState }).operationState;
     expect(op.isCompleted).toBe(false);
+  });
+
+  it('R6d keeps OperationState, Save, module selection, and stage stats across reset', () => {
+    const current = bootSession();
+    const moduleId = 'df_guardian_mod_guard_focus';
+    current.setPartySlotCombatModule(0, moduleId);
+    reachAwaitingNextWave(getEngine(current));
+
+    const engine = getEngine(current);
+    const beforePlayers = asBattleEngineInternals(engine).players;
+    const beforeOperation = current.getOperationState();
+    const beforeSave = structuredClone(current.getSaveState());
+    const tracker = (
+      current as unknown as { stageDamageStats: StageDamageStatsTracker }
+    ).stageDamageStats;
+    const gameData = (engine as unknown as { gameData: GameData }).gameData;
+    tracker.recordHeal(beforePlayers[0], 321);
+    const statsBefore = tracker.getDisplayRows(
+      current.getSaveState().party,
+      gameData.classRegistry,
+    );
+
+    expect(current.startNextWave()).toBe(true);
+
+    expect(current.getOperationState()).toEqual({
+      ...beforeOperation,
+      currentWaveIndex: 1,
+    });
+    expect(current.getClearedWaveCount()).toBe(1);
+    expect(current.getPartySlotCombatModule(0)).toBe(moduleId);
+    expect(current.getSaveState()).toEqual(beforeSave);
+    expect(
+      tracker.getDisplayRows(
+        current.getSaveState().party,
+        gameData.classRegistry,
+      ),
+    ).toEqual(statsBefore);
+    expect(asBattleEngineInternals(engine).players).not.toBe(beforePlayers);
   });
 });
 
