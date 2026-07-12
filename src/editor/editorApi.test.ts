@@ -355,6 +355,24 @@ describe('class passive unlock levels', () => {
     ]);
   });
 
+  it('buildClassPresetFromDraft omits legacy formationRow from preset', () => {
+    const draft = classDraftFromPreset({
+      id: classId,
+      role: 'attacker',
+      displayName: 'Test',
+      formationRow: 'front',
+      traits: { rangePx: 200 },
+      maxHp: 100,
+      atk: 10,
+      def: 10,
+      res: 0,
+      basicAttackSkillId: `${classId}_basic_attack`,
+      skills: [{ level: 0, skillIds: [] }],
+    } satisfies ClassPresetBeforeEnrich);
+    const preset = buildClassPresetFromDraft(draft, []);
+    expect(preset.formationRow).toBeUndefined();
+  });
+
   it('loads passive entries sorted by unlock level asc', () => {
     const preset: ClassPresetBeforeEnrich = {
       id: classId,

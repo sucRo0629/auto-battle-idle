@@ -114,7 +114,8 @@ export interface ClassPreset extends CombatStats {
   summary?: ClassLocaleText;
   /** 編成 UI 概要の短い戦闘傾向タグ（任意） */
   featureTags?: ClassFeatureTags;
-  formationRow: FormationRow;
+  /** 実行時導出（role + traits.rangePx）。classes.json には保存しない */
+  formationRow?: FormationRow;
   traits: NormalizedEntityTraits;
   /** 未指定時は `{id}_basic_attack` */
   basicAttackSkillId: string;

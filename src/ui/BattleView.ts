@@ -25,6 +25,7 @@ import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
 import { subscribeLocaleChange, getLocale } from "../i18n/locale.ts";
 import { t } from "../i18n/t.ts";
+import type { UiMessageKey } from "../i18n/uiMessages.ts";
 import type { GameTermLocale } from "./gameTermGlossary.ts";
 import {
   buildSkillPresentationContext,
@@ -108,6 +109,13 @@ export interface VerifyModeControls {
   } | null;
   onRematchSameStage?: () => boolean;
   onReturnToStageSelect?: () => boolean;
+  canReturnToStageSelectFromPause?: () => boolean;
+  onReturnToStageSelectFromPause?: () => boolean;
+  onReturnToStageSelectFromDefeatRetry?: () => boolean;
+  /** R7b: 現在の simulation 倍率（1 / 2 / 4） */
+  getSimulationSpeed?: () => 1 | 2 | 4;
+  /** R7b: 倍率を 1 → 2 → 4 → 1 で切り替える */
+  onCycleSimulationSpeed?: () => void;
 }
 
 function resolveSkillRangePxFromSnapshot(
@@ -134,8 +142,12 @@ export class BattleView {
   private readonly stagePlateWaveEl: HTMLElement;
   private readonly verifyBadgeEl: HTMLButtonElement;
   private readonly pauseButton: HTMLButtonElement;
+  private readonly speedButton: HTMLButtonElement;
   private readonly pauseOverlayEl: HTMLElement;
   private readonly pausePlateEl: HTMLElement;
+  private readonly pausePlateTitleEl: HTMLElement;
+  private readonly pauseActionsEl: HTMLElement;
+  private readonly pauseReturnToStageSelectButton: HTMLButtonElement;
   private readonly defeatRetryOverlayEl: HTMLElement;
   private readonly victoryResultOverlayEl: HTMLElement;
   private readonly victoryResultSummaryEl: HTMLElement;
@@ -262,6 +274,15 @@ export class BattleView {
     });
     battleTopInfoLeading.appendChild(this.pauseButton);
 
+    this.speedButton = document.createElement("button");
+    this.speedButton.type = "button";
+    this.speedButton.className = "battle-speed-button game-ui-button";
+    this.speedButton.addEventListener("click", () => {
+      this.verifyModeControls?.onCycleSimulationSpeed?.();
+      this.syncSimulationSpeedChrome();
+    });
+    battleTopInfoLeading.appendChild(this.speedButton);
+
     const battleTopInfoTrailing = document.createElement("div");
     battleTopInfoTrailing.className =
       "battle-top-info-side battle-top-info-side--trailing";
@@ -275,6 +296,25 @@ export class BattleView {
 
     this.pausePlateEl = document.createElement("div");
     this.pausePlateEl.className = "battle-pause-plate game-panel-surface";
+
+    this.pausePlateTitleEl = document.createElement("div");
+    this.pausePlateTitleEl.className = "battle-pause-plate-title";
+    this.pausePlateEl.appendChild(this.pausePlateTitleEl);
+
+    this.pauseActionsEl = document.createElement("div");
+    this.pauseActionsEl.className = "battle-pause-actions";
+    this.pauseActionsEl.hidden = true;
+
+    this.pauseReturnToStageSelectButton = document.createElement("button");
+    this.pauseReturnToStageSelectButton.type = "button";
+    this.pauseReturnToStageSelectButton.className =
+      "battle-pause-action-button game-ui-button";
+    this.pauseReturnToStageSelectButton.addEventListener("click", () => {
+      this.verifyModeControls?.onReturnToStageSelectFromPause?.();
+    });
+    this.pauseActionsEl.appendChild(this.pauseReturnToStageSelectButton);
+    this.pausePlateEl.appendChild(this.pauseActionsEl);
+
     battlePauseOverlay.appendChild(this.pausePlateEl);
 
     const defeatRetryOverlay = document.createElement("div");
@@ -295,19 +335,27 @@ export class BattleView {
     const defeatRetryActions = document.createElement("div");
     defeatRetryActions.className = "battle-defeat-retry-actions";
 
-    const defeatRetryButtons: Array<{ text: string; run: () => boolean }> = [
+    const defeatRetryButtons: Array<{
+      textKey: UiMessageKey;
+      run: () => boolean;
+    }> = [
       {
-        text: "現在Waveを同設定で再戦",
+        textKey: "battle.defeatRetryCurrentWave",
         run: () => verifyModeControls?.onRetryCurrentWave?.() ?? false,
       },
       {
-        text: "準備へ戻る",
+        textKey: "battle.defeatRetryFormationPrep",
         run: () => verifyModeControls?.onReturnToFormationPrep?.() ?? false,
       },
       {
-        text: "作戦をWave 0からやり直す",
+        textKey: "battle.defeatRetryFromWaveZero",
         run: () =>
           verifyModeControls?.onRestartOperationFromWaveZero?.() ?? false,
+      },
+      {
+        textKey: "battle.returnToStageSelect",
+        run: () =>
+          verifyModeControls?.onReturnToStageSelectFromDefeatRetry?.() ?? false,
       },
     ];
 
@@ -315,7 +363,8 @@ export class BattleView {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "battle-defeat-retry-button game-ui-button";
-      button.textContent = action.text;
+      button.dataset.uiMessageKey = action.textKey;
+      button.textContent = t(action.textKey);
       button.addEventListener("click", () => {
         if (action.run()) {
           this.syncDefeatRetryOverlay();
@@ -690,7 +739,21 @@ export class BattleView {
     this.menuButton.textContent = t("battle.formation");
     this.menuButton.setAttribute("aria-label", t("battle.formationAria"));
     this.syncPauseChrome();
+    this.syncSimulationSpeedChrome();
+    this.syncDefeatRetryChrome();
     this.syncVerifyBadgeState();
+  }
+
+  private syncDefeatRetryChrome(): void {
+    const buttons = this.defeatRetryOverlayEl.querySelectorAll<HTMLButtonElement>(
+      ".battle-defeat-retry-button[data-ui-message-key]",
+    );
+    for (const button of buttons) {
+      const key = button.dataset.uiMessageKey as UiMessageKey | undefined;
+      if (key) {
+        button.textContent = t(key);
+      }
+    }
   }
 
   private syncPauseChrome(): void {
@@ -703,9 +766,43 @@ export class BattleView {
       paused ? t("battle.resumeAria") : t("battle.pauseAria"),
     );
     this.pauseButton.setAttribute("aria-pressed", paused ? "true" : "false");
-    this.pausePlateEl.textContent = t("battle.pausePlate");
+    this.pausePlateTitleEl.textContent = t("battle.pausePlate");
+    const showReturnToStageSelect = this.canShowPauseReturnToStageSelect();
+    this.pauseReturnToStageSelectButton.textContent = t(
+      "battle.returnToStageSelect",
+    );
+    this.pauseReturnToStageSelectButton.hidden = !showReturnToStageSelect;
+    this.pauseActionsEl.hidden = !showReturnToStageSelect;
+    this.pausePlateEl.classList.toggle(
+      "battle-pause-plate--with-actions",
+      showReturnToStageSelect,
+    );
     this.pauseButton.disabled =
       this.isDefeatRetryVisible() || this.isVictoryResultVisible();
+    this.syncSimulationSpeedChrome();
+  }
+
+  private syncSimulationSpeedChrome(): void {
+    const hasSpeedControls =
+      this.verifyModeControls?.getSimulationSpeed !== undefined &&
+      this.verifyModeControls?.onCycleSimulationSpeed !== undefined;
+    this.speedButton.hidden = !hasSpeedControls;
+    if (!hasSpeedControls) return;
+
+    const speed = this.verifyModeControls?.getSimulationSpeed?.() ?? 1;
+    this.speedButton.textContent = t("battle.simulationSpeed", { speed });
+    this.speedButton.setAttribute(
+      "aria-label",
+      t("battle.simulationSpeedAria", { speed }),
+    );
+    this.speedButton.setAttribute("aria-pressed", speed === 1 ? "false" : "true");
+    this.speedButton.dataset.speed = String(speed);
+    this.speedButton.disabled =
+      this.isDefeatRetryVisible() || this.isVictoryResultVisible();
+  }
+
+  private canShowPauseReturnToStageSelect(): boolean {
+    return this.verifyModeControls?.canReturnToStageSelectFromPause?.() === true;
   }
 
   isBattlePaused(): boolean {

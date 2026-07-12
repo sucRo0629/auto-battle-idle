@@ -276,7 +276,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 1. **X 配置正本** — 全生存味方を **射程降順（長い＝左）** で一列。同射程は **物理 `attacker`** を左
 2. **スロット間隔** — 左端 `PARTY_FORMATION_LEFT_ANCHOR`（20px）、以降 `+32px`
-3. **`formationRow`** — Y 描画・クラス既定の編成分類（`classes.json`）。**X 深度・接敵・aura 範囲には使わない**
+3. **`formationRow`** — Y 描画・編成分類（**`role` + `rangePx` から導出**。JSON 正本ではない）。**X 深度・接敵・aura 範囲には使わない**
 4. **overlap 解消** — §4.2（接敵時プレイヤー必須）
 
 分類用途の `isMeleeRangePx` / `isMeleeUnit` は本書の距離計算・layout 正本から除外し、[combat.md](combat.md) / [classes-and-skills.md](classes-and-skills.md) に委譲する。
@@ -1015,6 +1015,7 @@ topInfo:
 | 表現 | 角丸タグ・ボタン風チップではなく、直線フレーム付き HUD 銘板（`border-radius: 0`、角欠け / 二重枠 / 内側ハイライト） |
 | Verify / DEBUG | 通常 HUD から分離し `.battle-debug-overlay` 右上に配置（Layer 5） |
 | 一時停止 | 本番観察用。`battle-top-info` 左端の Pause ボタン（Layer 4）。Debug UI とは分離 |
+| 倍速（最小 UI） | 本番観察用。**R7b 最小 UI**。Pause 右隣の Speed ボタン（`×1` / `×2` / `×4`。クリックで 1 → 2 → 4 → 1）。`GameSession` simulation のみ加速（描画 tick は未加速）。正式 UI polish は未実装 |
 
 ### 8.11.1 戦闘一時停止（観察 UI — Phase 4 Task 1）
 
@@ -1027,10 +1028,28 @@ topInfo:
 | 停止対象 | `BattleEngine.tick`、`BattleCanvas.tick`（スプライト / VFX / ポップアップ等）、`battleElapsedMs` と `targetIndicator` TTL の進行 |
 | 継続 | hover / selection / HUD 操作（`hoverHighlight`、`targetIndicator` 表示状態の維持、味方 HUD ホバー詳細、用語パネル等） |
 | 非対象 | Pause ボタンでは敵 group を展開しない（束表示のまま）。click 展開は §8.11.2 |
-| 表示 | `.battle-pause-overlay`（薄い暗幕、`pointer-events: none`）+ 中央の控えめな `PAUSE` 銘板。戦場は読める明度を維持。Debug overlay（Layer 5）とは混ぜない |
+| 表示 | `.battle-pause-overlay`（薄い暗幕、`pointer-events: none`）+ 中央の控えめな `PAUSE` 銘板。作戦中（verify ON/OFF）は銘板内に **ステージ選択へ**（作戦中断・確認なし）。操作ボタンのみ `pointer-events: auto`。戦場は読める明度を維持。Debug overlay（Layer 5）とは混ぜない |
+| 作戦中断 | 敗北 / 作戦結果 overlay 非表示時のみ。**ステージ選択へ**（ポーズ銘板）で未完了 Operation を破棄し `stageSelect` へ。§9 リトライ導線と同様、確認ダイアログは挟まない |
+| 敗北 retry | 敗北 overlay（`.battle-defeat-retry-overlay`）に retry 3 種 + **ステージ選択へ**（verify ON/OFF）。§9 参照 |
 | debug replay pause | 確認モードの battle-x replay pause（§1）とは独立。どちらかが ON なら `BattleEngine.tick` を止める |
 
 実装：`BattleView.ts`（状態・UI・`tick` ゲート）、`GameSession.ts`（`engine.tick` ゲート）、`battle-view.css`。
+
+### 8.11.1a 戦闘倍速（最小 UI — R7b）
+
+R6b の仮 Wave 開始・R6i の最小 retry と同列。**正式 UI**（Save 永続・描画 tick 同期・専用設定）は別 Phase。
+
+| 項目 | 方針 |
+| ---- | ---- |
+| 倍率 | `1` / `2` / `4` のみ（`GameSession.simulationSpeed`） |
+| 操作 | topInfo 左の Speed ボタン（Pause 右隣）。表示 `×{speed}`。クリックで 1 → 2 → 4 → 1 |
+| 加速対象 | `BattleEngine.tick` の `deltaSec` のみ（`GameSession.tick` gate） |
+| 非加速 | `BattleView.tick` / `BattleCanvas` アニメ（pause と同様、描画 delta は実時間） |
+| 停止合成 | pause または debug replay pause 中は engine tick 停止。倍率は保持 |
+| 永続化 | Save 対象外（セッション内のみ） |
+| 無効化 | 敗北 retry overlay・作戦結果 overlay 表示中は Speed ボタン disabled |
+
+実装：`GameSession.ts`（`getSimulationSpeed` / `cycleSimulationSpeed`）、`BattleView.ts`（Speed ボタン）、`gameSessionSimulationSpeed.test.ts`。
 
 ### 8.11.2 敵 group クリック展開（観察 UI — Phase 4 Task 2）
 

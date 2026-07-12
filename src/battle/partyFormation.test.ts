@@ -10,6 +10,7 @@ import {
   comparePartyFormationSlot,
   computePartyFormationBattleX,
   partyDeployOffScreenBattleX,
+  resolveClassFormationRow,
   resolvePartyDeployOffscreenOffset,
 } from './partyFormation.ts';
 
@@ -105,5 +106,13 @@ describe('partyFormation', () => {
     expect(partyDeployOffScreenBattleX(52)).toBe(
       52 - resolvePartyDeployOffscreenOffset(),
     );
+  });
+
+  it('resolveClassFormationRow follows role and range band defaults', () => {
+    expect(resolveClassFormationRow('defender', 200)).toBe('front');
+    expect(resolveClassFormationRow('attacker', 50)).toBe('front');
+    expect(resolveClassFormationRow('attacker', 100)).toBe('back');
+    expect(resolveClassFormationRow('supporter', 50)).toBe('front');
+    expect(resolveClassFormationRow('supporter', 128)).toBe('back');
   });
 });

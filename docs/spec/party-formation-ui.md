@@ -30,7 +30,7 @@
 | --------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | **選択クラス**              | Formation Screen でプレイヤーが直接選ぶ最大 4 クラス。UI 上はスロット番号・手動配置を持たない   | 本書                                                                         |
 | **クラス要約**              | 編成 UI に表示する数文のプレイヤー向け解説（`summary.ja`）                                       | `classes.json`（`ClassEditorStep` で編集）                                   |
-| **前衛 / 後衛**（データ）   | クラスマスタの `formationRow`。編成 UI v1 では **テキスト表示しない**（戦闘配置の正本）          | `classes.json`                                                               |
+| **前衛 / 後衛**（データ）   | **`role` + `rangePx` から導出**（`formationRow`）。編成 UI v1 では **テキスト表示しない** | `partyFormation.ts` / [classes-and-skills.md](classes-and-skills.md) §配置 |
 | **UI ロール**（Picker 見出し） | `defender` / `attacker` / `supporter`。Picker の **ブロック見出し** と右ペイン Class Summary のロール表示で用いる。Party Summary にはロールアイコンを出さない | [classes-and-skills.md](classes-and-skills.md#1-ui-上のロール分類3-大ロール) |
 | **戦闘隊形スロット**        | 接敵後の `battleX` 深度・`slotIndex`。編成枠とは別                                               | [battle-field.md](battle-field.md#1-用語)                                    |
 | **プレイヤーレベル**        | アカウント共通の 1 本。習得・ステ計算・枠解放の基準（`playerProgress.level`）                    | [progression.md](progression.md)                                             |
@@ -39,7 +39,7 @@
 
 - Formation Screen では **スロット番号・FRONT / BACK・前衛 / 後衛を表示しない**。プレイヤーが操作するのは「どの 4 クラスを選ぶか」であり、手動配置 UI ではない。
 - 内部保存・戦闘統計の `partySlotIndex` は実装上の配列位置であり、Formation Screen 上の入力概念ではない。
-- 戦闘上の前衛 / 後衛は **クラス定義の `formationRow`** に紐づく。プレイヤーが枠ごとに前列 / 後列を指定する UI は **v1 では持たない**。
+- 戦闘上の前衛 / 後衛は **クラスの `role` + 射程帯から導出**される。プレイヤーが枠ごとに前列 / 後列を指定する UI は **v1 では持たない**。
 - Kill / Flow / Survival はスキル設計の正本であり、編成 UI v1 では **専用ラベルとして出さない**（クラス要約 + Picker ロール見出しで足りる）。
 
 ---

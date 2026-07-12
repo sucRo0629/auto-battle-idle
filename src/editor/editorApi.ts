@@ -909,7 +909,6 @@ export function createEmptyClassDraft(): ClassDraft {
       id: '',
       role: 'defender',
       displayName: '',
-      formationRow: 'front',
       traits: {},
       maxHp: 100,
       atk: 10,
@@ -953,6 +952,7 @@ export function buildClassPresetFromDraft(
   delete cls.promotion;
   delete cls.promotesFrom;
   ensureClassGrowthFields(cls);
+  delete cls.formationRow;
   if (cls.id.trim()) {
     cls.basicAttackSkillId = defaultBasicAttackId(cls.id.trim());
   }

@@ -15,6 +15,15 @@ export interface PartyFormationUnit {
   formationRow?: FormationRow;
 }
 
+/** クラスマスタの formationRow 既定（classes-and-skills.md §配置） */
+export function resolveClassFormationRow(
+  role: Role,
+  rangePx: number,
+): FormationRow {
+  if (role === 'defender') return 'front';
+  return rangePx < RANGED_ATTACK_MIN_PX ? 'front' : 'back';
+}
+
 const BACK_ROW_ROLE_ORDER: Record<Role, number> = {
   attacker: 0,
   supporter: 1,

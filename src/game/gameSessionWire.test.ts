@@ -289,4 +289,80 @@ describe('GameSession stageSelect → party → battle wire', () => {
       document.body.querySelector('.skill-menu-return-to-battle-button'),
     ).toBeNull();
   });
+
+  it('verify OFF pause can abort operation back to stageSelect', () => {
+    setVerifyModeEnabled(false);
+    session = createSession();
+    const gameData = tryLoadGameData();
+    if (!gameData.ok) throw new Error(gameData.error);
+
+    const firstStage = gameData.data.stages[0];
+    if (!firstStage) throw new Error('Need at least 1 stage');
+
+    const container = document.body.querySelector('div')!;
+    container.querySelector<HTMLButtonElement>('.stage-selection-sortie')?.click();
+    container
+      .querySelector<HTMLButtonElement>('.skill-menu-return-to-battle-button')
+      ?.click();
+
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.getOperationState()).not.toBeNull();
+
+    session.view.setBattlePaused(true);
+    expect(session.canReturnToStageSelectFromPause()).toBe(true);
+
+    const returnButton = container.querySelector<HTMLButtonElement>(
+      '.battle-pause-action-button',
+    );
+    expect(returnButton?.hidden).toBe(false);
+    returnButton?.click();
+
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
+  });
+
+  it('verify ON pause can abort operation back to stageSelect', () => {
+    setVerifyModeEnabled(true);
+    session = createSession();
+    expect(session.getCurrentScreen()).toBe('battle');
+
+    const container = document.body.querySelector('div')!;
+    session.view.setBattlePaused(true);
+    expect(session.canReturnToStageSelectFromPause()).toBe(true);
+
+    const returnButton = container.querySelector<HTMLButtonElement>(
+      '.battle-pause-action-button',
+    );
+    expect(returnButton?.hidden).toBe(false);
+    returnButton?.click();
+
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.getOperationState()).toBeNull();
+  });
+
+  it('verify ON battle HUD exposes simulation speed button (1 → 2 → 4 → 1)', () => {
+    setVerifyModeEnabled(true);
+    session = createSession();
+
+    const speedButton = document.body.querySelector<HTMLButtonElement>(
+      '.battle-speed-button',
+    );
+    expect(speedButton).not.toBeNull();
+    expect(speedButton?.hidden).toBe(false);
+    expect(speedButton?.textContent).toBe('×1');
+    expect(session.getSimulationSpeed()).toBe(1);
+
+    speedButton?.click();
+    expect(session.getSimulationSpeed()).toBe(2);
+    expect(speedButton?.textContent).toBe('×2');
+
+    speedButton?.click();
+    expect(session.getSimulationSpeed()).toBe(4);
+    expect(speedButton?.textContent).toBe('×4');
+
+    speedButton?.click();
+    expect(session.getSimulationSpeed()).toBe(1);
+    expect(speedButton?.textContent).toBe('×1');
+  });
 });

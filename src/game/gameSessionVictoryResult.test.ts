@@ -316,7 +316,7 @@ describe('GameSession victory result (R7e)', () => {
     expect(session.shouldShowVictoryResult()).toBe(false);
     expect(session.getOperationResult()?.outcome).toBe('defeat');
     expectVictoryOverlayVisuallyHidden();
-    expect(document.body.querySelectorAll('.battle-defeat-retry-button')).toHaveLength(3);
+    expect(document.body.querySelectorAll('.battle-defeat-retry-button')).toHaveLength(4);
   });
 
   it('9. verify ON preserves existing victory and loop behavior', () => {

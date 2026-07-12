@@ -1776,15 +1776,17 @@ Conductor は自身でダメージを与えるキャスターではない。
 
 ## 配置
 
-`formationRow` で列を決定：`front` → `back`（左＝敵側）。正本は `classes.json` の各クラス `formationRow`。
+`formationRow`（前衛 / 後衛）は **`role` + `traits.rangePx` から実行時導出**する。`classes.json` には保存しない（legacy フィールド。読み込み時に JSON 値は無視）。
 
-**列の既定：**
-
-| ロール      | `formationRow`                                                         |
+| ロール      | 導出ルール                                                             |
 | ----------- | ---------------------------------------------------------------------- |
 | `defender`  | `front`                                                                |
 | `attacker`  | 近接帯（`rangePx < 100`）→ `front`、遠隔帯（`rangePx >= 100`）→ `back` |
-| `supporter` | `back`（**例外:** `sp_alchemist` は近接帯のため `front`）              |
+| `supporter` | `rangePx < 100` → `front`、それ以外 → `back`（`sp_alchemist` 等の近接帯） |
+
+実装: `partyFormation.ts` の `resolveClassFormationRow`。戦闘ユニット生成時に `CombatantState.formationRow` へ設定。
+
+`formationRow` で列を決定：`front` → `back`（左＝敵側）。
 
 敵のデフォルト単体ターゲットは [combat.md](combat.md) §敵の単体ターゲット選定 — 生存 `defender` がいればその中の最近傍、いなければプール内最近傍。近接 Kill / Flow が前列にいても、defender ロールが単体の主受け口になる。
 

@@ -268,6 +268,16 @@ export class GameSession {
         getOperationResultForDisplay: () => this.getOperationResultForDisplay(),
         onRematchSameStage: () => this.rematchSameStageFromResult(),
         onReturnToStageSelect: () => this.returnToStageSelectAfterVictory(),
+        canReturnToStageSelectFromPause: () =>
+          this.canReturnToStageSelectFromPause(),
+        onReturnToStageSelectFromPause: () =>
+          this.returnToStageSelectFromPause(),
+        onReturnToStageSelectFromDefeatRetry: () =>
+          this.returnToStageSelectFromDefeatRetry(),
+        getSimulationSpeed: () => this.getSimulationSpeed(),
+        onCycleSimulationSpeed: () => {
+          this.cycleSimulationSpeed();
+        },
       },
     );
     this.setGameScreen(this.verifyMode ? 'battle' : 'stageSelect');
@@ -504,10 +514,9 @@ export class GameSession {
     return this.wavePrepSuspended;
   }
 
-  /** R7c: verify OFF 敗北後に release retry UI を表示するか */
+  /** 敗北後に retry UI を表示するか */
   shouldShowDefeatRetry(): boolean {
     return (
-      !this.verifyMode &&
       this.currentScreen === 'battle' &&
       this.operationState !== null &&
       this.operationState.isDefeated &&
@@ -565,6 +574,40 @@ export class GameSession {
     this.view.setBattlePaused(false);
     this.view.refreshVictoryResultOverlay();
     return true;
+  }
+
+  /**
+   * 未完了作戦を破棄してステージ選択へ戻る。
+   * 確認ダイアログなし。
+   */
+  private abortIncompleteOperationToStageSelect(): boolean {
+    this.wavePrepSuspended = false;
+    if (this.menuHost.isOpen()) {
+      this.menuHost.close();
+    }
+    this.view.setBattlePaused(false);
+    this.setGameScreen('stageSelect');
+    return true;
+  }
+
+  /** 戦闘ポーズ中に作戦を中断してステージ選択へ戻れるか */
+  canReturnToStageSelectFromPause(): boolean {
+    if (this.currentScreen !== 'battle') return false;
+    if (this.shouldShowDefeatRetry()) return false;
+    if (this.shouldShowVictoryResult()) return false;
+    return true;
+  }
+
+  /** 戦闘ポーズ中に作戦を中断してステージ選択へ戻る。 */
+  returnToStageSelectFromPause(): boolean {
+    if (!this.canReturnToStageSelectFromPause()) return false;
+    return this.abortIncompleteOperationToStageSelect();
+  }
+
+  /** 敗北 retry UI からステージ選択へ戻る。 */
+  returnToStageSelectFromDefeatRetry(): boolean {
+    if (!this.shouldShowDefeatRetry()) return false;
+    return this.abortIncompleteOperationToStageSelect();
   }
 
   /**
@@ -1024,6 +1067,14 @@ export class GameSession {
     return true;
   }
 
+  /** R7b: 1 → 2 → 4 → 1 の順で simulation 倍率を切り替える。 */
+  cycleSimulationSpeed(): SimulationSpeed {
+    const next: SimulationSpeed =
+      this.simulationSpeed === 1 ? 2 : this.simulationSpeed === 2 ? 4 : 1;
+    this.simulationSpeed = next;
+    return next;
+  }
+
   tick(deltaSec: number, deltaMs: number): void {
     const simulationPaused =
       this.view.isBattlePaused() ||
@@ -1088,10 +1139,7 @@ export class GameSession {
 
     if (this.verifyMode && this.loopStageId) {
       console.log(`[progress] Defeat at ${failedStageName} (loop locked)`);
-      return;
-    }
-
-    if (this.verifyMode) {
+    } else if (this.verifyMode) {
       const previousStageId = applyStageRollbackOnDefeat(
         this.save,
         this.gameData.stages,
@@ -1107,10 +1155,10 @@ export class GameSession {
           `[progress] Defeat at ${failedStageName} → ${previousStageName}`,
         );
       }
-      return;
+    } else {
+      console.log(`[progress] Defeat at ${failedStageName} (retry)`);
     }
 
-    console.log(`[progress] Defeat at ${failedStageName} (retry)`);
     this.view.setBattlePaused(true);
   }
 

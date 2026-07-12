@@ -168,7 +168,21 @@ describe('GameSession simulation speed (R7b)', () => {
     expect(session.getSimulationSpeed()).toBe(1);
   });
 
-  it('7. speed persists across wave switch and retry', () => {
+  it('7. cycleSimulationSpeed rotates 1 → 2 → 4 → 1', () => {
+    session = bootVerifySession();
+    expect(session.getSimulationSpeed()).toBe(1);
+
+    expect(session.cycleSimulationSpeed()).toBe(2);
+    expect(session.getSimulationSpeed()).toBe(2);
+
+    expect(session.cycleSimulationSpeed()).toBe(4);
+    expect(session.getSimulationSpeed()).toBe(4);
+
+    expect(session.cycleSimulationSpeed()).toBe(1);
+    expect(session.getSimulationSpeed()).toBe(1);
+  });
+
+  it('8. speed persists across wave switch and retry', () => {
     session = bootVerifySession();
     const engine = getEngine(session);
     expect(session.trySetSimulationSpeed(4)).toBe(true);

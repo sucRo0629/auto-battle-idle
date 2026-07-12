@@ -8,6 +8,7 @@ Hensei Only の開発ロードマップ。
 - **[itch.io Devlog 方針](itch-io-devlog.md)** — ストアページ・Devlog の開始タイミングと M1 チェックリスト
 - **[マスター作業順（完了）](master-work-order.md)** — Phase 1〜3 + battle-field cleanup アーカイブ
 - **[敵エディタ改修計画](enemy-editor-refactor.md)** — クラススキル参照モデルへの tooling 移行（未着手）
+- **[戦場移動 一本化の残タスク](battle-movement-unification-remaining.md)** — `formationRow` 依存排除・spec 矛盾解消（未着手）
 
 ## 概要（番号順）
 

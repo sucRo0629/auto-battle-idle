@@ -128,7 +128,7 @@ describe('GameSession defeat retry (R7c)', () => {
     ).toBeNull();
   });
 
-  it('2. verify OFF defeat shows three retry actions', () => {
+  it('2. verify OFF defeat shows four retry actions', () => {
     session = createSession();
     session.start();
     enterBattleFromStageSelect(session);
@@ -136,11 +136,12 @@ describe('GameSession defeat retry (R7c)', () => {
 
     expect(session.shouldShowDefeatRetry()).toBe(true);
     const buttons = document.body.querySelectorAll('.battle-defeat-retry-button');
-    expect(buttons).toHaveLength(3);
+    expect(buttons).toHaveLength(4);
     expect([...buttons].map((button) => button.textContent)).toEqual([
       '現在Waveを同設定で再戦',
       '準備へ戻る',
       '作戦をWave 0からやり直す',
+      'ステージ選択へ',
     ]);
   });
 
@@ -216,7 +217,7 @@ describe('GameSession defeat retry (R7c)', () => {
     ).not.toBeNull();
   });
 
-  it('7. verify ON defeat path stays unchanged (no release retry UI)', () => {
+  it('7. verify ON defeat shows retry UI including stage select', () => {
     setVerifyModeEnabled(true);
     session = createSession();
     session.start();
@@ -227,14 +228,20 @@ describe('GameSession defeat retry (R7c)', () => {
     if (!firstStage || !secondStage) throw new Error('Need at least 2 stages');
 
     session.getSaveState().stageProgress.currentStageId = secondStage.id;
+    (
+      session as unknown as {
+        beginOperation: (stageId: string, initialWaveIndex: number) => boolean;
+      }
+    ).beginOperation(secondStage.id, 0);
     triggerDefeat(session);
 
     expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
     expect(session.getCurrentScreen()).toBe('battle');
-    expect(session.shouldShowDefeatRetry()).toBe(false);
-    expect(document.body.querySelector('.battle-defeat-retry-overlay')?.hidden).toBe(
-      true,
-    );
+    expect(session.shouldShowDefeatRetry()).toBe(true);
+    expect(document.body.querySelectorAll('.battle-defeat-retry-button')).toHaveLength(4);
+    expect(
+      document.body.querySelector('.battle-defeat-retry-overlay'),
+    ).not.toBeNull();
   });
 
   it('8. victory does not show defeat retry UI', () => {
@@ -247,5 +254,19 @@ describe('GameSession defeat retry (R7c)', () => {
     expect(document.body.querySelector('.battle-defeat-retry-overlay')?.hidden).toBe(
       true,
     );
+  });
+
+  it('9. return to stage select aborts defeated operation', () => {
+    session = createSession();
+    session.start();
+    const stageId = enterBattleFromStageSelect(session);
+    triggerDefeat(session);
+
+    clickDefeatRetryButton(document.body, 'ステージ選択へ');
+
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.shouldShowDefeatRetry()).toBe(false);
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(stageId);
   });
 });

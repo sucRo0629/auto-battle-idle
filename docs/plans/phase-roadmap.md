@@ -4,27 +4,42 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R6f 完了**（出撃確定時 checkpoint メモリ snapshot 基盤）。次は **R6g — 複数 Wave enemyGroups spawn**。
+**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**。**公式次タスク: R9.5a**（module 兵科の legacy active runtime 停止）。詳細は [planning-rules.md §3](../ai-handoff/planning-rules.md#3-r5-と-r10-の橋渡しr95--r10-prep)、[current-task.md §82](../ai-handoff/current-task.md#82-r95a--module兵科のlegacy-active-runtime停止次の再開タスク)。
+
+---
+
+## フェーズ完了の二層判定
+
+各 R フェーズの完了条件は **Backend 完了** と **Player 完了** の二層で書く。詳細・例は [planning-rules.md §2](../ai-handoff/planning-rules.md#2-フェーズ完了条件の二層) を正本とする。
+
+| 層 | 定義 |
+| -- | ---- |
+| **Backend 完了** | API、型、validate、engine、統合テストの縦切りが成立している |
+| **Player 完了** | プレイヤーがゲーム画面上で新仕様を確認・利用できる |
+
+Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記録し、**「Phase 完了」とは書かない**。legacy 共存は移行中の実装手段として許容するが、新仕様の Player 完了条件には使用しない。「後で対応」「スコープ外」とする項目には、戻し先 Phase ID・Player 完了条件・触るファイル候補を併記する。
 
 ---
 
 ## 概要（R0〜R10）
 
-| Phase | ゴール | 状態 |
-| ----- | ------ | ---- |
-| **R0** | 方針転換の正本化 — 旧 M1 路線凍結、維持・廃止・再設計・保留の整理、legacy 扱い、新実装順の確定 | **完了** |
-| **R1** | 上位戦闘設計 — 戦闘方式、兵科責務、旧 active / gauge / level 廃止、Wave 方式選択、作戦内パッシブ方針 | **完了** |
-| **R2** | 詳細戦闘・兵科仕様 — 攻撃間隔、Attack / Hit、方式効果形状、各兵科 2 方式（具体は未確定） | **完了** |
-| **R3** | Wave 作戦ループ — 初期準備 → Wave 戦闘 → Wave 間準備 → 次 Wave → 最終結果 | **完了** |
-| **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / normalize / editor API / legacy 移行（**設計のみ**） | **完了** |
-| **R5** | 最小縦切り — 少数兵科・各 2 戦闘方式・active/gauge なし・秒単位攻撃間隔・固定優先ターゲット・同一兵科禁止・敵戦闘方式指定・最小データ schema・単一 Wave または最小作戦で戦闘成立 | **完了** |
-| **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | **R6f 完了** → R6g 次 |
-| **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | **R7e 完了** → R8 次 |
-| **R8** | 作戦内パッシブ — リソース消費・任意取得・巻き戻し、**戦闘中表示整理**、**範囲パッシブ runtime 判定 + プレースホルダ範囲描画**（正式 VFX は後続） | **R8 完了** → R9 次 |
-| **R9** | エディタ実装 — クラス / 戦闘方式 / パッシブ / 敵 / Stage・Wave 各エディタ + validate / migration | **R9a 完了** → R9b 次 |
-| **R10** | 新複数 Wave 作戦の試作 — 旧 7 ステージ移植ではなく新仕様専用作戦。繰り返し遊べるかを評価 | 未着手 |
+| Phase | ゴール | Backend | Player | 状態 |
+| ----- | ------ | ------- | ------ | ---- |
+| **R0** | 方針転換の正本化 — 旧 M1 路線凍結、維持・廃止・再設計・保留の整理、legacy 扱い、新実装順の確定 | 完了 | 設計 Phase として完了 | **完了** |
+| **R1** | 上位戦闘設計 — 戦闘方式、兵科責務、旧 active / gauge / level 廃止、Wave 方式選択、作戦内パッシブ方針 | 完了 | 設計 Phase として完了 | **完了** |
+| **R2** | 詳細戦闘・兵科仕様 — 攻撃間隔、Attack / Hit、方式効果形状、各兵科 2 方式 | 完了 | 設計 Phase として完了 | **完了** |
+| **R3** | Wave 作戦ループ — 初期準備 → Wave 戦闘 → Wave 間準備 → 次 Wave → 最終結果 | 完了 | 設計 Phase として完了 | **完了** |
+| **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / editor API / legacy 移行（**設計のみ**） | 完了 | 設計 Phase として完了 | **完了** |
+| **R5** | 戦闘方式 runtime 縦切り — 少数兵科・各 2 方式・敵方式指定・同一兵科禁止・module 通常行動 | **完了** | **未達**（R9.5a〜c で解消） | **Backend 完了** |
+| **R6** | 複数 Wave・OperationState — Wave 間準備、checkpoint、retry、複数 Wave spawn | **完了** | R9.5 / R10 で画面導線を確認 | **Backend 完了** |
+| **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | **完了** | R10 で再挑戦性を確認 | **Backend 完了** |
+| **R8** | 作戦内パッシブ — 取得・保持・効果縦切り、戦闘中表示、範囲プレースホルダ | **完了** | R10 で判断差を確認 | **Backend 完了** |
+| **R9a** | authoring 骨格 — エディタ現状調査・タスク分割 | 完了 | 開発者向け確認済み | **完了** |
+| **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、出撃前方式選択 | 未着手 | 未着手 | **公式次** |
+| **R9b〜f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / closure | R9b 以降未着手 | R10 用作戦反映は未確認 | 未着手 |
+| **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | R9.5・R9 待ち |
 
-**試作成立後（R10 以降・順序未固定）:** 兵科拡張、診断基盤再構築、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブの演出制作含む — R8 ではプレースホルダ図形のみ）、効果音、i18n、packaging、公開準備。
+**試作成立後（R10 以降・順序未固定）:** 兵科拡張、診断基盤再構築、**戦場移動 legacy cleanup**（[battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)）、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブの演出制作含む — R8 ではプレースホルダ図形のみ）、効果音、i18n、packaging、公開準備。
 
 ---
 
@@ -235,43 +250,47 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 ---
 
-## R5 — 最小縦切り
+## R5 — 戦闘方式 runtime 縦切り
 
-**ゴール:** **少数兵科**だけで、新戦闘方式による戦闘を成立させる。
+**ゴール:** **少数兵科**だけで、新戦闘方式による戦闘を Backend 縦切りとして成立させる。
 
-**目的:**
+### Backend 完了（R5b〜g 成立済み）
 
-- 少数兵科
-- 各 2 戦闘方式
-- active / gauge なし
-- 秒単位攻撃間隔
-- 固定優先ターゲット
-- 同一兵科禁止（味方）
-- 敵戦闘方式指定
-- 最小データ schema
-- 単一 Wave または最小作戦で戦闘成立
+- 戦闘方式の最小型・データ・validate
+- module から通常行動定義への接続
+- R5 対象 4 兵科それぞれの 2 方式
+- 味方・敵の方式選択
+- 味方同一兵科禁止
+- module 通常行動の engine 接続
 
-**確認項目:**
+したがって R5 は **Backend 完了** として維持する。R5 単独を「Phase 完了」とは記載しない。
 
-- 戦闘方式選択
-- module を通常行動として `BattleEngine` が実行
-- 旧レベル成長・EXP への非依存
+### Player 未達（R9.5 へ割当）
+
+R5 実装時点では未達であり、**R9.5a〜c** で解消する。
+
+| 項目 | 戻し先 |
+| ---- | ------ |
+| module 兵科で legacy active を発動させない | **R9.5a** |
+| module 兵科の味方 HUD から legacy 2×2 gauge を除去する | **R9.5b** |
+| 味方 HUD に攻撃間隔を表示する | **R9.5b** |
+| 出撃前編成で戦闘方式を選択する | **R9.5c** |
+
+`learnedActiveIds=[]` のテスト fixture だけでは Player 完了にならない。
 
 **スコープ外（R5 に含めない）:** 移動阻害、作戦内パッシブ、全面エディタ改修、legacy 全面移行、Wave 間準備 UI、作戦途中セーブ、倍速・リトライ、Wave 報酬、Save 統合。
 
-### R5 サブフェーズ（R5a 調査で確定）
+### R5 サブフェーズ（R5a 調査で確定 — すべて Backend 完了）
 
 | サブ | 内容 | 状態 |
 | ---- | ---- | ---- |
 | **R5a** | 現行実装調査・最小実装計画 | **完了** — [current-task.md §47](../ai-handoff/current-task.md#47-r5a--現行実装調査と最小実装計画2026-07-12) |
-| **R5b** | 最小型 + 新データ + 新 validate | 次 |
-| **R5c** | 通常行動実行（module → SkillExecutor） | 未着手 |
-| **R5d** | 味方方式選択（Save 非統合） | 未着手 |
-| **R5e** | 敵 group module 指定 | 未着手 |
-| **R5f** | 編成制限（味方 classId 重複禁止） | 未着手 |
-| **R5g** | 統合テスト（4 兵科 × 2 方式・1 Wave） | 未着手 |
-
-**順序:** R5b → R5c → R5d → R5e → R5f → R5g。SkillExecutor は新 executor なしで basic スロット経由再利用。
+| **R5b** | 最小型 + 新データ + 新 validate | **完了** — §48 |
+| **R5c** | 通常行動実行（module → SkillExecutor） | **完了** — §49 |
+| **R5d** | 味方方式選択（Save 非統合） | **完了** — §51 |
+| **R5e** | 敵 group module 指定 | **完了** — §52 |
+| **R5f** | 編成制限（味方 classId 重複禁止） | **完了** — §53 |
+| **R5g** | 統合テスト（4 兵科 × 2 方式・1 Wave） | **完了** — §54 |
 
 ---
 
@@ -299,7 +318,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R6i** | retry 3 種（最小経路） | **完了（§67）** — GameSession retry API + debug 配線 |
 | **R6j** | 統合テスト（2 wave + stop/resume） | **完了（§68）** — legacy stage `1` 縦切り自動テスト |
 
-**次タスク:** R8 — 作戦内パッシブ
+**次タスク:** **R7** — 反復プレイ（完了）
 
 ---
 
@@ -311,14 +330,14 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 - 作戦最初からの再試行
 - 確認ダイアログなし（方針 — [operation-loop.md §9](../spec/operation-loop.md#9-リトライ導線r7-接続)）
 
-**R7a 調査完了（2026-07-12）:** [current-task.md §69](../ai-handoff/current-task.md#69-r7a--反復プレイ調査タスク分割2026-07-12-完了)。**R7b 完了（2026-07-12）:** [current-task.md §70](../ai-handoff/current-task.md#70-r7b--倍速-simulation2026-07-12-完了) — `GameSession` tick gate で 1/2/4 倍。**R7c 完了（2026-07-12）:** [current-task.md §71](../ai-handoff/current-task.md#71-r7c--敗北時-retry-正式導線2026-07-12-完了) — verify OFF 敗北で retry 3 種 UI・legacy auto-restart 廃止。**R7d 完了（2026-07-12）:** [current-task.md §72](../ai-handoff/current-task.md#72-r7d--wave-準備-retry--spec-整合2026-07-12-完了) — `wavePrep` から retry 3 種・formation suspend 往復。**R7e 完了（2026-07-12）:** [current-task.md §73](../ai-handoff/current-task.md#73-r7e--作戦結果後再戦--遷移統一2026-07-12-完了) — verify OFF 最終勝利で作戦結果 UI・rematch / stageSelect 導線。
+**R7a 調査完了（2026-07-12）:** [current-task.md §69](../ai-handoff/current-task.md#69-r7a--反復プレイ調査タスク分割2026-07-12-完了)。**R7b 完了（2026-07-12）:** [current-task.md §70](../ai-handoff/current-task.md#70-r7b--倍速-simulation2026-07-12-完了) — `GameSession` tick gate で 1/2/4 倍 + **最小 UI**（Pause 右隣 Speed ボタン。2026-07-13 追補）。**R7c 完了（2026-07-12）:** [current-task.md §71](../ai-handoff/current-task.md#71-r7c--敗北時-retry-正式導線2026-07-12-完了) — verify OFF 敗北で retry 3 種 UI・legacy auto-restart 廃止。**R7d 完了（2026-07-12）:** [current-task.md §72](../ai-handoff/current-task.md#72-r7d--wave-準備-retry--spec-整合2026-07-12-完了) — `wavePrep` から retry 3 種・formation suspend 往復。**R7e 完了（2026-07-12）:** [current-task.md §73](../ai-handoff/current-task.md#73-r7e--作戦結果後再戦--遷移統一2026-07-12-完了) — verify OFF 最終勝利で作戦結果 UI・rematch / stageSelect 導線。
 
 ### R7 実装分割（依存順・handoff §69.7）
 
 | ID | 内容 | 手動確認 |
 | ---- | ---- | -------- |
 | **R7a** | 調査・4 タスク分割 | **完了（§69）** |
-| **R7b** | 倍速 1 / 2 / 4 倍（`GameSession.tick` multiplier） | **完了（§70）** — API + tick テスト |
+| **R7b** | 倍速 1 / 2 / 4 倍（`GameSession.tick` multiplier + 最小 UI） | **完了（§70）** — API + 最小 Speed ボタン + tick / wire テスト |
 | **R7c** | 敗北時 retry 正式導線（release 含む・legacy defeat 置換） | **完了（§71）** — verify OFF 敗北で retry 3 種 |
 | **R7d** | Wave 準備 retry + 「準備へ戻る」spec 整合（`wavePrep`） | **完了（§72）** — wavePrep retry 3 種・formation suspend |
 | **R7e** | 作戦結果後再戦 + verify/release 勝利導線統一 | **完了（§73）** — `operationResult` → rematch / stageSelect |
@@ -396,7 +415,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R8e** | 戦闘中表示 — 常時 stat 非表示・条件付きのみアイコン・HUD read-only 一覧 | — **完了** |
 | **R8f** | 範囲系 runtime 判定 + 1 次元プレースホルダ描画 | — **完了** |
 
-**次タスク:** **R9** — エディタ実装。
+**次タスク:** **R9.5** — R5 Player completion / R10 preparation（公式次: **R9.5a**）。
 
 **R8 スコープ外:** 移動阻害・ノックバック・特殊移動・射程差 passive、Lv / EXP 連動、M1 レベル機能、敵側パッシブ（縦切り後）、エディタ（R9）。
 
@@ -408,42 +427,169 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 ---
 
-## R9 — エディタ実装
+---
 
-**ゴール:** [combat-data-schema-refactor.md](combat-data-schema-refactor.md) §13〜14 の editor 責務を、既存 `EditorApp` / `editorApi` / `vite-plugin-editor-api` 上に段階実装する。**既に編集可能な legacy 項目の再実装はしない。** UI polish と schema / save 変更は同一 PR に詰めない。
+## R9.5 — R5 Player completion / R10 preparation
 
-**R9a 調査完了（2026-07-13）:** [current-task.md §80](../ai-handoff/current-task.md#80-r9a--エディタ現状調査r9-分割2026-07-13-完了)。現状サマリ:
+**目的:** R5〜R8 で成立した Backend 縦切りを、プレイヤーが新仕様だけで利用できる状態へ接続する。R9（authoring）の代替ではない。
 
-- **編集済:** クラス stat / legacy スキル池、敵テンプレ、Stage `enemyGroups`（scale 含む）、passive/active effect 多数（`SkillEditorStep`）
-- **未接続:** `data/combat-modules/*.json` save 経路、class `combatModuleIds` UI、Stage `selectedCombatModuleId` UI、`operationPassiveCatalog` JSON 化、ally 範囲 passive フィールド（`buffAoeRadiusPx` 等）
-- **editor stages:** 常に `data/stages.json`（demo build の `@game-data/stages` とは分離）
+**推奨順序:** **R9.5a → R9.5b → R9.5c → R9b〜f → R10**。R9.5a と R9b は担当ファイルの衝突が少なければ技術的並行可だが、**公式進捗上は R9.5 を優先**する。
 
-### R9 実装分割（依存順・handoff §80.6）
+| ID | 内容 | Backend 完了条件 | Player 完了条件 | 依存 |
+| -- | ---- | ---------------- | --------------- | ---- |
+| **R9.5a** | module 兵科の legacy active runtime 停止 | 4 兵科で legacy active cooldown を生成せず、`runUnitSkills` から発動しない | 4 兵科を戦闘へ出しても legacy active が一度も発動しない | R5 |
+| **R9.5b** | 味方 HUD 攻撃間隔表示 | module 兵科用 HUD が legacy recast に依存せず、runtime と同じ攻撃間隔を表示 | 4 兵科に legacy 2×2 gauge がなく、攻撃間隔を読める | R9.5a |
+| **R9.5c** | 出撃前戦闘方式選択 | `SkillMenuPanel` の選択を出撃時 `OperationState` へ確定し、Wave1 生成へ反映 | 出撃前に方式を確認・変更でき、選んだ方式で Wave1 を開始できる | R9.5a、R6 |
 
-| ID | 内容 | 手動 / 自動確認 |
-| ---- | ---- | --------------- |
-| **R9a** | 現状調査・6 タスク分割 doc | **完了（§80）** |
-| **R9b** | Stage `enemyGroups[].selectedCombatModuleId` 編集 | `StageEnemyEditorStep.test.ts` / stage save validate |
-| **R9c** | CombatModule editor API + UI（`data/combat-modules/`） | module CRUD + validate |
-| **R9d** | Class `combatModuleIds`（R5 4 兵科のみ） | `editorClassList.test.ts` |
-| **R9e** | operationPassiveCatalog データ化 + 範囲 passive フィールド | catalog + passive round-trip |
-| **R9f** | Legacy migration 一括（独立・最後） | 旧新共存 read テスト |
+**対象兵科（`R5_COMBAT_MODULE_CLASS_IDS`）:** `df_guardian`、`at_swordsman`、`at_sorcerer`、`sp_cleric`。別一覧を重複定義しない。
 
-**次タスク:** **R9b** — Stage `selectedCombatModuleId`（最小 save 経路変更）。
+### R9.5 完了条件（Player）
 
-**R9 スコープ外:** M1 外 class の一括 editor 対応、Balance / StatusIcons 改修、demo editor→`stages-demo.json` 切替、legacy `waves[].enemies` 削除（R9f まで維持）、正式 VFX。
+対象 4 兵科を含む編成で、出撃前方式選択 → Wave1 → WavePrep で方式変更 → Wave2 を通して以下を確認できること。
 
-**`operationPassiveCatalog`:** R8 暫定 TS 定数 → **R9e で JSON + editor**。R9b〜d では変更しない。
+1. legacy active が発動しない
+2. legacy 2×2 gauge が表示されない
+3. 攻撃間隔が表示される
+4. 出撃前と Wave 間の方式選択が各 Wave へ反映される
+
+Backend テスト pass だけでは R9.5 完了としない。handoff 正本: [current-task.md §82](../ai-handoff/current-task.md#82-r95a--module兵科のlegacy-active-runtime停止次の再開タスク)。
+
+**R9.5 スコープ外:** module 未対応兵科の legacy active 廃止、legacy passive 全面撤去、敵 HUD への同等表示、`stages-demo.json` 移行、i18n / VFX polish。
 
 ---
 
-## R10 — 新しい複数 Wave 作戦の試作
+## R9 — 新仕様 authoring
 
-- **旧 7 ステージの移植ではなく**、新仕様専用作戦を新規作成
-- 公開用完成度より **「繰り返し遊びたいか」** を評価
-- Wave ごとの編成・戦闘方式・（R8 以降）パッシブ取得が**判断として成立するか**確認
+R9 は新仕様の Stage、Wave、敵方式、作戦内パッシブをエディタで作成する Phase である。**Player 向け legacy 除去の代替ではない。** R9.5 未完了の場合、R9 完了後も R10 へ進めない。
 
-**試作成立後:** 兵科拡張 → 診断基盤再構築 → 正式コンテンツ → UI 仕上げ → 画像 / VFX / 効果音 → i18n → packaging → 公開準備（順序は再計画）。
+**R9a 調査完了（2026-07-13）:** [current-task.md §80](../ai-handoff/current-task.md#80-r9a--エディタ現状調査r9-分割2026-07-13-完了)。
+
+### R9 実装分割（依存順）
+
+| ID | 内容 | 手動 / 自動確認 |
+| -- | ---- | --------------- |
+| **R9a** | エディタ骨格・現状調査 | **完了（§80）** |
+| **R9b** | Stage / Wave `enemyGroups[].selectedCombatModuleId` authoring | `StageEnemyEditorStep.test.ts` / stage save validate |
+| **R9c** | 複数 Wave・`enemyGroups` 構造 authoring | 2 Wave 作成・保存・runtime 読込 |
+| **R9d** | 作戦内パッシブ候補・付与条件 authoring | 作成データが WavePrep に出る |
+| **R9e** | preview・validation・参照整合の統合 | 不正 ID・重複・未設定警告 |
+| **R9f** | authoring closure — 回帰テスト・spec 一致・R10 用作戦作成可能判定 | 新規 2 Wave 作戦をエディタだけで起動 |
+
+**次タスク（R9 系列）:** **R9b** — R9.5 完了後に着手。公式次は **R9.5a**。
+
+### R9a §80.6 技術前提（R9 Backend 完了に必要・R9.5 と並行可）
+
+R9a 調査で分割した以下は、上表 R9b〜f の authoring 前提として **R9 Backend 完了前に成立させる**。詳細・テスト条件は [current-task.md §80.6](../ai-handoff/current-task.md#806-r9-小タスク一覧最大-6) を参照。
+
+| 項目 | 内容 |
+| ---- | ---- |
+| CombatModule editor | `GET/PUT /__editor/combat-modules` + 編集 UI（`attackIntervalSec` + `action`） |
+| Class `combatModuleIds` | R5 4 兵科のみ、2 件必須 |
+| `operationPassiveCatalog` JSON 化 | R8 暫定 TS 定数 → JSON + editor（R9d と統合可） |
+
+### Backend 完了
+
+- 新仕様の 2 Wave 以上の作戦をエディタで作成・保存・再読込できる
+- 敵方式と作戦内パッシブ候補を設定できる
+- 不正参照を validate できる
+- preview と runtime の解決結果が一致する
+
+### Player 完了
+
+- エディタで作った新作戦をゲームから開始できる
+- 設定した Wave、敵方式、パッシブ候補がプレイ画面へ反映される
+- 新仕様プレイ全体の完了判定は **R9.5 および R10** で行う
+
+**R9 スコープ外:** M1 外 class の一括 editor 対応、`stages-demo.json` 編集切替、正式 VFX、legacy フィールド一括削除（R9f 後・別 PR 可）。
+
+`stages-demo.json` は legacy reference として維持し、R9 の移行対象にしない。
+
+---
+
+## R10 — 新仕様 2 Wave 試作・反復評価
+
+### 開始条件
+
+**Backend 前提:**
+
+- R5〜R8 の Backend 縦切りが維持されている
+- R9b〜f により、新作戦を authoring・validate・preview できる
+- `stages.json` に R10 専用の新作戦を追加できる状態である
+- 2 Wave 以上の OperationState・WavePrep・作戦内パッシブ経路が接続済みである
+
+**Player 前提（[planning-rules.md §1](../ai-handoff/planning-rules.md#1-r10-の前提定義)）:**
+
+- R9.5a 完了: 4 兵科で legacy active が発動しない
+- R9.5b 完了: 4 兵科の HUD に legacy gauge がなく、攻撃間隔が表示される
+- R9.5c 完了: 出撃前に戦闘方式を選択できる
+- WavePrep で方式を確認・変更できる
+
+### 目的
+
+新仕様の構造が技術的に動くことではなく、以下を判断できる試作を作る。
+
+> 編成、戦闘方式、Wave 間変更、作戦内パッシブを使って、同じ作戦を別の判断で繰り返し遊びたいと思えるか。
+
+### 評価軸
+
+- Wave1 の選択が Wave2 への準備判断につながるか
+- 戦闘方式の変更が単なる倍率差ではなく、処理対象や挙動差として認識できるか
+- 作戦内パッシブの取得が次 Wave の編成・方式判断に影響するか
+- 初回失敗後に別案を試したくなるか
+- legacy active / legacy gauge が新仕様の理解を混乱させていないか
+
+テスト pass・データ追加・2 Wave 完走だけを R10 完了条件にしない。
+
+### Backend 完了
+
+- 新仕様専用の 2 Wave 以上の作戦がロード・完走できる
+- OperationState、WavePrep、方式変更、パッシブ保持、作戦終了リセットが成立する
+- 主要状態遷移の自動テストが pass する
+
+Backend 完了だけでは R10 完了としない。
+
+### Player 完了
+
+- プレイヤーが新仕様だけで 2 Wave 以上を遊べる
+- 出撃前と Wave 間の判断が戦闘結果へ反映される
+- legacy active と legacy gauge が新仕様プレイへ混在しない
+- 異なる編成・方式・パッシブで再挑戦できる
+- 「繰り返し遊びたいか」について評価結果を記録できる
+
+### スコープ外
+
+正式画像、VFX 最終版、効果音、i18n、packaging、itch.io 公開、非 M1 兵科の全面 module 移行、`stages-demo.json` 移行、Save を使った作戦途中再開、大量ステージ制作、メタ進行。
+
+### 未確定事項（R10 着手前に doc または実装から確認）
+
+- R10 新作戦で使用する作戦内パッシブの具体的候補数
+- Wave 開始前に次 Wave 敵構成をどこまで表示するか
+- 初期方式のデフォルト選択規則
+- 攻撃間隔表示の表記形式
+- R10 手動評価の記録先
+- R9d の authoring 対象が Stage 定義か別 passive pool 定義か
+
+未確定事項は一般 RPG の慣例で補完しない。
+
+**試作成立後:** 兵科拡張 → 診断基盤再構築 → **戦場移動 legacy cleanup** → 正式コンテンツ → UI 仕上げ → 画像 / VFX / 効果音 → i18n → packaging → 公開準備（順序は再計画）。
+
+---
+
+## 戦場移動 legacy cleanup（R10 以降・未着手）
+
+**目的:** Phase 3d で完了した接近・接敵 Intent 一本化の**残り** — X 方向デプロイ / 隊形 sort に残る `formationRow` 依存と、[battle-field.md](../spec/battle-field.md) §2.6 / §3.3 の spec 矛盾を解消する。
+
+**着手条件:** **R9.5 + R9 + R10 の新仕様最小実装が完了してから**（現行の R9.5a 等と並行しない）。接近・隊形レイヤは `battleLayout` / `partyFormation` / 多数テストと接するため、新 schema 縦切りの安定後にまとめて扱う。
+
+**詳細タスク:** [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
+
+| 区分 | 内容 | 状態 |
+| ---- | ---- | ---- |
+| 前提 | 接近 Intent 一本化、`battleX` 単一正本、`formationRow` JSON 導出化、クラスエディタ旧 UI 削除 | **完了** |
+| A | X デプロイ配置正本の確定（§3.3 vs §2.6） | 未着手 |
+| B〜F | `partyFormation` / `battleLayout` / `resolveApproachBattleX` から X 方向 `formationRow` 排除、デッドコード削除、`CombatantState.formationRow` 去就、データ・テスト整理 | 未着手 |
+
+**スコープ外:** R9.5 / R9 / R10 の Player 完了条件。新 combat module・operation passive・Wave  authoring とは別 PR を推奨。
 
 ---
 
@@ -460,20 +606,30 @@ R3 Wave 作戦ループ spec
   ↓
 R4 データスキーマ・エディタ設計
   ↓
-R5 最小縦切り（実装）
+R5 Backend
   ↓
-R6 Wave 間準備
+R6 Backend
   ↓
-R7 反復プレイ
+R7 Backend
   ↓
-R8 作戦内パッシブ
-  ↓
-R9 エディタ実装
-  ↓
-R10 複数 Wave 試作 → 試作成立判定
-  ↓
-（試作成立後）コンテンツ・診断・presentation・公開
+R8 Backend
+  ├─ R9a ── R9b ── R9c ── R9d ── R9e ── R9f ──┐
+  └─ R9.5a ── R9.5b ── R9.5c ───────────────────┤
+                                                 └─ R10
+                                                      ↓
+                                    戦場移動 legacy cleanup（R10 以降・任意タイミング）
+                                                      ↓
+                                    （試作成立後）コンテンツ・診断・presentation・公開
 ```
+
+補足:
+
+- R9.5a は R5 Backend に直接依存する
+- R9.5c は R6 の OperationState にも依存する
+- R9d は R7〜R8 のパッシブ基盤に依存する
+- R10 は R9.5（Player 完了）と R9f の両方を開始条件とする
+- R9b と R9.5a は技術的並行可能だが、公式次は R9.5a とする
+- **戦場移動 legacy cleanup** は R10 完了後（新仕様最小実装安定後）。R9.5 / R9 とは並行しない — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 
 R5 は R4 の設計（[combat-data-schema-refactor.md](combat-data-schema-refactor.md) §16 最小 schema）を前提に着手する。
 

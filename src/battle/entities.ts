@@ -12,6 +12,7 @@ import type {
   StageEnemyGroup,
 } from './types.ts';
 import { resolveEnemySpawnBattleX } from './battleConstants.ts';
+import { resolveClassFormationRow } from './partyFormation.ts';
 import { copyNormalizedTraits } from './data/entityTraits.ts';
 import type { NormalizedEntityTraits } from './types.ts';
 import {
@@ -116,7 +117,10 @@ export function createAllyFromMember(
     name: classPreset.displayName,
     role: classPreset.role,
     classId: classPreset.id,
-    formationRow: classPreset.formationRow,
+    formationRow: resolveClassFormationRow(
+      classPreset.role,
+      classPreset.traits.rangePx ?? 0,
+    ),
     traits: copyTraits(classPreset.traits),
     build: structuredClone(member.build),
     maxHp: stats.maxHp,
@@ -304,7 +308,10 @@ export function createEnemyFromClassGroup(
     name: classPreset.displayName,
     role: classPreset.role,
     classId: classPreset.id,
-    formationRow: classPreset.formationRow,
+    formationRow: resolveClassFormationRow(
+      classPreset.role,
+      classPreset.traits.rangePx ?? 0,
+    ),
     traits: copyTraits(classPreset.traits),
     build,
     maxHp: stats.maxHp,

@@ -3,7 +3,6 @@ import {
   ATTACK_SPEED_TIER_LABELS,
   ATTACK_SPEED_TIER_OPTIONS,
   DAMAGE_TYPE_OPTIONS,
-  FORMATION_ROW_OPTIONS,
   GROWTH_PRESET_KEY_LABELS,
   GROWTH_PRESET_KEY_OPTIONS,
   GROWTH_TIER_LABELS,
@@ -13,7 +12,6 @@ import {
 } from "../battle/data/gameDataSchema.ts";
 import type {
   DamageType,
-  FormationRow,
   GrowthPresetKey,
   GrowthTier,
   Role,
@@ -67,11 +65,6 @@ const ROLE_LABELS: Record<Role, string> = {
   defender: "守備 (defender)",
   attacker: "攻撃 (attacker)",
   supporter: "ヒーラー (supporter)",
-};
-
-const ROW_LABELS: Record<FormationRow, string> = {
-  front: "前列",
-  back: "後列",
 };
 
 const LEVEL_CURVES = loadLevelCurves(levelCurvesJson);
@@ -332,7 +325,6 @@ export class ClassEditorStep {
 
     const basicSummary = [
       ROLE_LABELS[draft.class.role],
-      ROW_LABELS[draft.class.formationRow],
       `射程${draft.class.traits.rangePx ?? 0}px（${formatRangeBandJa(draft.class.traits.rangePx ?? 0)}）`,
       draft.class.traits.damageType ?? "physical",
     ].join(" · ");
@@ -451,23 +443,6 @@ export class ClassEditorStep {
               },
               { rerender: true }
             );
-          }
-        )
-      )
-    );
-    identityGrid.appendChild(
-      createFieldRow(
-        "配置列",
-        createSelect(
-          draft.class.formationRow,
-          FORMATION_ROW_OPTIONS.map((value) => ({
-            value,
-            label: ROW_LABELS[value],
-          })),
-          (formationRow) => {
-            commitDraft((next) => {
-              next.class.formationRow = formationRow;
-            });
           }
         )
       )

@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R9b — Stage enemyGroups `selectedCombatModuleId` 編集**（§80.8）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**（Player 未達分は R9.5 へ）。
+- **次の再開タスク:** **R9.5a — module 兵科の legacy active runtime 停止**（§82）。旧公式次 R9b は R9.5 完了後へ繰り下げ。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -105,6 +105,7 @@
 
 ## 3. 参照すべき正本
 
+- [docs/ai-handoff/planning-rules.md](planning-rules.md) — **フェーズ分割・Backend/Player 二層完了条件・R10 前提**（ChatGPT handoff 用。計画漏れ防止）
 - [docs/plans/phase-roadmap.md](../plans/phase-roadmap.md) — **R0〜R10**（現行開発順の正本。**R4 完了 → R5**）
 - [docs/plans/combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) — **R4 正本**（データ責務・エディタ・validate / migration）
 - [docs/combat-architecture.md](../combat-architecture.md) — **R1 更新済**（§0 = 上位戦闘正本）
@@ -5450,7 +5451,7 @@ R7「反復プレイ」を実装可能な小タスクへ分割する。**product
 | **R7d** | **Wave 準備 retry + spec 整合** — `wavePrep` から 3 種操作。「準備へ戻る」を Wave 間準備へ | `wavePrep` 表示中の retry・`returnToFormationPrep` vs `wavePrep` 分岐 | `GameSession.returnToFormationPrep`、`WavePrepScreenHost`、wave prep テスト |
 | **R7e** | **作戦結果後再戦 + 遷移統一** — `operationResult` から同一 stage 再開・勝利後導線 | result 確定 → rematch → 新 OperationState / result クリア | `GameSession` rematch API、勝利後 screen、verify/release 統一テスト |
 
-**採用しなかった分割案:** 倍速 UI と simulation を別 Phase にする案 — 倍速は API + tick テストだけで縦切り可能なため R7b に統合。
+**採用しなかった分割案:** 倍速 UI と simulation を別 Phase にする案 — 倍速は **API + 最小 UI + tick テスト** で縦切り可能なため R7b に統合（「正式 UI 外」は polish 分離の意味で、R6b/R6i 同様 **UI なし** を意味しない）。
 
 **R6i との境界:** retry **API・checkpoint・engine 再生成**は R6i 完了。R7 は **player-facing 到達性・release 導線・spec 整合・倍速**。
 
@@ -5478,7 +5479,9 @@ R7「反復プレイ」を実装可能な小タスクへ分割する。**product
 
 ### 70.1 目的
 
-`GameSession.tick` に 1 / 2 / 4 倍の simulation speed を追加。Save 永続化・正式 UI・アニメーション個別制御はスコープ外。
+`GameSession.tick` に 1 / 2 / 4 倍の simulation speed を追加。**最小 UI**（Pause 右隣 `×1`/`×2`/`×4` ボタン）で player-facing 到達性を確保。Save 永続化・**正式 UI**（配置 polish・描画 tick 同期・設定画面連携）・アニメーション個別制御はスコープ外。
+
+**実装漏れ（2026-07-13 修正）:** 初回 R7b 完了時は API + tick テストのみで **最小 UI が未配線**だった。R6b/R6i と同様「正式 UI 外 ≠ UI なし」。`BattleView` Speed ボタン + `cycleSimulationSpeed` + wire テストを追補。
 
 ### 70.2 読んだファイル（6 件）
 
@@ -5495,8 +5498,13 @@ R7「反復プレイ」を実装可能な小タスクへ分割する。**product
 
 | ファイル | 内容 |
 | -------- | ---- |
-| `src/game/GameSession.ts` | `SimulationSpeed` 型・`simulationSpeed` フィールド・`getSimulationSpeed` / `trySetSimulationSpeed`・tick 乗算 |
-| `src/game/gameSessionSimulationSpeed.test.ts` | R7b 7 項目テスト（新規） |
+| `src/game/GameSession.ts` | `SimulationSpeed` 型・`simulationSpeed` フィールド・`getSimulationSpeed` / `trySetSimulationSpeed` / `cycleSimulationSpeed`・tick 乗算 |
+| `src/ui/BattleView.ts` | 最小 Speed ボタン（Pause 右隣・`VerifyModeControls` 配線） |
+| `src/styles/battle-view.css` | `.battle-speed-button` |
+| `src/i18n/uiMessages.ts` | `battle.simulationSpeed` / `battle.simulationSpeedAria` |
+| `src/game/gameSessionSimulationSpeed.test.ts` | R7b tick / cycle テスト |
+| `src/game/gameSessionWire.test.ts` | Speed ボタン wire テスト |
+| `docs/spec/battle-field.md` | §8.11.1a 最小倍速 UI |
 | `docs/ai-handoff/current-task.md` | 本 §70・ヘッダ更新 |
 | `docs/plans/phase-roadmap.md` | R7b 完了・次タスク R7c |
 
@@ -5508,6 +5516,8 @@ R7「反復プレイ」を実装可能な小タスクへ分割する。**product
 | **所有者** | `GameSession` private `simulationSpeed`（初期 1） |
 | **取得** | `getSimulationSpeed(): SimulationSpeed` |
 | **変更** | `trySetSimulationSpeed(speed: number): speed is SimulationSpeed` — 許可値以外は false・状態不変 |
+| **切替** | `cycleSimulationSpeed(): SimulationSpeed` — 1 → 2 → 4 → 1。最小 UI ボタンから呼ぶ |
+| **最小 UI** | `BattleView` `.battle-speed-button` — verify ON/OFF 共通。表示 `×{speed}` |
 | **tick 順** | pause 判定 → `currentScreen === 'battle'` かつ非 pause なら `engine.tick(deltaSec * simulationSpeed)` → `view.tick(deltaMs)`（描画 delta は未加速） |
 | **pause** | pause 中は engine tick スキップ（倍率無関係で 0 進行） |
 | **リセット** | なし（Wave 切替・retry・restartBattle でも倍率維持）。Save 非永続 |
@@ -6211,9 +6221,11 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 
 **不採用（場当たり）:** クラス・Stage・module を 1 PR にまとめる案 — 保存経路・validate 競合リスク大（R4 §13 / bug-fix-project 単一経路原則）。
 
-### 80.7 最初に実装する 1 タスク — **R9b**
+### 80.7 最初に実装する 1 タスク — **R9.5a**（2026-07-13 改定）
 
-**理由:** 変更ファイルが `StageEnemyEditorStep` + `editorApi` validate のみに収まり、**既存 `saveStageBundle` / `vite-plugin-editor-api` 経路をそのまま使える**。CombatModule 新 API（R9c）や class 側（R9d）より依存が少ない。validate は既に `selectedCombatModuleId` を要求しているため、UI 欠落の穴埋めが最優先。
+**改定理由:** R10 最大ブロッカーは「作れないこと」ではなく「新仕様だけで遊べないこと」。R9b（authoring）だけ先行しても legacy active / gauge / 出撃前方式選択不足は解消しない。
+
+**旧 R9b（Stage `selectedCombatModuleId`）:** R9.5 完了後に着手。技術的には R9.5a と並行可だが、公式進捗上は R9.5 を優先する。
 
 ### 80.8 保留事項
 
@@ -6282,3 +6294,147 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 4. 「同じステージで再戦」→ formation → battle で overlay が残らないことを確認。
 5. 再度勝利し「ステージ選択へ」→ 同一または別 stage 出撃で overlay が残らないことを確認。
 6. その後 R8 passive の Wave 間取得 → HUD 名表示 → runtime 効果 → 範囲帯表示の手動確認を再開。
+
+---
+
+## 82. R9.5a — module 兵科の legacy active runtime 停止（次の再開タスク）
+
+### 82.1 現在地
+
+- R5〜R8: Backend 完了
+- R9a: 完了
+- R5 Player 完了: 未達
+- R10 ブロッカー: R5 対象 4 兵科で legacy active がまだ発動する
+- 公式次タスク: **R9.5a**
+- 旧公式次 R9b は R9.5 完了後へ繰り下げる
+
+### 82.2 作業前に読むファイル（6 件以内）
+
+1. `docs/ai-handoff/planning-rules.md`
+2. `docs/plans/phase-roadmap.md`
+3. `src/battle/types.ts`
+4. `src/battle/entities.ts`
+5. `src/battle/BattleEngine.ts`
+6. `src/progression/skillBuild.ts`
+
+`data/skills/` と `data/classes.json` は全文 Read しない。必要な ID・フィールドのみ Grep する。
+
+### 82.3 目的
+
+`combatModuleIds` を持つ R5 対象 4 兵科で、legacy active の cooldown 生成と自動発動を停止し、戦闘方式による通常行動だけが動く runtime 状態を作る。
+
+### 82.4 対象兵科
+
+- `df_guardian`
+- `at_swordsman`
+- `at_sorcerer`
+- `sp_cleric`
+
+判定には既存の `R5_COMBAT_MODULE_CLASS_IDS` または同等の正本判定を使用し、別の対象一覧を重複定義しない。
+
+### 82.5 Backend 完了条件
+
+- 対象 4 兵科では legacy active cooldown を生成しない。
+- 対象 4 兵科は `runUnitSkills` 経由で legacy active を発動しない。
+- 戦闘方式による通常行動は従来どおり実行される。
+- 味方と敵に同じ抑止規則が適用される。
+- module 未対応兵科の legacy 経路は移行期間中維持される。
+- 対象 4 兵科すべての自動テストがある。
+- fixture で `learnedActiveIds=[]` にするだけの回避にしない。
+
+### 82.6 Player 完了条件
+
+対象 4 兵科を実際に戦闘へ出し、一定時間の戦闘中に以下を確認できること。
+
+- legacy active の発動・効果・再使用が一度も起きない。
+- 戦闘方式由来の通常行動は継続する。
+
+HUD の legacy gauge 除去は R9.5b のため、本タスク単独では R9.5 Phase 完了と書かない。
+
+### 82.7 触るファイル候補
+
+- `src/battle/entities.ts`
+- `src/battle/BattleEngine.ts`
+- `src/progression/skillBuild.ts`
+- `src/battle/types.ts`
+- `src/battle/entities*.test.ts`
+- `src/battle/battleEngine*.test.ts`
+- `docs/spec/combat.md`
+- `docs/spec/classes-and-skills.md`
+
+候補外ファイルが必要な場合は、変更前に責務を報告する。
+
+### 82.8 スコープ外
+
+| 項目 | 戻し先 |
+| ---- | ------ |
+| `PartyHudPanel` の変更 | **R9.5b** |
+| `SkillMenuPanel` の変更 | **R9.5c** |
+| legacy active JSON 削除 | R10 以降 |
+| legacy passive 全面撤去 | R10 以降 |
+| module 未対応兵科の移行 | R10 以降 |
+| `stages-demo.json` 変更 | 触らない（legacy reference） |
+| R9b エディタ実装 | R9.5 完了後 |
+| VFX、i18n、packaging | R10 以降 |
+| R5〜R8 の全面やり直し | — |
+
+### 82.9 acceptance criteria
+
+**自動テスト**
+
+- 対象 4 兵科で legacy active cooldown が作られない。
+- 対象 4 兵科で legacy active executor が呼ばれない。
+- module 通常行動が実行される。
+- 味方・敵双方に判定が適用される。
+- module 未対応兵科の必要な legacy 回帰を壊さない。
+- 既存関連テストが pass する。
+
+**spec 一致**
+
+- `docs/spec/combat.md` または該当正本に、module 兵科では legacy active を実行しないことを明記する。
+- `docs/spec/classes-and-skills.md` の legacy 記述と矛盾しないよう注記する。
+- `docs/ai-handoff/planning-rules.md` の「legacy 共存は移行手段」という規則に従う。
+- `stages-demo.json` は legacy reference として変更しない。
+
+**手動確認**
+
+- 対象 4 兵科を含む戦闘を起動する。
+- legacy active が発動しない。
+- 通常行動が継続する。
+- 戦闘停止・進行不能がない。
+
+### 82.10 次 Phase へ送る未接続事項
+
+**R9.5b**
+
+- Player 完了条件: 対象 4 兵科の HUD から legacy 2×2 gauge が消え、攻撃間隔が表示される。
+- 触る候補: `src/ui/PartyHudPanel.ts`、`src/ui/partyHudTypes.ts`、`docs/spec/battle-field.md`
+
+**R9.5c**
+
+- Player 完了条件: 出撃前の `SkillMenuPanel` で方式を選び、Wave1 へ反映できる。
+- 触る候補: `src/ui/SkillMenuPanel.ts`、`src/game/GameSession.ts`、`src/game/OperationState.ts`、`docs/spec/party-formation-ui.md`
+
+**R9b**
+
+- Player 完了条件: 敵の `selectedCombatModuleId` をエディタで設定・保存・再読込できる。
+- 触る候補: stage editor UI、editor API、stage preview、`docs/plans/phase-roadmap.md`
+
+### 82.11 完了後に更新する doc
+
+- `docs/ai-handoff/current-task.md`
+- `docs/plans/phase-roadmap.md`
+- `docs/spec/combat.md`
+- `docs/spec/classes-and-skills.md`
+- 必要な場合のみ `docs/ai-handoff/planning-rules.md`
+
+### 82.12 完了報告に含める内容
+
+1. 作業前に読んだファイル
+2. 変更したファイル
+3. legacy active を止めた判定箇所
+4. 味方・敵での適用範囲
+5. 対象 4 兵科のテスト結果
+6. 手動確認結果
+7. R9.5b へ残した未接続事項
+8. docs 更新内容
