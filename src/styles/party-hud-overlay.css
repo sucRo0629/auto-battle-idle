@@ -209,6 +209,21 @@
   gap: calc(var(--hud-recast-gap) * 1px);
 }
 
+/* R9.5b: author `display: grid` が [hidden] より優先され空 2×2 が残るのを防ぐ */
+.party-hud-panel--overlay .party-hud-recast-grid[hidden] {
+  display: none !important;
+  flex: 0 0 0 !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  overflow: hidden;
+  pointer-events: none !important;
+}
+
+/* CombatModule 兵科 — legacy 2×2 領域を折りたたみ（混在パーティで legacy 行高に揃う） */
+.party-hud-panel--overlay .party-hud-card--combat-module {
+  --hud-recast-grid-h: 0px;
+}
+
 .party-hud-panel--overlay .party-hud-recast-cell--locked {
   display: none;
 }

@@ -108,6 +108,7 @@
 .enemy-hud-card-stack {
   position: relative;
   box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .enemy-hud-group {
@@ -389,10 +390,6 @@
   );
   box-shadow: 0 0 6px rgba(255, 80, 60, 0.45);
   transition: width 0.08s linear;
-}
-
-.enemy-hud-card--front .party-hud-status-badge-hits {
-  pointer-events: auto;
 }
 
 .enemy-hud-danger-telegraph--inactive .enemy-hud-danger-telegraph-fill {

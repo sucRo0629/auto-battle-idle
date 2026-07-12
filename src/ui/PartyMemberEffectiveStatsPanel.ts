@@ -16,6 +16,16 @@ export interface PartyMemberEffectiveStatsPanelData {
   iconKey: string;
   ally: CombatantSnapshot;
   attackSpeedTier: AttackSpeedTier;
+  /**
+   * R9.5b: CombatModule 兵科の攻撃間隔（秒）。指定時は tier「攻撃速度」の代わりに
+   * 秒単位の「攻撃間隔」を表示する。legacy 兵科は未指定。
+   */
+  attackIntervalSec?: number;
+}
+
+export interface PartyMemberEffectiveStatsPointer {
+  clientX: number;
+  clientY: number;
 }
 
 export interface PartyMemberEffectiveStatsPanelOptions {
@@ -23,6 +33,9 @@ export interface PartyMemberEffectiveStatsPanelOptions {
   onHoverEnd?: () => void;
   frameMount?: HTMLElement;
 }
+
+/** Offset from cursor so the panel clears the pointer on small HUD hits. */
+const POINTER_ANCHOR_GAP_PX = 12;
 
 export class PartyMemberEffectiveStatsPanel {
   private readonly root: HTMLElement;
@@ -36,6 +49,7 @@ export class PartyMemberEffectiveStatsPanel {
   private visible = false;
   private anchoredSlot: HTMLElement | null = null;
   private anchoredSlotIndex: number | null = null;
+  private pointerAnchor: PartyMemberEffectiveStatsPointer | null = null;
 
   constructor(
     storageHost: HTMLElement,
@@ -93,13 +107,13 @@ export class PartyMemberEffectiveStatsPanel {
   attachToSlot(slotElement: HTMLElement | null, slotIndex?: number): void {
     this.anchoredSlot = slotElement;
     this.anchoredSlotIndex = slotIndex ?? null;
-    this.root.classList.toggle(
-      'party-member-effective-stats--align-end',
-      slotIndex !== undefined && slotIndex >= 2,
-    );
     if (this.visible) {
       this.reposition();
     }
+  }
+
+  setPointerAnchor(pointer: PartyMemberEffectiveStatsPointer | null): void {
+    this.pointerAnchor = pointer;
   }
 
   show(data: PartyMemberEffectiveStatsPanelData): void {
@@ -118,6 +132,7 @@ export class PartyMemberEffectiveStatsPanel {
     this.root.hidden = true;
     this.anchoredSlot = null;
     this.anchoredSlotIndex = null;
+    this.pointerAnchor = null;
   }
 
   isVisible(): boolean {
@@ -131,7 +146,14 @@ export class PartyMemberEffectiveStatsPanel {
   }
 
   reposition(): void {
-    if (!this.visible || !this.anchoredSlot || !this.frameMount) return;
+    if (!this.visible || !this.frameMount) return;
+
+    if (this.pointerAnchor) {
+      this.repositionNearPointer();
+      return;
+    }
+
+    if (!this.anchoredSlot) return;
 
     const frame = this.frameMount.getBoundingClientRect();
     const slot = this.anchoredSlot.getBoundingClientRect();
@@ -139,10 +161,41 @@ export class PartyMemberEffectiveStatsPanel {
 
     if (alignEnd) {
       this.root.style.left = `${slot.right - frame.left}px`;
+      this.root.classList.add('party-member-effective-stats--align-end');
     } else {
       this.root.style.left = `${slot.left - frame.left}px`;
+      this.root.classList.remove('party-member-effective-stats--align-end');
     }
     this.root.style.top = `${slot.top - frame.top}px`;
+    this.root.classList.toggle('party-member-effective-stats--slot-above', true);
+    clampElementToMountBounds(this.root, this.frameMount);
+  }
+
+  private repositionNearPointer(): void {
+    if (!this.frameMount || !this.pointerAnchor) return;
+
+    const frame = this.frameMount.getBoundingClientRect();
+    const scale =
+      frame.width > 0 && this.frameMount.clientWidth > 0
+        ? frame.width / this.frameMount.clientWidth
+        : 1;
+    const localX = (this.pointerAnchor.clientX - frame.left) / scale;
+    const localY = (this.pointerAnchor.clientY - frame.top) / scale;
+    const alignEnd = (this.anchoredSlotIndex ?? 0) >= 2;
+
+    this.root.classList.remove('party-member-effective-stats--slot-above');
+
+    let left = localX + POINTER_ANCHOR_GAP_PX;
+    let top = localY + POINTER_ANCHOR_GAP_PX;
+    this.root.style.left = `${left}px`;
+    this.root.style.top = `${top}px`;
+
+    if (alignEnd) {
+      const width = this.root.offsetWidth;
+      left = localX - width - POINTER_ANCHOR_GAP_PX;
+      this.root.style.left = `${left}px`;
+    }
+
     clampElementToMountBounds(this.root, this.frameMount);
   }
 
@@ -157,6 +210,7 @@ export class PartyMemberEffectiveStatsPanel {
     const rows = buildCombatantBattleStatRows(
       data.ally,
       data.attackSpeedTier,
+      data.attackIntervalSec,
     );
     this.gridEl.replaceChildren();
     for (const row of rows) {

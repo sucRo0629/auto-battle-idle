@@ -91,7 +91,14 @@ export type PartyHudPanelLayout = 'lane' | 'overlay';
 
 export interface PartyHudPanelOptions {
   layout?: PartyHudPanelLayout;
-  onMemberStatsHoverStart?: (slotIndex: number) => void;
+  onMemberStatsHoverStart?: (
+    slotIndex: number,
+    pointer: { clientX: number; clientY: number },
+  ) => void;
+  onMemberStatsPointerMove?: (
+    slotIndex: number,
+    pointer: { clientX: number; clientY: number },
+  ) => void;
   onMemberStatsHoverEnd?: () => void;
   onHoverHighlightStart?: (unitId: string) => void;
   onHoverHighlightEnd?: () => void;
@@ -361,8 +368,19 @@ export class PartyHudPanel {
   }
 
   private bindMemberStatsHover(element: HTMLElement, slotIndex: number): void {
-    element.addEventListener('mouseenter', () => {
-      this.options.onMemberStatsHoverStart?.(slotIndex);
+    element.addEventListener('mouseenter', (event) => {
+      if (!(event instanceof MouseEvent)) return;
+      this.options.onMemberStatsHoverStart?.(slotIndex, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    });
+    element.addEventListener('mousemove', (event) => {
+      if (!(event instanceof MouseEvent)) return;
+      this.options.onMemberStatsPointerMove?.(slotIndex, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
     });
     element.addEventListener('mouseleave', (event) => {
       if (this.shouldRetainMemberStatsHover(event.relatedTarget)) return;
@@ -637,6 +655,21 @@ export class PartyHudPanel {
     this.updateRecastGrid(slot, entry);
   }
 
+  /**
+   * R9.5b: CombatModule 通常行動が解決された兵科では legacy active 2×2 ゲージを
+   * 領域ごと非表示にする（空枠も出さない）。判定は runtime 解決済み basicSkillId
+   * 由来の `hasCombatModuleBasic` を使い、HUD と runtime を一致させる。
+   */
+  private applyRecastGridVisibility(slot: SlotElements, entry: PartyHudEntry): boolean {
+    const hideLegacyGauge = entry.hasCombatModuleBasic;
+    slot.recastGrid.hidden = hideLegacyGauge;
+    slot.unitPlate.classList.toggle(
+      'party-hud-card--combat-module',
+      hideLegacyGauge,
+    );
+    return hideLegacyGauge;
+  }
+
   private updateHpBar(slot: SlotElements, entry: PartyHudEntry): void {
     const signature = `${entry.hp}|${entry.maxHp}|${entry.barrierHp}|${entry.isAlive}`;
     if (signature === slot.hpBarSignature) return;
@@ -795,6 +828,7 @@ export class PartyHudPanel {
   }
 
   private updateRecastGrid(slot: SlotElements, entry: PartyHudEntry): void {
+    if (this.applyRecastGridVisibility(slot, entry)) return;
     const slotCount = entry.unlockedActiveSlotCount;
     const isOverlay = this.layout === 'overlay';
     const recastSlotRows = isOverlay
@@ -866,6 +900,8 @@ export class PartyHudPanel {
 
   private bindRecastCellHoverGuard(track: HTMLElement): void {
     track.addEventListener('mouseenter', () => {
+      const grid = track.closest('.party-hud-recast-grid');
+      if (grid instanceof HTMLElement && grid.hidden) return;
       this.dismissHudHoverOverlays();
     });
   }

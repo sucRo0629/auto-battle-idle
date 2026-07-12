@@ -129,11 +129,42 @@ function buildSpdRow(
   };
 }
 
+/**
+ * R9.5b: 攻撃間隔（秒）を表示用に整形。不要な小数桁を落とす。
+ * NaN / 非正 / 非有限は null を返し、不正文字列を表示させない。
+ */
+export function formatAttackIntervalSecValue(sec: number): string | null {
+  if (!Number.isFinite(sec) || sec <= 0) return null;
+  const rounded = Math.round(sec * 100) / 100;
+  const text = rounded.toFixed(2).replace(/\.?0+$/, '');
+  return `${text}秒`;
+}
+
+/**
+ * R9.5b: CombatModule 兵科は tier 由来の「攻撃速度」ではなく秒単位の「攻撃間隔」を表示。
+ * 値の正本は runtime で解決された CombatModule の attackIntervalSec。
+ */
+function buildAttackIntervalRow(
+  attackIntervalSec: number,
+): CombatantBattleStatRow {
+  const labels = getMemberStatLabels();
+  return {
+    label: labels.attackInterval,
+    valueText: formatAttackIntervalSecValue(attackIntervalSec) ?? '—',
+    deltaText: null,
+    deltaKind: null,
+  };
+}
+
 export function buildCombatantBattleStatRows(
   ally: CombatantSnapshot,
   attackSpeedTier: AttackSpeedTier,
+  attackIntervalSec?: number,
 ): CombatantBattleStatRow[] {
   const labels = getMemberStatLabels();
+  const useAttackInterval =
+    attackIntervalSec !== undefined &&
+    formatAttackIntervalSecValue(attackIntervalSec) !== null;
   return [
     buildHpRow(ally),
     buildNumericStatRow(
@@ -155,6 +186,8 @@ export function buildCombatantBattleStatRows(
       ally.statusEffects,
       { valueSuffix: '%' },
     ),
-    buildSpdRow(ally.statusEffects, attackSpeedTier),
+    useAttackInterval
+      ? buildAttackIntervalRow(attackIntervalSec as number)
+      : buildSpdRow(ally.statusEffects, attackSpeedTier),
   ];
 }

@@ -9,6 +9,7 @@ export interface MemberStatLabels {
   def: string;
   res: string;
   spd: string;
+  attackInterval: string;
   range: string;
   basicAttack: string;
 }
@@ -26,6 +27,7 @@ export function getMemberStatLabels(
     def: messageForLocale(locale, 'stat.def'),
     res: messageForLocale(locale, 'stat.res'),
     spd: messageForLocale(locale, 'stat.spd'),
+    attackInterval: messageForLocale(locale, 'stat.attackInterval'),
     range: messageForLocale(locale, 'stat.range'),
     basicAttack: messageForLocale(locale, 'stat.basicAttack'),
   };

@@ -93,6 +93,8 @@ Wave ごとに各兵科へ **2 方式** を選択する。全兵科を「単体 
 
 **R9.5a 注記（2026-07-13）:** CombatModule が解決された Combatant（`basic` slot の skillId が `combatModuleRegistry` に存在）では、legacy active は **runtime に cooldown 登録せず** `runUnitSkills` からも発動しない。`learnedActiveIds` と JSON データは移行期間中維持。legacy passive・作戦内 passive は従来どおり。実装: `resolveRuntimeActiveSkillIds`（`src/progression/battleActiveSkills.ts`）。
 
+**R9.5b 注記（HUD 表示との整合）:** 上記 runtime 停止判定と同一の `basicSkillId` 由来判定を用い、CombatModule 兵科の Party HUD からは legacy active 2×2 ゲージを非表示にする。戦闘中ステータスの攻撃間隔表示（秒）は選択中 CombatModule の `attackIntervalSec` を正本とし、legacy `attackSpeedTier` を新表示の正本にしない。表示詳細は [battle-field.md §7.1.1 / §8.7.1](battle-field.md)。
+
 ### 優先ターゲット
 
 **兵科固定。** 戦闘方式を変えても優先ターゲットは変えない（初期仕様）。

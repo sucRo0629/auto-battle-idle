@@ -50,6 +50,13 @@ describe('party-hud-overlay.css allyCard layout regression', () => {
     );
   });
 
+  it('hides CombatModule legacy recast grid when [hidden] despite display:grid rule', () => {
+    expect(css).toMatch(
+      /\.party-hud-panel--overlay \.party-hud-recast-grid\[hidden\][\s\S]*display:\s*none !important/,
+    );
+    expect(css).toMatch(/\.party-hud-card--combat-module[\s\S]*--hud-recast-grid-h:\s*0px/);
+  });
+
   it('lays out overlay damage bars as icon, fill, and value on one row', () => {
     expect(css).toMatch(
       /\.party-hud-panel--overlay \.party-hud-detail-damage \.party-stats-damage-bar[\s\S]*grid-template-columns:\s*12px minmax\(0,\s*1fr\) auto/,

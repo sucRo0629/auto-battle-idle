@@ -166,6 +166,7 @@ describe('buildPartyHudEntries', () => {
       res: 0,
       isAlive: true,
       useLocked: false,
+      hasCombatModuleBasic: false,
       unlockedActiveSlotCount: 2,
       statusEffects: [],
       activeCooldowns: [],

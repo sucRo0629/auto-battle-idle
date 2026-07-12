@@ -123,9 +123,11 @@ vi.mock("../ui/EnemyHudPanel.ts", () => ({
 vi.mock("../ui/PartyMemberEffectiveStatsPanel.ts", () => ({
   PartyMemberEffectiveStatsPanel: vi.fn().mockImplementation(() => ({
     attachToSlot: vi.fn(),
+    setPointerAnchor: vi.fn(),
     show: vi.fn(),
     hide: vi.fn(),
     update: vi.fn(),
+    reposition: vi.fn(),
     isVisible: vi.fn(() => false),
     destroy: vi.fn(),
   })),

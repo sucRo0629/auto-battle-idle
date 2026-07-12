@@ -555,12 +555,14 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | 要素 | 内容 |
 | ---- | ---- |
 | 起動 | **overlay（戦闘画面）:** `.party-hud-header-row`（アイコン・クラス名・HP バーを含む識別行）へ **マウスオーバー**。**lane 詳細:** `.party-hud-icon-wrap` / `.party-hud-bars` へマウスオーバー。パネル上にカーソルがあれば表示維持。離れたら非表示 |
-| 配置 | 選択スロットの **識別行の直上**（overlay は `.party-hud-header-row` 基準。lane は `.party-hud-slot` 内、`bottom: 100%`）。Canvas 上ではなく HUD 列にアンカー |
+| 配置 | マウスカーソル付近（右下 12px オフセット。右側スロットは左側へ展開）。Canvas 外へはみ出さない（`clampElementToMountBounds`）。lane 詳細で pointer 未供給時のみ識別行直上にフォールバック |
 | 対象 | **選択中スロット 1 人のみ** |
-| 表示項目 | **HP**（`現在HP / 実効MaxHP`）、**攻撃力 / 防御力 / 魔法耐性 / 攻撃速度**（5 段階 tier ラベル）。**射程・基本攻撃は表示しない** |
-| 補正列 | 各ステの右に `(+N)` / `(-N)`（RES は `(+N%)`）。SPD buff/debuff は **`(×倍率)`**（例: `(×1.25)`）。差分 0 は空 |
+| 表示項目 | **HP**（`現在HP / 実効MaxHP`）、**攻撃力 / 防御力 / 魔法耐性**、最終行に **攻撃間隔**（CombatModule 兵科）または **攻撃速度**（legacy 兵科）。**射程・基本攻撃は表示しない** |
+| 攻撃間隔（R9.5b） | CombatModule 通常行動が解決された兵科は **秒単位**の「攻撃間隔」を表示（例 `攻撃間隔: 2秒` / `1.5秒`）。値の正本は runtime で解決された CombatModule の `attackIntervalSec`（選択中 module の上書きを優先）。整数秒は小数桁を省略、`1.25` 等は小数第 2 位まで保持。`NaN秒` / `0秒` などの不正表記は出さない。legacy `attackSpeedTier` は新表示の正本にしない。buff/debuff による実効間隔のリアルタイム反映はしない（基礎値表示） |
+| 攻撃速度（legacy） | CombatModule 未解決兵科は移行期間中、従来の 5 段階 tier ラベル（`attackSpeedTier`）を維持する。正規化済み秒単位値がないため tier からの新規換算は行わない |
+| 補正列 | 各ステの右に `(+N)` / `(-N)`（RES は `(+N%)`）。SPD（legacy）buff/debuff は **`(×倍率)`**（例: `(×1.25)`）。攻撃間隔行は補正列を出さない。差分 0 は空 |
 | 色 | 上昇（buff）= やや青（`#8eb8e8`）、低下（debuff）= やや赤（`#e89595`）。中央の実効値は通常色 |
-| データ | `CombatantSnapshot`（`baseMaxHp` + `statusEffects` + ベース atk/def/res）とクラス `attackSpeedTier`。実効計算は [combat.md](combat.md) の `getEffective*` / `aggregateStatEffects` と同一 |
+| データ | `CombatantSnapshot`（`baseMaxHp` + `statusEffects` + ベース atk/def/res + 解決済み `basicSkillId`）とクラス `attackSpeedTier`、`combatModuleRegistry[basicSkillId]?.attackIntervalSec`。実効計算は [combat.md](combat.md) の `getEffective*` / `aggregateStatEffects` と同一 |
 | 更新 | パネル表示中は `BattleView.tick` 毎に refresh |
 
 #### 7.1.2 状態バッジクリック（用語パネル）
@@ -823,7 +825,9 @@ allyCard
 
 #### 8.7.1 味方スキルゲージ
 
-味方スキルゲージは最大 4 枠を常に表示し、2×2 の田の字配置にする。
+> **R9.5b（CombatModule 兵科の legacy active ゲージ非表示）:** 通常行動が CombatModule で解決された兵科（runtime 停止判定 = `isCombatModuleBasicSkillId(basicSkillId)`、[combat.md](combat.md) R9.5a と同一）では、本節の legacy active 2×2 ゲージ領域自体を **非表示**にする（空の 2×2 枠も出さない）。判定は HUD 独自 classId 配列ではなく、runtime 解決済み `basicSkillId`（`CombatantSnapshot.basicSkillId` → `PartyHudEntry.hasCombatModuleBasic`）を使い、HUD と runtime を一致させる。legacy 兵科（CombatModule 未解決）は移行完了まで本節の 2×2 ゲージを従来どおり維持する。**混在パーティ**では兵科ごとに表示形式が異なる。legacy 枠を消した後は既存 HUD 要素を自然に再配置するだけで、戦闘 HUD 本体には**攻撃間隔を常時表示しない**（攻撃間隔は §7.1.1 の戦闘中ステータスで確認）。次行動ゲージ・残り時間・通常行動アイコンも追加しない。
+
+以下は legacy 兵科（CombatModule 未解決）向けの仕様。味方スキルゲージは最大 4 枠を常に表示し、2×2 の田の字配置にする。
 
 ```text
 active_1  active_2

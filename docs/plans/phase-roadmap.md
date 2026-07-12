@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9.5a Backend 完了**。**公式次タスク: R9.5b**（味方 HUD 攻撃間隔表示・legacy gauge 除去）。詳細は [current-task.md §83](../ai-handoff/current-task.md#83-r95a-完了--module-兵科の-legacy-active-runtime-停止)。
+**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9.5a Backend 完了**、**R9.5b 完了**（CombatModule 兵科の legacy 2×2 gauge 非表示 + 戦闘中ステータスの攻撃間隔表示）。**公式次タスク: R9.5c**（出撃前戦闘方式選択）。詳細は [current-task.md §84](../ai-handoff/current-task.md)。
 
 ---
 
@@ -35,7 +35,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | **完了** | R10 で再挑戦性を確認 | **Backend 完了** |
 | **R8** | 作戦内パッシブ — 取得・保持・効果縦切り、戦闘中表示、範囲プレースホルダ | **完了** | R10 で判断差を確認 | **Backend 完了** |
 | **R9a** | authoring 骨格 — エディタ現状調査・タスク分割 | 完了 | 開発者向け確認済み | **完了** |
-| **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、出撃前方式選択 | **R9.5a Backend 完了** | 未着手 | **公式次: R9.5b** |
+| **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、出撃前方式選択 | **R9.5a/b 完了** | 未着手 | **公式次: R9.5c** |
 | **R9b〜f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / closure | R9b 以降未着手 | R10 用作戦反映は未確認 | 未着手 |
 | **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | R9.5・R9 待ち |
 
@@ -438,7 +438,7 @@ R5 実装時点では未達であり、**R9.5a〜c** で解消する。
 | ID | 内容 | Backend 完了条件 | Player 完了条件 | 依存 |
 | -- | ---- | ---------------- | --------------- | ---- |
 | **R9.5a** | module 兵科の legacy active runtime 停止 | **完了** — 4 兵科で legacy active cooldown を生成せず、`runUnitSkills` から発動しない | 4 兵科を戦闘へ出しても legacy active が一度も発動しない | R5 |
-| **R9.5b** | 味方 HUD 攻撃間隔表示 | module 兵科用 HUD が legacy recast に依存せず、runtime と同じ攻撃間隔を表示 | 4 兵科に legacy 2×2 gauge がなく、攻撃間隔を読める | R9.5a |
+| **R9.5b** | 味方 HUD 攻撃間隔表示 | **完了** — CombatModule 兵科の legacy 2×2 gauge を HUD から非表示（`hasCombatModuleBasic`）、戦闘中ステータスに攻撃間隔（秒）を表示。攻撃間隔は HUD 本体ではなく §7.1.1 ツールチップ内のみ | 4 兵科に legacy 2×2 gauge がなく、攻撃間隔を読める | R9.5a |
 | **R9.5c** | 出撃前戦闘方式選択 | `SkillMenuPanel` の選択を出撃時 `OperationState` へ確定し、Wave1 生成へ反映 | 出撃前に方式を確認・変更でき、選んだ方式で Wave1 を開始できる | R9.5a、R6 |
 
 **対象兵科（`R5_COMBAT_MODULE_CLASS_IDS`）:** `df_guardian`、`at_swordsman`、`at_sorcerer`、`sp_cleric`。別一覧を重複定義しない。

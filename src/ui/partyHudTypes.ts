@@ -1,11 +1,13 @@
 import type {
   BattleSnapshot,
   ClassPreset,
+  CombatModuleDef,
   PartySlotState,
   SkillTriggerKind,
   StatusEffect,
 } from '../battle/types.ts';
 import { PARTY_SLOT_COUNT } from '../battle/types.ts';
+import { isCombatModuleBasicSkillId } from '../battle/data/resolveCombatModuleBasic.ts';
 import type { AppLocale } from '../i18n/locale.ts';
 import { getLocale } from '../i18n/locale.ts';
 import { getUnlockedSkillSlotCount } from '../progression/skillBuild.ts';
@@ -34,6 +36,11 @@ export interface PartyHudEntry {
   res: number;
   isAlive: boolean;
   useLocked: boolean;
+  /**
+   * R9.5b: 解決済み通常行動が CombatModule 由来か（runtime と同一判定）。
+   * true の兵科は legacy active 2×2 ゲージを表示しない。
+   */
+  hasCombatModuleBasic: boolean;
   /** Lv 帯で解放済みのアクティブ枠数（Lv1=2, Lv10=3, Lv20=4） */
   unlockedActiveSlotCount: number;
   statusEffects: StatusEffect[];
@@ -103,6 +110,7 @@ export function sortPartyHudEntriesByRange(
 export function buildPartyHudEntries(
   snapshot: BattleSnapshot,
   partyMetaBySlot: (PartyHudMeta | null)[] = [],
+  combatModuleRegistry: Record<string, CombatModuleDef> = {},
 ): (PartyHudEntry | null)[] {
   const byPartySlot = Array.from({ length: PARTY_SLOT_COUNT }, (_, slotIndex) => {
     const meta = partyMetaBySlot[slotIndex];
@@ -112,6 +120,10 @@ export function buildPartyHudEntries(
       (unit) => unit.partySlotIndex === slotIndex,
     );
     if (!ally) return null;
+
+    const hasCombatModuleBasic =
+      ally.basicSkillId !== undefined &&
+      isCombatModuleBasicSkillId(ally.basicSkillId, combatModuleRegistry);
 
     return {
       unitId: ally.id,
@@ -128,6 +140,7 @@ export function buildPartyHudEntries(
       res: ally.res,
       isAlive: ally.hp > 0,
       useLocked: ally.useLocked ?? false,
+      hasCombatModuleBasic,
       unlockedActiveSlotCount: meta.unlockedActiveSlotCount,
       statusEffects: ally.statusEffects,
       activeCooldowns: ally.activeCooldowns,

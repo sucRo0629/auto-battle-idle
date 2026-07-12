@@ -357,6 +357,15 @@
   will-change: transform, opacity;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .skill-menu-roster-card-character--enter,
+  .skill-menu-roster-card-footer--enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @keyframes skill-menu-summary-character-drop {
   0% {
     opacity: 0;

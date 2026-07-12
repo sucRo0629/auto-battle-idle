@@ -167,6 +167,7 @@ export class BattleView {
   private readonly battleDebugShell: HTMLElement;
   private readonly debugMenuDock: HTMLElement;
   private hoveredMemberStatsSlotIndex: number | null = null;
+  private memberStatsPointer: { clientX: number; clientY: number } | null = null;
   private hoverHighlight: BattleHoverHighlightState = createEmptyHoverHighlight();
   private readonly targetIndicatorTracker = new BattleTargetIndicatorTracker();
   private battleElapsedMs = 0;
@@ -622,8 +623,16 @@ export class BattleView {
 
     this.partyHud = new PartyHudPanel(this.canvasHost, {
       layout: "overlay",
-      onMemberStatsHoverStart: (slotIndex) => {
+      onMemberStatsHoverStart: (slotIndex, pointer) => {
+        this.memberStatsPointer = pointer;
         this.showMemberStatsPanel(slotIndex);
+      },
+      onMemberStatsPointerMove: (slotIndex, pointer) => {
+        if (this.hoveredMemberStatsSlotIndex !== slotIndex) return;
+        this.memberStatsPointer = pointer;
+        if (!this.memberStatsPanel.isVisible()) return;
+        this.memberStatsPanel.setPointerAnchor(pointer);
+        this.memberStatsPanel.reposition();
       },
       onMemberStatsHoverEnd: () => {
         this.scheduleMemberStatsHide();
@@ -943,6 +952,7 @@ export class BattleView {
     this.memberStatsHideTimer = setTimeout(() => {
       this.memberStatsHideTimer = null;
       this.hoveredMemberStatsSlotIndex = null;
+      this.memberStatsPointer = null;
       this.syncMemberStatsPanel();
     }, 80);
   }
@@ -975,6 +985,7 @@ export class BattleView {
       slotRoot,
       this.hoveredMemberStatsSlotIndex,
     );
+    this.memberStatsPanel.setPointerAnchor(this.memberStatsPointer);
 
     if (this.memberStatsPanel.isVisible()) {
       this.memberStatsPanel.update(data);
@@ -991,7 +1002,11 @@ export class BattleView {
       save.party,
       this.gameData.classRegistry,
     );
-    const hudEntry = buildPartyHudEntries(snapshot, partyMeta)[visualSlotIndex];
+    const hudEntry = buildPartyHudEntries(
+      snapshot,
+      partyMeta,
+      this.gameData.combatModuleRegistry,
+    )[visualSlotIndex];
     if (!hudEntry) return null;
 
     const partySlotIndex = hudEntry.partySlotIndex;
@@ -1007,11 +1022,17 @@ export class BattleView {
     const preset = this.gameData.classRegistry[member.classId];
     if (!preset) return null;
 
+    const moduleDef =
+      ally.basicSkillId !== undefined
+        ? this.gameData.combatModuleRegistry[ally.basicSkillId]
+        : undefined;
+
     return {
       displayName: meta.displayName,
       iconKey: ally.iconKey,
       ally,
       attackSpeedTier: resolveAttackSpeedTier(preset),
+      attackIntervalSec: moduleDef?.attackIntervalSec,
     };
   }
 
@@ -1055,7 +1076,11 @@ export class BattleView {
       save.party,
       this.gameData.classRegistry,
     );
-    const entries = buildPartyHudEntries(snapshot, partyMeta);
+    const entries = buildPartyHudEntries(
+      snapshot,
+      partyMeta,
+      this.gameData.combatModuleRegistry,
+    );
     const namesBySlot = buildAcquiredOperationPassiveNamesBySlot(
       (slotIndex) => this.engine.getAcquiredOperationPassiveIdsForSlot(slotIndex),
       this.gameData.skillRegistry.passives,

@@ -1981,6 +1981,7 @@ export class BattleEngine {
       facingSign,
       bodyAnimMarching: this.resolveBodyAnimMarching(c),
       corpseVisible: c.isEnemy ? undefined : c.corpseVisible,
+      basicSkillId: c.cooldowns.find((cd) => cd.slotKind === "basic")?.skillId,
       ...(c.isEnemy
         ? {}
         : {

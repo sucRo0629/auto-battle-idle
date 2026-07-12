@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantSnapshot } from '../battle/types.ts';
-import { buildCombatantBattleStatRows } from './combatantBattleStatsDisplay.ts';
+import {
+  buildCombatantBattleStatRows,
+  formatAttackIntervalSecValue,
+} from './combatantBattleStatsDisplay.ts';
 
 function mockAlly(
   overrides: Partial<CombatantSnapshot> = {},
@@ -97,7 +100,7 @@ describe('buildCombatantBattleStatRows', () => {
     expect(rows[3].deltaKind).toBe('up');
   });
 
-  it('shows SPD tier and attackSpeed multiplier delta', () => {
+  it('shows legacy SPD tier when no attack interval is provided', () => {
     const rows = buildCombatantBattleStatRows(
       mockAlly({
         statusEffects: [
@@ -119,5 +122,49 @@ describe('buildCombatantBattleStatRows', () => {
     expect(rows[4].valueText).toBe('やや遅い');
     expect(rows[4].deltaText).toBe('(×1.25)');
     expect(rows[4].deltaKind).toBe('up');
+  });
+
+  it('shows 攻撃間隔 in seconds when an attack interval is provided', () => {
+    const rows = buildCombatantBattleStatRows(mockAlly(), 'normal', 2.5);
+    expect(rows[4].label).toBe('攻撃間隔');
+    expect(rows[4].valueText).toBe('2.5秒');
+    expect(rows[4].deltaText).toBeNull();
+    expect(rows[4].deltaKind).toBeNull();
+  });
+
+  it('drops trailing zeros for whole-second intervals', () => {
+    const rows = buildCombatantBattleStatRows(mockAlly(), 'normal', 2);
+    expect(rows[4].label).toBe('攻撃間隔');
+    expect(rows[4].valueText).toBe('2秒');
+  });
+
+  it('keeps two decimals for values like 1.25', () => {
+    const rows = buildCombatantBattleStatRows(mockAlly(), 'normal', 1.25);
+    expect(rows[4].valueText).toBe('1.25秒');
+  });
+
+  it.each([NaN, 0, -1, Infinity])(
+    'falls back to legacy 攻撃速度 for invalid interval %s',
+    (interval) => {
+      const rows = buildCombatantBattleStatRows(mockAlly(), 'normal', interval);
+      expect(rows[4].label).toBe('攻撃速度');
+      expect(rows[4].valueText).not.toContain('秒');
+    },
+  );
+});
+
+describe('formatAttackIntervalSecValue', () => {
+  it('formats whole and fractional seconds without invalid strings', () => {
+    expect(formatAttackIntervalSecValue(2)).toBe('2秒');
+    expect(formatAttackIntervalSecValue(1.5)).toBe('1.5秒');
+    expect(formatAttackIntervalSecValue(1.25)).toBe('1.25秒');
+    expect(formatAttackIntervalSecValue(3)).toBe('3秒');
+  });
+
+  it('returns null for NaN, undefined-like, zero, and negatives', () => {
+    expect(formatAttackIntervalSecValue(NaN)).toBeNull();
+    expect(formatAttackIntervalSecValue(0)).toBeNull();
+    expect(formatAttackIntervalSecValue(-2)).toBeNull();
+    expect(formatAttackIntervalSecValue(Infinity)).toBeNull();
   });
 });

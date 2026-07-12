@@ -1886,6 +1886,11 @@ export interface CombatantSnapshot {
   partySlotIndex?: number;
   /** 味方のみ: 停止時間（useDurationSec）中 */
   useLocked?: boolean;
+  /**
+   * 解決済み通常行動 skillId（'basic' slot）。CombatModule 兵科は module ID。
+   * HUD / ステータス表示が runtime と同一判定で CombatModule 兵科を識別するための read-only 情報。
+   */
+  basicSkillId?: string;
   statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;

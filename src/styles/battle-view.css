@@ -205,6 +205,10 @@
   pointer-events: auto;
 }
 
+.battle-layer--tooltip > .party-member-effective-stats {
+  pointer-events: auto;
+}
+
 /* Layer 0 — full-root background (1280×720) */
 .battle-background {
   position: absolute;

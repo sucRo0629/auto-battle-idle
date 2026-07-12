@@ -618,30 +618,26 @@ export class SkillMenuPanel {
   private animateRosterCardEnter(card: HTMLButtonElement): void {
     const character = card.querySelector(".skill-menu-roster-card-character");
     if (character instanceof HTMLElement) {
+      const clearEnter = () => {
+        character.classList.remove("skill-menu-roster-card-character--enter");
+      };
       character.classList.remove("skill-menu-roster-card-character--enter");
       void character.offsetWidth;
       character.classList.add("skill-menu-roster-card-character--enter");
-      character.addEventListener(
-        "animationend",
-        () => {
-          character.classList.remove("skill-menu-roster-card-character--enter");
-        },
-        { once: true }
-      );
+      character.addEventListener("animationend", clearEnter, { once: true });
+      window.setTimeout(clearEnter, 700);
     }
 
     const footer = card.querySelector(".skill-menu-roster-card-footer");
     if (footer instanceof HTMLElement) {
+      const clearFooterEnter = () => {
+        footer.classList.remove("skill-menu-roster-card-footer--enter");
+      };
       footer.classList.remove("skill-menu-roster-card-footer--enter");
       void footer.offsetWidth;
       footer.classList.add("skill-menu-roster-card-footer--enter");
-      footer.addEventListener(
-        "animationend",
-        () => {
-          footer.classList.remove("skill-menu-roster-card-footer--enter");
-        },
-        { once: true }
-      );
+      footer.addEventListener("animationend", clearFooterEnter, { once: true });
+      window.setTimeout(clearFooterEnter, 500);
     }
   }
 

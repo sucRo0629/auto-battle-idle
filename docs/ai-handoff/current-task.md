@@ -6563,3 +6563,110 @@ npx vitest run \
 4. 通常行動（module 名の damage / heal ログ）は継続すること
 5. legacy gauge は **まだ表示される**（R9.5b で除去予定）— gauge が見えても発動しないことを確認
 6. `at_ranger` 等 legacy 兵科 stage で legacy active が従来どおり発動することを別途確認
+
+---
+
+## 84. R9.5b 完了 — CombatModule 兵科の legacy gauge 非表示 + ステータスツールチップの攻撃間隔表示
+
+### 84.1 読んだファイル（6 件以内）
+
+1. `docs/ai-handoff/current-task.md`（最新 = §82 依頼・§83 R9.5a 完了）
+2. `src/ui/PartyHudPanel.ts`
+3. `src/ui/partyHudTypes.ts`
+4. `src/ui/PartyMemberEffectiveStatsPanel.ts` + `src/ui/combatantBattleStatsDisplay.ts`（戦闘中ステータスツールチップの正本）
+5. `src/ui/partyHudTypes.test.ts` / `src/ui/combatantBattleStatsDisplay.test.ts`（既存テスト）
+6. `src/battle/data/resolveCombatModuleBasic.ts`（`isCombatModuleBasicSkillId` = R9.5a と同一判定）
+
+補助 Grep のみ（読了数に含めない）: `BattleEngine.toSnapshot`、`entities.ts`、`types.ts`（`CombatModuleDef.attackIntervalSec` / `CombatantSnapshot`）、`i18n/uiMessages.ts` / `memberStatLabels.ts`、`data/combat-modules/*.json`（attackIntervalSec 値確認）。
+
+### 84.2 旧 HUD の legacy active データ生成・描画経路
+
+1. **データ:** `partyHudTypes.buildPartyHudEntries`（snapshot → `PartyHudEntry`）。active cooldown は `ally.activeCooldowns`（R9.5a で module 兵科は空配列）。
+2. **描画:** `PartyHudPanel.createRecastGrid` が `MAX_ACTIVE_SLOTS` 個の `.party-hud-recast-cell` を持つ `.party-hud-recast-grid`（2×2）を生成。`updateRecastGrid` が `unlockedActiveSlotCount`（Lv 由来）で有効セル数を決めるため、**cooldown が空でも Lv 帯分の空 2×2 枠が残っていた**。
+3. **旧「攻撃速度」経路:** `PartyMemberEffectiveStatsPanel.render` → `combatantBattleStatsDisplay.buildCombatantBattleStatRows` の `buildSpdRow` が `attackSpeedTier`（5 段階）を `getAttackSpeedTierLabel` でラベル化。data は `BattleView.resolveMemberStatsPanelData` が `resolveAttackSpeedTier(preset)` で供給。
+
+### 84.3 CombatModule 兵科の表示判定（HUD / runtime 一致）
+
+- runtime 解決済み `basicSkillId` を `CombatantSnapshot.basicSkillId`（read-only, `BattleEngine.toSnapshot` で `basic` slot cooldown から取得）として公開。
+- `buildPartyHudEntries` が `isCombatModuleBasicSkillId(ally.basicSkillId, combatModuleRegistry)` で `PartyHudEntry.hasCombatModuleBasic` を算出。
+- classId 固定配列・skillId 命名規則は新設せず、R9.5a の `resolveRuntimeActiveSkillIds` と**同一の module 判定関数**を共有。HUD と runtime で判定条件が食い違わない。
+
+### 84.4 legacy active 枠の非表示箇所
+
+- `PartyHudPanel.updateSlot` → `updateRecastGrid` 冒頭で `applyRecastGridVisibility` を呼び、`entry.hasCombatModuleBasic` の場合 `slot.recastGrid.hidden = true` にして **grid 領域ごと非表示**（空 2×2 枠も出さない）。以降のセル更新は早期 return でスキップ。
+- legacy 兵科（`hasCombatModuleBasic=false`）は `hidden=false` のまま従来どおり 2×2 を描画。
+
+### 84.5 「攻撃間隔」の取得元と表示
+
+- 正本: runtime 解決済み `basicSkillId` → `combatModuleRegistry[basicSkillId]?.attackIntervalSec`（`BattleView.resolveMemberStatsPanelData` で解決、選択中 module 上書きを含む）。
+- `PartyMemberEffectiveStatsPanelData.attackIntervalSec` として渡し、`buildCombatantBattleStatRows(ally, attackSpeedTier, attackIntervalSec?)` が有効値なら `攻撃間隔`（秒）行を、無ければ legacy `攻撃速度` tier 行を出す。
+- 整形 `formatAttackIntervalSecValue`: 小数第 2 位丸め + 末尾 0 除去（`2.0→2秒` / `1.5→1.5秒` / `1.25→1.25秒`）。`NaN` / 非正 / 非有限は `null` → legacy 行へフォールバック（不正文字列を出さない）。
+- 新ラベル `stat.attackInterval`（ja `攻撃間隔` / en `Attack Interval`）を `uiMessages.ts` / `memberStatLabels.ts` に追加。
+- buff/debuff の実効間隔リアルタイム反映は追加しない（基礎値 / 選択中 module 適用後の値のみ）。
+
+### 84.6 legacy 兵科の表示方針（決定）
+
+- **決定: legacy 兵科では旧「攻撃速度」tier 表示を一時維持する。** 理由: 既存コードに legacy 兵科向けの正規化済み `attackIntervalSec` が無く（`attackIntervalSec` は CombatModule JSON のみ、§80.4）、tier からの新換算規則の設計・追加は今回禁止事項。推測値は表示しない。移行は R9f の一括 migration で扱う。
+
+### 84.7 変更ファイル
+
+- `src/battle/types.ts` — `CombatantSnapshot.basicSkillId?`（read-only）追加
+- `src/battle/BattleEngine.ts` — `toSnapshot` で `basicSkillId` を basic slot cooldown から供給
+- `src/ui/partyHudTypes.ts` — `PartyHudEntry.hasCombatModuleBasic` + `buildPartyHudEntries` に `combatModuleRegistry` 引数（既定 `{}`）
+- `src/ui/PartyHudPanel.ts` — `applyRecastGridVisibility` で module 兵科の 2×2 grid 非表示
+- `src/ui/BattleView.ts` — `buildPartyHudEntries` 2 箇所へ registry 配線、ツールチップ data に `attackIntervalSec`
+- `src/ui/combatantBattleStatsDisplay.ts` — `attackIntervalSec` 対応 + `formatAttackIntervalSecValue` export
+- `src/ui/PartyMemberEffectiveStatsPanel.ts` — data 型 + render 経路に `attackIntervalSec`
+- `src/i18n/uiMessages.ts` / `src/i18n/memberStatLabels.ts` — `stat.attackInterval` 追加
+- テスト: `src/ui/partyHudCombatModuleGauge.test.ts`（新規）、`src/ui/partyHudCombatModuleGauge.dom.test.ts`（新規）、`src/ui/combatantBattleStatsDisplay.test.ts`（更新）、`src/ui/partyHudTypes.test.ts`（`makeEntry` へ新フィールド）
+- docs: `docs/spec/battle-field.md`（§7.1.1 / §8.7.1）、`docs/spec/combat.md`（R9.5b 注記）、`docs/plans/phase-roadmap.md`、本節
+
+### 84.8 追加・変更したテスト
+
+- `partyHudCombatModuleGauge.test.ts`（view model + integration, 8 tests）: A 4 兵科 parameterized で `hasCombatModuleBasic=true` & active cooldown 0 / legacy `at_ranger` false / 混在パーティで別モード / registry 無指定は false / **runtime integration** = engine snapshot 経由で 4 兵科の module basic 解決を確認。
+- `partyHudCombatModuleGauge.dom.test.ts`（DOM, 4 tests）: module 兵科は `.party-hud-recast-grid` が `hidden` / legacy 兵科は表示 & セル存在 / 混在で差分 / **HUD 本体に「攻撃間隔」「秒」文字を追加しない**。
+- `combatantBattleStatsDisplay.test.ts`（更新, 12 tests）: 攻撃間隔（秒）表示 / 末尾 0 除去 / 1.25 保持 / 不正値は legacy へ / `formatAttackIntervalSecValue` 単体（正常 + NaN/0/負/Infinity → null）。
+
+### 84.9 テスト結果
+
+- 新規 + 更新: `partyHudCombatModuleGauge.test.ts`（8）+ `partyHudCombatModuleGauge.dom.test.ts`（4）+ `combatantBattleStatsDisplay.test.ts`（12）+ `partyHudTypes.test.ts`（3）= **27 pass / 27**。
+- 回帰: `combatModuleLegacyActiveSuppression.test.ts`（8）/ `combatModuleBasicAttack.test.ts` / `battleEngine.outOfCombatTick.test.ts` / `allyCombatModuleSelection.test.ts` / `enemyGroupCombatModule.test.ts` / `partyHudActiveCooldownCount.test.ts` / `partyHudRecast*.test.ts` / `partyHudHoverHighlight.test.ts` / `partyHudDetailDamage.test.ts` / `annotateGameTerms.test.ts` — **pass**。
+- 既知の**事前失敗（本タスク非関与、base commit でも失敗）:** `src/i18n/t.test.ts`（1 件, 別キーの既存欠落）、`src/ui/BattleView.test.ts`（11 件, mock document の `dataset` 未対応）。stash で base 再現済み。
+- `tsc --noEmit` は本タスクで**新規エラーを追加していない**（`combatantBattleStatsDisplay.ts:119` の `resolveAttackSpeedTier({...})` 等は既存。新規テスト 2 ファイルは型エラー無し）。
+
+### 84.10 CombatModule 4 兵科の確認結果
+
+| 兵科 | legacy 2×2 gauge | 攻撃間隔（正本 = 既定 module `attackIntervalSec`） |
+| ---- | ---------------- | -------------------------------------------------- |
+| `df_guardian` | 非表示 | 2.5 秒（`df_guardian_mod_nearest_strike`） |
+| `at_swordsman` | 非表示 | 2.5 秒（`at_swordsman_mod_single_slash`） |
+| `at_sorcerer` | 非表示 | 3 秒（`at_sorcerer_mod_single_bolt`） |
+| `sp_cleric` | 非表示 | 3 秒（`sp_cleric_mod_single_mend`） |
+
+（選択中 module により上書き。表示値は runtime 解決 `basicSkillId` の module 値と一致）
+
+### 84.11 legacy 兵科・混在パーティ回帰
+
+- `at_ranger`（legacy）: `hasCombatModuleBasic=false`、2×2 gauge 維持、cooldown 進行維持、ツールチップは「攻撃速度」tier 継続。
+- 混在（`df_guardian` + `at_ranger`）: 同一 `buildPartyHudEntries` / `PartyHudPanel` 描画で各ユニットが別モード（module = gauge 無し / legacy = gauge あり）。
+- R9.5a runtime 停止テスト非 regression を確認。
+
+### 84.12 R9.5b 完了判定
+
+**完了 — Yes（実装 + 自動テスト + docs）**
+
+- CombatModule 4 兵科の legacy active HUD（2×2 gauge・空枠含む）が消えている。
+- CombatModule 未対応兵科の legacy active HUD は維持。
+- 戦闘 HUD 本体へ攻撃間隔・次行動ゲージ等を追加していない。
+- 戦闘中ステータスツールチップの「攻撃速度」が module 兵科で「攻撃間隔（秒）」へ置換。値は CombatModule 正本と一致。
+- 戦闘挙動・JSON データ・editor・save schema は未変更（read-only 配線のみ）。
+- 関連テスト pass、docs 更新済み。
+
+**手動確認（任意・視覚）:** `npm run dev` → demo party で出撃し、CombatModule 兵科カードに 2×2 gauge が無く空白も不自然でないこと、HUD ホバーで「攻撃間隔: 2.5秒」等が出ること、legacy 兵科は従来どおり gauge が出ることを目視（1280×720）。
+
+### 84.13 R9.5c へ送る事項
+
+- R9.5c は **R5〜R8 の Player 側統合確認**（出撃前戦闘方式選択・Wave 間準備画面・作戦内 passive 表示・HUD/runtime 統合 smoke）。触る候補: `src/ui/SkillMenuPanel.ts`、`src/game/GameSession.ts`、`src/game/OperationState.ts`、`docs/spec/party-formation-ui.md`。
+- **編成メニュー（`SkillMenuPanel`）の `攻撃速度`（`statLabels.spd` / `resolveMemberDisplayStats.spdLabel`）は本タスク未変更**（戦闘 HUD ではないため R9.5b スコープ外）。R9.5c / R9f で攻撃間隔へ揃えるか要判断。
+- legacy 兵科の攻撃間隔正規化（`attackSpeedTier`→秒）は R9f 一括 migration。
+- 敵 HUD の攻撃間隔表示は今回スコープ外。

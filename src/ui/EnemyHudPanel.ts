@@ -348,7 +348,7 @@ export class EnemyHudPanel {
     root.appendChild(stackRoot);
 
     this.bindFieldLinkHover(root, slotIndex);
-    this.bindGroupClick(root, stackRoot);
+    this.bindGroupClick(root);
 
     return {
       root,
@@ -496,8 +496,8 @@ export class EnemyHudPanel {
     const stackLayout = resolveEnemyHudCardStackLayout(group.count);
     const { footprint, visibleCount, hiddenCount } = stackLayout;
 
-    slot.stackRoot.style.width = `${footprint.width}px`;
-    slot.stackRoot.style.height = `${footprint.height}px`;
+    slot.stackRoot.style.width = '100%';
+    slot.stackRoot.style.height = '100%';
 
     if (hiddenCount > 0) {
       slot.stackOverflow.hidden = false;
@@ -554,7 +554,6 @@ export class EnemyHudPanel {
         card.root.classList.add('enemy-hud-card--expanded-individual');
         if (i === 0) {
           card.root.classList.add('enemy-hud-card--expanded-top');
-          this.bindExpandedTopCardClick(card);
         } else {
           card.root.classList.remove('enemy-hud-card--expanded-top');
         }
@@ -988,30 +987,33 @@ export class EnemyHudPanel {
     });
   }
 
-  private bindGroupClick(root: HTMLElement, stackRoot: HTMLElement): void {
-    const handleExpandClick = (event: MouseEvent): void => {
-      const groupId = root.dataset.enemyGroupId;
-      if (!groupId) return;
-      if (this.expandedGroupIds.has(groupId)) return;
-      event.stopPropagation();
-      this.options.onGroupClick?.(groupId, 'expand');
-    };
+  /**
+   * Capture-phase listener on the group root so pointer-events:none cards and
+   * badge hit overlays still share one expand/collapse path (battle-field.md §8.11.2).
+   */
+  private bindGroupClick(root: HTMLElement): void {
+    root.addEventListener(
+      'click',
+      (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest('.party-hud-status-badge-hit--interactive')) return;
 
-    root.addEventListener('click', handleExpandClick);
-    stackRoot.addEventListener('click', handleExpandClick);
-  }
+        const groupId = root.dataset.enemyGroupId;
+        if (!groupId) return;
 
-  private bindExpandedTopCardClick(card: EnemyCardElements): void {
-    if (card.root.dataset.expandedTopClickBound === '1') return;
-    card.root.dataset.expandedTopClickBound = '1';
+        if (this.expandedGroupIds.has(groupId)) {
+          if (!target.closest('.enemy-hud-card--expanded-top')) return;
+          event.stopPropagation();
+          this.options.onGroupClick?.(groupId, 'collapse');
+          return;
+        }
 
-    card.root.addEventListener('click', (event) => {
-      const slotRoot = card.root.closest('.enemy-hud-group');
-      const groupId = slotRoot?.dataset.enemyGroupId;
-      if (!groupId || !this.expandedGroupIds.has(groupId)) return;
-      event.stopPropagation();
-      this.options.onGroupClick?.(groupId, 'collapse');
-    });
+        event.stopPropagation();
+        this.options.onGroupClick?.(groupId, 'expand');
+      },
+      true,
+    );
   }
 
   private bindExpandedCardHover(card: EnemyCardElements): void {
