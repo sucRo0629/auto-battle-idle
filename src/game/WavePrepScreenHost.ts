@@ -20,12 +20,17 @@ export interface WavePrepScreenHostCallbacks {
   ) => PartyClassAssignmentResult;
   onModuleChanged: (slotIndex: number, moduleId: string) => boolean;
   onConfirmNextWave: () => boolean;
+  shouldShowRetryActions: () => boolean;
+  onRetryCurrentWave: () => boolean;
+  onReturnToFormationPrep: () => boolean;
+  onRestartOperationFromWaveZero: () => boolean;
 }
 
 /** R6e: Wave 間準備の最小 DOM UI（正式デザインは後続）。 */
 export class WavePrepScreenHost {
   private root: HTMLElement | null = null;
   private statusEl: HTMLElement | null = null;
+  private retrySection: HTMLElement | null = null;
   private slotRows: HTMLElement[] = [];
 
   constructor(
@@ -61,12 +66,17 @@ export class WavePrepScreenHost {
     for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
       this.refreshSlotRow(slotIndex, view);
     }
+
+    if (this.retrySection) {
+      this.retrySection.hidden = !this.callbacks.shouldShowRetryActions();
+    }
   }
 
   destroy(): void {
     this.root?.remove();
     this.root = null;
     this.statusEl = null;
+    this.retrySection = null;
     this.slotRows = [];
   }
 
@@ -101,8 +111,60 @@ export class WavePrepScreenHost {
       }
     });
 
-    this.root.append(title, this.statusEl, slotsHost, confirmButton);
+    this.retrySection = this.createRetrySection();
+
+    this.root.append(
+      title,
+      this.statusEl,
+      slotsHost,
+      confirmButton,
+      this.retrySection,
+    );
     this.host.replaceChildren(this.root);
+  }
+
+  private createRetrySection(): HTMLElement {
+    const section = document.createElement('div');
+    section.className = 'wave-prep-screen__retry';
+    section.hidden = true;
+
+    const retryTitle = document.createElement('h2');
+    retryTitle.className = 'wave-prep-screen__retry-title';
+    retryTitle.textContent = '再試行';
+
+    const retryActions = document.createElement('div');
+    retryActions.className = 'wave-prep-screen__retry-actions';
+
+    const retryButtons: Array<{ text: string; run: () => boolean }> = [
+      {
+        text: '現在Waveを同設定で再戦',
+        run: () => this.callbacks.onRetryCurrentWave(),
+      },
+      {
+        text: '準備へ戻る',
+        run: () => this.callbacks.onReturnToFormationPrep(),
+      },
+      {
+        text: '作戦をWave 0からやり直す',
+        run: () => this.callbacks.onRestartOperationFromWaveZero(),
+      },
+    ];
+
+    for (const action of retryButtons) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'wave-prep-screen__retry-button game-ui-button';
+      button.textContent = action.text;
+      button.addEventListener('click', () => {
+        if (!action.run()) {
+          this.statusEl!.textContent = '操作を実行できませんでした';
+        }
+      });
+      retryActions.appendChild(button);
+    }
+
+    section.append(retryTitle, retryActions);
+    return section;
   }
 
   private createSlotRow(slotIndex: number): HTMLElement {

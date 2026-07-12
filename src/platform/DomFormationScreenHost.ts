@@ -30,6 +30,7 @@ export class DomFormationScreenHost implements MenuHost {
         presentation: 'formation-screen',
         initialView,
         isVerifyMode: this.context.isVerifyMode,
+        getFormationReturnOptions: this.context.getFormationReturnOptions,
       },
     );
   }
@@ -39,7 +40,8 @@ export class DomFormationScreenHost implements MenuHost {
     this.overlay?.destroy();
     this.overlay = null;
     this.opened = false;
-    this.context.onScreenChange('battle');
+    const nextScreen = this.context.resolveFormationCloseScreen?.() ?? 'battle';
+    this.context.onScreenChange(nextScreen);
   }
 
   isOpen(): boolean {

@@ -113,6 +113,8 @@ export class GameSession {
   private suppressOperationWaveReload = false;
   /** R7b: battle simulation 倍率（Save 非永続・初期 1 倍） */
   private simulationSpeed: SimulationSpeed = 1;
+  /** R7d: Wave 間準備を維持したまま formation へ一時遷移中 */
+  private wavePrepSuspended = false;
 
   constructor(
     private readonly gameData: GameData,
@@ -173,6 +175,10 @@ export class GameSession {
         onModuleChanged: (slotIndex, moduleId) =>
           this.trySetOperationSlotCombatModule(slotIndex, moduleId),
         onConfirmNextWave: () => this.confirmWavePrepAndStartNextWave(),
+        shouldShowRetryActions: () => this.shouldShowWavePrepRetry(),
+        onRetryCurrentWave: () => this.retryCurrentWaveFromCheckpoint(),
+        onReturnToFormationPrep: () => this.returnToFormationPrep(),
+        onRestartOperationFromWaveZero: () => this.restartOperationFromWaveZero(),
       },
     );
 
@@ -256,6 +262,8 @@ export class GameSession {
       onPartySlotChanged: (slotIndex, member) =>
         this.updatePartySlot(slotIndex, member),
       onScreenChange: (screen) => this.setGameScreen(screen),
+      resolveFormationCloseScreen: () => this.resolveFormationCloseScreen(),
+      getFormationReturnOptions: () => this.getFormationReturnOptions(),
     });
 
     this.engine.onEvent((event) => {
@@ -391,6 +399,7 @@ export class GameSession {
     const checkpoint = this.operationCheckpoint!;
     if (!this.tryRestoreOperationFromCheckpoint(checkpoint)) return false;
 
+    this.wavePrepSuspended = false;
     this.clearOperationResult();
     this.operationState?.endWavePrepEditing();
     this.suppressOperationWaveReload = true;
@@ -399,19 +408,31 @@ export class GameSession {
     } finally {
       this.suppressOperationWaveReload = false;
     }
+    if (this.menuHost.isOpen()) {
+      this.menuHost.close();
+    }
     this.setGameScreen('battle');
     this.view.setBattlePaused(false);
     return true;
   }
 
   /**
-   * R6i: 戦闘を開始せず既存の編成導線（formation）へ戻る。
+   * R6i / R7d: 戦闘を開始せず既存の編成導線（formation）へ戻る。
+   * Wave 間準備中は編集状態を維持して一時 suspend する。
    * 作戦未開始・完了時は false。
    */
   returnToFormationPrep(): boolean {
     if (!this.canUseOperationRetry()) return false;
 
     this.clearOperationResult();
+
+    if (this.shouldSuspendWavePrepForFormation()) {
+      this.wavePrepSuspended = true;
+      this.menuHost.open('party');
+      return true;
+    }
+
+    this.wavePrepSuspended = false;
     this.operationState?.endWavePrepEditing();
     this.menuHost.open('party');
     this.view.setBattlePaused(false);
@@ -426,14 +447,40 @@ export class GameSession {
     if (!this.canUseOperationRetry()) return false;
 
     const stageId = this.operationState!.stageId;
+    this.wavePrepSuspended = false;
     this.clearOperationResult();
     this.operationState?.endWavePrepEditing();
 
     if (!this.beginOperation(stageId, 0)) return false;
     this.engine.restartBattle();
+    if (this.menuHost.isOpen()) {
+      this.menuHost.close();
+    }
     this.menuHost.open('party');
     this.view.setBattlePaused(false);
     return true;
+  }
+
+  /** R7d: Wave 間準備 screen に retry 3 操作を表示するか */
+  shouldShowWavePrepRetry(): boolean {
+    return (
+      this.currentScreen === 'wavePrep' &&
+      this.isAwaitingNextWave() &&
+      this.canUseOperationRetry()
+    );
+  }
+
+  /** R7d: formation から Wave 間準備へ戻る（suspend 中のみ） */
+  returnToWavePrepFromFormation(): boolean {
+    if (!this.wavePrepSuspended || !this.isAwaitingNextWave()) return false;
+    if (!this.menuHost.isOpen()) return false;
+    this.menuHost.close();
+    return this.currentScreen === 'wavePrep';
+  }
+
+  /** R7d: Wave 間準備を suspend して formation にいるか */
+  isWavePrepSuspendedForFormation(): boolean {
+    return this.wavePrepSuspended;
   }
 
   /** R7c: verify OFF 敗北後に release retry UI を表示するか */
@@ -523,8 +570,14 @@ export class GameSession {
       this.clearOperation();
     }
     if (this.currentScreen === 'wavePrep' && screen !== 'wavePrep') {
-      this.operationState?.endWavePrepEditing();
+      if (!this.wavePrepSuspended) {
+        this.operationState?.endWavePrepEditing();
+      }
       this.wavePrepScreenHost.hide();
+    }
+    if (screen === 'wavePrep' && this.wavePrepSuspended) {
+      this.wavePrepSuspended = false;
+      this.operationState?.beginWavePrepEditing();
     }
     this.currentScreen = screen;
     const onBattle = screen === 'battle';
@@ -983,6 +1036,7 @@ export class GameSession {
   }
 
   private clearOperation(): void {
+    this.wavePrepSuspended = false;
     this.operationState?.endWavePrepEditing();
     this.operationState = null;
     this.clearOperationCheckpoint();
@@ -998,6 +1052,38 @@ export class GameSession {
       this.operationState !== null &&
       !this.operationState.isCompleted
     );
+  }
+
+  /** R7d: Wave 間準備中の「準備へ戻る」は formation へ suspend 遷移 */
+  private shouldSuspendWavePrepForFormation(): boolean {
+    return (
+      this.currentScreen === 'wavePrep' &&
+      this.isAwaitingNextWave() &&
+      this.operationState !== null &&
+      this.operationState.isWavePrepEditable
+    );
+  }
+
+  /** R7d: formation 閉じた後の遷移先 */
+  private resolveFormationCloseScreen(): GameScreen {
+    if (this.wavePrepSuspended && this.isAwaitingNextWave()) {
+      return 'wavePrep';
+    }
+    this.wavePrepSuspended = false;
+    return 'battle';
+  }
+
+  /** R7d: formation フッター戻りボタン（suspend 中は Wave 準備へ） */
+  private getFormationReturnOptions():
+    | { label: string; canReturn: () => boolean }
+    | undefined {
+    if (!this.wavePrepSuspended || !this.isAwaitingNextWave()) {
+      return undefined;
+    }
+    return {
+      label: 'Wave準備へ戻る',
+      canReturn: () => true,
+    };
   }
 
   /** 既に確定済みなら no-op（同一 battleEnd 通知の二重確定防止）。 */

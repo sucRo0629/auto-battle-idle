@@ -51,3 +51,28 @@
 .wave-prep-screen__confirm {
   align-self: flex-start;
 }
+
+.wave-prep-screen__retry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--game-panel-border, #444);
+}
+
+.wave-prep-screen__retry-title {
+  margin: 0;
+  font-family: var(--font-heading, inherit);
+  font-size: 1rem;
+}
+
+.wave-prep-screen__retry-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wave-prep-screen__retry-button {
+  align-self: flex-start;
+}

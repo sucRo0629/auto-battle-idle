@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R7c 完了** — 敗北時 retry 正式導線（本 §71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R7d — Wave 準備 retry + spec 整合**（§69.7）。**R7a 完了** — 反復プレイ調査・4 タスク分割（§69）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R7d 完了** — Wave 準備 retry + spec 整合（本 §72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R7e — 作戦結果後再戦 + 遷移統一**（§69.7）。**R7a 完了** — 反復プレイ調査・4 タスク分割（§69）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5610,3 +5610,89 @@ API が `false` を返した場合、screen・`isDefeated`・overlay 表示を�
 ### 71.10 次タスク
 
 **R7d — Wave 準備 retry + spec 整合**（`wavePrep` から retry・`returnToFormationPrep` vs wavePrep 分岐）。
+
+---
+
+## 72. R7d — Wave 準備 retry + spec 整合（2026-07-12 完了）
+
+### 72.1 目的
+
+Wave 間準備（`wavePrep`）から R6i retry API へ到達できる正式導線を追加し、「準備へ戻る」の遷移先を状況（敗北 vs Wave 間準備）に応じて整合させる。
+
+### 72.2 読んだファイル（6 件）
+
+| ファイル | 用途 |
+| -------- | ---- |
+| `docs/ai-handoff/current-task.md` | R7d 要件・§69.7 分割 |
+| `docs/spec/operation-loop.md` | リトライ 3 種・Wave 間準備 spec |
+| `src/game/WavePrepScreenHost.ts` | Wave 間準備 UI 所有者 |
+| `src/game/GameSession.ts` | retry API・screen 遷移 |
+| `src/game/wavePrepScreen.test.ts` | 既存 wave prep テストパターン |
+| `src/game/operationRetry.test.ts` | R6i retry API テスト |
+
+### 72.3 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/GameSession.ts` | `wavePrepSuspended`・`shouldShowWavePrepRetry`・`returnToWavePrepFromFormation`・`returnToFormationPrep` 分岐 |
+| `src/game/WavePrepScreenHost.ts` | retry 3 ボタン UI |
+| `src/styles/wave-prep-screen.css` | retry セクション最小スタイル |
+| `src/platform/menuHost.ts` | formation 閉じ先・戻りラベル API |
+| `src/platform/DomFormationScreenHost.ts` | close 時 `resolveFormationCloseScreen` |
+| `src/ui/MetaMenuOverlay.ts` | Wave 準備へ戻るラベル配線 |
+| `src/ui/SkillMenuPanel.ts` | 戻りボタン label / canReturn 上書き |
+| `src/game/wavePrepScreen.test.ts` | R7d 8 項目テスト |
+| `docs/ai-handoff/current-task.md` | 本 §72・ヘッダ更新 |
+| `docs/plans/phase-roadmap.md` | R7d 完了・次タスク R7e |
+
+### 72.4 Wave 準備 retry UI の所有者と表示条件
+
+| 項目 | 内容 |
+| ---- | ---- |
+| **所有者** | `WavePrepScreenHost`（`wave-prep-screen__retry`） |
+| **表示条件** | `GameSession.shouldShowWavePrepRetry()` — `currentScreen === 'wavePrep' && isAwaitingNextWave() && canUseOperationRetry()` |
+
+### 72.5 各操作の状態遷移
+
+| UI ラベル | API | 遷移 |
+| --------- | --- | ---- |
+| 現在Waveを同設定で再戦 | `retryCurrentWaveFromCheckpoint()` | checkpoint 復元 → 未確定編集破棄 → `battle` 再開 |
+| 準備へ戻る（Wave 間準備中） | `returnToFormationPrep()` | `wavePrep` suspend → `formation`（OperationState / checkpoint / 次 Wave index 維持） |
+| 準備へ戻る（敗北後） | `returnToFormationPrep()` | `endWavePrepEditing` → `formation`（従来 R7c） |
+| 作戦をWave 0からやり直す | `restartOperationFromWaveZero()` | OperationState / checkpoint / Wave 準備編集初期化 → `formation` @ Wave 0 |
+
+### 72.6 formation と wavePrep 間の往復経路
+
+| 方向 | 経路 |
+| ---- | ---- |
+| wavePrep → formation | `returnToFormationPrep()`（suspend）→ `menuHost.open('party')` |
+| formation → wavePrep | `returnToWavePrepFromFormation()` または formation フッター「Wave準備へ戻る」→ `menuHost.close()` → `resolveFormationCloseScreen()` が `wavePrep` |
+
+### 72.7 未確定 module 編集の扱い
+
+| 操作 | 扱い |
+| ---- | ---- |
+| formation へ suspend | Wave 準備中の未確定編集を **維持**（`endWavePrepEditing` スキップ） |
+| 現在 Wave 再戦 | commit 済み checkpoint へ復元 → 未確定編集 **破棄** |
+| Wave 0 やり直し | `beginOperation` で Wave 準備編集 **初期化** |
+
+### 72.8 敵 spawn の抑止
+
+`BattleEngine.awaitingNextWave === true` の間は `startNextWave` 未呼び出し。Wave 準備中および formation suspend 中も engine は awaiting 状態を維持し、次 Wave 敵を spawn しない。
+
+### 72.9 失敗時の扱い
+
+API が `false` を返した場合、現在 screen・Wave 準備編集状態を維持（wave prep retry UI は閉じない / status にエラー表示）。
+
+### 72.10 テスト結果
+
+| スイート | 結果 |
+| -------- | ---- |
+| `wavePrepScreen.test.ts`（R7d 8 項目含む） | **24 pass / 24** |
+| `operationRetry.test.ts` | **7 pass / 7** |
+| `gameSessionDefeatRetry.test.ts` | **8 pass / 8** |
+| **合計** | **39 pass / 39** |
+
+### 72.11 次タスク
+
+**R7e — 作戦結果後再戦 + 遷移統一**（`operationResult` から同一 stage 再開・勝利後導線）。

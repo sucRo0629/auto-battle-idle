@@ -100,6 +100,8 @@ export interface SkillMenuPanelCallbacks {
 
 export interface SkillMenuPanelReturnToBattleOptions {
   onClick: () => void;
+  getLabel?: () => string;
+  canReturn?: () => boolean;
 }
 
 export interface SkillMenuPanelOptions {
@@ -118,6 +120,7 @@ export class SkillMenuPanel {
   private readonly formationZoneHeaderTitleEl: HTMLElement;
   private readonly leftRailFooterEl: HTMLElement | null;
   private readonly returnToBattleButton: HTMLButtonElement | null;
+  private readonly returnToBattleOptions: SkillMenuPanelReturnToBattleOptions | undefined;
   private readonly formationBlockEl: HTMLElement;
   private readonly rosterSlotsEl: HTMLElement;
   private readonly classArchiveHeaderEl: HTMLElement;
@@ -198,6 +201,7 @@ export class SkillMenuPanel {
     }
     this.leftRailFooterEl = leftRailFooterEl;
     this.returnToBattleButton = returnToBattleButton;
+    this.returnToBattleOptions = options.returnToBattle;
 
     this.formationBlockEl = document.createElement("div");
     this.formationBlockEl.className = "skill-menu-formation-block";
@@ -325,12 +329,17 @@ export class SkillMenuPanel {
   }
 
   canReturnToBattle(): boolean {
+    const override = this.returnToBattleOptions?.canReturn?.();
+    if (override !== undefined) {
+      return override;
+    }
     return this.isVerifyMode() || this.selectedClassIds.length === 4;
   }
 
   private updateReturnToBattleButton(): void {
     if (!this.returnToBattleButton) return;
-    const label = t("party.backToBattle");
+    const label =
+      this.returnToBattleOptions?.getLabel?.() ?? t("party.backToBattle");
     this.returnToBattleButton.textContent = label;
     this.returnToBattleButton.setAttribute("aria-label", label);
     this.returnToBattleButton.disabled = !this.canReturnToBattle();

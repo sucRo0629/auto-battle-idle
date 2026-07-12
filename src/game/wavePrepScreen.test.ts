@@ -87,6 +87,15 @@ function sortieToStage(session: GameSession, stageId: string): void {
   host(stageId);
 }
 
+function clickWavePrepRetryButton(container: ParentNode, label: string): void {
+  const buttons = container.querySelectorAll<HTMLButtonElement>(
+    '.wave-prep-screen__retry-button',
+  );
+  const button = [...buttons].find((entry) => entry.textContent === label);
+  if (!button) throw new Error(`Wave prep retry button not found: ${label}`);
+  button.click();
+}
+
 describe('Wave prep screen (R6e)', () => {
   let session: GameSession | null = null;
   const loaded = tryLoadGameData();
@@ -360,5 +369,161 @@ describe('Wave prep screen regression with createStage1Engine', () => {
     expect(snap.awaitingNextWave).toBe(true);
     expect(session.getCurrentScreen()).toBe('wavePrep');
     session.destroy();
+  });
+});
+
+describe('Wave prep retry (R7d)', () => {
+  let session: GameSession | null = null;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+    setVerifyModeEnabled(false);
+    setDebugLoopStageId(null);
+    setDebugLoopWaveIndex(null);
+  });
+
+  it('1. shows three retry actions on wave prep screen', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+
+    expect(session.shouldShowWavePrepRetry()).toBe(true);
+    const buttons = document.body.querySelectorAll('.wave-prep-screen__retry-button');
+    expect(buttons).toHaveLength(3);
+    expect([...buttons].map((button) => button.textContent)).toEqual([
+      '現在Waveを同設定で再戦',
+      '準備へ戻る',
+      '作戦をWave 0からやり直す',
+    ]);
+  });
+
+  it('2. retry current wave restores checkpoint wave and discards uncommitted module edit', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    const checkpointModule = session.getPartySlotCombatModule(0);
+    const editedModule = 'df_guardian_mod_guard_focus';
+    expect(session.trySetOperationSlotCombatModule(0, editedModule)).toBe(true);
+    expect(session.getPartySlotCombatModule(0)).toBe(editedModule);
+
+    expect(session.retryCurrentWaveFromCheckpoint()).toBe(true);
+
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.getOperationWaveIndex()).toBe(
+      session.getOperationCheckpoint()?.currentWaveIndex,
+    );
+    expect(session.getPartySlotCombatModule(0)).toBe(checkpointModule);
+    expect(session.getOperationState()?.isWavePrepEditable).toBe(false);
+    expect(getEngine(session).getSnapshot().awaitingNextWave).toBe(false);
+  });
+
+  it('3. return to formation keeps OperationState, checkpoint, and next wave index', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    const checkpoint = session.getOperationCheckpoint();
+    const waveIndex = session.getOperationWaveIndex();
+    const cleared = session.getClearedWaveCount();
+    const editedModule = 'df_guardian_mod_guard_focus';
+    session.trySetOperationSlotCombatModule(0, editedModule);
+
+    expect(session.returnToFormationPrep()).toBe(true);
+
+    expect(session.getCurrentScreen()).toBe('formation');
+    expect(session.getOperationCheckpoint()).toEqual(checkpoint);
+    expect(session.getOperationWaveIndex()).toBe(waveIndex);
+    expect(session.getClearedWaveCount()).toBe(cleared);
+    expect(session.isWavePrepSuspendedForFormation()).toBe(true);
+    expect(session.getOperationState()?.isWavePrepEditable).toBe(true);
+    expect(session.getPartySlotCombatModule(0)).toBe(editedModule);
+  });
+
+  it('4. returns from formation to wave prep and resumes the same next-wave edit', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    const editedModule = 'df_guardian_mod_guard_focus';
+    session.trySetOperationSlotCombatModule(0, editedModule);
+    expect(session.returnToFormationPrep()).toBe(true);
+
+    expect(session.returnToWavePrepFromFormation()).toBe(true);
+
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(session.isWavePrepSuspendedForFormation()).toBe(false);
+    expect(session.getOperationState()?.isWavePrepEditable).toBe(true);
+    expect(session.getPartySlotCombatModule(0)).toBe(editedModule);
+    expect(session.isAwaitingNextWave()).toBe(true);
+  });
+
+  it('5. restart from wave zero clears wave prep state and uncommitted edits', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    session.trySetOperationSlotCombatModule(0, 'df_guardian_mod_guard_focus');
+
+    expect(session.restartOperationFromWaveZero()).toBe(true);
+
+    expect(session.getCurrentScreen()).toBe('formation');
+    expect(session.getOperationWaveIndex()).toBe(0);
+    expect(session.getClearedWaveCount()).toBe(0);
+    expect(session.getOperationState()?.isWavePrepEditable).toBe(false);
+    expect(session.isAwaitingNextWave()).toBe(false);
+    expect(session.shouldShowWavePrepRetry()).toBe(false);
+  });
+
+  it('6. does not spawn next-wave enemies during wave prep or formation suspension', () => {
+    session = bootVerifySession();
+    const engine = getEngine(session);
+    reachAwaitingNextWave(engine);
+    const waveIndexBefore = engine.getSnapshot().waveIndex;
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+
+    expect(engine.getSnapshot().awaitingNextWave).toBe(true);
+    expect(startNextWaveSpy).not.toHaveBeenCalled();
+
+    expect(session.returnToFormationPrep()).toBe(true);
+    expect(engine.getSnapshot().awaitingNextWave).toBe(true);
+    expect(engine.getSnapshot().waveIndex).toBe(waveIndexBefore);
+    expect(startNextWaveSpy).not.toHaveBeenCalled();
+
+    engine.tick(0.1);
+    expect(startNextWaveSpy).not.toHaveBeenCalled();
+    expect(engine.getSnapshot().awaitingNextWave).toBe(true);
+
+    startNextWaveSpy.mockRestore();
+  });
+
+  it('7. retry API failure keeps wave prep screen and edit state', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    const editedModule = 'df_guardian_mod_guard_focus';
+    session.trySetOperationSlotCombatModule(0, editedModule);
+    session.clearOperationCheckpoint();
+
+    clickWavePrepRetryButton(document.body, '現在Waveを同設定で再戦');
+
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(session.getPartySlotCombatModule(0)).toBe(editedModule);
+    expect(session.getOperationState()?.isWavePrepEditable).toBe(true);
+  });
+
+  it('8. defeat retry and verify ON paths remain unchanged', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    expect(session.shouldShowWavePrepRetry()).toBe(true);
+    expect(session.shouldShowDefeatRetry()).toBe(false);
+
+    session.destroy();
+    setVerifyModeEnabled(false);
+    session = createSession();
+    sortieToStage(session, '1');
+    session.start();
+    document.body
+      .querySelector<HTMLButtonElement>('.skill-menu-return-to-battle-button')
+      ?.click();
+    getEngine(session).applyDefeatTransition([]);
+    expect(session.shouldShowDefeatRetry()).toBe(true);
   });
 });

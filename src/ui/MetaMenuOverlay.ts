@@ -14,6 +14,7 @@ import {
 } from "../i18n/locale.ts";
 import { t } from "../i18n/t.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
+import type { FormationReturnOptions } from "../platform/menuHost.ts";
 import { SkillMenuPanel } from "./SkillMenuPanel.ts";
 
 export type MetaMenuPresentation = "modal" | "window" | "formation-screen";
@@ -23,6 +24,7 @@ export interface MetaMenuOverlayOptions {
   presentation?: MetaMenuPresentation;
   initialView?: MetaMenuInitialView;
   isVerifyMode?: () => boolean;
+  getFormationReturnOptions?: () => FormationReturnOptions | undefined;
 }
 
 export interface MetaMenuOverlayCallbacks {
@@ -44,6 +46,7 @@ export class MetaMenuOverlay {
   private readonly presentation: MetaMenuPresentation;
   private readonly directPartyEntry: boolean;
   private readonly isVerifyMode: () => boolean;
+  private readonly getFormationReturnOptions?: () => FormationReturnOptions | undefined;
   private readonly unsubscribeLocale: () => void;
 
   constructor(
@@ -60,6 +63,7 @@ export class MetaMenuOverlay {
     this.presentation = presentation;
     this.directPartyEntry = initialView === "party";
     this.isVerifyMode = options.isVerifyMode ?? (() => false);
+    this.getFormationReturnOptions = options.getFormationReturnOptions;
 
     this.root = document.createElement("div");
     const overlayClasses = ["meta-menu-overlay"];
@@ -261,6 +265,10 @@ export class MetaMenuOverlay {
                   if (!this.skillPanel?.canReturnToBattle()) return;
                   this.callbacks.onClose();
                 },
+                getLabel: () =>
+                  this.getFormationReturnOptions?.()?.label ??
+                  t("party.backToBattle"),
+                canReturn: () => this.getFormationReturnOptions?.()?.canReturn(),
               }
             : undefined,
       },

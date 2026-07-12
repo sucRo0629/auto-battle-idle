@@ -13,6 +13,11 @@ import { isElectronBattle } from './electronApi.ts';
 
 export type { GameScreen, MetaMenuInitialView };
 
+export interface FormationReturnOptions {
+  label: string;
+  canReturn: () => boolean;
+}
+
 export interface MenuHostContext {
   gameData: GameData;
   levelCurves: LevelCurvesConfig;
@@ -23,6 +28,10 @@ export interface MenuHostContext {
   onBuildChanged: (partyIndex: number, build: CharacterBuild) => void;
   onPartySlotChanged: (slotIndex: number, member: PartySlotState) => void;
   onScreenChange: (screen: GameScreen) => void;
+  /** R7d: formation 閉じた後の遷移先（省略時 battle） */
+  resolveFormationCloseScreen?: () => GameScreen;
+  /** R7d: formation フッター戻りボタンの上書き（省略時は戦闘へ戻る） */
+  getFormationReturnOptions?: () => FormationReturnOptions | undefined;
 }
 
 export interface MenuHost {
