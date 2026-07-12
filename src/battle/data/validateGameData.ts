@@ -5907,6 +5907,19 @@ function parseStageEnemyScale(
   return scale;
 }
 
+function parseOptionalNonEmptyString(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): string | undefined {
+  const value = obj[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || value.length === 0) {
+    invalidField(context, key, 'must be a non-empty string');
+  }
+  return value;
+}
+
 function parseStageEnemyGroup(entry: unknown, context: string): StageEnemyGroup {
   const obj = requireRecord(entry, context);
   const classId = requireString(obj, 'classId', context);
@@ -5918,6 +5931,11 @@ function parseStageEnemyGroup(entry: unknown, context: string): StageEnemyGroup 
   const atkScale = parseStageEnemyScale(obj, 'atkScale', context);
   const defScale = parseStageEnemyScale(obj, 'defScale', context);
   const resScale = parseStageEnemyScale(obj, 'resScale', context);
+  const selectedCombatModuleId = parseOptionalNonEmptyString(
+    obj,
+    'selectedCombatModuleId',
+    context,
+  );
   return {
     classId,
     count,
@@ -5925,6 +5943,7 @@ function parseStageEnemyGroup(entry: unknown, context: string): StageEnemyGroup 
     ...(atkScale !== 1 ? { atkScale } : {}),
     ...(defScale !== 1 ? { defScale } : {}),
     ...(resScale !== 1 ? { resScale } : {}),
+    ...(selectedCombatModuleId !== undefined ? { selectedCombatModuleId } : {}),
   };
 }
 
@@ -6299,9 +6318,36 @@ function validateReferences(
 
   for (const stage of stages) {
     stage.enemyGroups?.forEach((group, groupIndex) => {
-      if (!classById.has(group.classId)) {
+      const groupContext = `${stage.id} enemyGroups[${groupIndex}]`;
+      const cls = classById.get(group.classId);
+      if (!cls) {
         throw new Error(
-          `Unknown classId "${group.classId}": ${stage.id} enemyGroups[${groupIndex}]`,
+          `Unknown classId "${group.classId}": ${groupContext}`,
+        );
+      }
+      const selectedId = group.selectedCombatModuleId;
+      if (selectedId === undefined) return;
+
+      const moduleIds = cls.combatModuleIds;
+      if (!moduleIds || moduleIds.length === 0) {
+        throw new Error(
+          `selectedCombatModuleId is not allowed for legacy class "${group.classId}": ${groupContext}`,
+        );
+      }
+      const module = moduleById.get(selectedId);
+      if (!module) {
+        throw new Error(
+          `Unknown selectedCombatModuleId "${selectedId}": ${groupContext}`,
+        );
+      }
+      if (module.classId !== group.classId) {
+        throw new Error(
+          `selectedCombatModuleId "${selectedId}" belongs to class "${module.classId}", not "${group.classId}": ${groupContext}`,
+        );
+      }
+      if (!moduleIds.includes(selectedId)) {
+        throw new Error(
+          `selectedCombatModuleId "${selectedId}" is not listed in combatModuleIds for class "${group.classId}": ${groupContext}`,
         );
       }
     });

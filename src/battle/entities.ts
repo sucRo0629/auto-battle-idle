@@ -257,7 +257,11 @@ export function createEnemyFromClassGroup(
     equippedActiveSlots: [],
   };
   const activeSkillIds = resolveBattleActiveSkillIds(build, unlockedSlots);
-  const basicSkillId = resolveBasicAttackSkillIdFromGameData(classPreset, gameData);
+  const basicSkillId = resolveBasicAttackSkillIdFromGameData(
+    classPreset,
+    gameData,
+    spec.selectedCombatModuleId,
+  );
   const battleX = resolveEnemySpawnBattleX(spawnOffset);
   const cooldowns = createCooldowns(
     basicSkillId,

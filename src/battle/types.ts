@@ -1737,6 +1737,8 @@ export interface StageEnemyGroup {
   atkScale?: number;
   defScale?: number;
   resScale?: number;
+  /** group 内全 Combatant が使用する combat module（未指定 = class.combatModuleIds[0]） */
+  selectedCombatModuleId?: string;
 }
 
 /**
@@ -1757,6 +1759,8 @@ export interface ResolvedEnemySpawnSpec {
   indexInGroup: number;
   /** 元 StageEnemyGroup.count */
   groupCount: number;
+  /** 元 StageEnemyGroup.selectedCombatModuleId（group 内共有） */
+  selectedCombatModuleId?: string;
   /** CombatantState.id 等の安定キー生成用（`g{groupIndex}_i{indexInGroup}`） */
   spawnUnitKey: string;
 }

@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R5d 完了** — 味方 combat module 選択（Save 非統合、本 §51）。次は **R5e — 敵 group module 指定**。
-- **次の再開タスク:** **R5e — 敵 group module 指定**（`selectedCombatModuleId` / enemy group schema 接続。R5d では敵未接続）。
+- **新ロードマップ現在地:** **R5e 完了** — 敵 group combat module 指定（本 §52）。次は **R5f**。
+- **次の再開タスク:** **R5f**（handoff §52.8 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -20,6 +20,7 @@
 - **今回の実装（R5b）:** §48。BattleEngine / SkillExecutor / Combatant 生成 / UI / editor / Save は未接続。
 - **今回の実装（R5c）:** §49。対象 4 兵科の先頭 module を通常行動として SkillExecutor 接続。UI / editor / Save / 作戦ループ / 方式 B 選択 / 敵 selectedCombatModuleId は未接続。
 - **今回の実装（R5d）:** §51。味方 4 slot ごとの module A/B 選択（実行中メモリのみ）。Save / UI / 敵 / 作戦ループは未接続。
+- **今回の実装（R5e）:** §52。敵 `enemyGroups[].selectedCombatModuleId` 接続。味方 R5d / Save / UI / 作戦ループは未変更。
 
 ### R4 で確定したデータ責務（doc 反映済）
 
@@ -3684,11 +3685,11 @@ GameSession.partyCombatModuleSelection
 
 - module 選択の正式 UI / CombatModuleEditor
 - Save 永続化・Wave 間保持・checkpoint
-- 敵 `selectedCombatModuleId` / enemy group schema（**R5e**）
+- 敵 `selectedCombatModuleId` / enemy group schema（**R5e で完了 → §52**）
 - 作戦ループ・作戦状態全体・作戦内パッシブ（R8）
 - 全兵科への combat module 移行
 
-**R5d 完了判定:** 本節時点で R5d 完了。次は R5e。
+**R5d 完了判定:** 本節時点で R5d 完了。次は R5e（→ §52 完了）。
 
 ---
 
@@ -3760,3 +3761,136 @@ GameSession.partyCombatModuleSelection
 | `barrage` | 適用方式「乱打」 |
 
 正本: [combat-data-schema-refactor.md §5.7](../plans/combat-data-schema-refactor.md#57-効果範囲1次元戦闘--r8-doc-反映--2026-07-12)。プレースホルダ表示: [battle-field.md §9.2–9.3](../spec/battle-field.md#92-1-次元戦闘における効果範囲用語)。
+
+---
+
+## 52. R5e — 敵 group combat module 指定（2026-07-12）
+
+**目的:** `StageEnemyGroup` に任意の `selectedCombatModuleId` を追加し、同一 group 内の敵全員が指定 module を通常行動として使用。味方 R5d / Save / UI / 作戦ループは未接続。
+
+**作業前に読んだファイル（6 件）:**
+
+1. `docs/ai-handoff/current-task.md` — §49 R5c 完了・§50 設計・§51 R5d 完了
+2. `src/battle/types.ts` — `StageEnemyGroup` / `ResolvedEnemySpawnSpec`
+3. `src/battle/enemyGroupSpawn.ts` — `expandEnemyGroups`
+4. `src/battle/entities.ts` — `createEnemyFromClassGroup` / `createEnemiesForStage`
+5. `src/battle/data/validateGameData.ts` — `parseStageEnemyGroup` / `validateReferences`
+6. `src/battle/data/resolveCombatModuleBasic.ts` — 既存 resolver（R5d 共用）
+
+---
+
+### 52.1 group フィールド
+
+| 項目 | 内容 |
+| ---- | ---- |
+| フィールド名 | `selectedCombatModuleId?: string` |
+| 型 | `StageEnemyGroup`（`src/battle/types.ts`） |
+| 意味 | group 内の全 Combatant が共有する combat module |
+| 未指定 | `class.combatModuleIds[0]`（module A） |
+| legacy class | 未指定を基本。指定は validate エラー |
+| 個体差 | 同一 group 内で個体ごとに別方式は持たせない |
+
+**接続経路（production）:** `stage.enemyGroups` のみ（`waves[].enemyGroups` 正本切替・Stage 全体移行は未実装）。
+
+---
+
+### 52.2 validate 規則（JSON load 時）
+
+`parseStageEnemyGroup` + `validateReferences`:
+
+| 条件 | 結果 |
+| ---- | ---- |
+| 未指定 | 有効 |
+| 空文字 / 非 string | parse エラー |
+| registry 不在 | エラー |
+| 他 class の module | エラー |
+| class `combatModuleIds` 候補外 | エラー |
+| legacy class（`combatModuleIds` なし）への指定 | エラー |
+| 自 class の module A / B | 有効 |
+
+不正 JSON は validate で拒否。runtime resolver（`resolveSelectedCombatModuleId`）は防御的 fallback を維持。
+
+---
+
+### 52.3 敵生成への受け渡し経路
+
+```
+StageEnemyGroup.selectedCombatModuleId
+  → expandEnemyGroups (ResolvedEnemySpawnSpec.selectedCombatModuleId)
+  → createEnemiesFromEnemyGroups / createEnemiesForStage
+  → createEnemyFromClassGroup(spec, ...)
+  → resolveBasicAttackSkillIdFromGameData(class, gameData, spec.selectedCombatModuleId)
+  → basic cooldowns[].skillId + attackIntervalSec（合成 skill trigger.value）
+```
+
+同一 group の `count` 展開後も `selectedCombatModuleId` は各 spec にコピーされ、全個体が同じ module を使用。
+
+---
+
+### 52.4 runtime fallback（防御的）
+
+| 条件 | 結果 |
+| ---- | ---- |
+| 未指定 | module A |
+| 空 / registry 不在 | module A |
+| class 候補外 | module A |
+| 他 class の module | module A |
+| legacy class | 従来 `basicAttackSkillId` |
+
+---
+
+### 52.5 legacy 互換
+
+- 既存 stage JSON へ一括フィールド追加なし（テスト fixture のみ）
+- legacy `waves` / `templateId` 経路は変更なし
+- legacy class 敵 group は従来 basic
+
+---
+
+### 52.6 editor
+
+- **UI 未接続**（選択ドロップダウン / CombatModuleEditor なし）
+- **editor 変更なし** — `StageEnemyEditorStep` は `structuredClone` で draft を編集するため、JSON に存在する `selectedCombatModuleId` は保存時に落ちない（未知フィールド破壊なし）
+
+---
+
+### 52.7 テスト
+
+- **新規:** `validateGameData.enemyGroupCombatModule.test.ts`（7 件 — validate）
+- **新規:** `enemyGroupCombatModule.test.ts`（13 件 — runtime / fallback / 味方非影響 / 物理・魔法実行 / heal module 配線）
+- **既存:** R5c/R5d 関連 — 回帰なし
+
+**R5 関連 subset 結果（90/90 pass）:**
+
+- `resolveCombatModuleBasic.test.ts`（8）
+- `allyCombatModuleSelection.test.ts`（15）
+- `combatModuleBasicAttack.test.ts`（14）
+- `entities.enemyGroups.test.ts`（12）
+- `healBasicAttack.test.ts`（10）
+- `validateGameData.combatModules.test.ts`（9）
+- `validateGameData.enemyGroupCombatModule.test.ts`（7）
+- `enemyGroupCombatModule.test.ts`（13）
+- `battleEngine.enemyAttackSpeedTier.test.ts`（2）
+
+**フルスイート:** 1614 pass / 53 fail / 18 failed files（R5e 起因の失敗なし）。pre-existing 例:
+
+- `demoStageBalance.puzzle.test.ts`（10）
+- `formatSkillText.test.ts`（15）
+- `StageSelectionPanel.test.ts`（6 — `Unknown combatModuleId` 等）
+- `skillCardDisplay.test.ts`（3）
+- `demoStageCh1_05AssassinFormalization.test.ts`（2）
+- その他 i18n / progression unlock / badge 系（単発）
+
+---
+
+### 52.8 R5f 以降へ送る未接続事項
+
+- module 選択の正式 UI / CombatModuleEditor（味方・敵）
+- Save 永続化・Wave 間保持・checkpoint
+- 作戦ループ・作戦状態全体・作戦内パッシブ（R8）
+- 全兵科への combat module 移行
+- `waves[].enemyGroups` 正本切替
+- **R5d 制約（後続 UI 接続時）:** 正式ルールは Wave 前準備で module 選択し戦闘中は固定。現状 `setPartySlotCombatModule` は戦闘中も `syncPartyBuilds` を起動する（R5e では変更しない）
+- **R5d 既知:** 同一 module 再設定でも cooldown 再生成（R5e では最適化しない）
+
+**R5e 完了判定:** 本節時点で R5e 完了。次は R5f。

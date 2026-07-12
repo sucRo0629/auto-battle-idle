@@ -66,6 +66,9 @@ export function expandEnemyGroups(stage: StageDef): ResolvedEnemySpawnSpec[] {
         groupIndex,
         indexInGroup,
         groupCount: group.count,
+        ...(group.selectedCombatModuleId !== undefined
+          ? { selectedCombatModuleId: group.selectedCombatModuleId }
+          : {}),
         spawnUnitKey: `g${groupIndex}_i${indexInGroup}`,
       });
     }
