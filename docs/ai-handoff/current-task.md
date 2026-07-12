@@ -10,7 +10,7 @@
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
 - **新ロードマップ現在地:** **R7e 完了** — 作戦結果後再戦 + 遷移統一（本 §73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R8 — 作戦内パッシブ**（[phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)）。**R7 完了** — R7a〜e（§69〜73）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **次の再開タスク:** **R8b — 作戦内パッシブ状態モデル + checkpoint**（R8a 調査完了 §74）。**R8a 完了（2026-07-12）** — 既存基盤調査・5 タスク分割。**R7 完了** — R7a〜e（§69〜73）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5794,4 +5794,115 @@ API が `false` を返した場合、現在 screen・Wave 準備編集状態を�
 
 ### 73.12 次タスク
 
-**R8 — 作戦内パッシブ**（runtime 適用・戦闘中表示 — [phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)）。
+**R8b — 作戦内パッシブ状態モデル + checkpoint**（§74.11）。R8a 調査完了。
+
+---
+
+## 74. R8a — 作戦内パッシブ既存基盤調査・タスク分割（2026-07-12 完了）
+
+**スコープ:** 調査 + doc 記録のみ。production code / JSON / テスト / spec 本文変更なし（矛盾整理不要のため spec 未更新）。
+
+**読んだファイル（6 件上限）:**
+
+| # | ファイル | 目的 |
+| - | -------- | ---- |
+| 1 | `docs/plans/phase-roadmap.md` | R8 ゴール・表示方針 |
+| 2 | `docs/ai-handoff/current-task.md` | ヘッダ・§73 接続 |
+| 3 | `src/game/OperationState.ts` | 作戦状態の現行フィールド |
+| 4 | `src/game/OperationCheckpoint.ts` | checkpoint 拡張候補 |
+| 5 | `src/battle/passiveBuffBridge.ts` | legacy passive buff 定義→runtime 橋 |
+| 6 | `src/game/WavePrepScreenHost.ts` | Wave 間準備 UI 構造 |
+
+**補助参照（Read 対象外・Grep のみ）:** `BattleEngine.reloadBattlefield` / `initBattlePassiveState`、`entities.createAlliesFromPartyState`、`passiveEffects.sync*Auras`、`types.ClassPreset` / `PartyMemberState.build`、`combat-data-schema-refactor.md` §5 / §8、`operation-loop.md` §8.3。
+
+### 74.1 passive 定義と runtime 適用の現状
+
+| レイヤ | 現状 |
+| ------ | ---- |
+| **クラス固定パッシブ** | `ClassPreset.passiveIds` / `starterPassiveIds`（Lv 解放経路。`skillBuild.reconcileMemberBuild` → `PartyMemberState.build.learnedPassiveIds`） |
+| **敵パッシブ** | `EnemyTemplate.passiveSkillIds` → `CombatantState.build.learnedPassiveIds`（`entities.createEnemyFromTemplate`） |
+| **作戦内パッシブ** | **未実装**。R4 設計上は legacy `PassiveSkillDef` と**別データ集合**（[combat-data-schema-refactor.md §5](../plans/combat-data-schema-refactor.md#5-作戦内パッシブデータoperation-passive)）だが、R8 最小縦切りでは**既存 passive JSON + 既存 `passiveEffects` 経路の再利用**が可能 |
+| **runtime 正本** | 戦闘中は `CombatantState.build.learnedPassiveIds` を参照（`combatMath` / `passiveEffects` / 各種 `sync*Auras`） |
+| **戦闘開始注入点** | `BattleEngine.reloadBattlefield` → `createAlliesFromPartyState`（`member.build` を clone）→ `initBattlePassiveState` → `syncContinuousPassiveAuras` |
+| **buff 橋** | `passiveBuffBridge.passiveBuffToEffectDef` が `PassiveSkillDef` を buff/barrier effect 形へ変換し `resolveEffectTargets` と共有 |
+
+**結論:** 作戦内取得パッシブは **OperationState 側に slot 別 ID を保持**し、Wave 開始時に `learnedPassiveIds` へ**マージ注入**すれば既存 aura / stat 解決を再利用できる。新 executor は不要。作戦内専用 JSON schema・pool フィールド（`operationPassivePoolIds` 等）は型・validate に**まだ無い**。
+
+### 74.2 作戦内選択状態の所有候補
+
+| 候補 | 評価 |
+| ---- | ---- |
+| **`OperationState` 専用フィールド（推奨）** | `PartyCombatModuleSelection` と同型パターン。`acquiredOperationPassiveIdsBySlot: Map<slot, passiveId[]>` + `unspentResource: number`。Save 非統合方針と一致 |
+| **`PartySlotState.build.learnedPassiveIds` へ直接書込** | **非推奨** — Save / Lv 解放と混在。作戦終了リセットが困難 |
+| **`OperationCheckpointSnapshot.operationExtras`** | R6f で「将来の作戦内パッシブ用」とコメント済み。**R8b では typed フィールド化**し、extras は空のまま維持が望ましい |
+
+`GameSession` が `OperationState` + checkpoint の所有者。`BattleEngine` は `getParty()` コールバック経由 — 注入は **GameSession → Engine へ acquired passives 供給関数を追加**する形が自然。
+
+### 74.3 checkpoint / retry との整合点
+
+| 操作 | パッシブ・リソース（[operation-loop.md §8.3](../spec/operation-loop.md#83-パッシブリソースの巻き戻しr3-確定)） | 現行 checkpoint |
+| ---- | --- | --- |
+| **出撃 / 次 Wave 確定** | 確定時点の取得状態を snapshot | `commitCheckpointFromCurrentOperationState`（party + module + wave index） |
+| **同設定再戦** | checkpoint 時点へ巻き戻し | `retryCurrentWaveFromCheckpoint` → `tryRestoreFromCheckpoint` |
+| **Wave 間「準備へ戻る」** | クリア済み Wave 維持。パッシブ変更可否は R8 | checkpoint は wave 開始時点 — **準備中に取得したパッシブは次 commit まで checkpoint 外** |
+| **作戦最初から** | パッシブ・リソース・clearedWave 初期化 | `prepareRetry(0)` — **R8b で acquired / resource も reset 必要** |
+| **出撃前取得** | 敗北再試行でも**維持** | checkpoint に acquired + resource を含めれば `retryCurrentWaveFromCheckpoint` と整合 |
+
+**ギャップ:** `createCheckpointFromOperationState` は `operationExtras: {}` 固定。`tryRestoreFromCheckpoint` は party / module / wave のみ。**R8b で acquired + unspentResource の capture / restore / validate が必須。**
+
+### 74.4 Wave 準備 UI・戦闘 HUD の再利用候補
+
+| 領域 | 現状 | R8 再利用案 |
+| ---- | ---- | ----------- |
+| **Wave 間準備** | `WavePrepScreenHost` — slot 行に class 選択 + **module `<select>`** + retry 3 種 | 同一 slot 行に **passive `<select>`**（または pool 一覧）を追加。`onPassiveChanged` / `trySetOperationPassiveForSlot` コールバック。module 行と**独立列**で共存 |
+| **編成 UI** | `SkillMenuPanel` — legacy Lv / 4 枠 passive 装備 | **M1 では触らない**。作戦内取得は Wave 準備（または将来の初期準備）専用 |
+| **戦闘 HUD — 状態アイコン** | `statusBadgeRenderer` + `statusEffectDisplay`（`passive_`  prefix 判定あり） | R8 方針: **常時 stat 補正は非表示**。R8e でフィルタ |
+| **戦闘 HUD — 味方カード** | `BattleView` → `PartyMemberEffectiveStatsPanel` | **選択中作戦内パッシブ名の read-only 表示**候補（常時 stat は数値に含まれるためアイコン不要） |
+| **範囲表示** | `BattleCanvas` / `placedField` 系 | R8f — 1 次元プレースホルダ帯。R8 最小縦切り（stat 1 個）では対象外 |
+
+### 74.5 Rank 1〜3・作戦内成長の既存型 / spec
+
+| 項目 | 有無 |
+| ---- | ---- |
+| **作戦内パッシブ Rank 1〜3** | **なし**（未設計・未実装） |
+| **`ClassPreset.jobTier`** | 一次職 / 二次職（Phase 7 昇進用）。作戦内パッシブとは無関係 |
+| **`growthTier` / Lv / EXP** | legacy 成長。M1 追加禁止 — 作戦内成長は **リソース + パッシブ取得のみ**（[phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)） |
+| **作戦内リソース** | spec 上は [operation-loop.md](../spec/operation-loop.md) / [combat-data-schema-refactor.md §8](../plans/combat-data-schema-refactor.md#8-作戦中状態operation-state) に候補 `unspentResource` のみ。**具体値・入手タイミング未確定** |
+
+### 74.6 R8 実装分割（最大 5 タスク・依存順）
+
+| ID | 内容 | 単独テスト | 手動確認 |
+| -- | ---- | ---------- | -------- |
+| **R8b** | `OperationState` + `OperationCheckpointSnapshot` に slot 別 `acquiredOperationPassiveIds` と `unspentResource` を追加。commit / restore / retry / restart で整合 | `operationCheckpoint.test.ts` / `operationRetry.test.ts` 拡張 | 不要 |
+| **R8c** | Wave 準備 UI — slot 行 passive 直接選択 + 固定コスト取得 API（リソース 1 種・上限 1 / slot）。module 選択と共存 | `wavePrepScreen.test.ts` 拡張 | Wave 間準備で取得→次 Wave 確定 |
+| **R8d** | 戦闘開始注入 — `createAlliesFromPartyState` 前後で operation passive を `learnedPassiveIds` にマージ。**最小縦切り:** 既存 1 兵科 + 既存 self stat buff passive 1 個（移動系除外） | 新規 integration test（stat 変化 or aura 存在） | 1 Wave 戦闘で効果確認 |
+| **R8e** | 戦闘中表示整理 — 常時 stat 非表示・条件付き発動中のみアイコン・ally HUD read-only 一覧 | `statusEffectDisplay` / HUD テスト | 戦闘中 HUD 目視 |
+| **R8f** | 範囲系 runtime 判定 + 1 次元プレースホルダ描画（判定データ共有・発生源消滅同期） | 範囲内外・重なりテスト | フィールド帯表示 |
+
+**スコープ外（R8 全体）:** 移動阻害・ノックバック・特殊移動・射程差 passive、Lv / EXP 連動、作戦内パッシブ専用 JSON ファイル分割（R8d では legacy passive ID 再利用）、敵側作戦内パッシブ、エディタ（R9）。
+
+### 74.7 最小縦切り（R8d）の推奨構成
+
+| 項目 | 推奨 |
+| ---- | ---- |
+| **兵科** | R5 縦切り 4 兵科のいずれか 1 体（例: 既存 stage `1` で使用可能な classId） |
+| **効果** | 既存 `PassiveSkillDef` の **self + stat buff** 1 個（`effect: "buff"`, `buffSubKind: "stat"`）。`df_guardian_passive_3` 等、テストで実績のある ID を pool から外して「作戦内取得」扱い |
+| **リソース** | R8c で固定値（例: 開始 1・取得 1 消費）— spec 未確定のため定数で開始 |
+| **データ変更** | R8b〜c では **JSON 変更なし**可 — テスト用 pool をコード側定数で hardcode、R9 前に schema 化 |
+
+### 74.8 最初に実装するタスク
+
+**R8b** — 状態モデル + checkpoint。UI / 戦闘注入なしでテスト完結。R8c〜f の前提。
+
+### 74.9 保留事項
+
+| 項目 | 理由 |
+| ---- | ---- |
+| 作戦内リソースの初期値・Wave 報酬・上限 | spec 未確定（R8c 以前に定数で開始可） |
+| 初期準備でのパッシブ取得可否 | [operation-loop.md](../spec/operation-loop.md) 未確定 — R8c は Wave 間準備のみ |
+| 「準備へ戻る」後のパッシブ**取り消し / 再購入** | operation-loop §9 未確定 — R8c では追加のみ |
+| 作戦内パッシブ専用 JSON vs legacy passive 再利用 | R8d は再利用。専用 schema は R9 |
+| `ClassPreset` への `operationPassivePoolIds` validate | 型・validate 未実装 — R8c 定数 pool → R9 で data 化 |
+| 敵側作戦内パッシブ | R8 コア機能に含むが縦切り後 |
+| 範囲系 passive | R8f。移動系効果は対象外のまま |
+| Rank / tier 成長 | M1 スコープ外。採用しない |
