@@ -41,6 +41,10 @@ import {
   buildPartyHudEntries,
   buildPartyHudMetaBySlot,
 } from "./partyHudTypes.ts";
+import {
+  attachOperationPassiveNamesToPartyHudEntries,
+  buildAcquiredOperationPassiveNamesBySlot,
+} from "./partyHudOperationPassives.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import { PartyHudFloatingTooltip } from "./partyHudFloatingTooltip.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
@@ -641,7 +645,7 @@ export class BattleView {
         save.party,
         this.gameData.classRegistry,
       );
-      this.partyHud.update(buildPartyHudEntries(snapshot, partyMeta));
+      this.partyHud.update(this.buildPartyHudEntriesForDisplay(snapshot));
       this.partyHud.refreshLocale();
       this.syncEnemyHudFromSnapshot(snapshot);
       this.refreshMemberStatsPanel();
@@ -941,14 +945,24 @@ export class BattleView {
 
   private refreshPartyHud(): void {
     const snapshot = this.engine.getSnapshot();
-    const save = this.getSave();
-    this.partyHud.update(
-      buildPartyHudEntries(
-        snapshot,
-        buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
-      ),
-    );
+    this.partyHud.update(this.buildPartyHudEntriesForDisplay(snapshot));
     this.syncEnemyHudFromSnapshot(snapshot);
+  }
+
+  private buildPartyHudEntriesForDisplay(
+    snapshot: BattleSnapshot,
+  ): ReturnType<typeof buildPartyHudEntries> {
+    const save = this.getSave();
+    const partyMeta = buildPartyHudMetaBySlot(
+      save.party,
+      this.gameData.classRegistry,
+    );
+    const entries = buildPartyHudEntries(snapshot, partyMeta);
+    const namesBySlot = buildAcquiredOperationPassiveNamesBySlot(
+      (slotIndex) => this.engine.getAcquiredOperationPassiveIdsForSlot(slotIndex),
+      this.gameData.skillRegistry.passives,
+    );
+    return attachOperationPassiveNamesToPartyHudEntries(entries, namesBySlot);
   }
 
   private setHoverHighlight(
@@ -1247,6 +1261,9 @@ export class BattleView {
     this.syncDefeatRetryOverlay();
     this.syncVictoryResultOverlay();
     if (this.battlePaused) {
+      const snapshot = this.engine.getSnapshot();
+      this.partyHud.update(this.buildPartyHudEntriesForDisplay(snapshot));
+      this.syncEnemyHudFromSnapshot(snapshot);
       this.refreshMemberStatsPanel();
       return;
     }
@@ -1293,12 +1310,7 @@ export class BattleView {
         this.battleXDebugCanvas.resolveDisplaySnapshot(snapshot);
       this.battleXDebugCanvas.syncFromSnapshot(debugSnapshot);
     }
-    this.partyHud.update(
-      buildPartyHudEntries(
-        snapshot,
-        buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
-      ),
-    );
+    this.partyHud.update(this.buildPartyHudEntriesForDisplay(snapshot));
     this.partyHud.updateDetailMetrics({
       snapshots: snapshot.allies,
       displayRows:

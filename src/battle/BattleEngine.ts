@@ -245,6 +245,10 @@ export interface BattleEngineOptions {
   onBattlefieldReload?: () => void;
 }
 
+export type BattleEngineAcquiredOperationPassiveIdsResolver = (
+  slotIndex: number,
+) => readonly string[];
+
 export class BattleEngine {
   private phase: BattlePhase = "idle";
   private players: CombatantState[] = [];
@@ -1861,6 +1865,11 @@ export class BattleEngine {
 
   stopBattle(): void {
     this.phase = "idle";
+  }
+
+  /** R8e: 味方 HUD 用。作戦内取得パッシブ ID（未接続時は空）。 */
+  getAcquiredOperationPassiveIdsForSlot(slotIndex: number): readonly string[] {
+    return this.getAcquiredOperationPassiveIds?.(slotIndex) ?? [];
   }
 
   getBattleTimeSec(): number {

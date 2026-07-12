@@ -3,7 +3,7 @@ import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import type { CombatantSnapshot } from '../battle/types.ts';
 import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
 import {
-  collectStatusEffectBadgeDisplays,
+  collectHudStatusEffectBadgeDisplays,
   sortBadgesForDetailView,
 } from '../battle/statusEffectDisplay.ts';
 import { getClassIconUrl } from '../render/IconRegistry.ts';
@@ -498,7 +498,7 @@ export function syncDamageBars(
 
 function drawStatusBadgeCanvas(
   canvas: HTMLCanvasElement,
-  badges: ReturnType<typeof collectStatusEffectBadgeDisplays>,
+  badges: ReturnType<typeof collectHudStatusEffectBadgeDisplays>,
   theme: BattleHudTheme,
 ): void {
   const ctx = canvas.getContext('2d');
@@ -590,7 +590,7 @@ export function syncStatusBadges(
     const refs = statusByPartyIndex.get(snapshot.partySlotIndex);
     if (!refs) continue;
 
-    const allBadges = collectStatusEffectBadgeDisplays(snapshot.statusEffects, {
+    const allBadges = collectHudStatusEffectBadgeDisplays(snapshot.statusEffects, {
       baseMaxHp: snapshot.baseMaxHp,
       atk: snapshot.atk,
       def: snapshot.def,

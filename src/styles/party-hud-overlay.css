@@ -152,6 +152,22 @@
   height: calc(var(--hud-body-bar-h) * 1px);
 }
 
+/* 1b. 作戦内取得パッシブ（R8e read-only 補助行） */
+.party-hud-panel--overlay .party-hud-operation-passives {
+  flex: 0 0 auto;
+  min-width: 0;
+  width: 100%;
+  font-size: calc((var(--hud-header-font-size, 12) - 2) * 1px);
+  line-height: 1.1;
+  color: var(--hud-name-color);
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 1px;
+  box-sizing: border-box;
+}
+
 /* 2. 状態 */
 .party-hud-panel--overlay .party-hud-status-badges-wrap {
   position: relative;

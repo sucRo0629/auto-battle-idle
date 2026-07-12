@@ -1,5 +1,5 @@
 import {
-  collectStatusEffectBadgeDisplays,
+  collectHudStatusEffectBadgeDisplays,
   selectPartyHudCompactStatusBadges,
 } from '../battle/statusEffectDisplay.ts';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
@@ -62,6 +62,8 @@ interface SlotElements {
   classCol?: HTMLElement;
   /** overlay allyCard 識別行 — 戦闘中ステータス hover の正本 */
   headerRow?: HTMLElement;
+  /** R8e: 作戦内取得パッシブ read-only 一覧 */
+  operationPassivesEl?: HTMLElement;
   iconWrap: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
@@ -497,6 +499,11 @@ export class PartyHudPanel {
     headerRow.appendChild(hpRow);
     this.bindMemberStatsHover(headerRow, slotIndex);
 
+    const operationPassivesEl = document.createElement('div');
+    operationPassivesEl.className = 'party-hud-operation-passives';
+    operationPassivesEl.hidden = true;
+    unitPlate.appendChild(operationPassivesEl);
+
     const { statusBadgeWrap, statusCanvas, statusBadgeHitLayer } =
       this.createStatusBadgeWrap();
     unitPlate.appendChild(statusBadgeWrap);
@@ -513,6 +520,7 @@ export class PartyHudPanel {
       label,
       unitPlate,
       headerRow,
+      operationPassivesEl,
       iconWrap,
       icon,
       hpFill,
@@ -606,6 +614,7 @@ export class PartyHudPanel {
   private updateSlot(slot: SlotElements, entry: PartyHudEntry): void {
     slot.root.classList.toggle('party-hud-slot--dead', !entry.isAlive);
     slot.label.textContent = entry.displayName;
+    this.updateOperationPassives(slot, entry);
 
     const iconUrl = getClassIconUrl(entry.iconKey);
     if (iconUrl) {
@@ -655,8 +664,23 @@ export class PartyHudPanel {
     }
   }
 
+  private updateOperationPassives(slot: SlotElements, entry: PartyHudEntry): void {
+    const operationPassivesEl = slot.operationPassivesEl;
+    if (!operationPassivesEl) return;
+
+    const names = entry.acquiredOperationPassiveNames ?? [];
+    if (names.length === 0) {
+      operationPassivesEl.hidden = true;
+      operationPassivesEl.textContent = '';
+      return;
+    }
+
+    operationPassivesEl.hidden = false;
+    operationPassivesEl.textContent = names.join(' · ');
+  }
+
   private updateCompactStatusBadges(slot: SlotElements, entry: PartyHudEntry): void {
-    const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
+    const badges = collectHudStatusEffectBadgeDisplays(entry.statusEffects, {
       baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
       def: entry.def,
@@ -847,7 +871,7 @@ export class PartyHudPanel {
   }
 
   private updateOverlayStatusBadges(slot: SlotElements, entry: PartyHudEntry): void {
-    const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
+    const badges = collectHudStatusEffectBadgeDisplays(entry.statusEffects, {
       baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
       def: entry.def,

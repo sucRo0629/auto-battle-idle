@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   aggregateStatStatusEffects,
   assignCompactBadgeTier,
+  collectHudStatusEffectBadgeDisplays,
   collectStatusEffectBadgeDisplays,
   selectCompactStatusBadges,
   selectPartyHudCompactStatusBadges,
@@ -226,6 +227,48 @@ describe('statusEffectDisplay', () => {
 
   it('collects one badge per status effect and keeps passives on the left', () => {
     const badges = collectStatusEffectBadgeDisplays(
+      [
+        statEffect({
+          id: 'passive_buff_guard_block_block',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.2,
+        }),
+        statEffect({
+          id: 'vuln',
+          kind: 'debuff',
+          stat: 'damageTaken',
+          multiplier: 1.5,
+        }),
+      ],
+      { baseMaxHp: 100, atk: 10, def: 10, res: 0 },
+    );
+
+    expect(badges).toHaveLength(2);
+    expect(badges[0]?.isPassive).toBe(true);
+    expect(badges[0]?.category).toBe('block');
+    expect(badges[1]?.isPassive).toBe(false);
+    expect(badges[1]?.category).toBe('damageIncrease');
+  });
+
+  it('R8e: hides always-on passive stat auras from HUD badge collection', () => {
+    const badges = collectHudStatusEffectBadgeDisplays(
+      [
+        statEffect({
+          id: 'passive_buff_aura_def',
+          kind: 'buff',
+          stat: 'def',
+          multiplier: 1.05,
+        }),
+      ],
+      { baseMaxHp: 100, atk: 10, def: 10, res: 0 },
+    );
+
+    expect(badges).toEqual([]);
+  });
+
+  it('R8e: keeps conditional passive overlay badges in HUD collection', () => {
+    const badges = collectHudStatusEffectBadgeDisplays(
       [
         statEffect({
           id: 'passive_buff_guard_block_block',

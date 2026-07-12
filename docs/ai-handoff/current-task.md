@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R8d 完了** — 戦闘開始注入（本 §77）。**R8c 完了** — Wave 間準備 UI + パッシブ取得 API（本 §76）。**R8b 完了** — 作戦内パッシブ状態モデル + checkpoint（§75）。**R8a 完了** — 既存基盤調査・5 タスク分割（§74）。**R7e 完了** — 作戦結果後再戦 + 遷移統一（§73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R8e — 戦闘中表示整理**（常時 stat 非表示・条件付き発動中のみアイコン、§74.6）。**R7 完了** — R7a〜e（§69〜73）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R8e 完了** — 戦闘中表示整理（本 §78）。**R8d 完了** — 戦闘開始注入（本 §77）。**R8c 完了** — Wave 間準備 UI + パッシブ取得 API（本 §76）。**R8b 完了** — 作戦内パッシブ状態モデル + checkpoint（§75）。**R8a 完了** — 既存基盤調査・5 タスク分割（§74）。**R7e 完了** — 作戦結果後再戦 + 遷移統一（§73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R8f — 範囲系 runtime 判定 + 1 次元プレースホルダ描画**（§74.6）。**R7 完了** — R7a〜e（§69〜73）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6062,4 +6062,36 @@ API が `false` を返した場合、現在 screen・Wave 準備編集状態を�
 
 ### 77.5 次タスク
 
-**R8e — 戦闘中表示整理** — 常時 stat 補正非表示・条件付き発動中のみアイコン・ally HUD read-only 一覧。
+**R8e — 戦闘中表示整理** — 常時 stat 補正非表示・条件付き発動中のみアイコン・ally HUD read-only 一覧。§78 で完了。
+
+---
+
+## 78. R8e — 戦闘中表示整理（2026-07-13 完了）
+
+**スコープ:** 取得済み作戦内パッシブを味方戦闘 HUD で read-only 確認。常時 stat 補正は状態アイコン非表示。条件付き・一時効果は既存バッジ経路を維持。
+
+### 78.1 表示規則
+
+| 種別 | ally HUD 一覧 | 状態アイコン |
+| ---- | ------------- | ------------ |
+| 作戦内取得パッシブ（`OperationState` slot 別） | slot ごとに日本語名 | — |
+| 常時 stat 補正（`passive_*` + `stat`） | 一覧のみ（runtime は stat に含まれる） | **非表示** |
+| 条件付き overlay（例: passive block） | — | 発動中のみ従来どおり |
+| DoT / CC / 一時デバフ | — | 従来どおり |
+
+### 78.2 データ経路
+
+`GameSession.getOperationAcquiredPassiveIds` → `BattleEngine.getAcquiredOperationPassiveIdsForSlot` → `BattleView.buildPartyHudEntriesForDisplay` → `partyHudOperationPassives`（registry `name` 解決）→ `PartyHudPanel` `.party-hud-operation-passives` 補助行。
+
+### 78.3 変更ファイル
+
+- 新規: `src/ui/partyHudOperationPassives.ts`、`src/game/operationPassiveHudDisplay.test.ts`
+- 更新: `statusEffectDisplay.ts`、`BattleEngine.ts`、`partyHudTypes.ts`、`PartyHudPanel.ts`、`PartyMemberStatsDisplay.ts`、`BattleView.ts`、`party-hud-overlay.css`、`statusEffectDisplay.test.ts`
+
+### 78.4 テスト
+
+`operationPassiveHudDisplay` / `statusEffectDisplay`（R8e 追加 2 + 関連 1 既存失敗）/ `operationPassiveInjection` / `wavePrepScreen` / `operationCheckpoint` / `operationRetry` — **124 passed, 1 pre-existing failed**（`STATUS_DISPLAY_CATEGORY_LABELS` 欠落カテゴリ）
+
+### 78.5 次タスク
+
+**R8f — 範囲系 runtime 判定 + 1 次元プレースホルダ描画**

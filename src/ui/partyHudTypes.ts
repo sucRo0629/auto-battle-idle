@@ -51,6 +51,8 @@ export interface PartyHudEntry {
     /** stageTriggerLimit 消費済み（HUD は最暗の empty 表示） */
     stageTriggerExhausted?: boolean;
   }[];
+  /** R8e: 作戦中に取得したパッシブの日本語表示名（slot 別・read-only） */
+  acquiredOperationPassiveNames?: readonly string[];
 }
 
 export function buildPartyHudMetaBySlot(

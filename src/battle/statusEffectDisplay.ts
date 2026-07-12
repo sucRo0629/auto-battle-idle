@@ -156,6 +156,17 @@ export function isPassiveAuraStatusEffect(effect: StatusEffect): boolean {
   return effect.id.startsWith("passive_");
 }
 
+/** R8e: 常時 stat 補正のパッシブオーラ（HUD 状態アイコン非表示対象） */
+export function isPassiveAlwaysOnStatAuraEffect(effect: StatusEffect): boolean {
+  return isPassiveAuraStatusEffect(effect) && effect.stat !== undefined;
+}
+
+export function filterEffectsForHudStatusBadges(
+  effects: readonly StatusEffect[],
+): StatusEffect[] {
+  return effects.filter((effect) => !isPassiveAlwaysOnStatAuraEffect(effect));
+}
+
 function isPassiveDisplayedStatusEffect(effect: StatusEffect): boolean {
   return isPassiveAuraStatusEffect(effect);
 }
@@ -423,6 +434,17 @@ function statusEffectBadgeForEffect(
     return statusEffectBadgeForDamageTaken(effect);
   }
   return statusEffectBadgeForOverlay(effect);
+}
+
+/** R8e: 味方 HUD 用。常時 stat 補正のパッシブオーラは除外する。 */
+export function collectHudStatusEffectBadgeDisplays(
+  effects: StatusEffect[],
+  baseStats: StatBadgeBaseStats,
+): StatusEffectBadgeDisplay[] {
+  return collectStatusEffectBadgeDisplays(
+    filterEffectsForHudStatusBadges(effects),
+    baseStats,
+  );
 }
 
 export function collectStatusEffectBadgeDisplays(
