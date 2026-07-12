@@ -15,7 +15,7 @@
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
 - **保留:** 移動阻害・移動速度差・ノックバック等は将来の**作戦内パッシブ候補**（R8）。
-- **R8 表示方針（2026-07-12 doc 確定）:** 常時 stat 補正は状態アイコン非表示。条件付き発動は発動中のみ。DoT/CC/一時デバフは従来どおり。Barrier は HP バーのみ。範囲・オーラ系はフィールド上プレースホルダ範囲表示（判定と同一 runtime データ）。正式 VFX は試作成立後。active 廃止による自動削減には依存しない — [phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)、[combat.md §作戦内パッシブの戦闘中表示](../spec/combat.md#作戦内パッシブの戦闘中表示r8-方針)、[battle-field.md §範囲系](../spec/battle-field.md#9-範囲系オーラ系効果のフィールド表示r8-方針)。
+- **R8 表示方針（2026-07-12 doc 確定）:** 常時 stat 補正は状態アイコン非表示。条件付き発動は発動中のみ。DoT/CC/一時デバフは従来どおり。Barrier は HP バーのみ。範囲・オーラ系はフィールド上プレースホルダ範囲表示（判定と同一 runtime データ）。1 次元効果範囲用語・大カテゴリ統合は [combat-data-schema-refactor.md §5.7](../plans/combat-data-schema-refactor.md#57-効果範囲1次元戦闘--r8-doc-反映--2026-07-12)。正式 VFX は試作成立後。active 廃止による自動削減には依存しない — [phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)、[combat.md §作戦内パッシブの戦闘中表示](../spec/combat.md#作戦内パッシブの戦闘中表示r8-方針)、[battle-field.md §範囲系](../spec/battle-field.md#9-範囲系オーラ系効果のフィールド表示r8-方針)。
 - **今回の doc 作業（R5a）:** production code、データ JSON、テスト、エディタは**未変更**。調査結果は §47。
 - **今回の実装（R5b）:** §48。BattleEngine / SkillExecutor / Combatant 生成 / UI / editor / Save は未接続。
 - **今回の実装（R5c）:** §49。対象 4 兵科の先頭 module を通常行動として SkillExecutor 接続。UI / editor / Save / 作戦ループ / 方式 B 選択 / 敵 selectedCombatModuleId は未接続。
@@ -3532,7 +3532,53 @@ SkillExecutor 専用第二実行系は追加していない。
 ### 50.2 更新した doc
 
 - [phase-roadmap.md §R8](../plans/phase-roadmap.md#r8--作戦内パッシブ)
-- [combat-data-schema-refactor.md §5.6](../plans/combat-data-schema-refactor.md#56-戦闘中表示r8-doc-反映--2026-07-12)
+- [combat-data-schema-refactor.md §5.6](../plans/combat-data-schema-refactor.md#56-戦闘中表示r8-doc-反映--2026-07-12)、[§5.7 効果範囲](../plans/combat-data-schema-refactor.md#57-効果範囲1次元戦闘--r8-doc-反映--2026-07-12)
 - [combat.md §作戦内パッシブの戦闘中表示](../spec/combat.md#作戦内パッシブの戦闘中表示r8-方針)
 - [battle-field.md §範囲系・オーラ系効果のフィールド表示](../spec/battle-field.md#9-範囲系オーラ系効果のフィールド表示r8-方針)
 
+### 50.3 1 次元効果範囲用語（2026-07-12 doc 追記）
+
+**スコープ:** doc のみ。production code / JSON / テスト / R8 実装 / エディタ実装は未着手。
+
+#### 大カテゴリ統合
+
+| 大カテゴリ | 内容 |
+| ---------- | ---- |
+| 効果内容 | ダメージ、回復、stat 補正等 |
+| **効果範囲** | 範囲形式・対象数・Hit・適用方式（旧 `targetShape` / 「ターゲット形式」はここへ統合） |
+| **対象条件** | 敵味方・優先ターゲット・HP / ロール / ステータス / 除外条件（空間範囲と分離） |
+
+#### 範囲形式（5 種）
+
+| 用語 | 起点 | 軸上 |
+| ---- | ---- | ---- |
+| 単体 | 選択対象 | その対象のみ |
+| 地点 N | effect 決定地点 | 左右 N |
+| 範囲 N（ターゲット中心範囲） | 選択ターゲット位置 | 左右 N |
+| 周囲 N | 使用者 | 左右 N |
+| 前方 N | 使用者 | facing 方向へ N |
+
+2 次元 shape（円・扇・矩形・angle / width / radius）は **導入しない**。
+
+#### 適用方式（4 種）
+
+| 方式 | 要点 |
+| ---- | ---- |
+| 即時 | 範囲内へ同一タイミングで適用 |
+| 進行 | 軸上を進み到達時 Hit。**飛翔と伝播はここへ統合** |
+| 持続 | 間隔または範囲内滞在で繰り返し判定 |
+| 乱打 | 親範囲内へ子範囲（地点 N 相当）を複数回。**非決定的乱数は使わない** |
+
+#### legacy の新位置づけ（削除せず）
+
+| legacy | 新仕様 |
+| ------ | ------ |
+| `single` | 単体 |
+| `area` | 範囲 N |
+| self area / aura | 周囲 N |
+| ground area | 地点 N |
+| `pierce` | 前方 N + 進行 + 対象数（migration 未確定） |
+| `multiLock` | 範囲形式 + Hit / 対象数 + 再命中規則（migration 未確定） |
+| `barrage` | 適用方式「乱打」 |
+
+正本: [combat-data-schema-refactor.md §5.7](../plans/combat-data-schema-refactor.md#57-効果範囲1次元戦闘--r8-doc-反映--2026-07-12)。プレースホルダ表示: [battle-field.md §9.2–9.3](../spec/battle-field.md#92-1-次元戦闘における効果範囲用語)。

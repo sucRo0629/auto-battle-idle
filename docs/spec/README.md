@@ -17,7 +17,7 @@
 | [operation-loop.md](operation-loop.md) | **作戦ループ**（R3）— 作戦状態 / 戦闘状態、Wave 間準備、チェックポイント、リトライ、途中セーブ方針 |
 | [stats.md](stats.md) | 兵科基礎ステ、攻撃間隔（R2）。Legacy: Lv 成長、growthPresets、attackSpeedTier |
 | [combat.md](combat.md) | Attack / Hit、攻撃間隔、戦闘方式、DoT・一時効果（R2）、**作戦内パッシブの戦闘中表示**（R8 doc）。Legacy: ダメージパイプライン、CD、gauge |
-| [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘画面 UI / HUD**、戦闘中統計 UI、**範囲系・オーラ系のフィールド表示**（R8 doc）。Legacy: BattlePhase 自動 Wave 遷移 |
+| [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘画面 UI / HUD**、戦闘中統計 UI、**1 次元効果範囲のフィールド表示**（R8 doc）。Legacy: BattlePhase 自動 Wave 遷移 |
 | [classes-and-skills.md](classes-and-skills.md) | 兵科・戦闘方式・作戦内パッシブ（R2 候補）、M1 方式表。Legacy: 旧スキル JSON スキーマ・UI 用語辞書 |
 | [i18n-en.md](i18n-en.md) | **英語 i18n 文案方針**（Phase 4e — M1 直前）— スキル効果文・用語・表記統一・スキルカード英語 |
 | [progression.md](progression.md) | 進行 3 層（R3）、作戦外進行。Legacy: EXP、レベル、セーブ、Stage Records、Phase 2〜12 |
