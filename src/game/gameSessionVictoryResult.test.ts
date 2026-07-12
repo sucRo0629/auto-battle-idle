@@ -12,6 +12,10 @@ import {
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import { GameSession } from './GameSession.ts';
+import {
+  expectVictoryOverlayVisuallyHidden,
+  expectVictoryOverlayVisuallyVisible,
+} from '../ui/battleResultOverlayTestUtils.ts';
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -123,12 +127,7 @@ describe('GameSession victory result (R7e)', () => {
 
     expect(session.getCurrentScreen()).toBe('battle');
     expect(session.shouldShowVictoryResult()).toBe(true);
-    expect(
-      document.body.querySelector('.battle-victory-result-overlay'),
-    ).not.toBeNull();
-    expect(document.body.querySelector('.battle-victory-result-overlay')?.hidden).toBe(
-      false,
-    );
+    expectVictoryOverlayVisuallyVisible();
 
     tickSession(session, 120);
     expect(engine.getBattleTimeSec()).toBe(battleTimeBefore);
@@ -145,9 +144,7 @@ describe('GameSession victory result (R7e)', () => {
     expect(session.getCurrentScreen()).toBe('wavePrep');
     expect(session.getOperationResult()).toBeNull();
     expect(session.shouldShowVictoryResult()).toBe(false);
-    expect(document.body.querySelector('.battle-victory-result-overlay')?.hidden).toBe(
-      true,
-    );
+    expectVictoryOverlayVisuallyHidden();
   });
 
   it('3. result UI shows victory, stageId, and final wave index', () => {
@@ -186,6 +183,7 @@ describe('GameSession victory result (R7e)', () => {
     expect(
       document.body.querySelector('.skill-menu-return-to-battle-button'),
     ).not.toBeNull();
+    expectVictoryOverlayVisuallyHidden();
   });
 
   it('5. rematch does not keep previous checkpoint, wave prep edits, or defeat state', () => {
@@ -259,6 +257,54 @@ describe('GameSession victory result (R7e)', () => {
     expect(session.getSaveState().stageProgress.clearedStageIds).toContain('test');
   });
 
+  it('7b. a new sortie clears stale victory UI through stageSelect, formation, and battle', () => {
+    session = createSession();
+    session.start();
+    sortieToStage(session, 'test');
+    triggerVictory(session);
+
+    expect(session.getOperationResult()?.outcome).toBe('victory');
+    expectVictoryOverlayVisuallyVisible();
+
+    session.openStageSelect();
+
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.getOperationResult()).toBeNull();
+    expectVictoryOverlayVisuallyHidden();
+
+    const container = document.body.querySelector('div')!;
+    container.querySelector<HTMLButtonElement>('.stage-selection-sortie')?.click();
+
+    expect(session.getCurrentScreen()).toBe('formation');
+    expect(session.getOperationResult()).toBeNull();
+    expectVictoryOverlayVisuallyHidden();
+
+    container
+      .querySelector<HTMLButtonElement>('.skill-menu-return-to-battle-button')
+      ?.click();
+
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.shouldShowVictoryResult()).toBe(false);
+    expectVictoryOverlayVisuallyHidden();
+  });
+
+  it('7c. battlefield reload hides stale victory DOM when operationResult is null', () => {
+    session = createSession();
+    session.start();
+    sortieToStage(session, 'test');
+    const overlay = document.body.querySelector<HTMLElement>(
+      '.battle-victory-result-overlay',
+    );
+    if (!overlay) throw new Error('Victory result overlay not found');
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+
+    getEngine(session).restartBattle();
+
+    expect(session.getOperationResult()).toBeNull();
+    expectVictoryOverlayVisuallyHidden();
+  });
+
   it('8. defeat keeps defeat retry UI and hides victory result UI', () => {
     session = createSession();
     session.start();
@@ -269,9 +315,7 @@ describe('GameSession victory result (R7e)', () => {
     expect(session.shouldShowDefeatRetry()).toBe(true);
     expect(session.shouldShowVictoryResult()).toBe(false);
     expect(session.getOperationResult()?.outcome).toBe('defeat');
-    expect(document.body.querySelector('.battle-victory-result-overlay')?.hidden).toBe(
-      true,
-    );
+    expectVictoryOverlayVisuallyHidden();
     expect(document.body.querySelectorAll('.battle-defeat-retry-button')).toHaveLength(3);
   });
 
@@ -290,9 +334,7 @@ describe('GameSession victory result (R7e)', () => {
     expect(session.getSaveState().stageProgress.currentStageId).toBe(secondStage.id);
     expect(session.getCurrentScreen()).toBe('battle');
     expect(session.shouldShowVictoryResult()).toBe(false);
-    expect(document.body.querySelector('.battle-victory-result-overlay')?.hidden).toBe(
-      true,
-    );
+    expectVictoryOverlayVisuallyHidden();
   });
 
   it('10. operation failure keeps result UI and current state', () => {
@@ -315,8 +357,6 @@ describe('GameSession victory result (R7e)', () => {
     expect(session.getCurrentScreen()).toBe('battle');
     expect(session.shouldShowVictoryResult()).toBe(true);
     expect(session.getOperationResult()?.outcome).toBe('victory');
-    expect(document.body.querySelector('.battle-victory-result-overlay')?.hidden).toBe(
-      false,
-    );
+    expectVictoryOverlayVisuallyVisible();
   });
 });

@@ -352,11 +352,11 @@ export class BattleView {
     const victoryResultButtons: Array<{ text: string; run: () => boolean }> = [
       {
         text: "同じステージで再戦",
-        run: () => verifyModeControls?.onRematchSameStage?.() ?? false,
+        run: () => this.verifyModeControls?.onRematchSameStage?.() ?? false,
       },
       {
         text: "ステージ選択へ",
-        run: () => verifyModeControls?.onReturnToStageSelect?.() ?? false,
+        run: () => this.verifyModeControls?.onReturnToStageSelect?.() ?? false,
       },
     ];
 
@@ -763,22 +763,23 @@ export class BattleView {
   }
 
   private syncVictoryResultOverlay(): void {
-    const visible = this.isVictoryResultVisible();
+    const result = this.verifyModeControls?.getOperationResultForDisplay?.() ?? null;
+    const visible =
+      result?.outcome === 'victory' && this.isVictoryResultVisible();
     this.victoryResultOverlayEl.hidden = !visible;
     this.victoryResultOverlayEl.setAttribute(
       "aria-hidden",
       visible ? "false" : "true",
     );
     if (visible) {
-      const result = this.verifyModeControls?.getOperationResultForDisplay?.();
-      if (result) {
-        this.victoryResultSummaryEl.textContent =
-          `outcome: ${result.outcome}\nstageId: ${result.stageId}\nreachedWaveIndex: ${result.reachedWaveIndex}`;
-      }
+      this.victoryResultSummaryEl.textContent =
+        `outcome: ${result.outcome}\nstageId: ${result.stageId}\nreachedWaveIndex: ${result.reachedWaveIndex}`;
       if (!this.battlePaused) {
         this.setBattlePaused(true);
         return;
       }
+    } else {
+      this.victoryResultSummaryEl.textContent = '';
     }
     this.syncPauseOverlayVisibility();
     this.syncPauseChrome();
@@ -1337,6 +1338,7 @@ export class BattleView {
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
     this.root.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    this.syncVictoryResultOverlay();
   }
 
   private syncVerifyBadgeState(): void {

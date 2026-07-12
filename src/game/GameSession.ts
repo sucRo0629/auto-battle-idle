@@ -610,6 +610,7 @@ export class GameSession {
       this.save.stageProgress.currentStageId,
     );
 
+    this.clearOperationResult();
     this.clearOperation();
     this.engine.restartBattle();
     this.persistSave();
@@ -649,7 +650,13 @@ export class GameSession {
   }
 
   private setGameScreen(screen: GameScreen): void {
-    if (this.currentScreen === screen) return;
+    if (screen === 'stageSelect') {
+      this.clearOperationResult();
+    }
+    if (this.currentScreen === screen) {
+      this.view.refreshVictoryResultOverlay();
+      return;
+    }
     if (
       screen === 'stageSelect' &&
       this.operationState !== null &&
@@ -684,6 +691,10 @@ export class GameSession {
       this.stageSelectionHost.hide();
     }
     this.view.setVisible(onBattle);
+    if (onBattle && !this.shouldShowVictoryResult() && !this.shouldShowDefeatRetry()) {
+      this.view.setBattlePaused(false);
+    }
+    this.view.refreshVictoryResultOverlay();
   }
 
   private handleStageSortie(stageId: string): void {
@@ -695,6 +706,8 @@ export class GameSession {
     this.beginOperation(resolvedStageId, this.resolveOperationStartWaveIndex());
     this.engine.restartBattle();
     this.persistSave();
+    this.view.setBattlePaused(false);
+    this.view.refreshVictoryResultOverlay();
     this.menuHost.open('party');
   }
 
@@ -1201,6 +1214,7 @@ export class GameSession {
 
   private clearOperationResult(): void {
     this.operationResult = null;
+    this.view?.refreshVictoryResultOverlay();
   }
 
   /** R6i: 敗北後・Wave 準備中の retry API が利用可能か */
@@ -1348,6 +1362,7 @@ export class GameSession {
   }
 
   private handleBattlefieldReload(): void {
+    this.view?.refreshVictoryResultOverlay();
     if (this.suppressOperationWaveReload) return;
     if (this.operationState === null || this.operationState.isCompleted) return;
     const startWave = this.resolveOperationStartWaveIndex();

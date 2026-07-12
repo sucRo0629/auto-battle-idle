@@ -7,6 +7,10 @@ import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import { STAGE_FIRST_PLAY_GUIDANCE_CLASS } from '../ui/stageDetailDom.ts';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import { GameSession } from './GameSession.ts';
+import {
+  expectVictoryOverlayVisuallyHidden,
+  expectVictoryOverlayVisuallyVisible,
+} from '../ui/battleResultOverlayTestUtils.ts';
 
 function triggerVictory(session: GameSession, survivingIndices: number[] = [0, 1, 2, 3]): void {
   const engine = (session as unknown as { engine: BattleEngine }).engine;
@@ -167,9 +171,7 @@ describe('GameSession stageSelect → party → battle wire', () => {
     );
     expect(session.getCurrentScreen()).toBe('battle');
     expect(session.shouldShowVictoryResult()).toBe(true);
-    expect(document.body.querySelector('.battle-victory-result-overlay')?.hidden).toBe(
-      false,
-    );
+    expectVictoryOverlayVisuallyVisible(container);
 
     clickVictoryResultButton('ステージ選択へ');
 
@@ -183,6 +185,19 @@ describe('GameSession stageSelect → party → battle wire', () => {
     expect(
       selectedItem?.querySelector('.stage-selection-list-item-cleared'),
     ).not.toBeNull();
+    expect(session.getOperationResult()).toBeNull();
+    expectVictoryOverlayVisuallyHidden(container);
+
+    container.querySelector<HTMLButtonElement>('.stage-selection-sortie')?.click();
+    expect(session.getCurrentScreen()).toBe('formation');
+    expectVictoryOverlayVisuallyHidden(container);
+
+    container
+      .querySelector<HTMLButtonElement>('.skill-menu-return-to-battle-button')
+      ?.click();
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.getOperationResult()).toBeNull();
+    expectVictoryOverlayVisuallyHidden(container);
   });
 
   it('verify ON stays on battle after victory (debug loop preserved)', () => {

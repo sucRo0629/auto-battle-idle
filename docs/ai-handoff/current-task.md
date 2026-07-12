@@ -9,7 +9,7 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
 - **次の再開タスク:** **R9b — Stage enemyGroups `selectedCombatModuleId` 編集**（§80.8）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -6224,3 +6224,61 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 - M1 外 class・未使用データの editor 一覧への追加
 - schema 正規化による敵 spawn 一本化（R6g スコープ外保留のまま）
 - UI 見た目 polish のみ PR（各タスクで schema / save と分離）
+
+---
+
+## 81. R8-smoke-fix — 作戦結果 overlay の残留・無反応修正（2026-07-13 完了）
+
+**スコープ:** verify OFF の stageSelect → formation → battle と作戦結果 overlay の同期のみ。R8 passive runtime・HUD・範囲表示、敗北 retry、verify ON loop の仕様は変更なし。
+
+### 81.1 読んだファイル（作業前 6 件）
+
+1. `docs/ai-handoff/current-task.md`
+2. `src/game/GameSession.ts`
+3. `src/ui/BattleView.ts`
+4. `src/game/gameSessionVictoryResult.test.ts`
+5. `src/game/gameSessionDefeatRetry.test.ts`
+6. `src/game/gameSessionWire.test.ts`
+
+### 81.2 原因
+
+`operationResult` の論理状態は `beginOperation` / `stageSelect` 遷移で消えていたが、**`.battle-victory-result-overlay { display: flex }` が HTML `hidden` 属性より優先**され、DOM 上は `hidden=true` でも画面上は overlay が残った。見えている旧ボタンを押しても GameSession 側は `operationResult === null` のため callback API が `false` を返し無反応に見えた。前回修正の JS 同期だけでは視覚的非表示にならなかった。
+
+### 81.3 修正
+
+- `battle-view.css` に `.battle-victory-result-overlay[hidden]` / `.battle-defeat-retry-overlay[hidden]` で `display: none !important` を追加。
+- 既存の `operationResult` クリア・`setGameScreen` / `handleBattlefieldReload` / `setVisible` での overlay 同期は維持。
+- `handleStageSortie` で `setBattlePaused(false)` + overlay 再同期。
+- battle 遷移時、勝利/敗北 retry 非表示なら pause も解除。
+- テストは `hidden` 属性に加え **computed `display`** を検証（`flex` / `none`）。
+- `src/ui/battleResultOverlayTestUtils.ts` で production と同じ `[hidden]` ルールを happy-dom に注入し、integration テストでも視覚的非表示を検証。
+- `src/ui/battleResultOverlayVisibility.test.ts` で CSS ファイル内容の回帰（`[hidden]` ルール存在）と overlay 表示契約を専用検証。
+
+### 81.4 変更ファイル
+
+- `src/game/GameSession.ts`
+- `src/ui/BattleView.ts`
+- `src/styles/battle-view.css`
+- `src/ui/battleResultOverlayTestUtils.ts`
+- `src/ui/battleResultOverlayVisibility.test.ts`
+- `src/game/gameSessionVictoryResult.test.ts`
+- `src/game/gameSessionWire.test.ts`
+- `docs/ai-handoff/current-task.md`
+
+### 81.5 テスト
+
+- overlay 専用: `battleResultOverlayVisibility.test.ts` — **7 pass / 7**（CSS 内容回帰 + computed display）
+- integration: `gameSessionVictoryResult.test.ts` + `gameSessionWire.test.ts` — **20 pass / 20**（`expectVictoryOverlayVisuallyHidden/Visible` 利用）
+- full: `gameSessionVictoryResult.test.ts` + `gameSessionDefeatRetry.test.ts` + `gameSessionWire.test.ts` — **28 pass / 28**
+- demo 相当: `BUILD_FLAVOR=demo npx vitest run src/game/gameSessionWire.test.ts` — **8 pass / 8**
+- demo 相当テストで verify OFF の stageSelect → formation → battle → 最終勝利 result → ステージ選択 → 再出撃を再現し、各遷移で旧 overlay 非表示を確認。
+- defeat retry overlay と verify ON 勝敗・stage 進行テストは pass。
+
+### 81.6 R8 手動確認の再開
+
+1. verify OFF・demo flavor で起動。
+2. stageSelect から任意 stage を選択し formation を経て battle 開始。未勝利で result overlay が出ないことを確認。
+3. 最終 Wave 勝利後だけ作戦結果が出ることを確認。
+4. 「同じステージで再戦」→ formation → battle で overlay が残らないことを確認。
+5. 再度勝利し「ステージ選択へ」→ 同一または別 stage 出撃で overlay が残らないことを確認。
+6. その後 R8 passive の Wave 間取得 → HUD 名表示 → runtime 効果 → 範囲帯表示の手動確認を再開。
