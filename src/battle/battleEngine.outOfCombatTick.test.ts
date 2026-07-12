@@ -26,21 +26,37 @@ function getAllies(engine: BattleEngine): CombatantState[] {
 }
 
 describe('BattleEngine out-of-combat ticking', () => {
-  it('starts all skill cooldowns unfilled at stage start', () => {
+  it('starts module class without legacy active cooldown slots at stage start', () => {
     const engine = createEngine();
     const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
     const basicCd = guardian.cooldowns.find((cd) => cd.slotKind === 'basic')!;
-    const activeCd = guardian.cooldowns.find((cd) => cd.slotKind === 'active')!;
+    const activeCds = guardian.cooldowns.filter((cd) => cd.slotKind === 'active');
+
+    expect(basicCd.remaining).toBeGreaterThan(0);
+    expect(activeCds).toHaveLength(0);
+  });
+
+  it('starts legacy class skill cooldowns unfilled at stage start', () => {
+    const engine = createEngine();
+    const ranger = getAllies(engine).find((a) => a.classId === 'at_ranger')!;
+    const basicCd = ranger.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    const activeCd = ranger.cooldowns.find((cd) => cd.slotKind === 'active')!;
 
     expect(basicCd.remaining).toBeGreaterThan(0);
     expect(activeCd.remaining).toBeGreaterThan(0);
   });
 
-  it('ticks buff duration and active cooldowns during wave intermission', () => {
+  it('ticks buff duration and time-trigger active cooldowns during wave intermission', () => {
     const engine = createEngine();
     const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
-    const activeCd = guardian.cooldowns.find((cd) => cd.slotKind === 'active')!;
-    activeCd.remaining = 5;
+    const activeCd = {
+      skillId: 'df_paladin_active_1',
+      remaining: 5,
+      slotKind: 'active' as const,
+      slotIndex: 0,
+      storedCharges: 0,
+    };
+    guardian.cooldowns.push(activeCd);
     guardian.statusEffects.push({
       id: 'test_buff',
       kind: 'buff',
@@ -78,11 +94,17 @@ describe('BattleEngine out-of-combat ticking', () => {
     expect(dot?.remainingSec).toBeCloseTo(2.5, 5);
   });
 
-  it('continues ticking active cooldowns while an actor is anim-locked', () => {
+  it('continues ticking time-trigger active cooldowns while an actor is anim-locked', () => {
     const engine = createEngine();
     const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
-    const activeCd = guardian.cooldowns.find((cd) => cd.slotKind === 'active')!;
-    activeCd.remaining = 5;
+    const activeCd = {
+      skillId: 'df_paladin_active_1',
+      remaining: 5,
+      slotKind: 'active' as const,
+      slotIndex: 0,
+      storedCharges: 0,
+    };
+    guardian.cooldowns.push(activeCd);
     const runner = (engine as unknown as {
       skillSequenceRunner: SkillSequenceRunner;
     }).skillSequenceRunner;
@@ -96,28 +118,28 @@ describe('BattleEngine out-of-combat ticking', () => {
 
   it('pauses basic and active cooldowns while an actor is use-locked', () => {
     const engine = createEngine();
-    const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
-    const basicCd = guardian.cooldowns.find((cd) => cd.slotKind === 'basic')!;
-    const activeCd = guardian.cooldowns.find((cd) => cd.slotKind === 'active')!;
+    const ranger = getAllies(engine).find((a) => a.classId === 'at_ranger')!;
+    const basicCd = ranger.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    const activeCd = ranger.cooldowns.find((cd) => cd.slotKind === 'active')!;
     basicCd.remaining = 2;
     activeCd.remaining = 5;
     const runner = (engine as unknown as {
       skillSequenceRunner: SkillSequenceRunner;
     }).skillSequenceRunner;
 
-    runner.beginUse(guardian.id, 1);
+    runner.beginUse(ranger.id, 1);
     engine.tick(0.5);
 
     expect(basicCd.remaining).toBeCloseTo(2, 5);
     expect(activeCd.remaining).toBeCloseTo(5, 5);
-    expect(runner.isActorUseLocked(guardian.id)).toBe(true);
+    expect(runner.isActorUseLocked(ranger.id)).toBe(true);
   });
 
   it('pauses hitsTaken charge progression while an actor is use-locked', () => {
     const engine = createEngine();
-    const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
-    const hitsTakenCd = guardian.cooldowns.find(
-      (cd) => cd.skillId === 'df_guardian_active_2',
+    const ranger = getAllies(engine).find((a) => a.classId === 'at_ranger')!;
+    const hitsTakenCd = ranger.cooldowns.find(
+      (cd) => cd.skillId === 'at_ranger_active_2',
     )!;
     hitsTakenCd.remaining = 2;
     const runner = (engine as unknown as {
@@ -129,10 +151,10 @@ describe('BattleEngine out-of-combat ticking', () => {
       }
     ).tickCountTriggers.bind(engine);
 
-    runner.beginUse(guardian.id, 1);
-    tickCountTriggers(guardian.id, 'hitsTaken');
+    runner.beginUse(ranger.id, 1);
+    tickCountTriggers(ranger.id, 'hitsTaken');
 
     expect(hitsTakenCd.remaining).toBe(2);
-    expect(runner.isActorUseLocked(guardian.id)).toBe(true);
+    expect(runner.isActorUseLocked(ranger.id)).toBe(true);
   });
 });

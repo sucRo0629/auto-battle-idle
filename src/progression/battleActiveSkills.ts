@@ -1,5 +1,6 @@
-import type { CharacterBuild, PartyMemberState } from '../battle/types.ts';
+import type { CharacterBuild, CombatModuleDef, PartyMemberState } from '../battle/types.ts';
 import type { GameData } from '../battle/types.ts';
+import { isCombatModuleBasicSkillId } from '../battle/data/resolveCombatModuleBasic.ts';
 import {
   MAX_ACTIVE_SLOTS,
   getUnlockedActiveSlotCount,
@@ -28,4 +29,34 @@ export function resolveBattleActiveSkillIdsForMember(
 ): string[] {
   const unlocked = getUnlockedActiveSlotCount(member, gameData);
   return resolveBattleActiveSkillIds(member.build, unlocked, options);
+}
+
+/** R9.5a: CombatModule 通常行動が解決済みの Combatant では legacy active を runtime に載せない。 */
+export function resolveRuntimeActiveSkillIds(
+  build: CharacterBuild,
+  unlockedSlotCount: number,
+  basicSkillId: string,
+  combatModuleRegistry: Record<string, CombatModuleDef>,
+  options?: { useEquippedOverride?: boolean },
+): string[] {
+  if (isCombatModuleBasicSkillId(basicSkillId, combatModuleRegistry)) {
+    return [];
+  }
+  return resolveBattleActiveSkillIds(build, unlockedSlotCount, options);
+}
+
+export function resolveRuntimeActiveSkillIdsForMember(
+  member: PartyMemberState,
+  gameData: GameData,
+  basicSkillId: string,
+  options?: { useEquippedOverride?: boolean },
+): string[] {
+  const unlocked = getUnlockedActiveSlotCount(member, gameData);
+  return resolveRuntimeActiveSkillIds(
+    member.build,
+    unlocked,
+    basicSkillId,
+    gameData.combatModuleRegistry,
+    options,
+  );
 }

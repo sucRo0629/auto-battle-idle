@@ -10,7 +10,7 @@
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
 - **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**（Player 未達分は R9.5 へ）。
-- **次の再開タスク:** **R9.5a — module 兵科の legacy active runtime 停止**（§82）。旧公式次 R9b は R9.5 完了後へ繰り下げ。
+- **次の再開タスク:** **R9.5b — 味方 HUD 攻撃間隔表示・legacy gauge 除去**（§83）。**R9.5a Backend 完了**（§83）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6438,3 +6438,128 @@ HUD の legacy gauge 除去は R9.5b のため、本タスク単独では R9.5 P
 6. 手動確認結果
 7. R9.5b へ残した未接続事項
 8. docs 更新内容
+
+---
+
+## 83. R9.5a 完了 — module 兵科の legacy active runtime 停止
+
+### 83.1 読んだファイル（6 件）
+
+1. `docs/ai-handoff/current-task.md`（§82）
+2. `src/battle/entities.ts`
+3. `src/battle/BattleEngine.ts`（`syncPartyBuilds` / `runUnitSkills` / `tickCooldowns`）
+4. `src/battle/data/resolveCombatModuleBasic.ts`
+5. `src/progression/battleActiveSkills.ts`
+6. `src/battle/combatModuleBasicAttack.test.ts`
+
+### 83.2 legacy active の旧 runtime 経路
+
+1. **登録:** `createAllyFromMember` / `createEnemyFromClassGroup` / `BattleEngine.syncPartyBuilds` が `resolveBattleActiveSkillIds*` で active ID を解決し、`createCooldowns` で `slotKind: 'active'` を追加。
+2. **CD 進行:** `BattleEngine.tickCooldowns` が time trigger active の `remaining` を減算。`tickCountTriggers` が count / hitsTaken trigger を処理。
+3. **発火:** `BattleEngine.runUnitSkills` → `tryExecuteActiveWithFireGate` / `executor.tryExecute`。`tryAutoFireFinalWaveStageSkills` も active cooldown を走査。
+4. **CombatModule 通常行動との識別:** `basic` slot の `skillId` が `combatModuleRegistry` に存在（`isCombatModuleBasicSkillId`）。
+5. **味方・敵:** 同一 — `entities.ts` の ally / enemy 生成と `syncPartyBuilds`（味方のみ Wave 中 build 同期）。
+6. **未対応兵科:** `resolveBasicAttackSkillIdFromGameData` が legacy `basicAttackSkillId` を返す → `isCombatModuleBasicSkillId` が false → 従来どおり active cooldown 登録。
+
+### 83.3 採用した停止判定
+
+`resolveRuntimeActiveSkillIds`（`src/progression/battleActiveSkills.ts`）:
+
+- 入力: 解決済み `basicSkillId` + `combatModuleRegistry`
+- `isCombatModuleBasicSkillId(basicSkillId, registry) === true` のとき **空配列** を返し、legacy active cooldown を生成しない
+- classId 固定配列ではなく、実際に解決された CombatModule 通常行動 skillId で判定
+- `build.learnedActiveIds` / passive 注入 / JSON データは変更しない
+
+### 83.4 味方・敵への適用
+
+| 経路 | 変更 |
+| ---- | ---- |
+| `createAllyFromMember` | basic 解決後に `resolveRuntimeActiveSkillIds` |
+| `createEnemyFromClassGroup` | 同上（`spec.selectedCombatModuleId` 反映済み basic） |
+| `BattleEngine.syncPartyBuilds` | `resolveRuntimeActiveSkillIdsForMember` |
+
+### 83.5 変更ファイル
+
+- `src/progression/battleActiveSkills.ts` — `resolveRuntimeActiveSkillIds*` 追加
+- `src/battle/entities.ts` — ally / enemy 生成で runtime active 抑止
+- `src/battle/BattleEngine.ts` — `syncPartyBuilds` で runtime active 抑止
+- `src/battle/combatModuleLegacyActiveSuppression.test.ts` — 新規
+- `src/battle/battleEngine.outOfCombatTick.test.ts` — module 兵科向け期待値更新
+- `docs/spec/combat.md` — R9.5a 注記
+- `docs/spec/classes-and-skills.md` — R9.5a 注記
+- `docs/plans/phase-roadmap.md` — R9.5a Backend 完了
+- `docs/ai-handoff/current-task.md` — 本節
+
+### 83.6 追加・変更したテスト
+
+**新規 `combatModuleLegacyActiveSuppression.test.ts`**
+
+- A: 4 兵科 parameterized — active cooldown 0 件
+- A: `df_guardian` integration — module basic 発火、legacy active 0 回
+- B: `df_paladin` — legacy active 発火維持
+- C: `df_guardian` passive_2 — DEF buff 維持
+- D: 敵 `at_sorcerer` enemyGroups — legacy active 0 回、module basic 発火
+
+**更新 `battleEngine.outOfCombatTick.test.ts`**
+
+- module 兵科（df_guardian）に active slot が無いことを確認
+- legacy 兵科（at_ranger）の active cooldown 初期化は維持
+
+### 83.7 テスト結果
+
+```
+npx vitest run \
+  src/battle/combatModuleLegacyActiveSuppression.test.ts \
+  src/battle/combatModuleBasicAttack.test.ts \
+  src/battle/battleEngine.outOfCombatTick.test.ts \
+  src/battle/allyCombatModuleSelection.test.ts \
+  src/battle/enemyGroupCombatModule.test.ts \
+  src/game/operationPassiveInjection.test.ts
+```
+
+**6 files, 69 tests — all pass**
+
+### 83.8 対象 4 兵科の確認結果
+
+| 兵科 | module 通常行動 | legacy active cooldown | legacy active 発火 |
+| ---- | --------------- | ---------------------- | ------------------ |
+| `df_guardian` | ✓ | 0 | 0 |
+| `at_swordsman` | ✓（parameterized） | 0 | — |
+| `at_sorcerer` | ✓（敵 integration） | 0 | 0 |
+| `sp_cleric` | ✓（parameterized） | 0 | — |
+
+### 83.9 legacy 兵科・passive 回帰
+
+- `df_paladin` Lv20: active cooldown あり、`runUnitSkills` で legacy active 発火を確認
+- `df_guardian` Lv10: `df_guardian_passive_2` が build に残り、`syncBuffAuras` 後 DEF 上昇を確認
+- `operationPassiveInjection.test.ts` 12 件 pass（R8 passive 注入回帰）
+
+### 83.10 R9.5a 完了判定
+
+**Backend 完了 — Yes**
+
+- 対象 4 兵科の CombatModule 通常行動: 動作
+- legacy active runtime 発動: 停止
+- 味方・敵: 同一判定
+- module 未対応兵科: 維持
+- legacy passive / 作戦内 passive: 維持
+- JSON / HUD / editor: 未変更
+- 関連テスト: pass
+
+**Player 完了 — No**（HUD legacy gauge は R9.5b）
+
+### 83.11 R9.5b へ送る事項
+
+- `PartyHudPanel` / `partyHudTypes.ts` — 対象 4 兵科の legacy 2×2 gauge 非表示
+- 攻撃間隔表示（`combatModuleRegistry[].attackIntervalSec` と runtime 一致）
+- `docs/spec/battle-field.md` — HUD 仕様更新
+- Player 完了条件: 実戦闘で legacy active が視覚的にも消え、攻撃間隔が読めること
+
+### 83.12 手動確認方法
+
+1. `npm run dev` で起動
+2. demo party（df_guardian / at_swordsman / sp_cleric 含む）で任意 stage 出撃
+3. 接敵後 30 秒以上戦闘を観察 — legacy active 名のログ・効果（障壁付与、連射等 module 以外）が出ないこと
+4. 通常行動（module 名の damage / heal ログ）は継続すること
+5. legacy gauge は **まだ表示される**（R9.5b で除去予定）— gauge が見えても発動しないことを確認
+6. `at_ranger` 等 legacy 兵科 stage で legacy active が従来どおり発動することを別途確認

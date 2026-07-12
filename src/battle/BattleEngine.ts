@@ -167,7 +167,7 @@ import {
   shouldFireActiveSkill,
   type FireGateContext,
 } from "./skills/fireGate.ts";
-import { resolveBattleActiveSkillIdsForMember } from "../progression/battleActiveSkills.ts";
+import { resolveRuntimeActiveSkillIdsForMember } from "../progression/battleActiveSkills.ts";
 import { resolveRuntimeBattlePhase } from "./battlePhase.ts";
 import {
   ANNOUNCEMENT_FADE_OUT_START_MS,
@@ -1846,14 +1846,15 @@ export class BattleEngine {
         this.getAcquiredOperationPassiveIds?.(slotIndex) ?? [],
         this.gameData.skillRegistry.passives,
       );
-      const activeSkillIds = resolveBattleActiveSkillIdsForMember(
-        member,
-        this.gameData,
-      );
       const basicSkillId = resolveBasicAttackSkillIdFromGameData(
         preset,
         this.gameData,
         this.getSelectedCombatModuleId?.(slotIndex),
+      );
+      const activeSkillIds = resolveRuntimeActiveSkillIdsForMember(
+        member,
+        this.gameData,
+        basicSkillId,
       );
       ally.cooldowns = createCooldowns(
         basicSkillId,

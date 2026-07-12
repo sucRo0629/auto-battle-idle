@@ -91,6 +91,8 @@ Wave ごとに各兵科へ **2 方式** を選択する。全兵科を「単体 
 
 詳細と M1 兵科ごとの方式 **候補** は [classes-and-skills.md §M1 兵科 — 新仕様候補](classes-and-skills.md#m1-兵科--新仕様候補r2)。
 
+**R9.5a 注記（2026-07-13）:** CombatModule が解決された Combatant（`basic` slot の skillId が `combatModuleRegistry` に存在）では、legacy active は **runtime に cooldown 登録せず** `runUnitSkills` からも発動しない。`learnedActiveIds` と JSON データは移行期間中維持。legacy passive・作戦内 passive は従来どおり。実装: `resolveRuntimeActiveSkillIds`（`src/progression/battleActiveSkills.ts`）。
+
 ### 優先ターゲット
 
 **兵科固定。** 戦闘方式を変えても優先ターゲットは変えない（初期仕様）。

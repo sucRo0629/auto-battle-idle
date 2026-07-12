@@ -29,7 +29,7 @@ import {
   computeStatsAtLevel,
   type LevelCurvesConfig,
 } from '../progression/levelGrowth.ts';
-import { resolveBattleActiveSkillIds } from '../progression/battleActiveSkills.ts';
+import { resolveRuntimeActiveSkillIds } from '../progression/battleActiveSkills.ts';
 import {
   validatePartyClassIds,
   type PartyValidationResult,
@@ -82,13 +82,6 @@ export function createAllyFromMember(
   gameData?: GameData,
   selectedCombatModuleId?: string | null,
 ): CombatantState {
-  const activeSkillIds =
-    gameData && 'progress' in member
-      ? resolveBattleActiveSkillIds(
-          member.build,
-          getUnlockedActiveSlotCount(member, gameData),
-        )
-      : member.build.learnedActiveIds.slice(0, MAX_ACTIVE_SLOTS);
   const basicSkillId =
     gameData !== undefined
       ? resolveBasicAttackSkillIdFromGameData(
@@ -97,6 +90,15 @@ export function createAllyFromMember(
           selectedCombatModuleId,
         )
       : classPreset.basicAttackSkillId;
+  const activeSkillIds =
+    gameData && 'progress' in member
+      ? resolveRuntimeActiveSkillIds(
+          member.build,
+          getUnlockedActiveSlotCount(member, gameData),
+          basicSkillId,
+          gameData.combatModuleRegistry,
+        )
+      : member.build.learnedActiveIds.slice(0, MAX_ACTIVE_SLOTS);
   const stats =
     curves && 'progress' in member
       ? computeStatsAtLevel(
@@ -290,11 +292,16 @@ export function createEnemyFromClassGroup(
     learnedActiveIds: [...learned.learnedActiveIds],
     equippedActiveSlots: [],
   };
-  const activeSkillIds = resolveBattleActiveSkillIds(build, unlockedSlots);
   const basicSkillId = resolveBasicAttackSkillIdFromGameData(
     classPreset,
     gameData,
     spec.selectedCombatModuleId,
+  );
+  const activeSkillIds = resolveRuntimeActiveSkillIds(
+    build,
+    unlockedSlots,
+    basicSkillId,
+    gameData.combatModuleRegistry,
   );
   const battleX = resolveEnemySpawnBattleX(spawnOffset);
   const cooldowns = createCooldowns(

@@ -18,6 +18,8 @@
 
 **R4 注記（2026-07-12）:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態の **データ責務分離・validate・エディタ責務・legacy 移行方針** は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) を正本とする。本書はゲームルールと M1 方式 **候補** の正本のまま。具体的な JSON フィールド名・型は R5 で subset 確定。
 
+**R9.5a 注記（2026-07-13）:** R5 対象 4 兵科で CombatModule 通常行動が解決済みのとき、legacy active JSON と `classes.json` 参照は **データ互換のため維持** するが、runtime では active cooldown を生成しない（[combat.md §戦闘方式](combat.md#戦闘方式)）。R9f まで JSON 削除は行わない。
+
 ### 兵科の主要構造
 
 | レイヤ | 内容 |
