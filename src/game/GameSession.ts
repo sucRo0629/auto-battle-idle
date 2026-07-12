@@ -54,6 +54,11 @@ import { BattleView } from '../ui/BattleView.ts';
 import type { GameScreen } from './gameScreen.ts';
 import { OperationState, type OperationStateReadonlyView } from './OperationState.ts';
 import {
+  cloneOperationResult,
+  type FinalizeOperationResultParams,
+  type OperationResult,
+} from './OperationResult.ts';
+import {
   cloneCheckpointSnapshot,
   createCheckpointFromOperationState,
   restoreOperationStateFromCheckpoint,
@@ -93,6 +98,8 @@ export class GameSession {
   private operationState: OperationState | null = null;
   /** R6f: 出撃確定時点の作戦 snapshot（メモリのみ・Save 非統合） */
   private operationCheckpoint: OperationCheckpointSnapshot | null = null;
+  /** R6h: 作戦完了時に確定する結果（メモリのみ・Save 非統合） */
+  private operationResult: OperationResult | null = null;
 
   constructor(
     private readonly gameData: GameData,
@@ -279,6 +286,13 @@ export class GameSession {
 
   getClearedWaveCount(): number | null {
     return this.operationState?.clearedWaveCount ?? null;
+  }
+
+  /** R6h: 確定済み作戦結果（未確定時は null） */
+  getOperationResult(): OperationResult | null {
+    return this.operationResult
+      ? cloneOperationResult(this.operationResult)
+      : null;
   }
 
   /** R6f: 有効な checkpoint が存在するか */
@@ -746,6 +760,11 @@ export class GameSession {
     const failedStageName = failedStage?.displayName ?? failedStageId;
 
     if (this.operationState !== null) {
+      this.tryFinalizeOperationResult({
+        stageId: this.operationState.stageId,
+        outcome: 'defeat',
+        reachedWaveIndex: this.operationState.currentWaveIndex,
+      });
       this.operationState.markDefeated();
     }
 
@@ -786,6 +805,11 @@ export class GameSession {
     const finalWaveIndex = Math.max(0, waveCount - 1);
 
     if (this.operationState !== null) {
+      this.tryFinalizeOperationResult({
+        stageId: this.operationState.stageId,
+        outcome: 'victory',
+        reachedWaveIndex: finalWaveIndex,
+      });
       this.operationState.markCompleted(finalWaveIndex, waveCount);
       this.clearOperation();
     }
@@ -868,6 +892,22 @@ export class GameSession {
     this.clearOperationCheckpoint();
   }
 
+  private clearOperationResult(): void {
+    this.operationResult = null;
+  }
+
+  /** 既に確定済みなら no-op（同一 battleEnd 通知の二重確定防止）。 */
+  private tryFinalizeOperationResult(params: FinalizeOperationResultParams): void {
+    if (this.operationResult !== null) {
+      return;
+    }
+    this.operationResult = {
+      stageId: params.stageId,
+      outcome: params.outcome,
+      reachedWaveIndex: params.reachedWaveIndex,
+    };
+  }
+
   /** R6e: 中間 Wave クリア後に Wave 間準備 screen を開く */
   private openWavePrepScreen(): void {
     if (this.operationState === null || !this.isAwaitingNextWave()) return;
@@ -889,6 +929,7 @@ export class GameSession {
 
   /** R6f: 出撃確定時に OperationState 初期化 + checkpoint commit */
   private beginOperation(stageId: string, initialWaveIndex = 0): boolean {
+    this.clearOperationResult();
     this.clearOperationCheckpoint();
     const next = OperationState.begin({
       stageId,

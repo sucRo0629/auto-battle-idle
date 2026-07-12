@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6g-4 完了** — `stages.json` / editor 移行（本 §65）。**R6g-3 完了**（§64）。**R6g-2 完了**（§63）。**R6g-1 完了**（§62）。**R6f 完了**（§61）。**R6e 完了**（§60）。**R6d 完了**（§59）。
-- **次の再開タスク:** **R6h — 最終 Wave → 作戦結果**（handoff §65 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R6h 完了** — 最終 Wave → 作戦結果（本 §66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R6i — retry 3 種（最小）**（handoff §66 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5171,4 +5171,62 @@ BattleEngine / GameSession の Wave 開始処理を、`waveIndex` に対応す�
 
 ### 65.7 次タスク
 
-**R6h — 最終 Wave → 作戦結果**（`operationResult` 仮）。schema 正規化による敵生成方式の一本化は今回スコープ外（§64.6 保留）。
+~~**R6h — 最終 Wave → 作戦結果**~~ → §66 完了。次は **R6i — retry 3 種（最小）**。
+
+---
+
+## 66. R6h — 最終 Wave → 作戦結果（2026-07-12 完了）
+
+### 66.1 目的
+
+最終 Wave 勝利または敗北時に、作戦全体の最小結果 `operationResult` をメモリ上で一度だけ確定・保持する。中間 Wave 勝利では確定しない。結果画面 UI・報酬・スコアは未実装。
+
+### 66.2 読んだファイル（6 件）
+
+1. `docs/ai-handoff/current-task.md` — R6h 正本・§65 完了状態
+2. `src/game/GameSession.ts` — battleEnd / handleVictory / handleDefeat / beginOperation
+3. `src/game/OperationState.ts` — markCompleted / markDefeated / currentWaveIndex
+4. `src/battle/BattleEngine.ts` — `checkBattleEnd` 最終分岐（変更なし）
+5. `src/game/operationState.test.ts` — 既存 GameSession テスト harness
+6. `src/game/gameSessionWire.test.ts` — triggerVictory / triggerDefeat パターン
+
+### 66.3 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/OperationResult.ts` | 新規 — `OperationResult` 型・clone |
+| `src/game/GameSession.ts` | `operationResult` 保持、`tryFinalizeOperationResult`、`getOperationResult()`、victory/defeat 確定・beginOperation リセット |
+| `src/game/operationResult.test.ts` | 新規 — R6h 必須テスト 10 件 |
+| `docs/ai-handoff/current-task.md` | 本 §66 |
+
+**未変更:** `BattleEngine.checkBattleEnd`、checkpoint、verify ON/OFF 遷移、勝利報酬・敗北 rollback、結果画面 UI。
+
+### 66.4 operationResult の型と所有者
+
+- **型:** `OperationResult` — `{ stageId: string; outcome: 'victory' \| 'defeat'; reachedWaveIndex: number }`（`src/game/OperationResult.ts`）
+- **所有者:** `GameSession` private `operationResult`（メモリのみ・Save 非統合）
+- **公開:** `getOperationResult()` — defensive clone
+
+### 66.5 victory / defeat 確定経路
+
+| 経路 | 条件 | 確定 |
+| ---- | ---- | ---- |
+| **victory** | `BattleEngine.applyVictoryTransition` → `battleEnd` → `GameSession.handleVictory` | 最終 Wave のみ（中間 Wave は `waveCleared` のみ） |
+| **defeat** | `applyDefeatTransition` → `battleEnd` → `GameSession.handleDefeat` | 敗北時 |
+
+`tryFinalizeOperationResult` は `operationResult !== null` なら no-op（二重確定防止）。
+
+### 66.6 リセットタイミング
+
+- **クリア:** `beginOperation` 開始時（新規作戦出撃）
+- **維持:** 最終 victory 後の `clearOperation()`（OperationState は破棄、結果は残す）
+- **維持:** defeat 後（OperationState defeated + checkpoint は R6f 既存どおり）
+
+### 66.7 テスト
+
+- `operationResult.test.ts`: **10 pass / 10**
+- 関連回帰 `operationState.test.ts` + `operationCheckpoint.test.ts` + `gameSessionWire.test.ts`: **76 pass / 76**（R6h 新規 10 + 既存 66）
+
+### 66.8 次タスク
+
+**R6i — retry 3 種（最小）** — defeat / wave prep から同設定再戦・準備へ戻る・作戦最初からの debug または最小 UI 経路。
