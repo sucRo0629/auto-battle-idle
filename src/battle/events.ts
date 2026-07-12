@@ -45,6 +45,12 @@ export type BattleEvent =
       type: 'battleEnd';
       result: 'victory' | 'defeat';
       survivingPartyIndices: number[];
+    }
+  | {
+      type: 'waveCleared';
+      completedWaveIndex: number;
+      hasNextWave: boolean;
+      isFinalWave: boolean;
     };
 
 export type BattleEventListener = (event: BattleEvent) => void;

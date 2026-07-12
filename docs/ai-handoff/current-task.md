@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6b 完了** — Wave 中間停止 + 仮次 Wave 開始（本 §57）。**R6a 調査完了**（§56）。
-- **次の再開タスク:** **R6c** 最小 OperationState（handoff §57.9 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R6c 完了** — 最小 OperationState（本 §58）。**R6b 完了**（§57）。**R6a 調査完了**（§56）。
+- **次の再開タスク:** **R6d** Wave 間状態リセット（handoff §58.13 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -4582,3 +4582,131 @@ ally/enemy action、skill/basic CD、status duration、DoT/HoT、移動、target
 ### 57.14 完了判定
 
 **R6b 完了扱い可** — 中間 Wave 停止・明示再開・最終 victory 維持・必須テスト・verify 仮トリガー成立。
+
+---
+
+## 58. R6c — 最小 OperationState（2026-07-12）
+
+**目的:** 複数 Wave をまたぐ作戦単位のメモリ専用状態を `GameSession` に導入。Save 非統合・checkpoint/retry/Wave 間リセット/正式 UI は未実装。
+
+### 58.1 読んだファイル（6 件）
+
+1. `docs/ai-handoff/current-task.md` — R5 完了・§56 R6a・§57 R6b 正本
+2. `src/game/GameSession.ts` — sortie / module API / 画面遷移
+3. `src/battle/BattleEngine.ts` — waveIndex・awaitingNextWave
+4. `src/battle/partyCombatModuleSelection.ts` — module 選択
+5. `src/battle/events.ts` — BattleEvent
+6. `src/battle/battleEngine.awaitingNextWave.test.ts` — R6b テストパターン
+
+### 58.2 変更したファイル
+
+| ファイル | 変更 |
+|----------|------|
+| `src/game/OperationState.ts` | **新規** — 作戦メモリ状態 |
+| `src/game/GameSession.ts` | 所有者・beginOperation・Wave 同期・public API |
+| `src/battle/BattleEngine.ts` | `waveCleared` イベント・`onBattlefieldReload` callback |
+| `src/battle/events.ts` | `waveCleared` イベント型 |
+| `src/battle/partyCombatModuleSelection.ts` | `clone()` snapshot 用 |
+| `src/game/operationState.test.ts` | R6c 必須テスト 35 件（新規） |
+| `docs/ai-handoff/current-task.md` | 本 §58 |
+| `docs/plans/phase-roadmap.md` | R6c 完了・次 R6d |
+
+### 58.3 OperationState
+
+- **型・ファイル:** `OperationState` / `OperationStateReadonlyView` — `src/game/OperationState.ts`
+- **所有者:** `GameSession.operationState`（private、`getOperationState()` で readonly view）
+
+**保持フィールド（今回）:**
+
+| フィールド | 説明 |
+|------------|------|
+| `stageId` | 作戦対象 stage |
+| `party`（内部 `partySlots`） | 出撃確定時 party snapshot |
+| `combatModuleSelection` | slot → moduleId map（`PartyCombatModuleSelection` 所有） |
+| `currentWaveIndex` | 作戦進行記録 |
+| `clearedWaveCount` | クリア済み Wave 数 |
+| `isActive` | 作戦進行中 |
+| `isCompleted` | 作戦完了 |
+| `isDefeated` | 作戦敗北（retry 用にインスタンス保持） |
+
+**未実装（今回フィールド追加なし）:** passiveIds、未使用リソース、checkpoint、retry snapshot、Wave 報酬、作戦内取得履歴
+
+### 58.4 party / module snapshot 規則
+
+- **party:** `structuredClone` per slot + `normalizePartySlots`。Save `party` と**別参照**。`validatePartyClassIds` 不合格は `begin` 拒否（null）
+- **module:** `PartyCombatModuleSelection.clone()` で別参照コピー。出撃前 `preOperationModuleSelection` から snapshot
+- **正本（二重化なし）:**
+  - 作戦未完了中（active / defeated retry 待ち）: **OperationState 内** `combatModuleSelection`
+  - 作戦前・完了後: **`preOperationModuleSelection`**
+  - R5d API（`set/get/clear/resetPartySlotCombatModule`）は `resolveCombatModuleSelection()` 経由で上記に委譲
+
+### 58.5 BattleEngine `waveIndex` との責務分担
+
+| 責務 | 所有者 |
+|------|--------|
+| 現在実行中 Wave の runtime index | `BattleEngine.waveIndex`（R6b どおり維持・削除なし） |
+| 作戦進行記録（currentWaveIndex / clearedWaveCount） | `OperationState` |
+
+### 58.6 同期タイミング
+
+| タイミング | OperationState | BattleEngine |
+|------------|----------------|--------------|
+| 作戦開始（`beginOperation`） | `currentWaveIndex = initialWave`（verify loop wave 含む）、`clearedWaveCount = 0` | `restartBattle` → `resolveStartWaveIndex()` |
+| 中間 Wave 待機突入 | `recordWaveCleared(completedWaveIndex)` → `clearedWaveCount++`（`currentWaveIndex` は完了 Wave のまま） | `waveCleared` イベント発火（`tickWaveExitMarch` 完了時 1 回） |
+| `startNextWave()` 成功 | `syncCurrentWaveIndex(engine.waveIndex)` | `beginWaveAnnouncement(next)` で `waveIndex` 更新 |
+| 最終 Wave 勝利 | `markCompleted` → `clearedWaveCount = totalWaveCount`、`isCompleted = true`、その後 `clearOperation()` | 従来 `battleEnd` victory |
+| 敗北 | `markDefeated`（インスタンス保持） | 従来 `battleEnd` defeat → `restartBattle` |
+| battlefield reload | `prepareRetry` または defeated 時 `resetWaveProgress` のみ | `onBattlefieldReload` callback |
+
+二重 increment なし: `waveCleared` は待機突入 1 回、`startNextWave` は engine 側で pending 消費 1 回。
+
+### 58.7 victory / defeat 時の状態
+
+**最終 Wave 勝利（`handleVictory`）**
+
+- `isActive = false`、`isCompleted = true`、`isDefeated = false`
+- `currentWaveIndex = finalWaveIndex`、`clearedWaveCount = totalWaveCount`
+- 続けて `clearOperation()`（stageSelect 遷移）
+
+**敗北（`handleDefeat`）**
+
+- `isActive = false`、`isDefeated = true`、`isCompleted = false`
+- OperationState は**破棄しない**（R6f retry 用）
+- `restartBattle` 時は `resetWaveProgress` で Wave 進行のみ戻す（`isDefeated` は維持）
+
+**stage 変更・新規出撃:** `beginOperation` で置き換え  
+**stageSelect へ明示中断:** `setGameScreen('stageSelect')` で未完了 Operation を破棄
+
+### 58.8 Save 非統合
+
+- `SaveGameState` / schema version / `SaveManager` / localStorage へ OperationState は**追加なし**
+- 作戦中の party snapshot は Save へ自動反映されない（R6e で接続予定）
+
+### 58.9 public API（GameSession）
+
+- `getOperationState(): OperationStateReadonlyView | null`
+- `hasActiveOperation(): boolean`
+- `getOperationParty(): PartySlotState[] | null`（snapshot 返却）
+- `getOperationWaveIndex(): number | null`
+- `getClearedWaveCount(): number | null`
+
+### 58.10 テスト
+
+- 新規: `src/game/operationState.test.ts` — 必須 34+ 項目（単体・sortie・Wave 同期・敗北・回帰）
+- **R6c 関連バンドル 104 件 pass**（operationState + R6b + R5 module + party 重複）
+- フルスイート: vitest worker timeout 等で既存失敗あり（本タスク起因の無差別修正は未実施）
+
+### 58.11 未実装（R6c スコープ外）
+
+- checkpoint / retry 本実装
+- Wave 間 HP/CC/CD/位置リセット（**R6d**）
+- 作戦中 party 編集接続（**R6e**）
+- 正式 Wave 間準備 UI
+
+### 58.12 完了判定
+
+**R6c 完了扱い可** — 最小 OperationState・snapshot 規則・Wave 同期・Save 分離・必須テスト成立。
+
+### 58.13 次タスク
+
+**R6d — Wave 間状態リセット**（味方 HP 全回復・Barrier/status/CC/CD 解除・位置/facing 再配置・一時 runtime 破棄）。`prepareWaveDeploy` 前後配線。

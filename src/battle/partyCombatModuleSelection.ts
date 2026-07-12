@@ -26,4 +26,13 @@ export class PartyCombatModuleSelection {
   resetToDefault(slotIndex: number): void {
     this.clearSelectedCombatModuleId(slotIndex);
   }
+
+  /** 別参照のコピー（OperationState snapshot 用）。 */
+  clone(): PartyCombatModuleSelection {
+    const copy = new PartyCombatModuleSelection();
+    for (const [slotIndex, moduleId] of this.bySlot) {
+      copy.setSelectedCombatModuleId(slotIndex, moduleId);
+    }
+    return copy;
+  }
 }

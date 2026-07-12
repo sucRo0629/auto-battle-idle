@@ -52,6 +52,7 @@ import { createMenuHost, type MenuHost } from '../platform/menuHost.ts';
 import { SaveManager } from '../save/SaveManager.ts';
 import { BattleView } from '../ui/BattleView.ts';
 import type { GameScreen } from './gameScreen.ts';
+import { OperationState, type OperationStateReadonlyView } from './OperationState.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import '../styles/game-shell.css';
 import levelCurvesJson from '../../data/levelCurves.json';
@@ -76,8 +77,10 @@ export class GameSession {
   private readonly stageSelectionHost: StageSelectionScreenHost;
   private readonly stageDamageStats = new StageDamageStatsTracker();
   private readonly menuHost: MenuHost;
-  /** R5d: 味方 module 選択（Save 非統合・実行中メモリのみ） */
-  private readonly partyCombatModuleSelection = new PartyCombatModuleSelection();
+  /** R5d / 作戦前: 編成画面での module 選択（作戦中は OperationState が正本） */
+  private readonly preOperationModuleSelection = new PartyCombatModuleSelection();
+  /** R6c: 作戦単位のメモリ専用状態（Save 非統合） */
+  private operationState: OperationState | null = null;
 
   constructor(
     private readonly gameData: GameData,
@@ -150,7 +153,8 @@ export class GameSession {
         getBattleXDebugEnabled: () =>
           this.verifyMode && this.battleXDebugDisplayEnabled,
         getSelectedCombatModuleId: (slotIndex) =>
-          this.partyCombatModuleSelection.getSelectedCombatModuleId(slotIndex),
+          this.resolveCombatModuleSelection().getSelectedCombatModuleId(slotIndex),
+        onBattlefieldReload: () => this.handleBattlefieldReload(),
       },
     );
 
@@ -196,6 +200,10 @@ export class GameSession {
     });
 
     this.engine.onEvent((event) => {
+      if (event.type === 'waveCleared') {
+        this.handleWaveCleared(event.completedWaveIndex);
+        return;
+      }
       if (event.type !== 'battleEnd') return;
       if (event.result === 'victory') {
         this.handleVictory(event.survivingPartyIndices);
@@ -205,12 +213,38 @@ export class GameSession {
       this.persistSave();
     });
 
+    if (this.verifyMode && this.loopStageId) {
+      this.beginOperation(this.loopStageId, this.resolveOperationStartWaveIndex());
+      this.engine.restartBattle();
+    }
+
     window.addEventListener('beforeunload', this.handleBeforeUnload);
     this.autoSaveTimer = setInterval(() => this.persistSave(), AUTO_SAVE_INTERVAL_MS);
   }
 
   getSaveState(): SaveGameState {
     return this.save;
+  }
+
+  /** R6c: 作戦中の readonly view（未開始時は null） */
+  getOperationState(): OperationStateReadonlyView | null {
+    return this.operationState?.toReadonlyView() ?? null;
+  }
+
+  hasActiveOperation(): boolean {
+    return this.operationState?.isActive === true;
+  }
+
+  getOperationParty(): PartySlotState[] | null {
+    return this.operationState?.getPartySnapshot() ?? null;
+  }
+
+  getOperationWaveIndex(): number | null {
+    return this.operationState?.currentWaveIndex ?? null;
+  }
+
+  getClearedWaveCount(): number | null {
+    return this.operationState?.clearedWaveCount ?? null;
   }
 
   isVerifyMode(): boolean {
@@ -241,6 +275,7 @@ export class GameSession {
       this.save.stageProgress.currentStageId,
     );
 
+    this.clearOperation();
     this.engine.restartBattle();
     this.persistSave();
     this.view.syncVerifyModeToggle(enabled);
@@ -280,6 +315,13 @@ export class GameSession {
 
   private setGameScreen(screen: GameScreen): void {
     if (this.currentScreen === screen) return;
+    if (
+      screen === 'stageSelect' &&
+      this.operationState !== null &&
+      !this.operationState.isCompleted
+    ) {
+      this.clearOperation();
+    }
     this.currentScreen = screen;
     const onBattle = screen === 'battle';
     const onFormation = screen === 'formation';
@@ -300,6 +342,7 @@ export class GameSession {
 
     this.save.stageProgress.currentStageId = resolvedStageId;
     this.stageDamageStats.resetForStage(resolvedStageId);
+    this.beginOperation(resolvedStageId, this.resolveOperationStartWaveIndex());
     this.engine.restartBattle();
     this.persistSave();
     this.menuHost.open('party');
@@ -316,7 +359,7 @@ export class GameSession {
   /** R5d: party slot の combat module 選択を更新（Save 非統合）。 */
   setPartySlotCombatModule(slotIndex: number, moduleId: string): void {
     if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) return;
-    this.partyCombatModuleSelection.setSelectedCombatModuleId(
+    this.resolveCombatModuleSelection().setSelectedCombatModuleId(
       slotIndex,
       moduleId,
     );
@@ -325,7 +368,7 @@ export class GameSession {
 
   /** R5d: 現在の選択 module ID（未指定 = undefined → default A）。 */
   getPartySlotCombatModule(slotIndex: number): string | undefined {
-    return this.partyCombatModuleSelection.getSelectedCombatModuleId(
+    return this.resolveCombatModuleSelection().getSelectedCombatModuleId(
       slotIndex,
     );
   }
@@ -333,7 +376,7 @@ export class GameSession {
   /** R5d: 選択をクリアし default module A へ戻す。 */
   clearPartySlotCombatModule(slotIndex: number): void {
     if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) return;
-    this.partyCombatModuleSelection.clearSelectedCombatModuleId(slotIndex);
+    this.resolveCombatModuleSelection().clearSelectedCombatModuleId(slotIndex);
     this.engine.syncPartyBuilds();
   }
 
@@ -369,7 +412,7 @@ export class GameSession {
         this.persistSave();
       } else if (current !== null) {
         this.save.party[slotIndex] = null;
-        this.partyCombatModuleSelection.clearSelectedCombatModuleId(slotIndex);
+        this.resolveCombatModuleSelection().clearSelectedCombatModuleId(slotIndex);
         this.persistSave();
         this.engine.restartBattle();
       }
@@ -377,7 +420,7 @@ export class GameSession {
     }
 
     if (nextClassId !== null) {
-      this.partyCombatModuleSelection.clearSelectedCombatModuleId(slotIndex);
+      this.resolveCombatModuleSelection().clearSelectedCombatModuleId(slotIndex);
     }
 
     this.save.party[slotIndex] = member ? structuredClone(member) : null;
@@ -432,6 +475,7 @@ export class GameSession {
 
     this.save.stageProgress.currentStageId = stageId;
     this.stageDamageStats.resetForStage(stageId);
+    this.beginOperation(stageId, this.resolveOperationStartWaveIndex());
     this.engine.restartBattle();
     this.persistSave();
     console.log(
@@ -451,6 +495,9 @@ export class GameSession {
 
     this.loopWaveIndex = clamped;
     setDebugLoopWaveIndex(clamped);
+    if (this.operationState !== null) {
+      this.operationState.prepareRetry(this.resolveOperationStartWaveIndex());
+    }
     this.engine.restartBattle();
     this.persistSave();
 
@@ -467,7 +514,13 @@ export class GameSession {
 
   /** R6b: 中間 Wave 終了待機中のみ次 Wave を開始（Save / 進行は変更しない） */
   startNextWave(): boolean {
-    return this.engine.startNextWave();
+    const started = this.engine.startNextWave();
+    if (started && this.operationState !== null) {
+      this.operationState.syncCurrentWaveIndex(
+        this.engine.getSnapshot().waveIndex,
+      );
+    }
+    return started;
   }
 
   isAwaitingNextWave(): boolean {
@@ -526,6 +579,10 @@ export class GameSession {
     const failedStage = getStageById(this.gameData.stages, failedStageId);
     const failedStageName = failedStage?.displayName ?? failedStageId;
 
+    if (this.operationState !== null) {
+      this.operationState.markDefeated();
+    }
+
     if (this.verifyMode && this.loopStageId) {
       console.log(`[progress] Defeat at ${failedStageName} (loop locked)`);
       return;
@@ -559,6 +616,14 @@ export class GameSession {
     const clearedStageId = this.save.stageProgress.currentStageId;
     const stage = getStageById(this.gameData.stages, clearedStageId);
     const stageName = stage?.displayName ?? clearedStageId;
+    const waveCount = stage?.waves.length ?? 1;
+    const finalWaveIndex = Math.max(0, waveCount - 1);
+
+    if (this.operationState !== null) {
+      this.operationState.markCompleted(finalWaveIndex, waveCount);
+      this.clearOperation();
+    }
+
     const expGranted = computeStageExpReward(
       this.gameData,
       clearedStageId,
@@ -629,6 +694,65 @@ export class GameSession {
       this.loopWaveIndex = null;
       setDebugLoopWaveIndex(null);
     }
+  }
+
+  private clearOperation(): void {
+    this.operationState = null;
+  }
+
+  /** R6c: 出撃確定時に OperationState を初期化（メモリ専用 snapshot） */
+  private beginOperation(stageId: string, initialWaveIndex = 0): void {
+    const next = OperationState.begin({
+      stageId,
+      party: this.save.party,
+      moduleSelection: this.preOperationModuleSelection,
+      initialWaveIndex,
+    });
+    if (next === null) {
+      console.warn('[operation] Invalid party snapshot; operation not started');
+      this.clearOperation();
+      return;
+    }
+    this.operationState = next;
+  }
+
+  private resolveOperationStartWaveIndex(): number {
+    if (!this.verifyMode) return 0;
+    const loopWave = this.loopWaveIndex;
+    if (loopWave === null) return 0;
+    const stage = getStageById(this.gameData.stages, this.save.stageProgress.currentStageId);
+    const waveCount = stage?.waves.length ?? 0;
+    if (loopWave < 0 || loopWave >= waveCount) return 0;
+    return loopWave;
+  }
+
+  /**
+   * module 選択の正本:
+   * - 作戦未完了中（active / defeated retry 待ち）: OperationState 内
+   * - それ以外（編成画面・作戦前）: preOperationModuleSelection
+   */
+  private resolveCombatModuleSelection(): PartyCombatModuleSelection {
+    if (
+      this.operationState !== null &&
+      !this.operationState.isCompleted
+    ) {
+      return this.operationState.getCombatModuleSelection();
+    }
+    return this.preOperationModuleSelection;
+  }
+
+  private handleWaveCleared(completedWaveIndex: number): void {
+    this.operationState?.recordWaveCleared(completedWaveIndex);
+  }
+
+  private handleBattlefieldReload(): void {
+    if (this.operationState === null || this.operationState.isCompleted) return;
+    const startWave = this.resolveOperationStartWaveIndex();
+    if (this.operationState.isDefeated) {
+      this.operationState.resetWaveProgress(startWave);
+      return;
+    }
+    this.operationState.prepareRetry(startWave);
   }
 
   private clearLoopStageSelection(): void {

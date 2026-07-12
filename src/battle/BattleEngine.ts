@@ -238,6 +238,8 @@ export interface BattleEngineOptions {
   getBattleXDebugEnabled?: () => boolean;
   /** R5d: party slot ごとの選択 combat module ID（未指定 = default A） */
   getSelectedCombatModuleId?: (slotIndex: number) => string | undefined;
+  /** R6c: battlefield 再読込（restart / respawn）通知。OperationState 同期用。 */
+  onBattlefieldReload?: () => void;
 }
 
 export class BattleEngine {
@@ -322,6 +324,7 @@ export class BattleEngine {
   private readonly getSelectedCombatModuleId?: (
     slotIndex: number,
   ) => string | undefined;
+  private readonly onBattlefieldReload?: () => void;
 
   constructor(
     private readonly gameData: GameData,
@@ -337,6 +340,7 @@ export class BattleEngine {
     this.getLoopWaveIndex = options.getLoopWaveIndex;
     this.getBattleXDebugEnabled = options.getBattleXDebugEnabled;
     this.getSelectedCombatModuleId = options.getSelectedCombatModuleId;
+    this.onBattlefieldReload = options.onBattlefieldReload;
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
       getBattleTimeSec: () => this.battleTimeSec,
       enqueuePendingHits: (hits) => {
@@ -729,6 +733,7 @@ export class BattleEngine {
     this.clearWaveAnnouncement();
     this.beginWaveAnnouncement(startWaveIndex);
     this.initBattlePassiveState();
+    this.onBattlefieldReload?.();
   }
 
   private resolveStartWaveIndex(): number {
@@ -1332,6 +1337,12 @@ export class BattleEngine {
     this.waveExitMarchActive = false;
     if (this.pendingNextWaveIndex !== null) {
       this.awaitingNextWave = true;
+      this.emit({
+        type: "waveCleared",
+        completedWaveIndex: this.waveIndex,
+        hasNextWave: true,
+        isFinalWave: false,
+      });
     }
   }
 
