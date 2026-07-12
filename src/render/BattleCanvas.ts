@@ -48,6 +48,7 @@ import {
 import { VictoryOverlay } from "./VictoryOverlay.ts";
 import { WaveOverlay } from "./WaveOverlay.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
+import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
 import { drawAllyRangePassiveBands } from "./battleRangePassiveBandDraw.ts";
 import type { AllyRangePassiveBand } from "../battle/allyRangePassiveBands.ts";
 import { pickCombatantAtCanvasPoint } from "./battleCanvasHitTest.ts";
