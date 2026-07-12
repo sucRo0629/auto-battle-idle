@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R8e 完了** — 戦闘中表示整理（本 §78）。**R8d 完了** — 戦闘開始注入（本 §77）。**R8c 完了** — Wave 間準備 UI + パッシブ取得 API（本 §76）。**R8b 完了** — 作戦内パッシブ状態モデル + checkpoint（§75）。**R8a 完了** — 既存基盤調査・5 タスク分割（§74）。**R7e 完了** — 作戦結果後再戦 + 遷移統一（§73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R8f — 範囲系 runtime 判定 + 1 次元プレースホルダ描画**（§74.6）。**R7 完了** — R7a〜e（§69〜73）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R8 完了** — 作戦内パッシブ（R8a〜f、本 §74〜79）。**R8f 完了** — 範囲系 runtime + プレースホルダ描画（§79）。**R8e 完了** — 戦闘中表示整理（§78）。**R8d 完了** — 戦闘開始注入（§77）。**R8c 完了** — Wave 間準備 UI + パッシブ取得 API（§76）。**R8b 完了** — 作戦内パッシブ状態モデル + checkpoint（§75）。**R8a 完了** — 既存基盤調査・5 タスク分割（§74）。**R7e 完了** — 作戦結果後再戦 + 遷移統一（§73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R9 — エディタ実装**。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6096,4 +6096,39 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 
 ### 78.5 次タスク
 
-**R8f — 範囲系 runtime 判定 + 1 次元プレースホルダ描画**
+**R8f — 範囲系 runtime 判定 + 1 次元プレースホルダ描画** — §79 で完了。
+
+---
+
+## 79. R8f — 範囲系 runtime 判定 + 1 次元プレースホルダ描画（2026-07-13 完了）
+
+**スコープ:** 作戦内取得の ally 範囲 buff を既存 `syncBuffAuras` 経路で runtime 接続。`battleX` 中心の 1 次元帯を `BattleCanvas` にプレースホルダ表示。敵側・移動系・正式 VFX は対象外。
+
+### 79.1 最小縦切り
+
+| 項目 | 採用 |
+| ---- | ---- |
+| 兵科 | `df_guardian` |
+| passive ID | `df_guardian_passive_5`（暫定・検証用。`at_lancer_passive_2` パターン流用） |
+| 効果 | ally 範囲 DEF stat buff（`buffMultiplier` 1.03） |
+| 範囲 | `buffAoeRadiusPx` 40（所有者 `battleX` 中心・左右対称） |
+| 所有者対象 | `selfOrigin` — 所有者自身を含む |
+
+### 79.2 runtime / 描画経路
+
+- **効果:** R8d 注入 → `learnedPassiveIds` → `BattleEngine.syncContinuousPassiveAuras` → `syncBuffAuras` → `resolvePassiveBuffTargets`（`battleX` + `buffAoeRadiusPx`）
+- **帯データ:** `resolveAllyRangePassiveBands`（`OperationState` 取得 ID × 生存味方 `battleX`）→ `BattleSnapshot.allyRangePassiveBands`
+- **描画:** `BattleCanvas.draw` → `drawAllyRangePassiveBands`（`battleX` 1:1 → screen X、地面帯）
+
+### 79.3 変更ファイル
+
+- 新規: `src/battle/allyRangePassiveBands.ts`、`src/render/battleRangePassiveBandDraw.ts`、`src/battle/operationRangePassive.test.ts`
+- 更新: `data/skills/passives/df_guardian.json`、`operationPassiveCatalog.ts`、`BattleEngine.ts`、`types.ts`、`BattleCanvas.ts`、`battleXDebugReplayBuffer.test.ts`
+
+### 79.4 テスト
+
+`operationRangePassive` / `passiveEffects` / `passiveBuffBridge` / `operationPassiveInjection` / `battleFieldTransition` / `operationRetry` — **全件 pass**。
+
+### 79.5 次タスク
+
+**R9 — エディタ実装**（phase-roadmap §R9）。

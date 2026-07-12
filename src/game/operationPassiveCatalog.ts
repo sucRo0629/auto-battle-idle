@@ -11,7 +11,7 @@ export const WAVE_CLEAR_OPERATION_RESOURCE_GRANT = 1;
 export const OPERATION_PASSIVE_CANDIDATES_BY_CLASS: Readonly<
   Record<string, readonly string[]>
 > = {
-  df_guardian: ['df_guardian_passive_2'],
+  df_guardian: ['df_guardian_passive_2', 'df_guardian_passive_5'],
 };
 
 export function getOperationPassiveCandidatesForClass(

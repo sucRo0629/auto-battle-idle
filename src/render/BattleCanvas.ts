@@ -48,7 +48,8 @@ import {
 import { VictoryOverlay } from "./VictoryOverlay.ts";
 import { WaveOverlay } from "./WaveOverlay.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
-import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
+import { drawAllyRangePassiveBands } from "./battleRangePassiveBandDraw.ts";
+import type { AllyRangePassiveBand } from "../battle/allyRangePassiveBands.ts";
 import { pickCombatantAtCanvasPoint } from "./battleCanvasHitTest.ts";
 import {
   drawHoverHighlightForLayout,
@@ -88,6 +89,7 @@ export class BattleCanvas implements IBattleRenderer {
   private hoverGlowAnimStartMs: number | null = null;
   private targetIndicatorUnitIds = new Set<string>();
   private targetIndicatorAnimStartMs: number | null = null;
+  private allyRangePassiveBands: AllyRangePassiveBand[] = [];
   private onFieldHoverChange: ((unitId: string | null) => void) | null = null;
 
   private readonly handleCanvasPointerMove = (event: MouseEvent): void => {
@@ -460,6 +462,7 @@ export class BattleCanvas implements IBattleRenderer {
       : undefined;
     applyVisualDepthOffsets(layouts, SPRITE_SCALE, { enemyDepthReference });
     this.worldOffsetX = snapshot.worldOffsetX;
+    this.allyRangePassiveBands = snapshot.allyRangePassiveBands ?? [];
     this.victoryOverlay.syncPhase(
       snapshot.phase,
       snapshot.alliesOffScreen,
@@ -541,6 +544,12 @@ export class BattleCanvas implements IBattleRenderer {
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawBackground();
+    drawAllyRangePassiveBands(
+      this.ctx,
+      this.allyRangePassiveBands,
+      groundLineY(canvas.height),
+      this.theme,
+    );
 
     const drawOrderLayouts = sortForSpriteDrawPass(this.layouts);
 

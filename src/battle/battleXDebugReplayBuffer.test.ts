@@ -24,6 +24,8 @@ function makeSnapshot(
     alliesOffScreen: false,
     victoryUseTimerFade: false,
     victoryAwaitExitMarch: false,
+    awaitingNextWave: false,
+    allyRangePassiveBands: [],
     players: [],
     allies: [],
     enemies: [],

@@ -1910,6 +1910,8 @@ export interface BattleSnapshot {
   waveIndex: number;
   waveCount: number;
   worldOffsetX: number;
+  /** R8f: 作戦内範囲 buff の 1 次元帯（判定と同一 battleX / radius） */
+  allyRangePassiveBands: import("./allyRangePassiveBands.ts").AllyRangePassiveBand[];
   /** Wave 開始前の告知オーバーレイ表示中（PartyDeploy より前） */
   waveAnnouncementActive: boolean;
   /** waveAnnouncementActive 時の経過 ms（描画アニメ用） */

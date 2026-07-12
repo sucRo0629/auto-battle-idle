@@ -92,6 +92,7 @@ import {
   tickHerbalPotencyAccumulation,
 } from "./herbalPotency.ts";
 import { tickIdleAtkRamp } from "./idleAtkRamp.ts";
+import { resolveAllyRangePassiveBands } from "./allyRangePassiveBands.ts";
 import { tickPlacedFields } from "./placedField.ts";
 import type { PlacedFieldInstance } from "./types.ts";
 import { tickNextOutgoingDamageArming } from "./nextOutgoingDamage.ts";
@@ -1897,6 +1898,11 @@ export class BattleEngine {
       victoryUseTimerFade: this.phase === "victory",
       victoryAwaitExitMarch,
       awaitingNextWave: this.awaitingNextWave,
+      allyRangePassiveBands: resolveAllyRangePassiveBands(
+        this.players,
+        this.gameData.skillRegistry.passives,
+        (slotIndex) => this.getAcquiredOperationPassiveIds?.(slotIndex) ?? [],
+      ),
       players: this.players.map((c) => this.toSnapshot(c)),
       allies: this.players.map((c) => this.toSnapshot(c)),
       enemies: this.enemies.map((c) => this.toSnapshot(c)),

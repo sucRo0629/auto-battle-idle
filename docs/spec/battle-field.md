@@ -1274,6 +1274,7 @@ Hensei-Only の戦場は **1 次元軸**（`battleX`）である。円・扇形�
 | 識別 | **味方由来** と **敵由来** を色・線種等で区別できること |
 | 重なり | **複数範囲の重なり** が視認できること |
 | データ一致 | 範囲表示・対象判定・進行位置・Hit 時刻は **同一 runtime 情報** を参照する。表示専用の別距離・別 facing・別発生地点列を持たせない |
+| R8f 実装 | `BattleSnapshot.allyRangePassiveBands`（`resolveAllyRangePassiveBands`）と `syncBuffAuras` が同一 `battleX` / `buffAoeRadiusPx` を参照。描画は `BattleCanvas` → `drawAllyRangePassiveBands` |
 | 確認項目 | 表示範囲と内部判定の一致 / 範囲内外の切り替え / 発生源消滅時の解除 |
 
 **適用方式ごとのプレースホルダ:**
