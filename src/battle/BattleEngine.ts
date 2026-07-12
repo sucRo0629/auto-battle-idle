@@ -706,7 +706,7 @@ export class BattleEngine {
     };
   }
 
-  private reloadBattlefield(): void {
+  private reloadBattlefield(explicitStartWaveIndex?: number): void {
     resetEntityIdCounter();
     this.trainingWaveReadyToEngage = false;
     this.pendingHitQueue = [];
@@ -723,7 +723,8 @@ export class BattleEngine {
       this.getSelectedCombatModuleId,
     );
     this.stageId = this.getStageId();
-    const startWaveIndex = this.resolveStartWaveIndex();
+    const startWaveIndex =
+      explicitStartWaveIndex ?? this.resolveStartWaveIndex();
     this.waveIndex = startWaveIndex;
     this.clearEngagedVisualState();
     this.victoryFormationReady = false;
@@ -1753,6 +1754,27 @@ export class BattleEngine {
     this.clearPendingDefeat();
     this.clearPendingWaveAdvance();
     this.reloadBattlefield();
+    this.worldOffsetX = 0;
+    this.restartTimer = 0;
+    this.phase = "running";
+    this.tryBeginTrainingEngage();
+  }
+
+  /** R6i: 指定 Wave index で戦闘フィールドを再生成する（作戦 checkpoint 再戦用）。 */
+  restartBattleAtWave(waveIndex: number): void {
+    const stage = this.gameData.stages.find((item) => item.id === this.getStageId());
+    const waveCount = stage?.waves.length ?? 0;
+    if (waveCount <= 0) {
+      this.restartBattle();
+      return;
+    }
+    const clampedWave = Math.max(0, Math.min(waveIndex, waveCount - 1));
+
+    this.engaged = false;
+    this.clearPendingVictory();
+    this.clearPendingDefeat();
+    this.clearPendingWaveAdvance();
+    this.reloadBattlefield(clampedWave);
     this.worldOffsetX = 0;
     this.restartTimer = 0;
     this.phase = "running";

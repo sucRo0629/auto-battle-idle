@@ -88,6 +88,11 @@ export interface VerifyModeControls {
   onLoopWaveChange?: (waveIndex: number | null) => void;
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
   getCurrentStageId?: () => string;
+  /** R6i: 作戦 retry API が利用可能か */
+  canUseOperationRetry?: () => boolean;
+  onRetryCurrentWave?: () => boolean;
+  onReturnToFormationPrep?: () => boolean;
+  onRestartOperationFromWaveZero?: () => boolean;
 }
 
 function resolveSkillRangePxFromSnapshot(
@@ -394,6 +399,14 @@ export class BattleView {
         },
         isAwaitingNextWave: () => this.engine.getSnapshot().awaitingNextWave,
         onStartNextWave: () => this.engine.startNextWave(),
+        canUseOperationRetry: () =>
+          verifyModeControls?.canUseOperationRetry?.() ?? false,
+        onRetryCurrentWave: () =>
+          verifyModeControls?.onRetryCurrentWave?.() ?? false,
+        onReturnToFormationPrep: () =>
+          verifyModeControls?.onReturnToFormationPrep?.() ?? false,
+        onRestartOperationFromWaveZero: () =>
+          verifyModeControls?.onRestartOperationFromWaveZero?.() ?? false,
       },
       () => {
         setDebugMenuDockOpen(false);

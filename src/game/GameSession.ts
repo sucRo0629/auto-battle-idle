@@ -100,6 +100,8 @@ export class GameSession {
   private operationCheckpoint: OperationCheckpointSnapshot | null = null;
   /** R6h: 作戦完了時に確定する結果（メモリのみ・Save 非統合） */
   private operationResult: OperationResult | null = null;
+  /** R6i: checkpoint 再戦中は onBattlefieldReload による Wave 進行巻き戻しを抑止 */
+  private suppressOperationWaveReload = false;
 
   constructor(
     private readonly gameData: GameData,
@@ -223,6 +225,10 @@ export class GameSession {
             this.gameData.classRegistry,
           ),
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
+        canUseOperationRetry: () => this.canUseOperationRetry(),
+        onRetryCurrentWave: () => this.retryCurrentWaveFromCheckpoint(),
+        onReturnToFormationPrep: () => this.returnToFormationPrep(),
+        onRestartOperationFromWaveZero: () => this.restartOperationFromWaveZero(),
       },
     );
     this.setGameScreen(this.verifyMode ? 'battle' : 'stageSelect');
@@ -360,6 +366,59 @@ export class GameSession {
   /** R6f: checkpoint を破棄（OperationState 自体は維持） */
   clearOperationCheckpoint(): void {
     this.operationCheckpoint = null;
+  }
+
+  /**
+   * R6i: 確定済み checkpoint から現在 Wave を同設定で再戦する。
+   * checkpoint 不在・作戦完了時は false（状態不変）。
+   */
+  retryCurrentWaveFromCheckpoint(): boolean {
+    if (!this.canUseOperationRetry()) return false;
+    if (!this.hasOperationCheckpoint()) return false;
+
+    const checkpoint = this.operationCheckpoint!;
+    if (!this.tryRestoreOperationFromCheckpoint(checkpoint)) return false;
+
+    this.clearOperationResult();
+    this.operationState?.endWavePrepEditing();
+    this.suppressOperationWaveReload = true;
+    try {
+      this.engine.restartBattleAtWave(checkpoint.currentWaveIndex);
+    } finally {
+      this.suppressOperationWaveReload = false;
+    }
+    this.setGameScreen('battle');
+    return true;
+  }
+
+  /**
+   * R6i: 戦闘を開始せず既存の編成導線（formation）へ戻る。
+   * 作戦未開始・完了時は false。
+   */
+  returnToFormationPrep(): boolean {
+    if (!this.canUseOperationRetry()) return false;
+
+    this.clearOperationResult();
+    this.operationState?.endWavePrepEditing();
+    this.menuHost.open('party');
+    return true;
+  }
+
+  /**
+   * R6i: 同 stageId の Wave 0 として OperationState を再初期化する。
+   * 作戦未開始・完了時は false。
+   */
+  restartOperationFromWaveZero(): boolean {
+    if (!this.canUseOperationRetry()) return false;
+
+    const stageId = this.operationState!.stageId;
+    this.clearOperationResult();
+    this.operationState?.endWavePrepEditing();
+
+    if (!this.beginOperation(stageId, 0)) return false;
+    this.engine.restartBattle();
+    this.menuHost.open('party');
+    return true;
   }
 
   isVerifyMode(): boolean {
@@ -896,6 +955,14 @@ export class GameSession {
     this.operationResult = null;
   }
 
+  /** R6i: 敗北後・Wave 準備中の retry API が利用可能か */
+  private canUseOperationRetry(): boolean {
+    return (
+      this.operationState !== null &&
+      !this.operationState.isCompleted
+    );
+  }
+
   /** 既に確定済みなら no-op（同一 battleEnd 通知の二重確定防止）。 */
   private tryFinalizeOperationResult(params: FinalizeOperationResultParams): void {
     if (this.operationResult !== null) {
@@ -998,6 +1065,7 @@ export class GameSession {
   }
 
   private handleBattlefieldReload(): void {
+    if (this.suppressOperationWaveReload) return;
     if (this.operationState === null || this.operationState.isCompleted) return;
     const startWave = this.resolveOperationStartWaveIndex();
     if (this.operationState.isDefeated) {

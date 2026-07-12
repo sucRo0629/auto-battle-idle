@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6h 完了** — 最終 Wave → 作戦結果（本 §66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R6i — retry 3 種（最小）**（handoff §66 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R6i 完了** — retry 3 種（最小）（本 §67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R6j — 統合テスト**（2 wave legacy stage `1` + module 選択 + stop/resume / handoff §67 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5229,4 +5229,76 @@ BattleEngine / GameSession の Wave 開始処理を、`waveIndex` に対応す�
 
 ### 66.8 次タスク
 
-**R6i — retry 3 種（最小）** — defeat / wave prep から同設定再戦・準備へ戻る・作戦最初からの debug または最小 UI 経路。
+~~**R6i — retry 3 種（最小）**~~ → §67 完了。次は **R6j — 統合テスト**。
+
+---
+
+## 67. R6i — retry 3 種（最小）（2026-07-12 完了）
+
+### 67.1 目的
+
+敗北後または Wave 準備中に使える 3 種類の再開操作を `GameSession` 公開 API として実装。checkpoint 利用・`operationResult` クリア・最小 debug 配線・テスト。正式 UI・retry 回数・報酬・Save 永続化は未実装。
+
+### 67.2 読んだファイル（6 件）
+
+1. `docs/ai-handoff/current-task.md` — R6i 正本・§66 完了状態
+2. `src/game/GameSession.ts` — checkpoint / operationResult / screen 遷移
+3. `src/game/OperationCheckpoint.ts` — snapshot 復元
+4. `src/game/OperationState.ts` — `tryRestoreFromCheckpoint` / `prepareRetry`
+5. `src/game/operationCheckpoint.test.ts` — harness パターン
+6. `docs/spec/operation-loop.md` — §9 リトライ 3 種
+
+### 67.3 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/battle/BattleEngine.ts` | `restartBattleAtWave(waveIndex)`、`reloadBattlefield(explicitStartWaveIndex?)` |
+| `src/game/GameSession.ts` | retry 3 API、`suppressOperationWaveReload`、`canUseOperationRetry` |
+| `src/ui/BattleView.ts` | verify 経由 retry callback 配線 |
+| `src/ui/DebugMenuPanel.ts` | verify 時「作戦 retry」debug ボタン 3 種 |
+| `src/game/operationRetry.test.ts` | 新規 — R6i 必須テスト 7 件 |
+| `docs/ai-handoff/current-task.md` | 本 §67 |
+
+### 67.4 追加 retry API
+
+| API | 概要 |
+| --- | ---- |
+| `retryCurrentWaveFromCheckpoint()` | 確定済み checkpoint から OperationState 復元 → 同 Wave で戦闘再生成 |
+| `returnToFormationPrep()` | `menuHost.open('party')` で編成画面へ（`restartBattle` 非呼び出し） |
+| `restartOperationFromWaveZero()` | 同 `stageId` で `beginOperation(stageId, 0)` → `restartBattle` → 編成画面 |
+
+### 67.5 状態遷移
+
+| retry | 前提 | OperationState | 画面 | 戦闘 |
+| ----- | ---- | -------------- | ---- | ---- |
+| **同設定再戦** | checkpoint あり・作戦未完了 | checkpoint 復元 → active | `battle` | `restartBattleAtWave(checkpoint.currentWaveIndex)` |
+| **編成準備へ** | 作戦未完了 | 維持（wave prep 編集終了のみ） | `formation` | 開始しない |
+| **Wave 0 から** | 作戦未完了 | `beginOperation` で Wave 0 再初期化 + 新 checkpoint | `formation` | `restartBattle`（tick は formation で停止） |
+
+いずれも開始時に `operationResult` をクリア。
+
+### 67.6 checkpoint 使用箇所
+
+- **同設定再戦:** commit 済み `operationCheckpoint` を `tryRestoreOperationFromCheckpoint` で復元（party / module / `currentWaveIndex` / `clearedWaveCount`）
+- **編成準備へ:** checkpoint 参照なし（保持のみ）
+- **Wave 0 から:** `beginOperation` が旧 checkpoint を破棄し Wave 0 の新 checkpoint を commit
+
+### 67.7 失敗時の扱い
+
+- 作戦未開始・`isCompleted` → 3 API とも `false`、状態不変
+- **同設定再戦:** checkpoint 不在・復元 validation 失敗 → `false`、状態不変
+- `beginOperation` 失敗（Wave 0 から）→ `false`
+- 二重実行: 同設定再戦は idempotent（同一 checkpoint から再復元 + 戦闘再生成）
+
+### 67.8 テスト
+
+- `operationRetry.test.ts`: **7 pass / 7**
+- 関連回帰 `operationCheckpoint.test.ts` + `operationState.test.ts` + `operationResult.test.ts` + `gameSessionWire.test.ts`: **83 pass / 83**（R6i 新規 7 + 既存 76）
+
+### 67.9 スコープ外維持
+
+- 正式敗北 / Wave 間準備 UI、retry 回数、報酬、checkpoint Save 永続化、StageDamageStats 巻き戻し
+
+### 67.10 次タスク
+
+**R6j — 統合テスト** — 2 wave legacy stage `1` + module 選択 + stop/resume の自動テスト縦切り。

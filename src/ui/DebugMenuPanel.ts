@@ -21,6 +21,11 @@ export interface DebugMenuControls {
   isAwaitingNextWave?: () => boolean;
   /** R6b: 次 Wave 開始（待機中のみ成功） */
   onStartNextWave?: () => boolean;
+  /** R6i: 作戦 retry API */
+  canUseOperationRetry?: () => boolean;
+  onRetryCurrentWave?: () => boolean;
+  onReturnToFormationPrep?: () => boolean;
+  onRestartOperationFromWaveZero?: () => boolean;
 }
 
 export class DebugMenuPanel {
@@ -79,6 +84,10 @@ export class DebugMenuPanel {
     const awaitingNextWave = this.controls.isAwaitingNextWave?.() ?? false;
     if (awaitingNextWave) {
       this.rowsHost.append(this.createStartNextWaveRow());
+    }
+
+    if (this.controls.canUseOperationRetry?.() ?? false) {
+      this.rowsHost.append(this.createOperationRetryRows());
     }
 
     const stageRow = document.createElement('div');
@@ -260,6 +269,46 @@ export class DebugMenuPanel {
     });
 
     row.appendChild(button);
+    return row;
+  }
+
+  private createOperationRetryRows(): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'debug-menu-retry-row';
+
+    const label = document.createElement('div');
+    label.className = 'debug-menu-retry-label';
+    label.textContent = '作戦 retry';
+    row.appendChild(label);
+
+    const actions: Array<{ text: string; run: () => boolean }> = [
+      {
+        text: '同設定再戦',
+        run: () => this.controls.onRetryCurrentWave?.() ?? false,
+      },
+      {
+        text: '編成準備へ',
+        run: () => this.controls.onReturnToFormationPrep?.() ?? false,
+      },
+      {
+        text: 'Wave0から',
+        run: () => this.controls.onRestartOperationFromWaveZero?.() ?? false,
+      },
+    ];
+
+    for (const action of actions) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'debug-menu-retry-button';
+      button.textContent = action.text;
+      button.addEventListener('click', () => {
+        if (action.run()) {
+          this.refresh();
+        }
+      });
+      row.appendChild(button);
+    }
+
     return row;
   }
 
