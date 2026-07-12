@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6g-3 完了** — BattleEngine / GameSession spawn 接続（本 §64）。**R6g-2 完了**（§63）。**R6g-1 完了**（§62）。**R6f 完了**（§61）。**R6e 完了**（§60）。**R6d 完了**（§59）。
-- **次の再開タスク:** **R6g-4 — `stages.json` / editor 移行**（handoff §64 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R6g-4 完了** — `stages.json` / editor 移行（本 §65）。**R6g-3 完了**（§64）。**R6g-2 完了**（§63）。**R6g-1 完了**（§62）。**R6f 完了**（§61）。**R6e 完了**（§60）。**R6d 完了**（§59）。
+- **次の再開タスク:** **R6h — 最終 Wave → 作戦結果**（handoff §65 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5113,9 +5113,62 @@ BattleEngine / GameSession の Wave 開始処理を、`waveIndex` に対応す�
 
 ### 64.6 未実装（R6g-4 以降）
 
-- `stages.json` / editor 移行
+- ~~`stages.json` / editor 移行~~ → **R6g-4 完了**（§65）
 - schema 正規化による敵生成方式の一本化
 
 ### 64.7 次タスク
 
-**R6g-4 — `stages.json` / editor 移行**
+~~**R6g-4 — `stages.json` / editor 移行**~~ → §65 完了。次は **R6h — 最終 Wave → 作戦結果**。
+
+---
+
+## 65. R6g-4 — `stages.json` / editor 移行（2026-07-12 完了）
+
+### 65.1 目的
+
+ステージデータと editor 保存経路で、複数 Wave の敵編成を `waves[].enemyGroups` として編集・保存・再読込できるようにする。production 戦闘・UI・バランス値は変更しない。
+
+### 65.2 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/editor/editorApi.ts` | `resolveStageDraftCompositionMode` / `ensureStageDraftWaves`、wave 向け `validateStageDraftForSave` / `normalizeStageDraftForSave` 拡張 |
+| `src/editor/StageEnemyEditorStep.ts` | Wave ごと enemyGroups 編集 UI、stage 直下編集とのモード分離 |
+| `src/editor/editorApi.test.ts` | R6g-4 wave draft テスト 7 件 |
+| `src/editor/StageEnemyEditorStep.test.ts` | wave UI テスト 2 件、stage ラベル更新 |
+| `docs/ai-handoff/current-task.md` | 本 §65 |
+
+**production code / `data/stages.json` 一括移行:** 未変更。
+
+### 65.3 editor 上の Wave 敵編成の所有箇所
+
+- **編集 UI:** `StageEnemyEditorStep` — `compositionMode === 'waveEnemyGroups'` 時、`draft.waves[waveIndex].enemyGroups`
+- **stage 直下:** 従来どおり `draft.enemyGroups`（`stageEnemyGroups` モード）
+- **legacy 参照:** `draft.waves[waveIndex].enemies`（読み取り専用、保存時維持）
+
+### 65.4 読込・編集・保存のデータ経路
+
+1. **読込:** `fetchStages` → `loadStageDraftById` → `structuredClone(stage)`（`waves[].enemyGroups` 含む）
+2. **編集:** `EditorApp.stageDraft` → `StageEnemyEditorStep.onDraftChange`
+3. **検証:** `validateStageDraftForSave`（stage 直下 or 各 wave の enemyGroups + recommendedLevel）
+4. **正規化:** `normalizeStageDraftForSave`（wave `enemies` 配列補完、未編集 wave 維持、stage 直下 placeholder waves は従来どおり）
+5. **保存:** `saveStageBundle` → `PUT /__editor/stages`
+
+### 65.5 legacy 互換
+
+| 形式 | 扱い |
+| ---- | ---- |
+| stage 直下 `enemyGroups` | 従来 UI・保存経路を維持 |
+| `waves[].enemies` のみ | legacy モード。保存時に enemies を欠落させない |
+| 同一 wave に enemies + enemyGroups | 保存時両方維持。spawn は R6g-2 既存規則（wave enemyGroups 優先） |
+| 全ステージ一括移行 | 今回スコープ外 |
+
+### 65.6 テスト
+
+- `editorApi.test.ts` wave draft: **7 pass**（読込・保存・複数 wave 維持・stage 直下・legacy・validate 通過・wave validate）
+- `StageEnemyEditorStep.test.ts`: **6 pass / 6**
+- 関連回帰 `editorApi.test.ts` 全体: **38 pass / 38**
+
+### 65.7 次タスク
+
+**R6h — 最終 Wave → 作戦結果**（`operationResult` 仮）。schema 正規化による敵生成方式の一本化は今回スコープ外（§64.6 保留）。

@@ -57,7 +57,7 @@ describe('StageEnemyEditorStep', () => {
 
     expect(host.textContent).toContain('recommendedLevel');
     expect(host.textContent).toContain('15');
-    expect(host.textContent).toContain('enemyGroups（編集中）');
+    expect(host.textContent).toContain('stage 直下 enemyGroups（編集中）');
     expect(host.textContent).toContain('総体数');
     expect(host.textContent).toContain('5');
     expect(host.textContent).toContain('df_paladin ×2');
@@ -100,7 +100,7 @@ describe('StageEnemyEditorStep', () => {
     host = document.createElement('div');
     new StageEnemyEditorStep(host, makeOptions(draft, stages));
 
-    expect(host.textContent).toContain('enemyGroups（編集中）');
+    expect(host.textContent).toContain('stage 直下 enemyGroups（編集中）');
     expect(host.textContent).toContain('10');
     expect(host.textContent).toContain('df_guardian ×1');
     expect(host.textContent).toContain('at_hunter ×1');
@@ -114,10 +114,64 @@ describe('StageEnemyEditorStep', () => {
     host = document.createElement('div');
     new StageEnemyEditorStep(host, makeOptions(draft, stages));
 
-    expect(host.textContent).toContain('enemyGroups（編集中）');
+    expect(host.textContent).toContain('stage 直下 enemyGroups（編集中）');
     expect(host.textContent).toContain('10');
     expect(host.textContent).toContain('df_guardian ×1');
     expect(host.textContent).toContain('at_hunter ×2');
     expect(host.textContent).not.toContain('legacy（waves / templateId）');
+  });
+
+  it('loads and previews waves[].enemyGroups per wave', () => {
+    const draft: StageDraft = {
+      id: 'wave_groups',
+      displayName: 'Wave Groups',
+      recommendedLevel: 12,
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+        },
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'at_hunter', count: 1, atkScale: 1.2 }],
+        },
+      ],
+    };
+
+    host = document.createElement('div');
+    new StageEnemyEditorStep(host, makeOptions(draft));
+
+    expect(host.textContent).toContain('waves[].enemyGroups（編集中）');
+    expect(host.textContent).toContain('Wave 0');
+    expect(host.textContent).toContain('Wave 1');
+    expect(host.textContent).toContain('df_paladin ×2');
+    expect(host.textContent).toContain('at_hunter ×1');
+    expect(host.textContent).toContain('wave 0:');
+    expect(host.textContent).toContain('wave 1:');
+  });
+
+  it('shows legacy wave alongside wave enemyGroups editing entry points', () => {
+    const draft: StageDraft = {
+      id: 'mixed_wave',
+      displayName: 'Mixed Wave',
+      recommendedLevel: 10,
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+        },
+        {
+          enemies: [{ templateId: 'enemy_b', spawnX: 120 }],
+        },
+      ],
+    };
+
+    host = document.createElement('div');
+    new StageEnemyEditorStep(host, makeOptions(draft));
+
+    expect(host.textContent).toContain('waves[].enemyGroups（編集中）');
+    expect(host.textContent).toContain('legacy enemies');
+    expect(host.textContent).toContain('enemy_b');
+    expect(host.textContent).toContain('この Wave の enemyGroups を編集');
   });
 });

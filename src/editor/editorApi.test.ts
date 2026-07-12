@@ -13,6 +13,7 @@ import {
   initClassSkillEntriesFromPreset,
   loadStageDraftById,
   normalizeStageDraftForSave,
+  resolveStageDraftCompositionMode,
   resyncEnemyBasicAttackEntry,
   toClassStatsPatch,
   validateStageDraftForSave,
@@ -820,5 +821,255 @@ describe('validateStageDraftForSave', () => {
       ],
       waves: [{ enemies: [] }],
     });
+  });
+});
+
+describe('wave enemyGroups draft helpers (R6g-4)', () => {
+  const minimalStageClass = {
+    id: 'df_paladin',
+    role: 'defender',
+    displayName: '聖騎士',
+    summary: { ja: 'test' },
+    formationRow: 'front',
+    maxHp: 100,
+    atk: 10,
+    def: 5,
+    res: 0,
+    basicAttackSkillId: 'df_paladin_basic_attack',
+    passiveIds: [],
+    starterActiveIds: [],
+    skills: [{ level: 0, skillIds: [] }],
+    classSkillIds: [],
+  };
+
+  const minimalStageEnemy = {
+    id: 'test_dummy',
+    displayName: 'dummy',
+    maxHp: 100,
+    atk: 1,
+    def: 1,
+    res: 0,
+    exp: 0,
+    basicAttackSkillId: 'test_dummy_basic_attack',
+    attackSpeedTier: 'normal' as const,
+  };
+
+  const minimalStageSkills = {
+    passives: [],
+    actives: [
+      {
+        id: 'df_paladin_basic_attack',
+        name: 'basic',
+        trigger: { kind: 'time', value: 2 },
+        effect: [
+          {
+            target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+            type: 'damage',
+            amount: { kind: 'atkBased', atkScale: 1 },
+          },
+        ],
+      },
+    ],
+  };
+
+  const emptyParties = {
+    test: {
+      name: 'Test',
+      members: [{ classId: 'df_paladin', build: { activeSkillIds: [] } }],
+    },
+  };
+
+  it('loads waves[].enemyGroups into draft via loadStageDraftById', () => {
+    const stage = {
+      id: 'multi_wave',
+      displayName: 'Multi Wave',
+      recommendedLevel: 12,
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+        },
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'at_hunter', count: 1, atkScale: 1.1 }],
+        },
+      ],
+    };
+
+    const draft = loadStageDraftById([stage], 'multi_wave');
+
+    expect(resolveStageDraftCompositionMode(draft)).toBe('waveEnemyGroups');
+    expect(draft.waves?.[0]?.enemyGroups).toEqual([
+      { classId: 'df_paladin', count: 2 },
+    ]);
+    expect(draft.waves?.[1]?.enemyGroups).toEqual([
+      { classId: 'at_hunter', count: 1, atkScale: 1.1 },
+    ]);
+  });
+
+  it('saves wave-level enemyGroups edits through normalizeStageDraftForSave', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'multi_wave',
+      displayName: 'Multi Wave',
+      recommendedLevel: 12,
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'df_paladin', count: 3 }],
+        },
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'at_hunter', count: 1 }],
+        },
+      ],
+    });
+
+    expect(normalized.waves).toEqual([
+      {
+        enemies: [],
+        enemyGroups: [{ classId: 'df_paladin', count: 3 }],
+      },
+      {
+        enemies: [],
+        enemyGroups: [{ classId: 'at_hunter', count: 1 }],
+      },
+    ]);
+    expect(normalized.enemyGroups).toBeUndefined();
+  });
+
+  it('preserves unedited waves when saving mixed wave draft', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'mixed_wave',
+      displayName: 'Mixed Wave',
+      recommendedLevel: 10,
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+        },
+        {
+          enemies: [{ templateId: 'test_dummy', spawnX: 120 }],
+        },
+      ],
+    });
+
+    expect(normalized.waves?.[1]?.enemies).toEqual([
+      { templateId: 'test_dummy', spawnX: 120 },
+    ]);
+    expect(normalized.waves?.[1]?.enemyGroups).toBeUndefined();
+  });
+
+  it('keeps stage-level enemyGroups save path unchanged', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'stage_groups',
+      displayName: 'Stage Groups',
+      recommendedLevel: 10,
+      enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+    });
+
+    expect(normalized.enemyGroups).toEqual([{ classId: 'df_paladin', count: 2 }]);
+    expect(normalized.waves).toEqual([{ enemies: [] }]);
+  });
+
+  it('keeps legacy waves[].enemies when saving legacy stage', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'legacy_1',
+      displayName: 'Legacy 1',
+      waves: [
+        { enemies: [{ templateId: 'test_dummy', spawnX: 100 }] },
+        {
+          enemies: [
+            { templateId: 'test_dummy', spawnX: 80 },
+            { templateId: 'test_dummy', spawnX: 160 },
+          ],
+        },
+      ],
+    });
+
+    expect(normalized.waves).toEqual([
+      { enemies: [{ templateId: 'test_dummy', spawnX: 100 }] },
+      {
+        enemies: [
+          { templateId: 'test_dummy', spawnX: 80 },
+          { templateId: 'test_dummy', spawnX: 160 },
+        ],
+      },
+    ]);
+  });
+
+  it('normalized wave enemyGroups draft passes parseAndValidateGameDataJson', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'multi_wave',
+      displayName: 'Multi Wave',
+      recommendedLevel: 12,
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+        },
+        {
+          enemies: [{ templateId: 'test_dummy', spawnX: 100 }],
+          enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+        },
+      ],
+    });
+
+    const result = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [minimalStageEnemy],
+        skills: minimalStageSkills,
+        stages: [normalized],
+        parties: emptyParties,
+      },
+      { mode: 'editor' },
+    );
+
+    expect(result.stages[0]?.waves).toEqual([
+      {
+        enemies: [],
+        enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+      },
+      {
+        enemies: [{ templateId: 'test_dummy', spawnX: 100 }],
+        enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+      },
+    ]);
+  });
+
+  it('validateStageDraftForSave validates per-wave enemyGroups', () => {
+    expect(
+      validateStageDraftForSave({
+        id: 'wave_groups',
+        displayName: 'Wave Groups',
+        recommendedLevel: 10,
+        waves: [
+          { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 2 }] },
+          { enemies: [], enemyGroups: [] },
+        ],
+      }),
+    ).toMatch(/waves\[1\]\.enemyGroups/);
+
+    expect(
+      validateStageDraftForSave({
+        id: 'wave_groups',
+        displayName: 'Wave Groups',
+        waves: [
+          { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 1 }] },
+        ],
+      }),
+    ).toMatch(/recommendedLevel/);
+
+    expect(
+      validateStageDraftForSave({
+        id: 'wave_groups',
+        displayName: 'Wave Groups',
+        recommendedLevel: 10,
+        waves: [
+          { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 2 }] },
+          { enemies: [{ templateId: 'test_dummy', spawnX: 100 }] },
+        ],
+      }),
+    ).toBeNull();
   });
 });

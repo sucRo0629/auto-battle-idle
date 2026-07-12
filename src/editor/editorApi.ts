@@ -144,6 +144,29 @@ export type StageDraft = {
   enemyGroups?: StageEnemyGroup[];
 };
 
+/** ステージ敵編成の editor 編集モード（保存 JSON には書かない）。 */
+export type StageDraftCompositionMode =
+  | 'legacy'
+  | 'stageEnemyGroups'
+  | 'waveEnemyGroups';
+
+export function resolveStageDraftCompositionMode(
+  draft: StageDraft,
+): StageDraftCompositionMode {
+  if (draft.enemyGroups !== undefined) return 'stageEnemyGroups';
+  if ((draft.waves ?? []).some((wave) => wave.enemyGroups !== undefined)) {
+    return 'waveEnemyGroups';
+  }
+  return 'legacy';
+}
+
+export function ensureStageDraftWaves(draft: StageDraft): StageWave[] {
+  if (!Array.isArray(draft.waves) || draft.waves.length === 0) {
+    draft.waves = [{ enemies: [] }];
+  }
+  return draft.waves;
+}
+
 const ENEMY_GROUPS_WAVE_PLACEHOLDER: StageWave[] = [{ enemies: [] }];
 
 /**
@@ -152,10 +175,10 @@ const ENEMY_GROUPS_WAVE_PLACEHOLDER: StageWave[] = [{ enemies: [] }];
  */
 export function normalizeStageDraftForSave(draft: StageDraft): StageDef {
   const copy = structuredClone(draft);
-  const hasEnemyGroups =
+  const hasStageEnemyGroups =
     Array.isArray(copy.enemyGroups) && copy.enemyGroups.length > 0;
 
-  if (hasEnemyGroups) {
+  if (hasStageEnemyGroups) {
     if (!Array.isArray(copy.waves) || copy.waves.length === 0) {
       copy.waves = structuredClone(ENEMY_GROUPS_WAVE_PLACEHOLDER);
     }
@@ -164,6 +187,11 @@ export function normalizeStageDraftForSave(draft: StageDraft): StageDef {
   if (!Array.isArray(copy.waves) || copy.waves.length === 0) {
     throw new Error('waves is required for legacy stage drafts');
   }
+
+  copy.waves = copy.waves.map((wave) => ({
+    ...wave,
+    enemies: Array.isArray(wave.enemies) ? wave.enemies : [],
+  }));
 
   return copy as StageDef;
 }
@@ -203,48 +231,76 @@ function isPositiveStageEnemyScale(value: number | undefined): boolean {
   return value === undefined || (typeof value === 'number' && value >= STAGE_ENEMY_SCALE_MIN);
 }
 
-/** 保存前の軽いクライアント検証。null = OK。 */
-export function validateStageDraftForSave(draft: StageDraft): string | null {
-  if (draft.enemyGroups === undefined) {
-    return null;
-  }
-
-  if (draft.recommendedLevel === undefined) {
-    return 'recommendedLevel を入力してください';
-  }
-  if (
-    !Number.isInteger(draft.recommendedLevel) ||
-    draft.recommendedLevel < 1
-  ) {
-    return 'recommendedLevel は 1 以上の整数です';
-  }
-
-  const groups = draft.enemyGroups;
+function validateStageEnemyGroupsForSave(
+  groups: StageEnemyGroup[],
+  prefix: string,
+): string | null {
   if (groups.length === 0) {
-    return 'enemyGroups に 1 件以上のグループを追加してください';
+    return `${prefix} に 1 件以上のグループを追加してください`;
   }
 
   for (let index = 0; index < groups.length; index += 1) {
     const group = groups[index]!;
-    const prefix = `enemyGroups[${index}]`;
+    const groupPrefix = `${prefix}[${index}]`;
     if (!group.classId.trim()) {
-      return `${prefix}: classId を選択してください`;
+      return `${groupPrefix}: classId を選択してください`;
     }
     if (!Number.isInteger(group.count) || group.count < 1) {
-      return `${prefix}: count は 1 以上の整数です`;
+      return `${groupPrefix}: count は 1 以上の整数です`;
     }
     if (!isPositiveStageEnemyScale(group.hpScale)) {
-      return `${prefix}: hpScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+      return `${groupPrefix}: hpScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
     }
     if (!isPositiveStageEnemyScale(group.atkScale)) {
-      return `${prefix}: atkScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+      return `${groupPrefix}: atkScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
     }
     if (!isPositiveStageEnemyScale(group.defScale)) {
-      return `${prefix}: defScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+      return `${groupPrefix}: defScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
     }
     if (!isPositiveStageEnemyScale(group.resScale)) {
-      return `${prefix}: resScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+      return `${groupPrefix}: resScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
     }
+  }
+
+  return null;
+}
+
+function validateRecommendedLevelForSave(
+  recommendedLevel: number | undefined,
+): string | null {
+  if (recommendedLevel === undefined) {
+    return 'recommendedLevel を入力してください';
+  }
+  if (!Number.isInteger(recommendedLevel) || recommendedLevel < 1) {
+    return 'recommendedLevel は 1 以上の整数です';
+  }
+  return null;
+}
+
+/** 保存前の軽いクライアント検証。null = OK。 */
+export function validateStageDraftForSave(draft: StageDraft): string | null {
+  if (draft.enemyGroups !== undefined) {
+    const levelError = validateRecommendedLevelForSave(draft.recommendedLevel);
+    if (levelError) return levelError;
+    return validateStageEnemyGroupsForSave(draft.enemyGroups, 'enemyGroups');
+  }
+
+  const wavesWithGroups = (draft.waves ?? [])
+    .map((wave, waveIndex) => ({ wave, waveIndex }))
+    .filter(({ wave }) => wave.enemyGroups !== undefined);
+  if (wavesWithGroups.length === 0) {
+    return null;
+  }
+
+  const levelError = validateRecommendedLevelForSave(draft.recommendedLevel);
+  if (levelError) return levelError;
+
+  for (const { wave, waveIndex } of wavesWithGroups) {
+    const groupError = validateStageEnemyGroupsForSave(
+      wave.enemyGroups ?? [],
+      `waves[${waveIndex}].enemyGroups`,
+    );
+    if (groupError) return groupError;
   }
 
   return null;
