@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R8 完了** — 作戦内パッシブ（R8a〜f、本 §74〜79）。**R8f 完了** — 範囲系 runtime + プレースホルダ描画（§79）。**R8e 完了** — 戦闘中表示整理（§78）。**R8d 完了** — 戦闘開始注入（§77）。**R8c 完了** — Wave 間準備 UI + パッシブ取得 API（§76）。**R8b 完了** — 作戦内パッシブ状態モデル + checkpoint（§75）。**R8a 完了** — 既存基盤調査・5 タスク分割（§74）。**R7e 完了** — 作戦結果後再戦 + 遷移統一（§73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R9 — エディタ実装**。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R9b — Stage enemyGroups `selectedCombatModuleId` 編集**（§80.8）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6131,4 +6131,96 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 
 ### 79.5 次タスク
 
-**R9 — エディタ実装**（phase-roadmap §R9）。
+**R9a — エディタ現状調査・分割** — §80 で完了。
+
+---
+
+## 80. R9a — エディタ現状調査・R9 分割（2026-07-13 完了）
+
+**目的:** R9「エディタ実装」の既存機能・不足・保存経路を整理し、競合しにくい小タスクへ分割する。
+
+**制約:** production code / editor code / データ JSON は**未変更**。調査と doc 更新のみ。
+
+**読んだファイル（6 件）:** `src/editor/editorApi.ts`、`src/editor/EditorApp.ts`、`vite-plugin-editor-api.ts`（先頭 + save ハンドラ）、`src/game/operationPassiveCatalog.ts`、`docs/plans/phase-roadmap.md`（R9 節）、`docs/ai-handoff/current-task.md`（§2・§79 付近）。その他は Grep で補完。
+
+### 80.1 編集領域別 — 現状表
+
+| 領域 | UI 所有者 | draft 所有 | validate / normalize | 保存先 | 編集可 | 不足 | 既存テスト | legacy 注意 |
+| ---- | --------- | ---------- | ------------------- | ------ | ------ | ---- | ---------- | ----------- |
+| **クラス** | `ClassEditorStep` + `SkillEditorStep`（`EditorApp` クラスタブ） | `EditorApp.classDraft` / `classSkillEntries` | クライアント: `validateClassDraftForSave`・`buildClassPresetFromDraft`・`collectSkillsFromDrafts`（→ `sanitizePassiveSkillForJson` / `sanitizeBasicAttackSkillForJson`）。サーバ: `parseAndValidateGameDataJson({ mode: 'editor' })` | `data/classes.json` + `data/skills/passives\|actives/{classId stem}.json` | id / 表示名 / role / formationRow / Lv1 stat / growthTier / attackSpeedTier / growthPresetKey(caster) / traits(rangePx, damageType, basicAttackVfx) / passive+active スキル池（unlockLevel 付き）/ 通常攻撃 active | **`combatModuleIds`**（R5 4 兵科のみ JSON に存在・UI なし）。**`attackIntervalSec`**（方式側。クラスは legacy `attackSpeedTier` のまま）。M1 外・`combatModuleIds` 無しクラスを R9 で一括編集対象にしない | `editorApi.test.ts`（class preset / passive unlock）、`editorClassList.test.ts`（picker・combatModule validate）、`balanceReference.test.ts` | `passiveIds` + `skills[]` 二系統。`jobTier` 固定 1。Lv 成長 preview は legacy。promotion 削除済み |
+| **戦闘方式・通常攻撃・スキル構成** | 通常攻撃・active/passive: **`SkillEditorStep`**（クラス / 敵タブ内）。戦闘方式 JSON: **エディタなし** | クラス / 敵: `EditorApp.*SkillEntries`。module: 未実装 | module runtime: `validateGameData` `combatModules` / `combatModuleIds` / `selectedCombatModuleId` 整合。通常攻撃: `normalizeActiveSkillEffectForEditor` + `sanitizeBasicAttackSkillForJson` | 通常攻撃・スキル: 上記 skills JSON。**module: `data/combat-modules/{classId}.json`**（手編集のみ） | legacy `{id}_basic_attack` active の trigger / effect / targeting。active passive の effect 種多数（`SkillEditorStep` + `skillEditorCombatFields.ts`） | **CombatModule 専用 UI / save API なし**。`attackIntervalSec`・module `action` 編集不可。R5 方式と legacy basic attack **二重管理**。active 枠・Lv 習得 UI は新仕様（方式のみ）と非整合 | `skillEditorSharedTargeting.test.ts`、`duelistActiveRender.test.ts`、`editorApi.test.ts`（basic attack sanitize） | R4 推奨: SkillEditorStep → CombatModuleEditor 改修。**legacy skill editor は migration 期間併存**（combat-data-schema-refactor §13.2 C） |
+| **passive 定義** | **独立画面なし**。`SkillEditorStep` 内 passive 枠（クラス / 敵 bundle 保存） | `SkillDraftEntry.passive` | `normalizePassiveSkillForEditor`（load）/ `sanitizePassiveSkillForJson`（save）/ `parseAndValidateGameDataJson` | `data/skills/passives/{entity stem}.json` | effect 種・数値・target 多数（EDITOR_PASSIVE_EFFECT_KIND_GROUPS） | **ally 範囲 buff**（`buffAoeRadiusPx` 等 R8 追加フィールド）UI 未対応。**作戦内候補 catalog** は TS 定数（下記） | `editorApi.test.ts`（passive sanitize） | 作戦内取得 passive と兵科固定 passive は同一 JSON だが **catalog 編集経路なし** |
+| **敵テンプレ** | `EnemyEditorStep` + `SkillEditorStep`（敵タブ） | `EditorApp.enemyDraft` / `enemySkillEntries` | `validateEnemyDraftForSave` / `normalizeEnemyTemplateForEditor` / `buildEnemyFromDraft` + サーバ validate | `data/enemies.json` + skills JSON | id / 表示名 / stat / exp / traits / attackSpeedTier+custom interval / passive+active / 通常攻撃 | 新仕様の **group 単位 spawn**（`classId`+`selectedCombatModuleId`）は Stage 側。テンプレは legacy reference（R4 §6.4） | `editorApi.test.ts`（enemy basic attack resync） | `enemies.json` は dev / legacy 用。新 authoring 正本は Stage `enemyGroups` |
+| **Stage / Wave / enemyGroups** | `StageEnemyEditorStep`（ステージタブ） | `EditorApp.stageDraft` | `validateStageDraftForSave` / `normalizeStageDraftForSave` / `resolveStageDraftCompositionMode` + サーバ validate | **`data/stages.json` のみ**（editor API 固定） | id / displayName / recommendedLevel / stage 直下 or `waves[].enemyGroups`（classId, count, hp\|atk\|def\|res scale）/ legacy `waves[].enemies` **参照のみ** / 編集モード切替 | **`selectedCombatModuleId`**（validate 必須・UI なし）。Wave 追加削除 UI 最小。作戦内リソース・passive 報酬は Stage 外 | `StageEnemyEditorStep.test.ts`、`editorApi.test.ts`（stage draft / wave enemyGroups R6g-4） | legacy `waves[].enemies` **保存時維持**（R6g-4）。stage 直下 vs wave 内 groups **共存**。migration まで削除しない |
+| **作戦内 passive catalog** | **なし**（runtime: `operationPassiveCatalog.ts`） | なし（定数） | validate なし（コード二重管理） | **`src/game/operationPassiveCatalog.ts`**（非 JSON） | — | **JSON 化・editor GET/PUT・UI** すべて未実装 | `operationPassiveCatalog` 直接テストなし（R8 統合テストで間接） | R8c 暫定。候補は既存 passive ID 参照。**M1 外 class へ無条件拡張しない** |
+
+### 80.2 editor API — 読込・validate・normalize・保存経路
+
+| 操作 | HTTP | 読込 | クライアント normalize | サーバ validate | 書込 |
+| ---- | ---- | ---- | ---------------------- | --------------- | ---- |
+| クラス bundle | `GET/PUT /__editor/class-bundle` | `classes.json` + skills glob | `buildClassPresetFromDraft` / `collectSkillsFromDrafts` / `ensureClassGrowthFields` | `parseAndValidateGameDataJson(..., { mode: 'editor' })` 全 bundle | `classes.json` + `replaceEntitySkillsInFiles` |
+| クラス stat 一括 | `PUT /__editor/class-stats-bulk` | 同上 | `toClassStatsPatch` / `validateClassStatsForSave` | 同上（classes のみ差替） | `classes.json` |
+| 敵 bundle | `PUT /__editor/enemy-bundle` | `enemies.json` + skills | `buildEnemyFromDraft` / `normalizeEntityTraits` | 同上 | `enemies.json` + skills files |
+| ステージ | `PUT /__editor/stages` | `stages.json` | `normalizeStageDraftForSave` / `validateStageDraftForSave` | 同上（stages 差替） | `stages.json` |
+| 演出スキル | `PUT /__editor/presentation-skill` | skills + optional traits patch | — | 同上 | skills + optional `classes.json`/`enemies.json` traits |
+| 一覧 GET | `/__editor/classes` `\|skills` `\|enemies` `\|stages` | 各 READ_FILES | load 時 `normalizePassiveSkillForEditor`（passives のみ EditorApp） | GET 時は validate しない | — |
+
+**未接続:** `data/combat-modules/*.json`、`operationPassiveCatalog`、**`data/stages-demo.json`**。
+
+保存後: `vite-plugin-editor-api` → `reloadGameDataModules`（`loadGameData.ts` HMR）。
+
+### 80.3 full / demo データの扱い
+
+| データ | full dev / `BUILD_FLAVOR=full` | demo build `BUILD_FLAVOR=demo` | editor API |
+| ------ | ------------------------------ | ------------------------------ | ---------- |
+| ステージ | `data/stages.json`（`@game-data/stages`） | `data/stages-demo.json` | **常に `stages.json` のみ** read/write |
+| classes / enemies / skills / combat-modules | 共通 | 共通 | 共通 |
+| editor 同梱 | `editor.html` + plugin（vite 共通） | 同上 | demo zip 同梱は未判断（legacy handoff §6b） |
+
+**方針:** R9 では editor を demo stages に切替えない。新仕様 authoring は `stages.json` + R10 試作ステージ。demo 7 件は legacy reference のまま。
+
+### 80.4 legacy 互換と migration 上の注意
+
+- **`waves[].enemies`:** Stage エディタ参照のみ。`enemyGroups` 編集開始後も legacy wave は**保存維持**。spawn は groups 優先（R6g）。
+- **stage 直下 `enemyGroups`:** 単 Wave 省略記法。`normalizeStageDraftForSave` が空 `waves` に placeholder 補完。
+- **legacy 通常攻撃 active + combat module:** R5 4 兵科は module 実行が正本。editor は両方編集可能で**不整合リスク** — migration タスク（R9f）まで共存、authoring 新規は module 側へ誘導。
+- **`attackSpeedTier`:** クラス / 敵 editor に残存。新仕様 `attackIntervalSec` は module JSON のみ。一括変換は **R9f のみ**。
+- **Lv / EXP / unlockLevel:** editor UI 残存。新仕様非採用だが R9f まで削除しない。
+- **validate `mode: 'editor'`:** R5 参照がある class / group に `combatModuleIds` / `selectedCombatModuleId` 必須。legacy class は `combatModuleIds` 未定義可（`editorClassList.test.ts`）。
+
+### 80.5 `operationPassiveCatalog` データ化方針
+
+| 段階 | 内容 |
+| ---- | ---- |
+| **R8（完了）** | `src/game/operationPassiveCatalog.ts` 定数。`df_guardian` のみ候補 2 件 |
+| **R9b〜d** | **触らない** — Stage module 参照・CombatModule 本体を先に editor 化 |
+| **R9e** | **`data/operation-passive-catalog.json`（仮）** へ移行。editor GET/PUT + 最小 UI（classId → passiveId[]、cost 定数）。ゲーム loadGameData または専用 import に接続。**SkillEditorStep に R8 範囲 passive フィールド（`buffAoeRadiusPx` 等）追加** — schema 変更と同一タスク、UI polish 単独タスクにしない |
+| **R9f 前** | catalog JSON と passive 定義の参照整合を validate に追加（editor save 時） |
+| **R9f** | legacy stage / skill / tier **一括 migration**。catalog の全面拡張（M1 外 class）は R10 以降 |
+
+### 80.6 R9 小タスク一覧（最大 6）
+
+| ID | 内容 | テスト可能な完了条件 |
+| ---- | ---- | -------------------- |
+| **R9a** | 現状調査・分割 doc | 本 §80 + phase-roadmap R9 表 |
+| **R9b** | Stage `enemyGroups[].selectedCombatModuleId` 編集 UI + draft validate 拡張 | `StageEnemyEditorStep.test.ts` / `editorApi.test.ts` — groups 保存で module ID が JSON に残り validate pass |
+| **R9c** | CombatModule editor — `GET/PUT /__editor/combat-modules` + 編集 UI（`attackIntervalSec` + `action`）。legacy SkillEditorStep 通常攻撃は**触らない** | module JSON 1 件 CRUD + validate + R5 統合テスト非 regression |
+| **R9d** | Class `combatModuleIds` 編集（**R5 4 兵科のみ**、2 件必須）。M1 外 class は read-only | `editorClassList.test.ts` 拡張 — 保存後 validate pass |
+| **R9e** | operationPassiveCatalog JSON 化 + editor + SkillEditorStep 範囲 passive フィールド | catalog 保存・ゲーム候補読込・passive JSON 編集 round-trip |
+| **R9f** | Legacy migration **独立** — script / 一括 normalize（`attackSpeedTier`→module、`waves.enemies`→groups **optional**、旧 active 整理）。**legacy フィールド削除は別 PR 可** | migration テスト + 旧新共存 read |
+
+**不採用（場当たり）:** クラス・Stage・module を 1 PR にまとめる案 — 保存経路・validate 競合リスク大（R4 §13 / bug-fix-project 単一経路原則）。
+
+### 80.7 最初に実装する 1 タスク — **R9b**
+
+**理由:** 変更ファイルが `StageEnemyEditorStep` + `editorApi` validate のみに収まり、**既存 `saveStageBundle` / `vite-plugin-editor-api` 経路をそのまま使える**。CombatModule 新 API（R9c）や class 側（R9d）より依存が少ない。validate は既に `selectedCombatModuleId` を要求しているため、UI 欠落の穴埋めが最優先。
+
+### 80.8 保留事項
+
+- demo 向け editor が `stages-demo.json` を編集する切替（Phase 6d 以降判断のまま）
+- `BalanceEditorStep` / Lv10 preview — legacy。R9 スコープ外
+- `StatusIconsEditorStep` — R9 スコープ外
+- 敵テンプレ editor の新仕様への再定義（プリセット export 程度 — R4 §6.4、R10 まで保留）
+- M1 外 class・未使用データの editor 一覧への追加
+- schema 正規化による敵 spawn 一本化（R6g スコープ外保留のまま）
+- UI 見た目 polish のみ PR（各タスクで schema / save と分離）

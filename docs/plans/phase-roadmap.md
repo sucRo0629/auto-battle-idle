@@ -21,7 +21,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | **R6f 完了** → R6g 次 |
 | **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | **R7e 完了** → R8 次 |
 | **R8** | 作戦内パッシブ — リソース消費・任意取得・巻き戻し、**戦闘中表示整理**、**範囲パッシブ runtime 判定 + プレースホルダ範囲描画**（正式 VFX は後続） | **R8 完了** → R9 次 |
-| **R9** | エディタ実装 — クラス / 戦闘方式 / パッシブ / 敵 / Stage・Wave 各エディタ + validate / migration | 未着手 |
+| **R9** | エディタ実装 — クラス / 戦闘方式 / パッシブ / 敵 / Stage・Wave 各エディタ + validate / migration | **R9a 完了** → R9b 次 |
 | **R10** | 新複数 Wave 作戦の試作 — 旧 7 ステージ移植ではなく新仕様専用作戦。繰り返し遊べるかを評価 | 未着手 |
 
 **試作成立後（R10 以降・順序未固定）:** 兵科拡張、診断基盤再構築、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブの演出制作含む — R8 ではプレースホルダ図形のみ）、効果音、i18n、packaging、公開準備。
@@ -410,12 +410,30 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 ## R9 — エディタ実装
 
-- クラスエディタ
-- 戦闘方式エディタ
-- パッシブエディタ
-- 敵エディタ
-- Stage / Wave エディタ
-- validate、normalize、migration、legacy データ取り扱い
+**ゴール:** [combat-data-schema-refactor.md](combat-data-schema-refactor.md) §13〜14 の editor 責務を、既存 `EditorApp` / `editorApi` / `vite-plugin-editor-api` 上に段階実装する。**既に編集可能な legacy 項目の再実装はしない。** UI polish と schema / save 変更は同一 PR に詰めない。
+
+**R9a 調査完了（2026-07-13）:** [current-task.md §80](../ai-handoff/current-task.md#80-r9a--エディタ現状調査r9-分割2026-07-13-完了)。現状サマリ:
+
+- **編集済:** クラス stat / legacy スキル池、敵テンプレ、Stage `enemyGroups`（scale 含む）、passive/active effect 多数（`SkillEditorStep`）
+- **未接続:** `data/combat-modules/*.json` save 経路、class `combatModuleIds` UI、Stage `selectedCombatModuleId` UI、`operationPassiveCatalog` JSON 化、ally 範囲 passive フィールド（`buffAoeRadiusPx` 等）
+- **editor stages:** 常に `data/stages.json`（demo build の `@game-data/stages` とは分離）
+
+### R9 実装分割（依存順・handoff §80.6）
+
+| ID | 内容 | 手動 / 自動確認 |
+| ---- | ---- | --------------- |
+| **R9a** | 現状調査・6 タスク分割 doc | **完了（§80）** |
+| **R9b** | Stage `enemyGroups[].selectedCombatModuleId` 編集 | `StageEnemyEditorStep.test.ts` / stage save validate |
+| **R9c** | CombatModule editor API + UI（`data/combat-modules/`） | module CRUD + validate |
+| **R9d** | Class `combatModuleIds`（R5 4 兵科のみ） | `editorClassList.test.ts` |
+| **R9e** | operationPassiveCatalog データ化 + 範囲 passive フィールド | catalog + passive round-trip |
+| **R9f** | Legacy migration 一括（独立・最後） | 旧新共存 read テスト |
+
+**次タスク:** **R9b** — Stage `selectedCombatModuleId`（最小 save 経路変更）。
+
+**R9 スコープ外:** M1 外 class の一括 editor 対応、Balance / StatusIcons 改修、demo editor→`stages-demo.json` 切替、legacy `waves[].enemies` 削除（R9f まで維持）、正式 VFX。
+
+**`operationPassiveCatalog`:** R8 暫定 TS 定数 → **R9e で JSON + editor**。R9b〜d では変更しない。
 
 ---
 
