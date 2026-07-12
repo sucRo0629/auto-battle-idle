@@ -555,3 +555,91 @@ describe('OperationState regression (R6c)', () => {
     expect(serialized).not.toContain('clearedWaveCount');
   });
 });
+
+describe('OperationState operation passives and resource (R8b)', () => {
+  const loaded = tryLoadGameData();
+  if (!loaded.ok) throw new Error(loaded.error);
+  const save = createDefaultSave(loaded.data, 'demo');
+
+  function beginOp(): OperationState {
+    return OperationState.begin({
+      stageId: '1',
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+  }
+
+  it('1. new operation starts with empty passives and zero resource', () => {
+    const op = beginOp();
+    for (let slot = 0; slot < 4; slot += 1) {
+      expect(op.getAcquiredOperationPassiveIds(slot)).toEqual([]);
+    }
+    expect(op.getUnspentResource()).toBe(0);
+  });
+
+  it('2. keeps passive IDs per slot', () => {
+    const op = beginOp();
+    expect(op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a')).toBe(true);
+    expect(op.tryAddAcquiredOperationPassiveId(1, 'op_passive_b')).toBe(true);
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+    expect(op.getAcquiredOperationPassiveIds(1)).toEqual(['op_passive_b']);
+  });
+
+  it('3. duplicate passive ID on same slot does not duplicate state', () => {
+    const op = beginOp();
+    expect(op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a')).toBe(true);
+    expect(op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a')).toBe(false);
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+  });
+
+  it('4. same passive ID can exist on different slots', () => {
+    const op = beginOp();
+    expect(op.tryAddAcquiredOperationPassiveId(0, 'op_passive_shared')).toBe(true);
+    expect(op.tryAddAcquiredOperationPassiveId(2, 'op_passive_shared')).toBe(true);
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_shared']);
+    expect(op.getAcquiredOperationPassiveIds(2)).toEqual(['op_passive_shared']);
+  });
+
+  it('5. adds and spends unspent resource safely', () => {
+    const op = beginOp();
+    expect(op.tryAddUnspentResource(5)).toBe(true);
+    expect(op.getUnspentResource()).toBe(5);
+    expect(op.trySpendUnspentResource(3)).toBe(true);
+    expect(op.getUnspentResource()).toBe(2);
+  });
+
+  it('6. invalid slot, values, and insufficient balance leave state unchanged', () => {
+    const op = beginOp();
+    op.tryAddUnspentResource(4);
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+
+    expect(op.tryAddAcquiredOperationPassiveId(-1, 'x')).toBe(false);
+    expect(op.tryAddAcquiredOperationPassiveId(99, 'x')).toBe(false);
+    expect(op.tryAddAcquiredOperationPassiveId(0, '')).toBe(false);
+    expect(op.tryAddAcquiredOperationPassiveId(0, '   ')).toBe(false);
+
+    expect(op.tryAddUnspentResource(-1)).toBe(false);
+    expect(op.tryAddUnspentResource(1.5)).toBe(false);
+    expect(op.tryAddUnspentResource(Number.NaN)).toBe(false);
+    expect(op.trySpendUnspentResource(99)).toBe(false);
+    expect(op.trySpendUnspentResource(0)).toBe(false);
+
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+    expect(op.getUnspentResource()).toBe(4);
+  });
+
+  it('11. getter returns clones that cannot mutate internal state', () => {
+    const op = beginOp();
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+    const ids = op.getAcquiredOperationPassiveIds(0);
+    (ids as string[]).push('mutated');
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+  });
+
+  it('does not write acquired passives into party learnedPassiveIds', () => {
+    const op = beginOp();
+    const before = op.getPartySnapshot()[0]?.build.learnedPassiveIds;
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+    expect(op.getPartySnapshot()[0]?.build.learnedPassiveIds).toEqual(before);
+  });
+});

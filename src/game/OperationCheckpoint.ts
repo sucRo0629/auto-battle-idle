@@ -7,6 +7,12 @@ import {
   validatePartyClassIds,
 } from '../progression/partyCompose.ts';
 import type { OperationState } from './OperationState.ts';
+import {
+  captureAcquiredPassiveEntries,
+  OperationAcquiredPassives,
+  type OperationAcquiredPassiveEntry,
+  validateAcquiredPassiveEntries,
+} from './operationAcquiredPassives.ts';
 
 /** slot ごとの combat module 選択（deep snapshot 用） */
 export interface OperationCheckpointModuleEntry {
@@ -14,9 +20,15 @@ export interface OperationCheckpointModuleEntry {
   readonly moduleId: string;
 }
 
+export type OperationCheckpointPassiveEntry = OperationAcquiredPassiveEntry;
+
+function isValidResourceBalance(value: number): boolean {
+  return Number.isFinite(value) && Number.isInteger(value) && value >= 0;
+}
+
 /**
- * R6f: Wave 戦闘開始直前の作戦設定 snapshot（Combatant / runtime 非含有）。
- * operationExtras は将来の作戦内パッシブ・未使用リソース拡張用。
+ * R6f / R8b: Wave 戦闘開始直前の作戦設定 snapshot（Combatant / runtime 非含有）。
+ * operationExtras は将来拡張用（R8b では空オブジェクト）。
  */
 export interface OperationCheckpointSnapshot {
   readonly stageId: string;
@@ -24,12 +36,23 @@ export interface OperationCheckpointSnapshot {
   readonly clearedWaveCount: number;
   readonly party: readonly (PartySlotState | null)[];
   readonly combatModuleSelection: readonly OperationCheckpointModuleEntry[];
+  readonly acquiredOperationPassives: readonly OperationCheckpointPassiveEntry[];
+  readonly unspentResource: number;
   readonly operationExtras: Readonly<Record<string, unknown>>;
 }
 
 export interface OperationCheckpointValidationOptions {
   expectedStageId?: string;
   waveCount: number;
+}
+
+function cloneAcquiredPassiveEntries(
+  entries: readonly OperationAcquiredPassiveEntry[],
+): OperationAcquiredPassiveEntry[] {
+  return entries.map((entry) => ({
+    slotIndex: entry.slotIndex,
+    passiveIds: [...entry.passiveIds],
+  }));
 }
 
 function clonePartySlots(
@@ -87,6 +110,12 @@ export function createCheckpointFromOperationState(
     combatModuleSelection: cloneModuleEntries(
       captureModuleEntries(state.getCombatModuleSelection()),
     ),
+    acquiredOperationPassives: cloneAcquiredPassiveEntries(
+      captureAcquiredPassiveEntries(
+        state.getAcquiredOperationPassivesReference(),
+      ),
+    ),
+    unspentResource: state.getUnspentResource(),
     operationExtras: {},
   };
 }
@@ -101,6 +130,10 @@ export function cloneCheckpointSnapshot(
     clearedWaveCount: snapshot.clearedWaveCount,
     party: clonePartySlots(snapshot.party),
     combatModuleSelection: cloneModuleEntries(snapshot.combatModuleSelection),
+    acquiredOperationPassives: cloneAcquiredPassiveEntries(
+      snapshot.acquiredOperationPassives,
+    ),
+    unspentResource: snapshot.unspentResource,
     operationExtras: structuredClone(snapshot.operationExtras),
   };
 }
@@ -178,6 +211,14 @@ export function validateCheckpointSnapshot(
     return false;
   }
 
+  if (!validateAcquiredPassiveEntries(snapshot.acquiredOperationPassives)) {
+    return false;
+  }
+
+  if (!isValidResourceBalance(snapshot.unspentResource)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -218,4 +259,15 @@ export function applyCheckpointModulesToSelection(
   entries: readonly OperationCheckpointModuleEntry[],
 ): void {
   applyModuleEntriesToSelection(selection, entries);
+}
+
+/** @internal OperationState 復元時に acquired passives / resource を反映する */
+export function applyCheckpointPassivesAndResource(
+  acquired: OperationAcquiredPassives,
+  entries: readonly OperationCheckpointPassiveEntry[],
+  setUnspentResource: (value: number) => void,
+  unspentResource: number,
+): void {
+  acquired.replaceFromEntries(entries);
+  setUnspentResource(unspentResource);
 }

@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R7e 完了** — 作戦結果後再戦 + 遷移統一（本 §73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R8b — 作戦内パッシブ状態モデル + checkpoint**（R8a 調査完了 §74）。**R8a 完了（2026-07-12）** — 既存基盤調査・5 タスク分割。**R7 完了** — R7a〜e（§69〜73）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R8b 完了** — 作戦内パッシブ状態モデル + checkpoint（本 §75）。**R8a 完了** — 既存基盤調査・5 タスク分割（§74）。**R7e 完了** — 作戦結果後再戦 + 遷移統一（§73）。**R7d 完了** — Wave 準備 retry + spec 整合（§72）。**R7c 完了** — 敗北時 retry 正式導線（§71）。**R7b 完了** — 倍速 simulation（§70）。**R6j 完了** — 統合テスト（§68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R8c — Wave 間準備 UI + パッシブ取得 API**（§75.12）。**R7 完了** — R7a〜e（§69〜73）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5906,3 +5906,56 @@ API が `false` を返した場合、現在 screen・Wave 準備編集状態を�
 | 敵側作戦内パッシブ | R8 コア機能に含むが縦切り後 |
 | 範囲系 passive | R8f。移動系効果は対象外のまま |
 | Rank / tier 成長 | M1 スコープ外。採用しない |
+
+---
+
+## 75. R8b — 作戦内パッシブ状態モデル + checkpoint（2026-07-12 完了）
+
+**スコープ:** `OperationState` / `OperationCheckpoint` に slot 別取得パッシブ + 未使用リソースを追加。UI / 戦闘注入 / JSON 変更なし。
+
+**読んだファイル（6 件）:**
+
+| # | ファイル | 目的 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | R8b 要件・§74 接続 |
+| 2 | `src/game/OperationState.ts` | 作戦状態所有者 |
+| 3 | `src/game/OperationCheckpoint.ts` | snapshot 拡張候補 |
+| 4 | `src/game/operationState.test.ts` | 既存テストパターン |
+| 5 | `src/game/operationCheckpoint.test.ts` | checkpoint テスト |
+| 6 | `src/game/operationRetry.test.ts` | retry 整合テスト |
+
+### 75.1 追加した状態
+
+| 型 / フィールド | 所有者 |
+| --------------- | ------ |
+| `OperationAcquiredPassives`（slot → passiveId[]） | `OperationState` 私有 |
+| `unspentResourceValue: number`（初期 0） | `OperationState` 私有 |
+| `OperationCheckpointSnapshot.acquiredOperationPassives` | `GameSession.operationCheckpoint` |
+| `OperationCheckpointSnapshot.unspentResource` | 同上 |
+
+### 75.2 public API
+
+**取得済みパッシブ:** `getAcquiredOperationPassiveIds(slot)`（clone 返却）、`tryAddAcquiredOperationPassiveId(slot, id)`（同一 slot 内重複不可）
+
+**リソース:** `getUnspentResource()`、`tryAddUnspentResource(amount)`、`trySpendUnspentResource(amount)`（正の整数のみ。残高不足・不正値は不変）
+
+### 75.3 checkpoint / retry
+
+- **保存:** `createCheckpointFromOperationState` → `GameSession.commitCheckpointFromCurrentOperationState`（出撃確定・次 Wave 確定時）
+- **復元:** `restoreOperationStateFromCheckpoint` → `OperationState.tryRestoreFromCheckpoint`
+- **同設定再戦:** `retryCurrentWaveFromCheckpoint` が checkpoint 時点の passives + resource へ巻き戻し
+- **Wave 0 再開:** `restartOperationFromWaveZero` → `beginOperation` で新 `OperationState`（空 passives / resource 0）
+- **formation ↔ wavePrep:** `returnToFormationPrep` / `returnToWavePrepFromFormation` 間で状態維持
+
+### 75.4 テスト
+
+`operationState.test.ts` / `operationCheckpoint.test.ts` / `operationRetry.test.ts` に R8b ケース追加。**80 passed**。
+
+### 75.5 変更ファイル
+
+- 新規: `src/game/operationAcquiredPassives.ts`
+- 更新: `src/game/OperationState.ts`、`src/game/OperationCheckpoint.ts`、上記 3 テスト、`docs/plans/phase-roadmap.md`
+
+### 75.6 次タスク
+
+**R8c — Wave 間準備 UI + パッシブ直接選択 + 固定コスト取得 API**

@@ -6,6 +6,7 @@ import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { setDebugLoopStageId, setDebugLoopWaveIndex } from '../dev/debugLoopStage.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
+import { OperationState } from './OperationState.ts';
 import { GameSession } from './GameSession.ts';
 import {
   asBattleEngineInternals,
@@ -79,6 +80,10 @@ function bootVerifySession(): GameSession {
 
 function triggerDefeat(session: GameSession, survivingIndices: number[] = []): void {
   getEngine(session).applyDefeatTransition(survivingIndices);
+}
+
+function getOperation(session: GameSession): OperationState {
+  return (session as unknown as { operationState: OperationState }).operationState;
 }
 
 function advanceToWaveTwoCheckpoint(
@@ -214,5 +219,56 @@ describe('Operation retry (R6i)', () => {
     expect(session.getOperationState()?.isActive).toBe(true);
     expect(session.getOperationState()?.isDefeated).toBe(false);
     expect(session.hasOperationCheckpoint()).toBe(true);
+  });
+
+  it('R8b retry current wave restores checkpoint passives and resource', () => {
+    session = bootVerifySession();
+    const op = getOperation(session);
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+    op.tryAddUnspentResource(5);
+    const checkpoint = advanceToWaveTwoCheckpoint(session)!;
+    op.tryAddAcquiredOperationPassiveId(1, 'op_passive_lost');
+    op.trySpendUnspentResource(2);
+    triggerDefeat(session);
+
+    expect(session.retryCurrentWaveFromCheckpoint()).toBe(true);
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+    expect(op.getAcquiredOperationPassiveIds(1)).toEqual([]);
+    expect(op.getUnspentResource()).toBe(5);
+    expect(session.getOperationCheckpoint()).toEqual(checkpoint);
+  });
+
+  it('R8b restart operation from wave zero resets passives and resource', () => {
+    session = bootVerifySession();
+    const op = getOperation(session);
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+    op.tryAddUnspentResource(5);
+    advanceToWaveTwoCheckpoint(session);
+    triggerDefeat(session);
+
+    expect(session.restartOperationFromWaveZero()).toBe(true);
+    const opAfter = getOperation(session);
+    for (let slot = 0; slot < 4; slot += 1) {
+      expect(opAfter.getAcquiredOperationPassiveIds(slot)).toEqual([]);
+    }
+    expect(opAfter.getUnspentResource()).toBe(0);
+  });
+
+  it('R8b formation and wave prep round-trip keeps passives and resource', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    const op = getOperation(session);
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+    op.tryAddUnspentResource(4);
+
+    expect(session.returnToFormationPrep()).toBe(true);
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+    expect(op.getUnspentResource()).toBe(4);
+    expect(session.isWavePrepSuspendedForFormation()).toBe(true);
+
+    expect(session.returnToWavePrepFromFormation()).toBe(true);
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+    expect(op.getUnspentResource()).toBe(4);
   });
 });

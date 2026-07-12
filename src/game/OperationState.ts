@@ -11,9 +11,21 @@ import {
   type PartyClassAssignmentResult,
 } from '../progression/partyCompose.ts';
 import {
+  OperationAcquiredPassives,
+} from './operationAcquiredPassives.ts';
+import {
   applyCheckpointModulesToSelection,
+  applyCheckpointPassivesAndResource,
   type OperationCheckpointSnapshot,
 } from './OperationCheckpoint.ts';
+
+function isValidResourceDelta(value: number): boolean {
+  return Number.isFinite(value) && Number.isInteger(value) && value > 0;
+}
+
+function isValidResourceBalance(value: number): boolean {
+  return Number.isFinite(value) && Number.isInteger(value) && value >= 0;
+}
 
 export interface OperationStateReadonlyView {
   readonly stageId: string;
@@ -47,6 +59,8 @@ export class OperationState {
   private isCompletedValue = false;
   private isDefeatedValue = false;
   private wavePrepEditable = false;
+  private readonly acquiredOperationPassives: OperationAcquiredPassives;
+  private unspentResourceValue = 0;
 
   private constructor(
     stageId: string,
@@ -58,6 +72,7 @@ export class OperationState {
     this.stageId = stageId;
     this.partySlots = party;
     this.combatModuleSelection = moduleSelection;
+    this.acquiredOperationPassives = new OperationAcquiredPassives();
     this.currentWaveIndexValue = initialWaveIndex;
     this.isActiveValue = isActive;
   }
@@ -105,6 +120,42 @@ export class OperationState {
 
   getCombatModuleSelection(): PartyCombatModuleSelection {
     return this.combatModuleSelection;
+  }
+
+  /** R8b: slot ごとの取得済み作戦内パッシブ ID（clone 返却）。 */
+  getAcquiredOperationPassiveIds(slotIndex: number): readonly string[] {
+    return this.acquiredOperationPassives.getAcquiredPassiveIds(slotIndex);
+  }
+
+  /** R8b: 作戦内未使用リソース残高。 */
+  getUnspentResource(): number {
+    return this.unspentResourceValue;
+  }
+
+  /** R8b: 作戦内パッシブ ID を slot に追加（同一 slot 内重複不可）。 */
+  tryAddAcquiredOperationPassiveId(
+    slotIndex: number,
+    passiveId: string,
+  ): boolean {
+    return this.acquiredOperationPassives.tryAddAcquiredPassiveId(
+      slotIndex,
+      passiveId,
+    );
+  }
+
+  /** R8b: 未使用リソースを加算する。 */
+  tryAddUnspentResource(amount: number): boolean {
+    if (!isValidResourceDelta(amount)) return false;
+    this.unspentResourceValue += amount;
+    return true;
+  }
+
+  /** R8b: 未使用リソースを消費する。残高不足・不正値は不変。 */
+  trySpendUnspentResource(amount: number): boolean {
+    if (!isValidResourceDelta(amount)) return false;
+    if (this.unspentResourceValue < amount) return false;
+    this.unspentResourceValue -= amount;
+    return true;
   }
 
   getPartySnapshot(): PartySlotState[] {
@@ -296,6 +347,11 @@ export class OperationState {
     return this.combatModuleSelection;
   }
 
+  /** テスト用: acquired passives が外部 Map と別参照であることの検証 */
+  getAcquiredOperationPassivesReference(): OperationAcquiredPassives {
+    return this.acquiredOperationPassives;
+  }
+
   /**
    * R6f: 検証済み checkpoint から party / module / Wave 進行を復元し、
    * 再戦可能な active 状態へ正規化する。呼出前に validate が通っていること。
@@ -320,6 +376,14 @@ export class OperationState {
     applyCheckpointModulesToSelection(
       this.combatModuleSelection,
       snapshot.combatModuleSelection,
+    );
+    applyCheckpointPassivesAndResource(
+      this.acquiredOperationPassives,
+      snapshot.acquiredOperationPassives,
+      (value) => {
+        this.unspentResourceValue = value;
+      },
+      snapshot.unspentResource,
     );
 
     this.currentWaveIndexValue = snapshot.currentWaveIndex;

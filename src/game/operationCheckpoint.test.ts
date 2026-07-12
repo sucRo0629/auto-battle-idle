@@ -345,6 +345,37 @@ describe('Operation checkpoint (R6f)', () => {
     sortieToStage(session, '2');
     expect(session.getOperationState()?.stageId).toBe('2');
   });
+
+  it('R8b wave prep edits to passives do not update checkpoint until confirm', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    const before = session.getOperationCheckpoint();
+    const op = (session as unknown as { operationState: OperationState }).operationState;
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_prep');
+    op.tryAddUnspentResource(2);
+    expect(session.getOperationCheckpoint()).toEqual(before);
+
+    expect(session.confirmWavePrepAndStartNextWave()).toBe(true);
+    const checkpoint = session.getOperationCheckpoint();
+    expect(checkpoint?.acquiredOperationPassives).toEqual([
+      { slotIndex: 0, passiveIds: ['op_passive_prep'] },
+    ]);
+    expect(checkpoint?.unspentResource).toBe(2);
+  });
+
+  it('R8b invalid checkpoint passive data fails restore', () => {
+    session = createSession();
+    sortieToStage(session, '1');
+    const op = (session as unknown as { operationState: OperationState }).operationState;
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+    const invalid = cloneCheckpointSnapshot(session.getOperationCheckpoint()!);
+    const tampered = {
+      ...invalid,
+      acquiredOperationPassives: [{ slotIndex: 0, passiveIds: [''] }],
+    };
+    expect(session.tryRestoreOperationFromCheckpoint(tampered)).toBe(false);
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+  });
 });
 
 describe('OperationCheckpoint unit (R6f)', () => {
@@ -385,6 +416,53 @@ describe('OperationCheckpoint unit (R6f)', () => {
         expectedStageId: '1',
         waveCount: 2,
       }),
+    ).toBe(false);
+  });
+
+  it('R8b checkpoint commit and restore round-trips passives and resource', () => {
+    const op = OperationState.begin({
+      stageId: '1',
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+    op.tryAddAcquiredOperationPassiveId(1, 'op_passive_b');
+    op.tryAddUnspentResource(7);
+    const checkpoint = createCheckpointFromOperationState(op);
+
+    op.tryAddAcquiredOperationPassiveId(2, 'op_passive_c');
+    op.trySpendUnspentResource(3);
+
+    expect(op.tryRestoreFromCheckpoint(checkpoint)).toBe(true);
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+    expect(op.getAcquiredOperationPassiveIds(1)).toEqual(['op_passive_b']);
+    expect(op.getAcquiredOperationPassiveIds(2)).toEqual([]);
+    expect(op.getUnspentResource()).toBe(7);
+  });
+
+  it('validateCheckpointSnapshot rejects invalid passive and resource fields', () => {
+    const op = OperationState.begin({
+      stageId: '1',
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    const snapshot = createCheckpointFromOperationState(op);
+    expect(
+      validateCheckpointSnapshot(
+        { ...snapshot, unspentResource: -1 },
+        gameData,
+        { expectedStageId: '1', waveCount: 2 },
+      ),
+    ).toBe(false);
+    expect(
+      validateCheckpointSnapshot(
+        {
+          ...snapshot,
+          acquiredOperationPassives: [{ slotIndex: 0, passiveIds: ['dup', 'dup'] }],
+        },
+        gameData,
+        { expectedStageId: '1', waveCount: 2 },
+      ),
     ).toBe(false);
   });
 });
