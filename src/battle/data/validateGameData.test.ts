@@ -3,7 +3,7 @@ import classesJson from '../../../data/classes.json';
 import enemiesJson from '../../../data/enemies.json';
 import partiesJson from '../../../data/parties.json';
 import stagesDemoJson from '../../../data/stages-demo.json';
-import type { ActiveSkillDef, PassiveSkillDef } from '../types.ts';
+import type { ActiveSkillDef, CombatModuleDef, PassiveSkillDef } from '../types.ts';
 import { tryLoadGameData } from './loadGameData.ts';
 import {
   DEPRECATED_THREAT_PASSIVE_EFFECT,
@@ -24,6 +24,11 @@ const activeModules = import.meta.glob<ActiveSkillDef[]>(
   { eager: true, import: 'default' },
 );
 
+const combatModuleFiles = import.meta.glob<CombatModuleDef[]>(
+  '../../../data/combat-modules/*.json',
+  { eager: true, import: 'default' },
+);
+
 function loadMergedSkillsForValidateTest(): {
   passives: PassiveSkillDef[];
   actives: ActiveSkillDef[];
@@ -32,6 +37,10 @@ function loadMergedSkillsForValidateTest(): {
     passives: Object.values(passiveModules).flat(),
     actives: Object.values(activeModules).flat(),
   };
+}
+
+function loadMergedCombatModulesForValidateTest(): CombatModuleDef[] {
+  return Object.values(combatModuleFiles).flat();
 }
 
 const emptyGameDataShell = {
@@ -538,6 +547,7 @@ describe('stages-demo.json validation', () => {
       classes: classesJson,
       enemies: enemiesJson,
       skills: loadMergedSkillsForValidateTest(),
+      combatModules: loadMergedCombatModulesForValidateTest(),
       stages: stagesDemoJson,
       parties: partiesJson,
     });
@@ -588,6 +598,7 @@ describe('at_ranger passive excludeRoles', () => {
       classes: classesJson,
       enemies: enemiesJson,
       skills,
+      combatModules: loadMergedCombatModulesForValidateTest(),
       stages: [],
       parties: partiesJson,
     });

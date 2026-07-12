@@ -68,7 +68,11 @@
         "前線維持",
         "被弾押し上げ"
       ]
-    }
+    },
+    "combatModuleIds": [
+      "df_guardian_mod_nearest_strike",
+      "df_guardian_mod_guard_focus"
+    ]
   },
   {
     "id": "df_paladin",
@@ -268,7 +272,11 @@
         "防御無視",
         "近接"
       ]
-    }
+    },
+    "combatModuleIds": [
+      "at_swordsman_mod_single_slash",
+      "at_swordsman_mod_pierce_slash"
+    ]
   },
   {
     "id": "at_assassin",
@@ -664,7 +672,11 @@
         "マルチロック",
         "魔法火力"
       ]
-    }
+    },
+    "combatModuleIds": [
+      "at_sorcerer_mod_single_bolt",
+      "at_sorcerer_mod_twin_bolt"
+    ]
   },
   {
     "id": "at_sigilist",
@@ -806,7 +818,11 @@
         "低HP回復",
         "余剰→バリア"
       ]
-    }
+    },
+    "combatModuleIds": [
+      "sp_cleric_mod_single_mend",
+      "sp_cleric_mod_party_mend"
+    ]
   },
   {
     "id": "sp_wardweaver",

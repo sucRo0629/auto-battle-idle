@@ -519,6 +519,15 @@ R4 では **実装しない**。順序候補:
 
 **R5a（2026-07-12）で確定したサブ分割:** R5b（型+JSON+validate）→ R5c（実行）→ R5d（味方 module）→ R5e（敵 module）→ R5f（編成制限）→ R5g（統合テスト）。詳細は [current-task.md §47](../ai-handoff/current-task.md#47-r5a--現行実装調査と最小実装計画2026-07-12)。
 
+**R5b（2026-07-12）確定:**
+
+- 型: `CombatModuleDef` / `CombatModuleActionDef`（`src/battle/types.ts`）
+- データ: `data/combat-modules/*.json`（4 兵科 × 2 方式）
+- class 参照: `ClassPreset.combatModuleIds`（2 件 tuple）
+- 秒単位: `attackIntervalSec`（正数 validate。旧 `attackSpeedTier` は legacy 維持）
+- **R5c 推奨:** 初回攻撃 CD と継続周期の両方に `attackIntervalSec` を使用。旧 `trigger.value = 2` 秒を新方式初回 CD 正本にしない
+- 合成: `synthesizeCombatModuleSkill.ts`（R5c で SkillExecutor 接続）
+
 ---
 
 ## 18. 保留事項（R4 完了時点）

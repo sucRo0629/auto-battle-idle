@@ -27,6 +27,8 @@ import type {
   ClassLocaleText,
   ClassPreset,
   ClassSkillUnlock,
+  CombatModuleActionDef,
+  CombatModuleDef,
   DamageType,
   EnemyTemplate,
   EntityTraits,
@@ -72,6 +74,7 @@ import type {
   DamageIncreaseSpec,
   DefenseIgnoreSpec,
 } from '../types.ts';
+import { R5_COMBAT_MODULE_CLASS_IDS } from '../types.ts';
 import {
   enrichClassPreset,
   getClassSkillIds,
@@ -2010,6 +2013,114 @@ function parseOptionalEffectCombatModifiers(
     );
   }
   return result;
+}
+
+function parseCombatModuleAction(
+  raw: unknown,
+  context: string,
+): CombatModuleActionDef {
+  const obj = requireRecord(raw, context);
+  const sharedTargeting = parseSkillSharedTargetingFields(obj, context);
+  const effectsRaw = obj.effect;
+  if (!Array.isArray(effectsRaw) || effectsRaw.length === 0) {
+    invalidField(context, 'effect', 'must be a non-empty array');
+  }
+  const effect = (effectsRaw as unknown[]).map((entry, effectIndex) =>
+    parseSkillEffect(entry, `${context}.effect[${effectIndex}]`),
+  );
+  effect.forEach((entry, effectIndex) => {
+    validateEffectTargetPoolReference(
+      entry,
+      effectIndex,
+      `${context}.effect[${effectIndex}]`,
+    );
+  });
+  validateActiveSkillEffectTargeting(
+    {
+      id: '__combat_module_action__',
+      name: '__combat_module_action__',
+      effect,
+      ...sharedTargeting,
+    },
+    context,
+  );
+  return {
+    effect,
+    ...sharedTargeting,
+  };
+}
+
+function requirePositiveNumber(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): number {
+  const value = requireNumber(obj, key, context);
+  if (value <= 0) {
+    invalidField(context, key, 'must be a positive number');
+  }
+  return value;
+}
+
+function parseCombatModules(raw: unknown): CombatModuleDef[] {
+  if (raw === undefined) {
+    return [];
+  }
+  if (!Array.isArray(raw)) {
+    throw new Error('combat-modules must be an array');
+  }
+  return raw.map((entry, index) => {
+    const context = `combatModules[${index}]`;
+    const obj = requireRecord(entry, context);
+    const id = requireString(obj, 'id', context);
+    const classId = requireString(obj, 'classId', context);
+    const displayName = requireString(obj, 'displayName', context);
+    const description = requireString(obj, 'description', context);
+    const attackIntervalSec = requirePositiveNumber(
+      obj,
+      'attackIntervalSec',
+      context,
+    );
+    if (obj.action === undefined) {
+      missingField(context, 'action');
+    }
+    const action = parseCombatModuleAction(obj.action, `${context}.action`);
+    return {
+      id,
+      classId,
+      displayName,
+      description,
+      attackIntervalSec,
+      action,
+    };
+  });
+}
+
+function parseCombatModuleIds(
+  obj: Record<string, unknown>,
+  context: string,
+): [string, string] | undefined {
+  if (obj.combatModuleIds === undefined) {
+    return undefined;
+  }
+  const raw = obj.combatModuleIds;
+  if (!Array.isArray(raw)) {
+    invalidField(context, 'combatModuleIds', 'must be an array');
+  }
+  if (raw.length !== 2) {
+    invalidField(context, 'combatModuleIds', 'must contain exactly 2 module ids');
+  }
+  const ids = raw.map((entry, index) => {
+    const entryContext = `${context}.combatModuleIds[${index}]`;
+    if (typeof entry !== 'string' || entry.trim().length === 0) {
+      missingField(entryContext, 'module id');
+    }
+    return entry.trim();
+  }) as [string, string];
+  if (ids[0] === ids[1]) {
+    invalidField(context, 'combatModuleIds', 'must not contain duplicate module ids');
+  }
+  return ids;
 }
 
 function parseSkillSharedTargetingFields(
@@ -5294,6 +5405,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       role,
       context,
     );
+    const combatModuleIds = parseCombatModuleIds(obj, context);
     if (jobTier === 1 && growthTier === undefined) {
       missingField(context, 'growthTier');
     }
@@ -5320,6 +5432,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       ...(attackSpeedTier !== undefined ? { attackSpeedTier } : {}),
       ...(growthTier !== undefined ? { growthTier } : {}),
       ...(growthPresetKey !== undefined ? { growthPresetKey } : {}),
+      ...(combatModuleIds !== undefined ? { combatModuleIds } : {}),
     };
   });
 }
@@ -5969,6 +6082,64 @@ function parseParties(raw: unknown): Record<string, PartyDef> {
   return parties;
 }
 
+function validateCombatModuleData(
+  combatModules: CombatModuleDef[],
+  classById: Map<string, ClassPreset>,
+): void {
+  const moduleIds = new Set<string>();
+  for (const module of combatModules) {
+    if (moduleIds.has(module.id)) {
+      throw new Error(`Duplicate combat module id "${module.id}"`);
+    }
+    moduleIds.add(module.id);
+    if (!classById.has(module.classId)) {
+      throw new Error(
+        `Unknown classId "${module.classId}" for combat module "${module.id}"`,
+      );
+    }
+  }
+}
+
+function validateClassCombatModuleRefs(
+  classes: ClassPreset[],
+  moduleById: Map<string, CombatModuleDef>,
+): void {
+  const r5ClassSet = new Set<string>(R5_COMBAT_MODULE_CLASS_IDS);
+
+  for (const cls of classes) {
+    const refs = cls.combatModuleIds;
+    if (refs === undefined) {
+      if (r5ClassSet.has(cls.id)) {
+        throw new Error(`R5 class "${cls.id}" must define combatModuleIds`);
+      }
+      continue;
+    }
+
+    if (refs.length !== 2) {
+      throw new Error(
+        `combatModuleIds must contain exactly 2 entries: ${cls.id}`,
+      );
+    }
+    if (new Set(refs).size !== refs.length) {
+      throw new Error(`combatModuleIds must not duplicate module ids: ${cls.id}`);
+    }
+
+    for (const moduleId of refs) {
+      const module = moduleById.get(moduleId);
+      if (!module) {
+        throw new Error(
+          `Unknown combatModuleId "${moduleId}" referenced by class "${cls.id}"`,
+        );
+      }
+      if (module.classId !== cls.id) {
+        throw new Error(
+          `combat module "${moduleId}" belongs to class "${module.classId}", not "${cls.id}"`,
+        );
+      }
+    }
+  }
+}
+
 export type GameDataValidationMode = 'strict' | 'editor';
 
 export interface ParseAndValidateGameDataOptions {
@@ -5982,6 +6153,7 @@ function validateReferences(
   enemies: EnemyTemplate[],
   stages: StageDef[],
   parties: Record<string, PartyDef>,
+  combatModules: CombatModuleDef[],
   mode: GameDataValidationMode,
 ): void {
   const passiveIds = new Set(passives.map((p) => p.id));
@@ -6031,6 +6203,10 @@ function validateReferences(
   }
 
   const classById = new Map(classes.map((cls) => [cls.id, cls] as const));
+  const moduleById = new Map(combatModules.map((module) => [module.id, module] as const));
+
+  validateCombatModuleData(combatModules, classById);
+  validateClassCombatModuleRefs(classes, moduleById);
 
   for (const cls of classes) {
     if (!activeIds.has(cls.basicAttackSkillId)) {
@@ -6208,6 +6384,7 @@ export interface ParsedGameDataJson {
   classes: ClassPreset[];
   passives: PassiveSkillDef[];
   actives: ActiveSkillDef[];
+  combatModules: CombatModuleDef[];
   enemies: EnemyTemplate[];
   stages: StageDef[];
   parties: Record<string, PartyDef>;
@@ -6217,6 +6394,7 @@ export function parseAndValidateGameDataJson(
   raw: {
     classes: unknown;
     skills: unknown;
+    combatModules?: unknown;
     enemies: unknown;
     stages: unknown;
     parties: unknown;
@@ -6235,6 +6413,7 @@ export function parseAndValidateGameDataJson(
   }
 
   const classesRaw = parseClasses(raw.classes);
+  const combatModules = parseCombatModules(raw.combatModules);
   const passives = parsePassives(passivesRaw);
   const activesParsed = parseActives(activesRaw);
   const activesById = new Map(activesParsed.map((skill) => [skill.id, skill]));
@@ -6274,8 +6453,9 @@ export function parseAndValidateGameDataJson(
     enemies,
     stages,
     parties,
+    combatModules,
     mode,
   );
 
-  return { classes, passives, actives, enemies, stages, parties };
+  return { classes, passives, actives, combatModules, enemies, stages, parties };
 }

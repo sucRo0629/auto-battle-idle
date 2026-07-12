@@ -1,0 +1,53 @@
+[
+  {
+    "id": "at_sorcerer_mod_single_bolt",
+    "classId": "at_sorcerer",
+    "displayName": "単体魔弾（仮）",
+    "description": "最近傍の敵へ単体魔法攻撃。R5b プレースホルダー。",
+    "attackIntervalSec": 3,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "damageType": "magic",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ],
+      "targetShape": "single"
+    }
+  },
+  {
+    "id": "at_sorcerer_mod_twin_bolt",
+    "classId": "at_sorcerer",
+    "displayName": "双弾（仮）",
+    "description": "multiLock で複数対応の魔法攻撃。R5b プレースホルダー。",
+    "attackIntervalSec": 3.5,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "damageType": "magic",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.65
+          }
+        }
+      ],
+      "targetShape": "multiLock",
+      "hitCount": 2
+    }
+  }
+]

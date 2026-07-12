@@ -1,0 +1,52 @@
+[
+  {
+    "id": "sp_cleric_mod_single_mend",
+    "classId": "sp_cleric",
+    "displayName": "単体癒し（仮）",
+    "description": "HP 比率が最も低い味方へ単体回復。R5b プレースホルダー。",
+    "attackIntervalSec": 3,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
+          },
+          "type": "heal",
+          "healSubKind": "instant",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ],
+      "targetShape": "single"
+    }
+  },
+  {
+    "id": "sp_cleric_mod_party_mend",
+    "classId": "sp_cleric",
+    "displayName": "全体癒し（仮）",
+    "description": "全味方へ回復。R5b プレースホルダー。",
+    "attackIntervalSec": 4,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "all",
+            "side": "ally"
+          },
+          "type": "heal",
+          "healSubKind": "instant",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.75
+          }
+        }
+      ],
+      "targetShape": "single"
+    }
+  }
+]

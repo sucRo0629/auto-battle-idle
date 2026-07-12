@@ -2,7 +2,14 @@ import classesJson from '../../../data/classes.json';
 import enemiesJson from '../../../data/enemies.json';
 import stagesJson from '@game-data/stages';
 import partiesJson from '../../../data/parties.json';
-import type { ActiveSkillDef, ClassPreset, EnemyTemplate, GameData, PassiveSkillDef } from '../types.ts';
+import type {
+  ActiveSkillDef,
+  ClassPreset,
+  CombatModuleDef,
+  EnemyTemplate,
+  GameData,
+  PassiveSkillDef,
+} from '../types.ts';
 import { parseAndValidateGameDataJson } from './validateGameData.ts';
 
 const passiveModules = import.meta.glob<PassiveSkillDef[]>(
@@ -12,6 +19,11 @@ const passiveModules = import.meta.glob<PassiveSkillDef[]>(
 
 const activeModules = import.meta.glob<ActiveSkillDef[]>(
   '../../../data/skills/actives/*.json',
+  { eager: true, import: 'default' },
+);
+
+const combatModuleFiles = import.meta.glob<CombatModuleDef[]>(
+  '../../../data/combat-modules/*.json',
   { eager: true, import: 'default' },
 );
 
@@ -25,6 +37,10 @@ function loadMergedPassives(): PassiveSkillDef[] {
 
 function loadMergedActives(): ActiveSkillDef[] {
   return Object.values(activeModules).flat();
+}
+
+function loadMergedCombatModules(): CombatModuleDef[] {
+  return Object.values(combatModuleFiles).flat();
 }
 
 export type LoadGameDataResult =
@@ -65,9 +81,11 @@ export function renderGameDataLoadError(
 export function loadGameData(): GameData {
   const passives = loadMergedPassives();
   const actives = loadMergedActives();
+  const combatModules = loadMergedCombatModules();
   const parsed = parseAndValidateGameDataJson({
     classes: classesJson,
     skills: { passives, actives },
+    combatModules,
     enemies: enemiesJson,
     stages: stagesJson,
     parties: partiesJson,
@@ -77,6 +95,7 @@ export function loadGameData(): GameData {
   return {
     classOrder: classes.map((cls) => cls.id),
     classRegistry: indexById(classes),
+    combatModuleRegistry: indexById(parsed.combatModules),
     skillRegistry: {
       passives: indexById(parsed.passives),
       actives: indexById(parsed.actives),

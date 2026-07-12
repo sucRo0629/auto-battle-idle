@@ -1,0 +1,53 @@
+[
+  {
+    "id": "at_swordsman_mod_single_slash",
+    "classId": "at_swordsman",
+    "displayName": "単体斬撃（仮）",
+    "description": "最近傍の敵へ単体物理攻撃。R5b プレースホルダー。",
+    "attackIntervalSec": 2.5,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ],
+      "targetShape": "single"
+    }
+  },
+  {
+    "id": "at_swordsman_mod_pierce_slash",
+    "classId": "at_swordsman",
+    "displayName": "貫通斬（仮）",
+    "description": "pierce 形状で複数対応の物理攻撃。R5b プレースホルダー。",
+    "attackIntervalSec": 3,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.85
+          }
+        }
+      ],
+      "targetShape": "pierce",
+      "pierceDurationSec": 0.15
+    }
+  }
+]

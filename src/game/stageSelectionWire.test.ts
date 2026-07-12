@@ -6,7 +6,7 @@ import classesJson from '../../data/classes.json';
 import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
 import stagesDemoJson from '../../data/stages-demo.json';
-import type { ActiveSkillDef, GameData, PassiveSkillDef } from '../battle/types.ts';
+import type { ActiveSkillDef, CombatModuleDef, GameData, PassiveSkillDef } from '../battle/types.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
@@ -19,6 +19,11 @@ const passiveModules = import.meta.glob<PassiveSkillDef[]>(
 
 const activeModules = import.meta.glob<ActiveSkillDef[]>(
   '../../data/skills/actives/*.json',
+  { eager: true, import: 'default' },
+);
+
+const combatModuleFiles = import.meta.glob<CombatModuleDef[]>(
+  '../../data/combat-modules/*.json',
   { eager: true, import: 'default' },
 );
 
@@ -35,6 +40,7 @@ function loadDemoGameDataForTest(): GameData {
       passives: Object.values(passiveModules).flat(),
       actives: Object.values(activeModules).flat(),
     },
+    combatModules: Object.values(combatModuleFiles).flat(),
     stages: stagesDemoJson,
     parties: partiesJson,
   });

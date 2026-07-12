@@ -134,6 +134,11 @@ export interface ClassPreset extends CombatStats {
   classSkillIds: string[];
   /** 基本攻撃 CD 段階（SPD）。未指定は normal */
   attackSpeedTier?: AttackSpeedTier;
+  /**
+   * R5+: 使用可能戦闘方式 ID（2件固定）。
+   * 未指定 = legacy（module 経路なし。attackSpeedTier + basicAttackSkillId を使用）。
+   */
+  combatModuleIds?: [string, string];
   /** LvUP 成長段階（HP/ATK/DEF 各独立）。一次職は必須 */
   growthTier?: GrowthTierSet;
   /** 術師のみ caster（HP/DEF=supporter 表、ATK=attacker 表） */
@@ -1625,6 +1630,32 @@ export type SkillEffectDef =
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;
 
+/** 戦闘方式の実行定義。ActiveSkillDef の effect / 共有ターゲット形状のみ（trigger は module 側 attackIntervalSec） */
+export interface CombatModuleActionDef extends SkillSharedTargetingFields {
+  effect: SkillEffectDef[];
+}
+
+/** R5 最小戦闘方式。R5c で ActiveSkillDef へ合成し basic スロットで実行 */
+export interface CombatModuleDef {
+  id: string;
+  classId: ClassId;
+  displayName: string;
+  description: string;
+  /** 秒単位攻撃間隔（初回 CD・継続周期の正本候補。R5c で SkillExecutor 接続） */
+  attackIntervalSec: number;
+  action: CombatModuleActionDef;
+}
+
+/** R5 最小縦切りの module 対象兵科（4 兵科 × 2 方式） */
+export const R5_COMBAT_MODULE_CLASS_IDS = [
+  'df_guardian',
+  'at_swordsman',
+  'at_sorcerer',
+  'sp_cleric',
+] as const;
+
+export type R5CombatModuleClassId = (typeof R5_COMBAT_MODULE_CLASS_IDS)[number];
+
 export interface ActiveSkillDef extends SkillSharedTargetingFields {
   id: string;
   name: string;
@@ -1763,6 +1794,8 @@ export interface GameData {
   /** classes.json の配列順（バランス表・編成クラス一覧の並び） */
   classOrder: ClassId[];
   classRegistry: Record<ClassId, ClassPreset>;
+  /** combat-modules/*.json を id で索引 */
+  combatModuleRegistry: Record<string, CombatModuleDef>;
   skillRegistry: SkillRegistry;
   enemyRegistry: Record<string, EnemyTemplate>;
   stages: StageDef[];

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "df_guardian_mod_nearest_strike",
+    "classId": "df_guardian",
+    "displayName": "近接打撃（仮）",
+    "description": "最近傍の敵へ単体物理攻撃。R5b プレースホルダー。",
+    "attackIntervalSec": 2.5,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "df_guardian_mod_guard_focus",
+    "classId": "df_guardian",
+    "displayName": "防御姿勢（仮）",
+    "description": "自身の DEF を一時強化。Barrier は既存 basic 安全例が無いため buff で代替。R5b プレースホルダー。",
+    "attackIntervalSec": 3,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "buff",
+          "buffSubKind": "stat",
+          "buffStat": "def",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 4
+        }
+      ]
+    }
+  }
+]

@@ -9,13 +9,14 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R5a 完了** — 現行実装調査と最小実装計画（本 §47）。次は **R5b — 最小型と新データ**（実装）。
-- **次の再開タスク:** **R5b — 最小型と新データ**（combat module 最小型・秒単位攻撃間隔・少数兵科 module データ・新データ validate）。
+- **新ロードマップ現在地:** **R5b 完了** — 戦闘方式最小型・データ・validate（本 §48）。次は **R5c — 通常行動実行**。
+- **次の再開タスク:** **R5c — 通常行動実行**（module → ActiveSkillDef 合成、attackIntervalSec 接続、SkillExecutor / BattleEngine 接続）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
 - **保留:** 移動阻害・移動速度差・ノックバック等は将来の**作戦内パッシブ候補**（R8）。
 - **今回の doc 作業（R5a）:** production code、データ JSON、テスト、エディタは**未変更**。調査結果は §47。
+- **今回の実装（R5b）:** §48。BattleEngine / SkillExecutor / Combatant 生成 / UI / editor / Save は未接続。
 
 ### R4 で確定したデータ責務（doc 反映済）
 
@@ -3309,3 +3310,104 @@ class / stage / `enemyGroups`、demo balance、save schema、`currentStageId` / 
 3. class 側 module 参照 + default
 4. load 時 module → ActiveSkillDef + validate
 5. 実行接続は R5c
+
+---
+
+## 48. R5b — 戦闘方式最小型・データ・validate（2026-07-12）
+
+**目的:** CombatModule 最小型、4 兵科 × 2 方式データ、load / validate、データ単体テスト。**実行接続は R5c。**
+
+**作業前に読んだファイル（6 件）:**
+
+1. `docs/ai-handoff/current-task.md` — R5a 調査結果（§47）
+2. `docs/plans/combat-data-schema-refactor.md` — R4 データ責務
+3. `src/battle/types.ts` — ClassPreset / ActiveSkillDef / GameData
+4. `src/battle/data/loadGameData.ts` — 読込経路
+5. `src/battle/data/validateGameData.ts` — validate 層
+6. `data/skills/actives/df_guardian.json` — 代表 skill JSON（effect / target 形状）
+
+**追加参照:** `synthesizeBasicAttack.ts`、`data/classes.json`（Grep）、各 `data/combat-modules/*.json`
+
+---
+
+### 48.1 追加した型（`src/battle/types.ts`）
+
+| 型 | 内容 |
+| ---- | ---- |
+| `CombatModuleActionDef` | 既存 `SkillSharedTargetingFields` + `effect[]`（独自 effect schema なし） |
+| `CombatModuleDef` | `id`, `classId`, `displayName`, `description`, `attackIntervalSec`, `action` |
+| `R5_COMBAT_MODULE_CLASS_IDS` | R5 対象 4 兵科定数 |
+| `ClassPreset.combatModuleIds?` | `[string, string]` — 未指定 = legacy |
+| `GameData.combatModuleRegistry` | module ID → `CombatModuleDef` |
+
+**合成ヘルパー（R5c 接続用、R5b では未配線）:** `src/battle/data/synthesizeCombatModuleSkill.ts` — module → `ActiveSkillDef`。`trigger.value = attackIntervalSec`。
+
+---
+
+### 48.2 module データ保存場所
+
+`data/combat-modules/` — 兵科ごと JSON 配列（4 ファイル、計 8 module）。
+
+---
+
+### 48.3 対象 4 兵科 × 2 方式（仮名称）
+
+| classId | 方式 A | 方式 B |
+| ------- | ------ | ------ |
+| `df_guardian` | `df_guardian_mod_nearest_strike` — 最近傍単体物理 | `df_guardian_mod_guard_focus` — 自身 DEF buff（Barrier 安全例なしのため buff 代替） |
+| `at_swordsman` | `at_swordsman_mod_single_slash` — 単体物理 | `at_swordsman_mod_pierce_slash` — pierce 複数対応 |
+| `at_sorcerer` | `at_sorcerer_mod_single_bolt` — 単体魔法 | `at_sorcerer_mod_twin_bolt` — multiLock 複数魔法 |
+| `sp_cleric` | `sp_cleric_mod_single_mend` — 単体 heal | `sp_cleric_mod_party_mend` — 全味方 heal |
+
+各 class の `classes.json` に `combatModuleIds`（2 件）を追加。旧 basic / passive / active 参照は維持。
+
+---
+
+### 48.4 attackIntervalSec
+
+- 新方式用の秒単位攻撃間隔。旧 `attackSpeedTier` は**削除せず** legacy 継続。
+- module 対象兵科では `attackIntervalSec` を正本候補（R5c で CD tick 接続）。
+- validate: 正数のみ（0 / 負 / NaN 拒否）。
+- **初回 CD と継続周期:** 推奨は**両方とも同じ `attackIntervalSec`**。旧 `trigger.value = 2` 秒を新方式の初回 CD 正本に**しない**（R5c 接続時に `initializeSkillCooldowns` / `resetCooldownAfterFire` で module 経路を分岐）。
+
+---
+
+### 48.5 load / validate
+
+- **load:** `loadGameData.ts` が `data/combat-modules/*.json` を glob → `parseAndValidateGameDataJson({ combatModules })` → `GameData.combatModuleRegistry`。
+- **validate module 単体:** ID 重複、classId 実在、表示名・説明必須、`attackIntervalSec > 0`、action.effect を既存 `parseSkillEffect` で検証。
+- **validate class 整合:** `combatModuleIds` がある class は 2 件・重複なし・実在 module・classId 一致。R5 対象 4 兵科は `combatModuleIds` 必須。
+- **legacy:** `combatModuleIds` 未指定 class はエラーにしない。旧 active / passive / basic 構造維持。
+
+---
+
+### 48.6 legacy 共存
+
+- `combatModuleIds` の有無で段階移行（暫定フラグ大量追加なし）。
+- legacy class: `attackSpeedTier` + `basicAttackSkillId` 経路そのまま。
+- module 未実装兵科を一律エラーにしない（R5 対象 4 兵科のみ必須）。
+
+---
+
+### 48.7 双刃士 classId 誤記修正
+
+§47.8 の `at_assassin`（双刃士）表記を正とする。`df_duelist`（闘技士）とは別兵科。R5 最初の実装対象から除外は R5a 確定のまま。
+
+---
+
+### 48.8 R5c で接続する箇所
+
+1. `synthesizeCombatModuleSkill` → `skillRegistry.actives` 登録（または runtime 解決）
+2. `createAllyFromMember` / `createEnemyFromClassGroup` — basic `skillId` を選択 module に差し替え
+3. `initializeSkillCooldowns` / `tickCooldowns` — module 経路は `attackIntervalSec` ベース（tier rate バイパス）
+4. `SkillExecutor.tryExecute` — 既存 basic スロット再利用（新 executor 不要）
+
+---
+
+### 48.9 テスト
+
+- `src/battle/data/validateGameData.combatModules.test.ts`（新規）
+- `validateGameData.test.ts` / `stageSelectionWire.test.ts` — 実データ bundle に `combatModules` 追加
+
+**次の再開タスク:** R5c「通常行動実行」
+
