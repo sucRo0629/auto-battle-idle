@@ -517,6 +517,8 @@ R4 では **実装しない**。順序候補:
 13. 作戦内パッシブ（R8）
 14. エディタ全面（R9）
 
+**R5a（2026-07-12）で確定したサブ分割:** R5b（型+JSON+validate）→ R5c（実行）→ R5d（味方 module）→ R5e（敵 module）→ R5f（編成制限）→ R5g（統合テスト）。詳細は [current-task.md §47](../ai-handoff/current-task.md#47-r5a--現行実装調査と最小実装計画2026-07-12)。
+
 ---
 
 ## 18. 保留事項（R4 完了時点）
@@ -527,7 +529,7 @@ R4 では **実装しない**。順序候補:
 | JSON ファイル分割（`classes.json` vs `modules/` 等） | R5 |
 | module effect schema 詳細 | R5 試作 |
 | passive effect schema 詳細 | R8 |
-| 既存 `SkillExecutor` 再利用範囲 | R5 |
+| 既存 `SkillExecutor` 再利用範囲 | **R5a 確定** — 新 executor 不要。module → ActiveSkillDef 合成後 basic スロットで `tryExecute` 再利用（[current-task.md §47.9](../ai-handoff/current-task.md#479-skillexecutor-再利用判断)） |
 | 旧 SkillEditor の最終存廃 | R9 |
 | 敵テンプレ最終存廃 | R9 |
 | legacy normalize 期間の長さ | R5〜R10 |

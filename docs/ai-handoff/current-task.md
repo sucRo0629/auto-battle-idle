@@ -9,13 +9,13 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R4 完了** — データスキーマとエディタ設計（[phase-roadmap.md](../plans/phase-roadmap.md)）。
-- **次の再開タスク:** **R5 — 最小縦切り**（少数兵科・各 2 戦闘方式・最小 schema で戦闘成立。**実装 Phase**）。
+- **新ロードマップ現在地:** **R5a 完了** — 現行実装調査と最小実装計画（本 §47）。次は **R5b — 最小型と新データ**（実装）。
+- **次の再開タスク:** **R5b — 最小型と新データ**（combat module 最小型・秒単位攻撃間隔・少数兵科 module データ・新データ validate）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
 - **保留:** 移動阻害・移動速度差・ノックバック等は将来の**作戦内パッシブ候補**（R8）。
-- **今回の doc 作業（R4）:** production code、データ JSON、テスト、エディタは**未変更**。
+- **今回の doc 作業（R5a）:** production code、データ JSON、テスト、エディタは**未変更**。調査結果は §47。
 
 ### R4 で確定したデータ責務（doc 反映済）
 
@@ -3139,3 +3139,173 @@ class / stage / `enemyGroups`、demo balance、save schema、`currentStageId` / 
 
 - [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
 - [ ] 7h 体験版終了画面（`demo_ch1_07` クリア後）
+
+---
+
+## 47. R5a — 現行実装調査と最小実装計画（2026-07-12）
+
+**目的:** R5 最小縦切りを安全に分割する実装計画。production code / JSON / テスト / エディタは**未変更**。
+
+**作業前に読んだファイル（6 件）:**
+
+1. `docs/ai-handoff/current-task.md` — R4 完了・R5 前提
+2. `docs/plans/combat-data-schema-refactor.md` — R4 データ責務・§16 最小 schema
+3. `src/battle/types.ts` — `CombatantState` / `StageEnemyGroup` / `PartySlotState` / `AttackSpeedTier`
+4. `src/battle/BattleEngine.ts` — 通常攻撃 tick / 実行ループ（代表）
+5. `src/battle/entities.ts` — Combatant 生成（代表）
+6. `src/battle/data/loadGameData.ts` — class / skill / stage 読込（代表）
+
+**追加参照（調査中）:** `SkillExecutor.ts`, `skillTrigger.ts`, `synthesizeBasicAttack.ts`, `validateGameData.ts`（basic 合成）, `enemyGroupSpawn.ts`, `partyCompose.ts`, `memberStatsDisplay.ts`, `basicAttackPreview.ts`, `targeting.ts`, `resolveApproachBattleX.ts`, `combatPosition.ts`
+
+---
+
+### 47.1 通常攻撃の現行経路
+
+| 段階 | ファイル / 関数 | 責務 |
+| ---- | --------------- | ---- |
+| データ読込 | `loadGameData.ts` → `parseAndValidateGameDataJson` | classes / skills / stages / parties を merge |
+| basic 合成 | `validateGameData.ts` `injectSynthesizedBasicAttacks` → `synthesizeBasicAttack.ts` | 各 class の `basicAttackSkillId` に JSON override を merge。trigger 既定 `{ kind: 'time', value: 2 }` |
+| Combatant 生成 | `entities.ts` `createAllyFromMember` / `createEnemyFromClassGroup` | `createCooldowns(basicAttackSkillId, build, activeSkillIds)` で basic + active 枠を生成 |
+| CD 初期化 | `BattleEngine.initBattlePassiveState` / `spawnWaveEnemies` → `skillTrigger.initializeSkillCooldowns` | `remaining = skill.trigger.value`（basic 既定 2 秒） |
+| CD tick | `BattleEngine.tickCooldowns` | basic: `deltaTime * getBasicCooldownRate(tier) * getEffectiveAttackSpeedMultiplier`。active は別経路 |
+| 実行判定 | `BattleEngine.runUnitSkills` | `remaining <= 0` の basic を `SkillExecutor.tryExecute` へ。active は fire gate / gauge あり |
+| スキル解決 | `SkillExecutor.tryExecute` | basic 時 `resolveEffectiveBasicAttackSkill`（transform overlay）。`buildSkillSequence` or 即 effect 適用 |
+| ターゲット | `skills/targeting.ts` `resolveEffectTargetSpec` | effect.target + passive `targetRuleOverride`（pool が空でなければ上書き） |
+| 射程 / 接敵 | `combatPosition.ts` / `resolveApproachBattleX.ts` | `resolveBasicAttackRangePx`、move effect 時は approach 待ち |
+| ダメージ / 回復 | `SkillExecutor.applyResolvedEffectStep` → `combatMath.ts` | damage / heal / barrier / DoT 等 |
+| active / gauge 依存 | `runUnitSkills` 内 | basic 前に `basicAttackCount` ready active を優先。time active は charge bank + fire gate |
+
+**SkillExecutor との関係:** 通常攻撃は **basic スロットの ActiveSkillDef** として SkillExecutor に入る。effect パイプライン（target / range / hit / damage）は **ほぼ全面再利用可能**。
+
+---
+
+### 47.2 攻撃速度（attackSpeedTier）の現行経路
+
+| 項目 | 現状 |
+| ---- | ---- |
+| 型 | `types.ts` `AttackSpeedTier` = slow / somewhatSlow / normal / somewhatFast / fast |
+| 保存 | `ClassPreset.attackSpeedTier`（classes.json）、`EnemyTemplate.attackSpeedTier`（enemies.json）。basic JSON の trigger.value とは**別系統** |
+| tier → rate | `levelCurves.json` `attackSpeedPresets[tier].basicCooldownRate` → `levelGrowth.getBasicCooldownRate` |
+| 実秒換算 | `basicAttackPreview.computeEffectiveBasicAttackIntervalSec(tier, curves, baseIntervalSec=2, speedMul)` = `baseIntervalSec / (cdRate * speedMul)` |
+| timer 適用 | `BattleEngine.tickCooldowns`: basic の `remaining` 減算 rate = `basicRate * getEffectiveAttackSpeedMultiplier(unit)`。初期 `remaining` は **skill.trigger.value**（tier 非反映） |
+| buff / debuff | `combatMath.getEffectiveAttackSpeedMultiplier` — statusEffects の `attackSpeed` stat 集約 |
+| UI | `memberStatsDisplay.resolveAttackSpeedTier` → `getAttackSpeedTierLabel`（編成 / 戦闘 stat 行） |
+
+**R5 で秒単位移行時の最低変更経路:**
+
+1. 新 class / module データに `attackIntervalSec`（または module 上書き）を持たせる
+2. `initializeSkillCooldowns` / `resetCooldownAfterFire` — module 経路では `trigger.value` を sec から設定
+3. `BattleEngine.tickCooldowns` — 新経路は tier rate を使わず `deltaTime * speedMul` のみ
+4. legacy 用に `attackSpeedTier` + `getBasicCooldownRate` 分岐を残す
+5. UI / validate / editor は R5b では新データ validate のみ（legacy editor 触らない）
+
+---
+
+### 47.3 class / skill 責務（現状）
+
+| 関係 | 現状 |
+| ---- | ---- |
+| class → basic | `ClassPreset.basicAttackSkillId`（未指定時 `{id}_basic_attack`） |
+| class → passive | `passiveIds` + Lv 解放 `starterPassiveIds` / `skills[]` |
+| class → active | `starterActiveIds` + `skills[]` → `resolveBattleActiveSkillIds` |
+| basic skill | ActiveSkillDef: trigger(time) + effect[](damage/heal, target, rangePx は traits 側) |
+| passive → target override | `targeting.ts`: `passive.effect === 'targetRuleOverride'` が effect 側 faction の pool 非空時に default target を上書き |
+| active 自動発動 | `runUnitSkills`: time trigger CD 0 + fire gate / count trigger / stage trigger |
+| module 暫定実装 | **可能** — load 時に module → `ActiveSkillDef` へ合成し `skillRegistry.actives` に登録。basic スロットの `skillId` を module 解決 ID に差し替え |
+| 新 executor | **不要** — R5 では SkillExecutor 再利用 |
+
+**R5 方針:** active / gauge / wave passive aura を空にした Combatant で basic（= module 解決スキル）だけ回す。
+
+---
+
+### 47.4 Combatant 生成経路
+
+**味方:** `SaveGameState.party` → `BattleEngine.getParty()` → `createAlliesFromPartyState` → `createAllyFromMember`
+
+**敵（enemyGroups）:** `stage.enemyGroups` → `expandEnemyGroups` → `createEnemyFromClassGroup`
+
+**敵（legacy waves）:** `createEnemyFromTemplate`
+
+**`selectedCombatModuleId` 最小接続点:** 味方は `createAllyFromMember`（basic `skillId` 差し替え）。敵は `ResolvedEnemySpawnSpec` → `createEnemyFromClassGroup`。
+
+---
+
+### 47.5 Party / formation 状態
+
+- 保存: `SaveGameState.party` — 4 slot × `{ classId, progress, build }`。module 選択なし
+- 同一 classId: UI `getAssignableClassIds` のみ。runtime validate なし
+- module 保持（Save 外）: `GameSession.operationState.partyModuleBySlot` 推奨
+- R5: 固定デフォルト + debug 経路で Wave 間 UI なしでも成立
+
+---
+
+### 47.6 敵 group / Stage
+
+- `StageEnemyGroup`: classId, count, scales のみ
+- 現行 demo: stage 直下 `enemyGroups`（wave 0 のみ）
+- legacy 維持: 新 R5 stage のみ `selectedCombatModuleId`。`BUILD_FLAVOR` / 別 JSON で分離
+
+---
+
+### 47.7 active / gauge 依存の分類（R5）
+
+| 分類 | 例 |
+| ---- | -- |
+| 回避できる | active CD / charge bank / fire gate（`learnedActiveIds=[]`） |
+| 一時無効化 | wave passive aura、stageStart periodic passive |
+| 後続削除 | Lv 解放 active 枠、growthTier 依存ステ |
+| 触らない | SkillSequenceRunner 全面削除、passive bridge refactor、Save schema |
+
+---
+
+### 47.8 R5 対象兵科（4 兵科）
+
+| classId | 方式候補（各 2） |
+| ------- | ---------------- |
+| `df_guardian` | 防御方式 2 種 |
+| `at_swordsman` | 単体打撃 / 範囲打撃 |
+| `at_sorcerer` | 単体魔法 / 複数魔法 |
+| `sp_cleric` | 単体回復 / 複数回復 |
+
+変更案なし。`at_assassin`（双刃士）は背後回り込み等の特殊 move を含むため、最初の実装対象から除外（`df_duelist` = 闘技士とは別兵科）。
+
+---
+
+### 47.9 SkillExecutor 再利用判断
+
+- **再利用:** `tryExecute`、effect 解決、targeting、range、pending hit
+- **差し替え:** basic `skillId` 解決元、CD sec ベース tick
+- **bypass:** active / passive aura / gauge
+- **新 executor:** 不要
+
+---
+
+### 47.10 R5b〜R5g 実装分割
+
+| Phase | 内容 |
+| ----- | ---- |
+| R5b | 最小型 + 新 JSON + 新 validate |
+| R5c | module 解決 + attack interval + SkillExecutor 接続 |
+| R5d | 味方 module 選択（Save 非統合） |
+| R5e | 敵 group module 指定 |
+| R5f | 味方 classId 重複禁止 |
+| R5g | 統合テスト |
+
+順序: R5b → R5c → R5d → R5e → R5f → R5g
+
+---
+
+### 47.11 legacy 境界 / R5 で触らない範囲
+
+- legacy: 既存 JSON 読込のみ、`attackSpeedTier` 経路維持、Save 変更なし
+- 触らない: 作戦内パッシブ、Wave 間 UI、Save、migration、エディタ、spec 本文、旧 active 削除
+
+---
+
+### 47.13 次アクション（R5b）
+
+1. `CombatModule` 最小型
+2. 4 兵科 × 2 module JSON
+3. class 側 module 参照 + default
+4. load 時 module → ActiveSkillDef + validate
+5. 実行接続は R5c
