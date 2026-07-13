@@ -3,8 +3,10 @@ import { loadGameData } from '../battle/data/loadGameData.ts';
 import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
 import type { ActiveSkillDef } from '../battle/types.ts';
 import {
+  addStageDraftWave,
   buildClassPresetFromDraft,
   buildClassSkillsFromEntries,
+  canRemoveStageDraftWave,
   classDraftFromPreset,
   classStatsEqual,
   collectSkillsFromDrafts,
@@ -13,12 +15,14 @@ import {
   initClassSkillEntriesFromPreset,
   loadStageDraftById,
   normalizeStageDraftForSave,
+  removeStageDraftWave,
   resolveStageDraftCompositionMode,
   resyncEnemyBasicAttackEntry,
   toClassStatsPatch,
   validateStageDraftForSave,
   type SkillDraftEntry,
   type SkillsJson,
+  type StageDraft,
 } from './editorApi.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 
@@ -1149,5 +1153,68 @@ describe('wave enemyGroups draft helpers (R6g-4)', () => {
     ).toMatchObject({
       selectedCombatModuleId: 'at_swordsman_mod_pierce_slash',
     });
+  });
+});
+
+describe('wave structure authoring helpers (R9c)', () => {
+  it('addStageDraftWave appends wave with default enemyGroups when authoring', () => {
+    const draft: StageDraft = {
+      id: 'author_wave',
+      displayName: 'Author Wave',
+      recommendedLevel: 10,
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+        },
+      ],
+    };
+
+    addStageDraftWave(draft, { defaultClassId: 'at_hunter' });
+
+    expect(draft.waves).toHaveLength(2);
+    expect(draft.waves?.[1]?.enemyGroups).toEqual([
+      { classId: 'at_hunter', count: 1 },
+    ]);
+    expect(resolveStageDraftCompositionMode(draft)).toBe('waveEnemyGroups');
+  });
+
+  it('removeStageDraftWave removes wave while keeping at least one', () => {
+    const draft: StageDraft = {
+      id: 'remove_wave',
+      displayName: 'Remove Wave',
+      recommendedLevel: 10,
+      waves: [
+        { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 1 }] },
+        { enemies: [], enemyGroups: [{ classId: 'at_hunter', count: 2 }] },
+      ],
+    };
+
+    expect(canRemoveStageDraftWave(draft)).toBe(true);
+    expect(removeStageDraftWave(draft, 1)).toBeNull();
+    expect(draft.waves).toHaveLength(1);
+    expect(draft.waves?.[0]?.enemyGroups?.[0]?.classId).toBe('df_paladin');
+    expect(canRemoveStageDraftWave(draft)).toBe(false);
+    expect(removeStageDraftWave(draft, 0)).toMatch(/最低 1 件/);
+  });
+
+  it('saves two-wave enemyGroups draft and passes runtime validate', () => {
+    const draft: StageDraft = {
+      id: 'r9c_two_wave',
+      displayName: 'R9c Two Wave',
+      recommendedLevel: 12,
+      waves: [
+        { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 2 }] },
+        { enemies: [], enemyGroups: [{ classId: 'at_hunter', count: 1 }] },
+      ],
+    };
+
+    const normalized = normalizeStageDraftForSave(draft);
+    expect(validateStageDraftForSave(draft)).toBeNull();
+    expect(normalized.waves).toHaveLength(2);
+
+    const reloaded = loadStageDraftById([normalized], 'r9c_two_wave');
+    expect(resolveStageDraftCompositionMode(reloaded)).toBe('waveEnemyGroups');
+    expect(reloaded.waves?.[1]?.enemyGroups?.[0]?.classId).toBe('at_hunter');
   });
 });

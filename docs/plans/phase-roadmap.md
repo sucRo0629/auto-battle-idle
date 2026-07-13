@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9b 完了**（Stage enemyGroups CombatModule 編集 UI）、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**（R5〜R8 縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**。**公式次タスク: R9c**（複数 Wave・enemyGroups 構造 authoring）。詳細は [current-task.md §87](../ai-handoff/current-task.md)。
+**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9b 完了**（Stage enemyGroups CombatModule 編集 UI）、**R9c 完了**（複数 Wave・enemyGroups 構造 authoring）、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**（R5〜R8 縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**。**公式次タスク: R9d**（作戦内パッシブ候補 authoring）。詳細は [current-task.md §88](../ai-handoff/current-task.md)。
 
 ---
 
@@ -36,7 +36,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R8** | 作戦内パッシブ — 取得・保持・効果縦切り、戦闘中表示、範囲プレースホルダ | **完了** | Wave 間準備の正式パッシブ選択 UI は **R9.6-B**。R10 で判断差を確認 | **Backend 完了** |
 | **R9a** | authoring 骨格 — エディタ現状調査・タスク分割 | 完了 | 開発者向け確認済み | **完了** |
 | **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、統合確認 | **R9.5a〜c Backend 完了** | R9.5a〜b 完了。R9.5c は暫定 UI 縦切りのみ（正式 作戦準備 UI は **R9.6**） | **Backend 完了** |
-| **R9b〜f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / closure | **R9b 完了**（§87） / R9c〜f 未着手 | R10 用作戦反映は未確認 | R9b Tooling 完了 |
+| **R9b〜f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / closure | **R9b〜c 完了**（§87〜88） / R9d〜f 未着手 | R10 用作戦反映は未確認 | R9c Tooling 完了 |
 | **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の正式選択 | 未着手 | 未着手 | R9.5c Backend |
 | **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | R9f・**R9.6 Player** 待ち |
 
@@ -510,14 +510,14 @@ R9 は新仕様の Stage、Wave、敵方式、作戦内パッシブをエディ�
 | -- | ---- | --------------- |
 | **R9a** | エディタ骨格・現状調査 | **完了（§80）** |
 | **R9b** | Stage / Wave `enemyGroups[].selectedCombatModuleId` authoring | **完了（§87）** — `StageEnemyEditorStep` + `stageEnemyCombatModuleEditor` + save round-trip |
-| **R9c** | 複数 Wave・`enemyGroups` 構造 authoring | 2 Wave 作成・保存・runtime 読込 |
+| **R9c** | 複数 Wave・`enemyGroups` 構造 authoring | **完了（§88）** — Wave 追加削除 UI + 2 Wave save round-trip |
 | **R9d** | 作戦内パッシブ候補・付与条件 authoring | 作成データが WavePrep に出る |
 | **R9e** | preview・validation・参照整合の統合 | 不正 ID・重複・未設定警告 |
 | **R9f** | authoring closure — 回帰テスト・spec 一致・R10 用作戦作成可能判定 | 新規 2 Wave 作戦をエディタだけで起動 |
 
-**次タスク（R9 系列）:** **R9c** — 複数 Wave・`enemyGroups` 構造 authoring。
+**次タスク（R9 系列）:** **R9d** — 作戦内パッシブ候補・付与条件 authoring。
 
-**当面のフェーズ順:** R9c〜f → **R9.6（A→B）** → R10。R9.6 は R9b とは別 Phase（Player UI）。R9b（Stage editor 敵設定 UI）は **完了**（§87）。R9.6（Player 準備 UI）は未着手。
+**当面のフェーズ順:** R9d〜f → **R9.6（A→B）** → R10。R9.6 は R9b とは別 Phase（Player UI）。R9b（Stage editor 敵設定 UI）・R9c（Wave 構造 authoring）は **完了**（§87〜88）。R9.6（Player 準備 UI）は未着手。
 
 ### R9a §80.6 技術前提（R9 Backend 完了に必要・R9.5 と並行可）
 
@@ -849,7 +849,7 @@ R8 Backend
 - R9d は R7〜R8 のパッシブ基盤に依存する
 - **R9.6 は R9.5c Backend 完了後に着手**（R9b〜f と並行可だが、R10 Player 前に A+B 必須）
 - R10 Backend 開始は R9f 完了を条件とする。**R10 Player 完了は R9.6（A+B）Player 完了を必須依存**とする
-- R9b は完了（§87）。公式次は **R9c**
+- R9b〜c は完了（§87〜88）。公式次は **R9d**
 - **戦場移動 legacy cleanup** は R10 完了後（新仕様最小実装安定後）。R9.5 / R9 とは並行しない — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 
 R5 は R4 の設計（[combat-data-schema-refactor.md](combat-data-schema-refactor.md) §16 最小 schema）を前提に着手する。

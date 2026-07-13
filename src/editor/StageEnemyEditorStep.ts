@@ -4,8 +4,11 @@ import {
   resolveStageEnemyCompositionPreview,
 } from "../ui/stageEnemyCompositionPreview.ts";
 import {
+  addStageDraftWave,
+  canRemoveStageDraftWave,
   createDefaultStageEnemyGroup,
   ensureStageDraftWaves,
+  removeStageDraftWave,
   resolveStageDraftCompositionMode,
   type StageDraft,
 } from "./editorApi.ts";
@@ -464,7 +467,12 @@ export class StageEnemyEditorStep {
         createActionButton("Wave ごと enemyGroups 編集を開始", "editor-btn", () => {
           commitDraft((next) => {
             ensureStageDraftWaves(next);
-            next.waves![0]!.enemyGroups = [];
+            const wave = next.waves![0]!;
+            if (wave.enemyGroups === undefined) {
+              wave.enemyGroups = [
+                createDefaultStageEnemyGroup(defaultClassId),
+              ];
+            }
           }, true);
         })
       );
@@ -519,6 +527,7 @@ export class StageEnemyEditorStep {
       appendRecommendedLevelField(editSection, draft, commitDraft);
 
       const waves = draft.waves ?? [];
+      const allowRemoveWave = canRemoveStageDraftWave(draft);
       for (let waveIndex = 0; waveIndex < waves.length; waveIndex += 1) {
         const wave = waves[waveIndex]!;
         const waveSection = createSection(`Wave ${waveIndex}`);
@@ -575,7 +584,40 @@ export class StageEnemyEditorStep {
           );
           waveSection.appendChild(legacyNote);
         }
+
+        if (allowRemoveWave) {
+          const removeWaveActions = createEl("div", "editor-actions");
+          const removeBtn = createButton(
+            "Wave を削除",
+            "editor-btn editor-btn-small",
+            () => {
+              commitDraft((next) => {
+                if (removeStageDraftWave(next, waveIndex) !== null) return;
+              }, true);
+            }
+          );
+          removeBtn.dataset.editorAction = "removeWave";
+          removeBtn.dataset.waveIndex = String(waveIndex);
+          removeWaveActions.appendChild(removeBtn);
+          waveSection.appendChild(removeWaveActions);
+        }
       }
+
+      const waveStructureActions = createEl("div", "editor-actions");
+      const addWaveBtn = createButton(
+        "+ Wave を追加",
+        "editor-btn editor-btn-small",
+        () => {
+          commitDraft((next) => {
+            addStageDraftWave(next, {
+              defaultClassId: groupsEditorContext.defaultClassId,
+            });
+          }, true);
+        }
+      );
+      addWaveBtn.dataset.editorAction = "addWave";
+      waveStructureActions.appendChild(addWaveBtn);
+      editSection.appendChild(waveStructureActions);
     }
 
     const actions = createEl("div", "editor-actions");

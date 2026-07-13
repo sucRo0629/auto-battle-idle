@@ -310,6 +310,53 @@ export function createDefaultStageEnemyGroup(classId: string): StageEnemyGroup {
   return { classId, count: 1 };
 }
 
+export function createDefaultStageWave(options?: {
+  withEnemyGroups?: boolean;
+  defaultClassId?: string;
+}): StageWave {
+  const wave: StageWave = { enemies: [] };
+  if (options?.withEnemyGroups) {
+    wave.enemyGroups = [
+      createDefaultStageEnemyGroup(options.defaultClassId ?? 'df_paladin'),
+    ];
+  }
+  return wave;
+}
+
+export function canRemoveStageDraftWave(draft: StageDraft): boolean {
+  return (draft.waves ?? []).length > 1;
+}
+
+/** null = OK。エラー文字列 = 削除不可。 */
+export function removeStageDraftWave(
+  draft: StageDraft,
+  waveIndex: number,
+): string | null {
+  const waves = draft.waves ?? [];
+  if (waves.length <= 1) {
+    return 'Wave は最低 1 件必要です';
+  }
+  if (waveIndex < 0 || waveIndex >= waves.length) {
+    return 'Wave が見つかりません';
+  }
+  waves.splice(waveIndex, 1);
+  return null;
+}
+
+export function addStageDraftWave(
+  draft: StageDraft,
+  options?: { defaultClassId?: string },
+): void {
+  const waves = ensureStageDraftWaves(draft);
+  const inWaveAuthoring = waves.some((wave) => wave.enemyGroups !== undefined);
+  waves.push(
+    createDefaultStageWave({
+      withEnemyGroups: inWaveAuthoring,
+      defaultClassId: options?.defaultClassId,
+    }),
+  );
+}
+
 export const ENEMY_ATTACK_SPEED_CUSTOM = 'custom' as const;
 
 export type EnemyAttackSpeedSelect =

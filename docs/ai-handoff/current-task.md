@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
-- **次の再開タスク:** **R9c** — 複数 Wave・`enemyGroups` 構造 authoring（§80.6 / phase-roadmap §R9）。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
+- **新ロードマップ現在地:** **R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
+- **次の再開タスク:** **R9d** — 作戦内パッシブ候補・付与条件 authoring（phase-roadmap §R9）。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7169,3 +7169,64 @@ R10 の評価軸は、新仕様で 2 Wave 以上遊び、「繰り返し遊び�
 ### 87.15 次タスク
 
 **R9c** — 複数 Wave・`enemyGroups` 構造 authoring（phase-roadmap §R9）。その後 R9d〜f → **R9.6（A→B）** → R10。
+
+---
+
+## 88. R9c — 複数 Wave・`enemyGroups` 構造 authoring（完了 2026-07-13）
+
+### 88.1 目的
+
+Stage editor で複数 Wave の `waves[].enemyGroups` 構造を **作成・追加・削除** し、保存・再読込・runtime validate が通る authoring 経路を完成させる。R6g-4 の per-wave 編集に Wave 構造操作 UI を追加。
+
+### 88.2 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/editor/editorApi.ts` | `createDefaultStageWave` / `addStageDraftWave` / `removeStageDraftWave` / `canRemoveStageDraftWave` |
+| `src/editor/StageEnemyEditorStep.ts` | `+ Wave を追加` / `Wave を削除` UI、legacy 開始時の既定グループ 1 件 |
+| `src/editor/editorApi.test.ts` | R9c helper 3 件 |
+| `src/editor/StageEnemyEditorStep.test.ts` | R9c UI 3 件 |
+
+**production code / `data/stages.json`:** 未変更（authoring 経路のみ）。
+
+### 88.3 Wave 構造操作
+
+| 操作 | 経路 |
+| ---- | ---- |
+| 追加 | `addStageDraftWave` — wave authoring 中は新 Wave に `enemyGroups: [default group]` を付与 |
+| 削除 | `removeStageDraftWave` — Wave 最低 1 件を維持。2 件以上のときのみ UI 表示 |
+| legacy 開始 | 「Wave ごと enemyGroups 編集を開始」— Wave 0 に既定グループ 1 件（空配列ではなく） |
+
+### 88.4 保存・再読込・validate
+
+- `normalizeStageDraftForSave` / `validateStageDraftForSave` — R6g-4 既存経路を再利用（変更なし）
+- 2 Wave draft → normalize → `loadStageDraftById` round-trip 確認済み
+- `parseAndValidateGameDataJson` — 既存 multi-wave テストで regression なし
+
+### 88.5 legacy 互換
+
+- `waves[].enemies` 維持 — 削除・追加時も各 Wave の legacy enemies は触らない
+- stage 直下 `enemyGroups` モード — 変更なし
+- mixed wave（一部 legacy only）— 削除ボタンは全 Wave に表示（2 件以上時）
+
+### 88.6 テスト
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `editorApi.test.ts` | add / remove helper、2 Wave save round-trip |
+| `StageEnemyEditorStep.test.ts` | add wave UI、remove wave UI、単一 Wave 時 remove 非表示 |
+
+**結果:** 上記 2 ファイル計 61 テスト pass（R9c 関連 6 件含む）
+
+### 88.7 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R9c Backend** | **Yes** — 2 Wave 作成・保存・reload・validate 経路成立 |
+| **R9c Tooling** | **Yes** — Wave 追加削除 UI + 自動テスト |
+| **R9c 全体** | **Yes** |
+| R9.6 Player UI | **No** — スコープ外 |
+
+### 88.8 次タスク
+
+**R9d** — 作戦内パッシブ候補・付与条件 authoring（phase-roadmap §R9）。その後 R9e〜f → **R9.6（A→B）** → R10。

@@ -441,4 +441,76 @@ describe('StageEnemyEditorStep', () => {
       expect(moduleSelects[1]!.value).toBe('');
     });
   });
+
+  describe('wave structure authoring (R9c)', () => {
+    it('adds a second wave from the editor UI', () => {
+      const draft: StageDraft = {
+        id: 'add_wave_ui',
+        displayName: 'Add Wave UI',
+        recommendedLevel: 10,
+        waves: [
+          { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 1 }] },
+        ],
+      };
+      const onDraftChange = vi.fn();
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft, [draft as StageDef], { onDraftChange }));
+
+      const addBtn = host.querySelector<HTMLButtonElement>(
+        'button[data-editor-action="addWave"]',
+      );
+      expect(addBtn).toBeTruthy();
+      addBtn!.click();
+
+      const nextDraft = onDraftChange.mock.calls.at(-1)?.[0] as StageDraft;
+      expect(nextDraft.waves).toHaveLength(2);
+      expect(nextDraft.waves?.[1]?.enemyGroups?.[0]?.classId).toBeTruthy();
+    });
+
+    it('removes a wave from a two-wave draft', () => {
+      const draft: StageDraft = {
+        id: 'remove_wave_ui',
+        displayName: 'Remove Wave UI',
+        recommendedLevel: 10,
+        waves: [
+          { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 1 }] },
+          { enemies: [], enemyGroups: [{ classId: 'at_hunter', count: 2 }] },
+        ],
+      };
+      const onDraftChange = vi.fn();
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft, [draft as StageDef], { onDraftChange }));
+
+      const removeBtn = host.querySelector<HTMLButtonElement>(
+        'button[data-editor-action="removeWave"][data-wave-index="1"]',
+      );
+      expect(removeBtn).toBeTruthy();
+      removeBtn!.click();
+
+      const nextDraft = onDraftChange.mock.calls.at(-1)?.[0] as StageDraft;
+      expect(nextDraft.waves).toHaveLength(1);
+      expect(nextDraft.waves?.[0]?.enemyGroups?.[0]?.classId).toBe('df_paladin');
+    });
+
+    it('does not show remove wave when only one wave exists', () => {
+      const draft: StageDraft = {
+        id: 'single_wave_ui',
+        displayName: 'Single Wave UI',
+        recommendedLevel: 10,
+        waves: [
+          { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 1 }] },
+        ],
+      };
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft));
+
+      expect(
+        host.querySelector('button[data-editor-action="removeWave"]'),
+      ).toBeNull();
+      expect(host.querySelector('button[data-editor-action="addWave"]')).toBeTruthy();
+    });
+  });
 });
