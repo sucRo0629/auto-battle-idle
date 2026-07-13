@@ -21,6 +21,7 @@ import {
 } from '../passiveDispelBridge.ts';
 import type {
   ActiveSkillDef,
+  AttackMethod,
   AttackSpeedTier,
   BasicAttackTransformPrimaryPatch,
   BasicAttackTransformSpec,
@@ -2018,6 +2019,71 @@ function parseOptionalEffectCombatModifiers(
   return result;
 }
 
+function parseOptionalAttackMethod(
+  obj: Record<string, unknown>,
+  context: string,
+): AttackMethod | undefined {
+  const raw = obj.attackMethod;
+  if (raw === undefined) return undefined;
+  if (raw !== 'melee' && raw !== 'ranged') {
+    invalidField(context, 'attackMethod', 'must be melee or ranged');
+  }
+  return raw;
+}
+
+function validateAttackMethodForBasicSkill(
+  skillId: string,
+  attackMethod: AttackMethod | undefined,
+  effect: ActiveSkillDef['effect'] | CombatModuleActionDef['effect'],
+  context: string,
+): void {
+  const primaryType = effect[0]?.type;
+  const requiresAttackMethod =
+    skillId.endsWith('_basic_attack') && primaryType === 'damage';
+  if (requiresAttackMethod) {
+    if (attackMethod === undefined) {
+      invalidField(
+        context,
+        'attackMethod',
+        'required on damage basic attack skills',
+      );
+    }
+    return;
+  }
+  if (attackMethod !== undefined) {
+    invalidField(
+      context,
+      'attackMethod',
+      'only allowed on damage basic attack skills or combat module actions',
+    );
+  }
+}
+
+function validateAttackMethodForCombatModuleAction(
+  attackMethod: AttackMethod | undefined,
+  effect: CombatModuleActionDef['effect'],
+  context: string,
+): void {
+  const primaryType = effect[0]?.type;
+  if (primaryType === 'damage') {
+    if (attackMethod === undefined) {
+      invalidField(
+        context,
+        'attackMethod',
+        'required when primary effect type is damage',
+      );
+    }
+    return;
+  }
+  if (attackMethod !== undefined) {
+    invalidField(
+      context,
+      'attackMethod',
+      'must be omitted when primary effect is not damage',
+    );
+  }
+}
+
 function parseCombatModuleAction(
   raw: unknown,
   context: string,
@@ -2047,9 +2113,12 @@ function parseCombatModuleAction(
     },
     context,
   );
+  const attackMethod = parseOptionalAttackMethod(obj, context);
+  validateAttackMethodForCombatModuleAction(attackMethod, effect, context);
   return {
     effect,
     ...sharedTargeting,
+    ...(attackMethod !== undefined ? { attackMethod } : {}),
   };
 }
 
@@ -5765,6 +5834,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       'arenaDominanceNonMarkDamageMultiplier',
       context,
     );
+    const attackMethod = parseOptionalAttackMethod(obj, context);
 
     validateNoChargeTimeTriggerActive(
       trigger,
@@ -5822,6 +5892,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       ...(arenaDominanceNonMarkDamageMultiplier !== undefined
         ? { arenaDominanceNonMarkDamageMultiplier }
         : {}),
+      ...(attackMethod !== undefined ? { attackMethod } : {}),
     };
     validateActiveSkillEffectTargeting(skill, context);
     return skill;
@@ -6681,6 +6752,17 @@ export function parseAndValidateGameDataJson(
     enemiesWithTraits,
     activesById,
   );
+
+  for (const [skillId, skill] of activesById) {
+    if (skillId.endsWith('_basic_attack')) {
+      validateAttackMethodForBasicSkill(
+        skillId,
+        skill.attackMethod,
+        skill.effect,
+        `activesById[${skillId}]`,
+      );
+    }
+  }
 
   const actives = [...activesById.values()];
   const skillRegistry: SkillRegistry = {

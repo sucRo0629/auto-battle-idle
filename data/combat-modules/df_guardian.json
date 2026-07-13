@@ -19,7 +19,8 @@
             "atkScale": 1
           }
         }
-      ]
+      ],
+      "attackMethod": "melee"
     }
   },
   {

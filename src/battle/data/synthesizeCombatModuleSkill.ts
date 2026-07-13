@@ -12,6 +12,9 @@ export function synthesizeCombatModuleSkill(module: CombatModuleDef): ActiveSkil
     name: displayName,
     trigger: { kind: 'time', value: attackIntervalSec },
     effect: effect.map((entry) => ({ ...entry })),
+    ...(action.attackMethod !== undefined
+      ? { attackMethod: action.attackMethod }
+      : {}),
     ...sharedTargeting,
   };
 }

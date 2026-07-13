@@ -20,7 +20,8 @@
         },
         "targetShape": "single"
       }
-    ]
+    ],
+    "attackMethod": "melee"
   },
   {
     "id": "at_lancer_active_1",

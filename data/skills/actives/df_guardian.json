@@ -20,7 +20,8 @@
     "trigger": {
       "kind": "time",
       "value": 2
-    }
+    },
+    "attackMethod": "melee"
   },
   {
     "id": "df_guardian_active_1",

@@ -771,8 +771,8 @@ describe('stages-demo.json validation', () => {
   });
 });
 
-describe('at_ranger passive excludeRoles', () => {
-  it('parseAndValidateGameDataJson accepts at_ranger passives with excludeRoles', () => {
+describe('at_ranger passive attackType', () => {
+  it('parseAndValidateGameDataJson accepts at_ranger passives without excludeRoles', () => {
     const skills = loadMergedSkillsForValidateTest();
     const result = parseAndValidateGameDataJson({
       classes: classesJson,
@@ -790,17 +790,14 @@ describe('at_ranger passive excludeRoles', () => {
     expect(p2?.targetRuleOverride).toMatchObject({
       kind: 'attackType',
       ranged: true,
-      excludeRoles: ['supporter'],
     });
     expect(p3?.specialEffect?.conditions[0]).toMatchObject({
       kind: 'attackType',
       ranged: true,
-      excludeRoles: ['supporter'],
     });
     expect(p4?.bonusBasicAttackConditions?.[0]).toMatchObject({
       kind: 'attackType',
       ranged: true,
-      excludeRoles: ['supporter'],
     });
   });
 });

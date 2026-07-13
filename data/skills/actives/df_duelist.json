@@ -19,7 +19,8 @@
     "trigger": {
       "kind": "time",
       "value": 2
-    }
+    },
+    "attackMethod": "melee"
   },
   {
     "id": "df_duelist_active_2",

@@ -18,8 +18,7 @@
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
       "kind": "attackType",
-      "ranged": true,
-      "excludeRoles": ["supporter"]
+      "ranged": true
     }
   },
   {
@@ -32,8 +31,7 @@
       "conditions": [
         {
           "kind": "attackType",
-          "ranged": true,
-          "excludeRoles": ["supporter"]
+          "ranged": true
         }
       ]
     }
@@ -47,8 +45,7 @@
     "bonusBasicAttackConditions": [
       {
         "kind": "attackType",
-        "ranged": true,
-        "excludeRoles": ["supporter"]
+        "ranged": true
       }
     ]
   }

@@ -20,7 +20,8 @@
     "trigger": {
       "kind": "time",
       "value": 2
-    }
+    },
+    "attackMethod": "melee"
   },
   {
     "id": "df_paladin_active_1",

@@ -1,3 +1,4 @@
+import { resolveBasicAttackSkillIdFromGameData } from '../data/resolveCombatModuleBasic.ts';
 import { matchesAttackType } from '../skills/targetSpec.ts';
 import type {
   ClassId,
@@ -27,7 +28,7 @@ export interface M1TargetClassificationRow {
   formationRow: ClassPreset['formationRow'];
   rangePx: number;
   damageType: string;
-  /** 弓術士 P2 `attackType.ranged` + `excludeRoles` プール（戦闘正本） */
+  /** 弓術士 P2 `attackType.ranged` プール（戦闘正本。attackMethod 参照） */
   inRangerRangedPool: boolean;
   /** 診断 `RANGER_PRIORITY_ENEMY_CLASS_IDS` / back / ranged ヒューリスティック */
   inRangerDiagnosticBand: boolean;
@@ -94,11 +95,11 @@ function buildSplitNote(row: Omit<M1TargetClassificationRow, 'rangerVsAssassinNo
   }
   if (row.classId === 'sp_cleric' || row.classId === 'sp_wardweaver') {
     return row.inRangerRangedPool
-      ? 'support だが rangePx>=100 のため ranger ranged 対象; assassin は HP 低下後'
-      : 'support excluded from ranger ranged; assassin low-HP when damaged';
+      ? 'support heal basic has no attackMethod but still in ranged pool — check data'
+      : 'support heal basic excluded from ranger ranged (no attackMethod)';
   }
   if (row.classId === 'at_sorcerer') {
-    return 'ranger ranged yes (rangePx); assassin low-HP when damaged';
+    return 'ranger ranged yes (attackMethod); assassin low-HP when damaged';
   }
   if (row.classId === 'at_ranger') {
     return 'both ranger ranged band; assassin when HP lowest among living';
@@ -125,7 +126,11 @@ export function buildM1TargetClassificationRows(
     const rangePx = preset.traits?.rangePx ?? 0;
     const damageType = preset.traits?.damageType ?? 'physical';
     const probe = presetAsCombatantProbe(classId, preset);
-    const inRangerRangedPool = matchesAttackType(probe, rangerRangedSpec);
+    const basicSkillId = resolveBasicAttackSkillIdFromGameData(preset, gameData);
+    probe.cooldowns = [
+      { skillId: basicSkillId, remaining: 0, slotKind: 'basic' },
+    ];
+    const inRangerRangedPool = matchesAttackType(probe, rangerRangedSpec, gameData);
     const inRangerDiagnosticBand = isRangerPriorityEnemyClass(classId, registry);
     const inAssassinDiagnosticBand = ASSASSIN_PRIORITY_TARGET_CLASS_IDS.includes(classId);
     const base = {
@@ -151,13 +156,10 @@ export function buildM1TargetClassificationRows(
 export function logM1TargetClassificationReport(gameData: GameData): void {
   const rows = buildM1TargetClassificationRows(gameData);
   const rangerSpec = getRangerRangedTargetSpec(gameData);
-  const excludeNote =
-    rangerSpec.excludeRoles && rangerSpec.excludeRoles.length > 0
-      ? `; excludeRoles=${rangerSpec.excludeRoles.join(',')}`
-      : '';
+  const excludeNote = '';
   console.info('[demo-m1-target-classification] M1 target priority bands (implementation + diagnostics):');
   console.info(
-    `  ranger P2 (at_ranger_passive_2): targetRuleOverride attackType.ranged — pool = enemies with rangePx>=100${excludeNote}; fallback nearest if empty`,
+    `  ranger P2 (at_ranger_passive_2): targetRuleOverride attackType.ranged — pool = enemies with basic attackMethod=ranged${excludeNote}; fallback nearest if empty`,
   );
   console.info(
     '  assassin P2 (at_assassin_passive_2): targetRuleOverride stat.hp order lowest — all living enemies; P3 bonus when targetHp<=25% maxHp',
@@ -182,7 +184,7 @@ export function logM1TargetClassificationReport(gameData: GameData): void {
     );
   } else {
     console.info(
-      '[demo-m1-target-classification] healer/support excluded from ranger ranged pool (excludeRoles)',
+      '[demo-m1-target-classification] healer/support excluded from ranger ranged pool (no attackMethod on heal basic)',
     );
   }
   console.info(

@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { shouldTriggerBonusBasicAttackOnHit } from './bonusBasicAttackOnHit.ts';
 import { resolveDamage } from './combatMath.ts';
+import { loadGameData } from './data/loadGameData.ts';
 import { mockCombatant } from './testFixtures.ts';
 import type { PassiveSkillDef } from './types.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
 
 describe('at_ranger combat mechanics', () => {
+  const gameData = loadGameData();
+
   const baseEffect = {
     type: 'damage' as const,
     target: { kind: 'distance' as const, side: 'enemy' as const, order: 'nearest' as const },
@@ -21,9 +23,7 @@ describe('at_ranger combat mechanics', () => {
       specialEffectApplyTo: 'damage',
       specialEffect: {
         scale: 1.2,
-        conditions: [
-          { kind: 'attackType', ranged: true, excludeRoles: ['supporter'] },
-        ],
+        conditions: [{ kind: 'attackType', ranged: true }],
       },
     },
   };
@@ -34,19 +34,18 @@ describe('at_ranger combat mechanics', () => {
       name: '二の矢',
       effect: 'bonusBasicAttackOnHit',
       chance: 0.5,
-      bonusBasicAttackConditions: [
-        { kind: 'attackType', ranged: true, excludeRoles: ['supporter'] },
-      ],
+      bonusBasicAttackConditions: [{ kind: 'attackType', ranged: true }],
     },
   };
 
-  function enemyWithRange(rangePx: number) {
+  function enemyWithBasic(skillId: string, rangePx: number) {
     return mockCombatant({
       def: 0,
       hp: 100,
       maxHp: 100,
       isEnemy: true,
       traits: { rangePx, damageType: 'physical' },
+      cooldowns: [{ skillId, remaining: 0, slotKind: 'basic' }],
     });
   }
 
@@ -59,11 +58,15 @@ describe('at_ranger combat mechanics', () => {
         equippedActiveSlots: [],
       },
     });
-    const rangedTarget = enemyWithRange(RANGED_ATTACK_MIN_PX);
-    const meleeTarget = enemyWithRange(RANGED_ATTACK_MIN_PX - 1);
+    const rangedTarget = enemyWithBasic('at_ranger_basic_attack', 30);
+    const meleeTarget = enemyWithBasic('at_swordsman_basic_attack', 300);
 
-    const rangedDamage = resolveDamage(attacker, rangedTarget, baseEffect, p3Passives);
-    const meleeDamage = resolveDamage(attacker, meleeTarget, baseEffect, p3Passives);
+    const rangedDamage = resolveDamage(attacker, rangedTarget, baseEffect, p3Passives, {
+      gameData,
+    });
+    const meleeDamage = resolveDamage(attacker, meleeTarget, baseEffect, p3Passives, {
+      gameData,
+    });
     const meleeBaseline = resolveDamage(
       mockCombatant({ atk: 100 }),
       meleeTarget,
@@ -75,7 +78,7 @@ describe('at_ranger combat mechanics', () => {
     expect(meleeDamage).toBe(meleeBaseline);
   });
 
-  it('P3 specialEffect skips ranged supporter enemies', () => {
+  it('P3 specialEffect skips heal-only supporter enemies', () => {
     const attacker = mockCombatant({
       atk: 100,
       build: {
@@ -84,20 +87,17 @@ describe('at_ranger combat mechanics', () => {
         equippedActiveSlots: [],
       },
     });
-    const rangedSupporter = enemyWithRange(RANGED_ATTACK_MIN_PX);
-    rangedSupporter.role = 'supporter';
+    const healSupporter = enemyWithBasic('sp_cleric_mod_single_mend', 110);
+    healSupporter.role = 'supporter';
     const baseline = resolveDamage(
       mockCombatant({ atk: 100 }),
-      rangedSupporter,
+      healSupporter,
       baseEffect,
       {},
     );
-    const withPassive = resolveDamage(
-      attacker,
-      rangedSupporter,
-      baseEffect,
-      p3Passives,
-    );
+    const withPassive = resolveDamage(attacker, healSupporter, baseEffect, p3Passives, {
+      gameData,
+    });
     expect(withPassive).toBe(baseline);
   });
 
@@ -110,20 +110,20 @@ describe('at_ranger combat mechanics', () => {
         equippedActiveSlots: [],
       },
     });
-    const rangedTarget = enemyWithRange(RANGED_ATTACK_MIN_PX);
-    const meleeTarget = enemyWithRange(RANGED_ATTACK_MIN_PX - 1);
+    const rangedTarget = enemyWithBasic('at_ranger_basic_attack', 30);
+    const meleeTarget = enemyWithBasic('at_swordsman_basic_attack', 300);
 
     const successSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
-    expect(shouldTriggerBonusBasicAttackOnHit(actor, rangedTarget, p4Passives)).toBe(
-      true,
-    );
-    expect(shouldTriggerBonusBasicAttackOnHit(actor, meleeTarget, p4Passives)).toBe(
-      false,
-    );
+    expect(
+      shouldTriggerBonusBasicAttackOnHit(actor, rangedTarget, p4Passives, gameData),
+    ).toBe(true);
+    expect(
+      shouldTriggerBonusBasicAttackOnHit(actor, meleeTarget, p4Passives, gameData),
+    ).toBe(false);
     successSpy.mockRestore();
   });
 
-  it('P4 does not trigger on ranged supporter enemies', () => {
+  it('P4 does not trigger on heal-only supporter enemies', () => {
     vi.restoreAllMocks();
     const actor = mockCombatant({
       build: {
@@ -132,13 +132,13 @@ describe('at_ranger combat mechanics', () => {
         equippedActiveSlots: [],
       },
     });
-    const rangedSupporter = enemyWithRange(RANGED_ATTACK_MIN_PX);
-    rangedSupporter.role = 'supporter';
+    const healSupporter = enemyWithBasic('sp_cleric_mod_single_mend', 110);
+    healSupporter.role = 'supporter';
 
     const successSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
-    expect(shouldTriggerBonusBasicAttackOnHit(actor, rangedSupporter, p4Passives)).toBe(
-      false,
-    );
+    expect(
+      shouldTriggerBonusBasicAttackOnHit(actor, healSupporter, p4Passives, gameData),
+    ).toBe(false);
     successSpy.mockRestore();
   });
 
@@ -151,12 +151,12 @@ describe('at_ranger combat mechanics', () => {
         equippedActiveSlots: [],
       },
     });
-    const fullHpRanged = enemyWithRange(RANGED_ATTACK_MIN_PX);
+    const fullHpRanged = enemyWithBasic('at_ranger_basic_attack', 30);
 
     const successSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
-    expect(shouldTriggerBonusBasicAttackOnHit(actor, fullHpRanged, p4Passives)).toBe(
-      true,
-    );
+    expect(
+      shouldTriggerBonusBasicAttackOnHit(actor, fullHpRanged, p4Passives, gameData),
+    ).toBe(true);
     successSpy.mockRestore();
   });
 });

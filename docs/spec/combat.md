@@ -374,7 +374,7 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 
 **特効ダメージ**（パッシブ `damageIncrease` + effect `damageIncrease`）: **直接 `heal` のみ**に乗算（`damage` と同式の条件判定）。**HoT tick には非適用**（`damage` 直接のみ / DoT tick あり、という攻撃側の対比と同様）。
 
-`DamageIncreaseCondition`（パッシブ `specialEffect` / effect `damageIncrease` / `bonusBasicAttackConditions` 共用）: 全条件 **AND**。種別は `debuff` / `targetHp` / `attackType`。`attackType` は `target.attackType` と同型で、対象の `traits.rangePx` 等から遠隔/近接を判定（`matchesAttackType`）。詳細は [classes-and-skills.md](classes-and-skills.md) 特効効果節。
+`DamageIncreaseCondition`（パッシブ `specialEffect` / effect `damageIncrease` / `bonusBasicAttackConditions` 共用）: 全条件 **AND**。種別は `debuff` / `targetHp` / `attackType`。`attackType` は `target.attackType` と同型で、対象の解決済み通常攻撃 `attackMethod` から遠隔/近接を判定（`matchesAttackType` / `resolveUnitAttackMethod`）。詳細は [classes-and-skills.md](classes-and-skills.md) 特効効果節。
 
 **被回復量増加**（パッシブ `healReceivedIncrease`）: 回復対象のパッシブ `percent` を加算し、`heal` / HoT tick 量に `floor(量 × (1 + percent合算))` を適用（`damageIncrease` 適用後の量に対して乗算）。
 

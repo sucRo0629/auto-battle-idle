@@ -20,7 +20,8 @@
         },
         "applyFrame": 3
       }
-    ]
+    ],
+    "attackMethod": "melee"
   },
   {
     "id": "at_swordsman_active_1",

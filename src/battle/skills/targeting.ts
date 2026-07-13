@@ -207,6 +207,7 @@ export function evaluateHealWithholdReason(
     enemies,
     passives,
     skill,
+    gameData,
   );
 
   if (spec.kind === 'self') {
@@ -236,6 +237,7 @@ export function evaluateHealWithholdReason(
     allies,
     enemies,
     rangePx,
+    gameData,
   );
 
   if (
@@ -294,6 +296,7 @@ function hasScopedTargetRuleOverride(
       context.actor,
       context.allies,
       context.enemies,
+      context.gameData,
     );
     if (pool.length > 0) return true;
   }
@@ -317,11 +320,12 @@ export function resolveEffectTargetSpec(
   enemies: CombatantState[],
   passives?: PassiveSkillDef[],
   skill?: ActiveSkillDef,
+  gameData?: GameData,
 ): TargetSpec {
   const merged = mergeEffectWithSkillTargeting(skill, effect);
   const defaultSpec = getEffectTarget(merged);
   if (!passives || passives.length === 0) return defaultSpec;
-  const context: TargetRuleContext = { actor, allies, enemies };
+  const context: TargetRuleContext = { actor, allies, enemies, gameData };
   if (!shouldApplyTargetRuleOverride(defaultSpec, passives, context)) {
     return defaultSpec;
   }
@@ -350,12 +354,13 @@ export function resolveEffectAnchor(
     enemies,
     passives,
     skill,
+    gameData,
   );
   if (isSelfOriginSpec(spec)) {
     return actor.isAlive ? actor : null;
   }
   if (effect.type === 'move') {
-    const pool = getTargetPool(spec, actor, allies, enemies);
+    const pool = getTargetPool(spec, actor, allies, enemies, gameData);
     return pickTargetFromPoolSpec(
       spec,
       actor,
@@ -436,10 +441,11 @@ function resolveEffectResolutionInternal(
     enemies,
     passives,
     skill,
+    _gameData,
   );
 
   if (sourceEffect.type === 'move') {
-    const pool = getTargetPool(specForResolution, actor, allies, enemies);
+    const pool = getTargetPool(specForResolution, actor, allies, enemies, _gameData);
     const target = pickTargetFromPoolSpec(
       specForResolution,
       actor,
@@ -477,7 +483,7 @@ function resolveEffectResolutionInternal(
   if (priorPool === null) return null;
   const attackablePool =
     priorPool ??
-    getAttackablePool(specForResolution, actor, allies, enemies, rangePx);
+    getAttackablePool(specForResolution, actor, allies, enemies, rangePx, _gameData);
   const shape: TargetShape = merged.targetShape ?? 'single';
   const basePower = getBaseAtkScale(sourceEffect);
   const pickOptions: PickTargetOptions = pickOptionsForEffect(merged);

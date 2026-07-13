@@ -21,7 +21,8 @@
           }
         }
       ],
-      "targetShape": "single"
+      "targetShape": "single",
+      "attackMethod": "ranged"
     }
   },
   {
@@ -47,7 +48,8 @@
         }
       ],
       "targetShape": "multiLock",
-      "hitCount": 2
+      "hitCount": 2,
+      "attackMethod": "ranged"
     }
   }
 ]

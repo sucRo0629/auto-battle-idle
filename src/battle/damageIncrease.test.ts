@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState } from './types.ts';
+import { loadGameData } from './data/loadGameData.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
+
+const gameData = loadGameData();
 
 function unit(
   overrides: Partial<CombatantState> & { id: string },
@@ -68,48 +71,48 @@ describe('damageIncrease', () => {
     expect(mul).toBe(1);
   });
 
-  it('attackType ranged matches enemies by rangePx band', () => {
+  it('attackType ranged matches enemies by attackMethod', () => {
     const attacker = unit({ id: 'a' });
     const ranged = unit({
       id: 'r',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      traits: { rangePx: 30, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'at_ranger_basic_attack', remaining: 0, slotKind: 'basic' }],
     });
     const melee = unit({
       id: 'm',
-      traits: { rangePx: 30, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      traits: { rangePx: 300, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'at_swordsman_basic_attack', remaining: 0, slotKind: 'basic' }],
     });
     const spec = {
       scale: 1.2,
       conditions: [{ kind: 'attackType' as const, ranged: true }],
     };
-    expect(resolveDamageIncreaseMultiplier(attacker, ranged, spec)).toBe(1.2);
-    expect(resolveDamageIncreaseMultiplier(attacker, melee, spec)).toBe(1);
+    expect(resolveDamageIncreaseMultiplier(attacker, ranged, spec, gameData)).toBe(1.2);
+    expect(resolveDamageIncreaseMultiplier(attacker, melee, spec, gameData)).toBe(1);
   });
 
-  it('attackType ranged + excludeRoles skips supporter bonus', () => {
+  it('attackType ranged skips heal-only supporter even with high rangePx', () => {
     const attacker = unit({ id: 'a' });
-    const rangedSupporter = unit({
+    const healSupporter = unit({
       id: 's',
       role: 'supporter',
       traits: { rangePx: 110, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [
+        { skillId: 'sp_cleric_mod_single_mend', remaining: 0, slotKind: 'basic' },
+      ],
     });
     const rangedAttacker = unit({
       id: 'r',
       role: 'attacker',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      traits: { rangePx: 30, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'at_ranger_basic_attack', remaining: 0, slotKind: 'basic' }],
     });
     const spec = {
       scale: 1.2,
-      conditions: [
-        {
-          kind: 'attackType' as const,
-          ranged: true,
-          excludeRoles: ['supporter' as const],
-        },
-      ],
+      conditions: [{ kind: 'attackType' as const, ranged: true }],
     };
-    expect(resolveDamageIncreaseMultiplier(attacker, rangedSupporter, spec)).toBe(1);
-    expect(resolveDamageIncreaseMultiplier(attacker, rangedAttacker, spec)).toBe(1.2);
+    expect(resolveDamageIncreaseMultiplier(attacker, healSupporter, spec, gameData)).toBe(1);
+    expect(resolveDamageIncreaseMultiplier(attacker, rangedAttacker, spec, gameData)).toBe(1.2);
   });
 
   it('requires all conditions (AND)', () => {

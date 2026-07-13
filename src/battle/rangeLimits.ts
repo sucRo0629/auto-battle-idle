@@ -43,9 +43,9 @@ export function counterAttackRangeBandEditorHintJa(): string {
   return `未選択 = 全区間。遠隔 = 実効射程が遠隔帯（${RANGED_ATTACK_MIN_PX} px 以上）。`;
 }
 
-/** エディタ: target.attackType の遠隔帯補足 */
+/** エディタ: target.attackType の遠隔補足 */
 export function attackTypeRangedBandEditorHintJa(): string {
-  return `遠隔 = traits.rangePx が遠隔帯（${RANGED_ATTACK_MIN_PX} 以上）。射程 px の大小ではなく帯で判定します。`;
+  return '遠隔 = 対象の解決済み通常攻撃 attackMethod が ranged。heal-only basic は未設定のため対象外。';
 }
 
 /** 射程 px 入力: 絶対値、または +delta で baseRangePx に加算 */

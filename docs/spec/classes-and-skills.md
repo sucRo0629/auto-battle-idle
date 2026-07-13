@@ -1920,7 +1920,7 @@ flowchart TD
 
 **設定上限:** `traits.rangePx` および `effect.range` は `0〜CONFIGURABLE_RANGE_PX_MAX` px（`rangeLimits.ts`: `CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）。
 
-分類用途では `RANGED_ATTACK_MIN_PX`（100）を使う。`traits.rangePx >= RANGED_ATTACK_MIN_PX` で遠隔攻撃（`rangedAttackingEnemy`）とし、`traits.damageType === 'magic'` で `magicAttackingEnemy`。
+`attackType` フィルタの `melee` / `ranged` は `traits.rangePx` 帯ではなく、対象の解決済み通常攻撃 `attackMethod`（`resolveUnitAttackMethod`）で判定する。`traits.rangePx >= RANGED_ATTACK_MIN_PX` の遠隔帯は隊形・UI・反撃帯など別用途。`traits.damageType === 'magic'` で `magicAttackingEnemy`（attackType.physical/magic フィルタ）。
 
 距離用途では [battle-field.md §2.5](./battle-field.md#25-攻撃位置move新軸) の `effectiveRangePx` 共通式を使う。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX）で、停止位置や移動量の計算に 100px 境界は使わない。敵対接近・攻撃の実効射程は `engagedMinBodyGap()` を下回らない（宣言 `rangePx` が短い双刃士などでも体幅より手前で停止）。隊形順・帯分類は raw `traits.rangePx`。
 
@@ -2168,7 +2168,7 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `debuff.tags`            | デバフタグ（OR）。`DEBUFF_FILTER_TAGS` 参照                                                      |
 | `debuff.selfAppliedOnly` | DoT 等で自分付与のみ                                                                             |
 | `targetHp.maxHpRatio`    | 対象 `hp/maxHp ≤ ratio`（バリア非含有）                                                          |
-| `attackType`             | `target.attackType` と同型。対象の `traits.rangePx` 等で遠隔/近接等を判定（`matchesAttackType`） |
+| `attackType`             | `target.attackType` と同型。`melee` / `ranged` は対象の解決済み通常攻撃 `attackMethod`（`matchesAttackType` + `resolveUnitAttackMethod`）。`physical` / `magic` は `traits.damageType` |
 
 ### 防御無視（`DefenseIgnoreSpec`）
 
@@ -2279,10 +2279,12 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。**敵対単体 AttackTarget のデフォルト**は `distance/enemy/nearest` だが、実行時は [combat.md](combat.md) §敵対単体ターゲット選定（相手戦線の最前）に解決する。`order: nearest` を「使用者からの距離」や「編成の奥」と解釈しない。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false） |
 | `stat`       | `side` + `stat`（hp/maxHp/atk/def/res）+ `order`（highest/lowest/ratio）。`stat: hp` + `lowest` = 現在 HP 絶対値（`unit.hp`）最小（例: `lowestHpEnemy` / 双刃士 P1）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外。`poolFromEffectIndex`（任意）= 同一スキル内の先行 effect 命中プール内だけで stat 選定 |
-| `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線                                                                                                                                                                                                                                                   |
+| `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。`melee` / `ranged` は対象の解決済み通常攻撃 `attackMethod`（`resolveUnitAttackMethod`）で判定。heal-only basic は `attackMethod` 未設定のため melee/ranged フィルタに一致しない。任意 `excludeRoles` でロール除外可。フィルタ後 anchor は最前線 |
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線                                                                                                                                                                                                                                            |
 | `self`       | 自身                                                                                                                                                                                                                                                                                                                                                                         |
 | `all`        | `side` で味方全員 / 敵全員（射程無視）                                                                                                                                                                                                                                                                                                                                       |
+
+**`attackMethod`（通常攻撃 / 戦闘方式）:** `ActiveSkillDef` および `CombatModuleDef.action` の任意フィールド。`"melee"` | `"ranged"`。**primary effect が `damage` のとき必須**。heal-only basic / buff module は未設定。`resolveUnitAttackMethod(unit, gameData)` は basic スロットの `skillId` から解決（CombatModule 差し替え対応）。接近・射程計算は従来どおり `traits.rangePx` / effect `range`。
 
 ### アンカーの意味
 

@@ -4724,6 +4724,35 @@ export class SkillEditorStep {
           "通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。ダメージ種は下の効果欄、射程・VFX はクラス／敵の traits で編集します。"
         )
       );
+      if (active.effect[0]?.type === "damage") {
+        grid.appendChild(
+          createFieldRow(
+            editorFieldLabel("attackMethod"),
+            createSelect(
+              active.attackMethod ?? "melee",
+              [
+                { value: "melee", label: "近接 (melee)" },
+                { value: "ranged", label: "遠隔 (ranged)" },
+              ],
+              (attackMethod) => {
+                setActive(
+                  (current) => {
+                    current.attackMethod = attackMethod as import("../battle/types.ts").AttackMethod;
+                  },
+                  { rerender: false }
+                );
+              }
+            )
+          )
+        );
+        grid.appendChild(
+          createEl(
+            "p",
+            "editor-hint",
+            "attackType フィルタ（弓術士など）の近接/遠隔分類に使用。heal-only 通常攻撃では未設定。"
+          )
+        );
+      }
     } else {
       const trigger = resolveSkillTrigger(active);
       grid.appendChild(

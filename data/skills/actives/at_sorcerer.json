@@ -19,7 +19,8 @@
     "trigger": {
       "kind": "time",
       "value": 2
-    }
+    },
+    "attackMethod": "ranged"
   },
   {
     "id": "at_sorcerer_active_1",

@@ -21,7 +21,8 @@
           }
         }
       ],
-      "targetShape": "single"
+      "targetShape": "single",
+      "attackMethod": "melee"
     }
   },
   {
@@ -47,7 +48,8 @@
         }
       ],
       "targetShape": "pierce",
-      "pierceDurationSec": 0.15
+      "pierceDurationSec": 0.15,
+      "attackMethod": "melee"
     }
   }
 ]

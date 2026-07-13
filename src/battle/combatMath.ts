@@ -146,6 +146,7 @@ export function resolveResourceAmount(
 export interface HealResolveOptions {
   atkScaleOverride?: number;
   effectSpecialIncrease?: DamageIncreaseSpec;
+  gameData?: Pick<import('./types.ts').GameData, 'skillRegistry' | 'combatModuleRegistry'>;
 }
 
 /** 直接 heal 用。damageIncrease（パッシブ + effect）→ healReceivedIncrease の順。HoT 非対象。 */
@@ -158,7 +159,12 @@ export function resolveHealAmount(
 ): number {
   const increaseMul = resolveOutgoingHealSpecialMultiplier(actor, target, passives);
   const effectMul = options.effectSpecialIncrease
-    ? resolveDamageIncreaseMultiplier(actor, target, options.effectSpecialIncrease)
+    ? resolveDamageIncreaseMultiplier(
+        actor,
+        target,
+        options.effectSpecialIncrease,
+        options.gameData,
+      )
     : 1;
   const baseAmount = Math.floor(
     resolvePowerAmount(
@@ -367,6 +373,7 @@ export interface DamageResolveOptions {
   statusDefenseIgnore?: DefenseIgnoreSpec;
   /** damage effect: resolveDamage 内で damageTakenMul を 1.0 として計算 */
   ignoreDamageTakenReduction?: boolean;
+  gameData?: Pick<import('./types.ts').GameData, 'skillRegistry' | 'combatModuleRegistry'>;
 }
 
 export function resolveDamage(
@@ -406,6 +413,7 @@ export function resolveDamage(
     options.effectDamageIncrease ?? effect.damageIncrease,
     options.statusDamageIncrease,
     passives,
+    options.gameData,
   );
 
   const chargeMul = consumeNextOutgoingDamageMultiplier(attacker);

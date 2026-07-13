@@ -62,6 +62,7 @@ function resolveAllyHealBasicTargetSpec(
     allies: players,
     enemies,
     applyScope: "ally",
+    gameData,
   });
 }
 
@@ -94,7 +95,7 @@ function resolveDamagedAllyHealTarget(
     gameData,
     livingAllyCount(players),
   );
-  const pool = getAttackablePool(spec, player, players, enemies, range);
+  const pool = getAttackablePool(spec, player, players, enemies, range, gameData);
   if (!pool.some((unit) => unit.id === pht.id)) return null;
   return pht;
 }
@@ -151,6 +152,7 @@ function resolveUnitTargetSpec(
     allies: players,
     enemies,
     applyScope: "enemy",
+    gameData,
   });
 }
 
@@ -162,7 +164,7 @@ export function resolvePlayerChaseTargetEnemy(
   gameData: GameData,
 ): CombatantState | null {
   const spec = resolveUnitTargetSpec(player, players, enemies, gameData);
-  const pool = getTargetPool(spec, player, players, enemies);
+  const pool = getTargetPool(spec, player, players, enemies, gameData);
   return pickTargetFromPool(spec, player, pool);
 }
 
@@ -185,7 +187,7 @@ export function resolvePlayerAttackTargetEnemy(
     enemies,
     baseRange,
   );
-  const pool = getAttackablePool(spec, player, players, enemies, range);
+  const pool = getAttackablePool(spec, player, players, enemies, range, gameData);
   if (pool.length === 0) return null;
   return pickTargetFromPool(spec, player, pool);
 }
@@ -198,7 +200,7 @@ export function resolveEnemyChaseTargetPlayer(
   gameData: GameData,
 ): CombatantState | null {
   const spec = resolveUnitTargetSpec(enemy, players, enemies, gameData);
-  const pool = getTargetPool(spec, enemy, players, enemies);
+  const pool = getTargetPool(spec, enemy, players, enemies, gameData);
   return pickEnemySingleTargetFromPool(enemy, spec, pool);
 }
 

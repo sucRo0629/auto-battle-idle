@@ -28,7 +28,7 @@ describe('rangeLimits', () => {
   it('editor band hints reference RANGED_ATTACK_MIN_PX', () => {
     const threshold = String(RANGED_ATTACK_MIN_PX);
     expect(counterAttackRangeBandEditorHintJa()).toContain(threshold);
-    expect(attackTypeRangedBandEditorHintJa()).toContain(threshold);
+    expect(attackTypeRangedBandEditorHintJa()).toContain('attackMethod');
   });
 
   it('hint describes bands with ranged minimum px', () => {

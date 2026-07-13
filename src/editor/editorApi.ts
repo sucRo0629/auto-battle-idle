@@ -1264,6 +1264,7 @@ export function defaultBasicAttackActiveSkill(id: string): ActiveSkillDef {
   return {
     id,
     name: id,
+    attackMethod: 'melee',
     trigger: { kind: 'time', value: 2 },
     effect: [
       {

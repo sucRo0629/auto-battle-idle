@@ -1580,7 +1580,7 @@ export class SkillExecutor {
         cd.slotKind === "basic" &&
         !damageContext.suppressBonusBasicAttack &&
         damageTarget.isAlive &&
-        shouldTriggerBonusBasicAttackOnHit(actor, damageTarget, passives)
+        shouldTriggerBonusBasicAttackOnHit(actor, damageTarget, passives, this.gameData)
       ) {
         this.deps.enqueuePendingHits([
           {

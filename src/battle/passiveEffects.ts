@@ -138,6 +138,7 @@ export function getPassiveSpecialEffectMultiplier(
   attacker: CombatantState,
   target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
+  gameData?: Pick<import('./types.ts').GameData, 'skillRegistry' | 'combatModuleRegistry'>,
 ): number {
   let mul = 1;
   for (const passive of getPassiveDefs(attacker, passives)) {
@@ -146,7 +147,12 @@ export function getPassiveSpecialEffectMultiplier(
       passive.specialEffectApplyTo === applyTo &&
       passive.specialEffect
     ) {
-      mul *= resolveDamageIncreaseMultiplier(attacker, target, passive.specialEffect);
+      mul *= resolveDamageIncreaseMultiplier(
+        attacker,
+        target,
+        passive.specialEffect,
+        gameData,
+      );
     }
   }
   return mul;
@@ -182,13 +188,30 @@ export function resolveEffectDamageIncreaseMultiplier(
   effectIncrease: DamageIncreaseSpec | undefined,
   statusIncrease: DamageIncreaseSpec | undefined,
   passives: Record<string, PassiveSkillDef>,
+  gameData?: Pick<import('./types.ts').GameData, 'skillRegistry' | 'combatModuleRegistry'>,
 ): number {
-  let mul = getPassiveSpecialEffectMultiplier('damage', attacker, target, passives);
+  let mul = getPassiveSpecialEffectMultiplier(
+    'damage',
+    attacker,
+    target,
+    passives,
+    gameData,
+  );
   if (effectIncrease) {
-    mul *= resolveDamageIncreaseMultiplier(attacker, target, effectIncrease);
+    mul *= resolveDamageIncreaseMultiplier(
+      attacker,
+      target,
+      effectIncrease,
+      gameData,
+    );
   }
   if (statusIncrease) {
-    mul *= resolveDamageIncreaseMultiplier(attacker, target, statusIncrease);
+    mul *= resolveDamageIncreaseMultiplier(
+      attacker,
+      target,
+      statusIncrease,
+      gameData,
+    );
   }
   return mul;
 }

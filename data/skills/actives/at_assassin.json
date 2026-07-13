@@ -22,7 +22,8 @@
         "hitCount": 2,
         "hitDurationSec": 0.1
       }
-    ]
+    ],
+    "attackMethod": "melee"
   },
   {
     "id": "at_assassin_active_1",

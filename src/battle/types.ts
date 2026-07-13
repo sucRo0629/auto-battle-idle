@@ -1631,9 +1631,14 @@ export type SkillEffectDef =
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;
 
+/** 通常攻撃の近接/遠隔分類（damage basic / combat module のみ。heal-only は未設定） */
+export type AttackMethod = 'melee' | 'ranged';
+
 /** 戦闘方式の実行定義。ActiveSkillDef の effect / 共有ターゲット形状のみ（trigger は module 側 attackIntervalSec） */
 export interface CombatModuleActionDef extends SkillSharedTargetingFields {
   effect: SkillEffectDef[];
+  /** damage 系 module のみ。heal / buff module は未設定 */
+  attackMethod?: AttackMethod;
 }
 
 /** R5 最小戦闘方式。R5c で ActiveSkillDef へ合成し basic スロットで実行 */
@@ -1660,6 +1665,8 @@ export type R5CombatModuleClassId = (typeof R5_COMBAT_MODULE_CLASS_IDS)[number];
 export interface ActiveSkillDef extends SkillSharedTargetingFields {
   id: string;
   name: string;
+  /** damage 系通常攻撃のみ。heal-only basic は未設定 */
+  attackMethod?: AttackMethod;
   /** 未指定時は所属クラス role からプレースホルダー。PNG は assets/skill-icons/{iconKey}.png */
   iconKey?: string;
   /** 発動条件（アクティブ）。未指定時は legacy interval を time として解釈 */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState } from '../types.ts';
+import { loadGameData } from '../data/loadGameData.ts';
 import {
   applyIncludeSelfFilter,
   filterSelectablePool,
@@ -61,6 +62,18 @@ function mockUnit(
     isEnemy: opts.isEnemy ?? false,
     battleX,
     corpseVisible: true,
+  };
+}
+
+const gameData = loadGameData();
+
+function withBasicSkill(
+  unit: CombatantState,
+  skillId: string,
+): CombatantState {
+  return {
+    ...unit,
+    cooldowns: [{ skillId, remaining: 0, slotKind: 'basic' }],
   };
 }
 
@@ -253,43 +266,50 @@ describe('getTargetPool / pickTargetFromPool', () => {
     ]);
   });
 
-  it('filters ranged attackers', () => {
-    const rangedEnemy = mockUnit('e3', 60, { isEnemy: true, rangePx: 100 });
-    const poolEnemies = [...enemies, rangedEnemy];
+  it('filters ranged attackers by attackMethod', () => {
+    const rangedEnemy = withBasicSkill(
+      mockUnit('e3', 60, { isEnemy: true, rangePx: 30 }),
+      'at_ranger_basic_attack',
+    );
+    const meleeEnemy = withBasicSkill(
+      mockUnit('e4', 50, { isEnemy: true, rangePx: 300 }),
+      'at_swordsman_basic_attack',
+    );
+    const poolEnemies = [...enemies, rangedEnemy, meleeEnemy];
     const spec = { kind: 'attackType', ranged: true } as const;
-    const pool = getTargetPool(spec, actor, allies, poolEnemies);
+    const pool = getTargetPool(spec, actor, allies, poolEnemies, gameData);
     expect(pool.map((u) => u.id)).toEqual(['e3']);
   });
 
-  it('excludeRoles removes supporter from ranged pool even when rangePx >= 100', () => {
-    const rangedSupporter = mockUnit('e3', 60, {
-      isEnemy: true,
-      rangePx: 110,
-    });
+  it('heal-only supporter is excluded from ranged pool even when rangePx >= 100', () => {
+    const healSupporter = withBasicSkill(
+      mockUnit('e3', 60, { isEnemy: true, rangePx: 110 }),
+      'sp_cleric_mod_single_mend',
+    );
+    healSupporter.role = 'supporter';
+    const rangedAttacker = withBasicSkill(
+      mockUnit('e4', 50, { isEnemy: true, rangePx: 30 }),
+      'at_ranger_basic_attack',
+    );
+    const poolEnemies = [...enemies, healSupporter, rangedAttacker];
+    const spec = { kind: 'attackType', ranged: true } as const;
+    const pool = getTargetPool(spec, actor, allies, poolEnemies, gameData);
+    expect(pool.map((u) => u.id)).toEqual(['e4']);
+  });
+
+  it('excludeRoles still filters role when attackMethod matches', () => {
+    const rangedSupporter = withBasicSkill(
+      mockUnit('e3', 60, { isEnemy: true, rangePx: 30 }),
+      'at_ranger_basic_attack',
+    );
     rangedSupporter.role = 'supporter';
-    const rangedAttacker = mockUnit('e4', 50, {
-      isEnemy: true,
-      rangePx: 100,
-    });
-    const poolEnemies = [...enemies, rangedSupporter, rangedAttacker];
     const spec = {
       kind: 'attackType',
       ranged: true,
       excludeRoles: ['supporter'],
     } as const;
-    const pool = getTargetPool(spec, actor, allies, poolEnemies);
-    expect(pool.map((u) => u.id)).toEqual(['e4']);
-  });
-
-  it('without excludeRoles supporter with rangePx >= 100 stays in ranged pool', () => {
-    const rangedSupporter = mockUnit('e3', 60, {
-      isEnemy: true,
-      rangePx: 110,
-    });
-    rangedSupporter.role = 'supporter';
-    const spec = { kind: 'attackType', ranged: true } as const;
-    const pool = getTargetPool(spec, actor, allies, [rangedSupporter]);
-    expect(pool.map((u) => u.id)).toEqual(['e3']);
+    const pool = getTargetPool(spec, actor, allies, [rangedSupporter], gameData);
+    expect(pool.map((u) => u.id)).toEqual([]);
   });
 
   it('pickDefaultHostileSingleTarget prefers front defender by battleX not actor distance', () => {

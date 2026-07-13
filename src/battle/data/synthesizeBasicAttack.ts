@@ -1,10 +1,12 @@
 import type {
   ActiveSkillDef,
+  AttackMethod,
   AttackSpeedTier,
   DamageSkillEffect,
   NormalizedEntityTraits,
   ResourceAmountSpec,
 } from '../types.ts';
+import { RANGED_ATTACK_MIN_PX } from '../types.ts';
 
 export const DEFAULT_BASIC_ATTACK_INTERVAL_SEC = 2;
 
@@ -22,6 +24,14 @@ function synthesizedDamageEffect(
   };
 }
 
+function inferAttackMethodFromTraits(
+  traits: NormalizedEntityTraits,
+  primaryEffectType: string | undefined,
+): AttackMethod | undefined {
+  if (primaryEffectType !== 'damage') return undefined;
+  return traits.rangePx >= RANGED_ATTACK_MIN_PX ? 'ranged' : 'melee';
+}
+
 export function synthesizeBasicAttackSkill(params: {
   entityId: string;
   isEnemy: boolean;
@@ -33,7 +43,7 @@ export function synthesizeBasicAttackSkill(params: {
   const {
     entityId,
     isEnemy,
-    traits: _traits,
+    traits,
     attackSpeedTier: _attackSpeedTier,
     displayName,
     jsonOverride,
@@ -53,12 +63,25 @@ export function synthesizeBasicAttackSkill(params: {
     effect: [synthesizedDamageEffect(amount)],
   };
 
-  if (!jsonOverride) return synthesized;
+  if (!jsonOverride) {
+    const attackMethod = inferAttackMethodFromTraits(
+      traits,
+      synthesized.effect[0]?.type,
+    );
+    return attackMethod !== undefined
+      ? { ...synthesized, attackMethod }
+      : synthesized;
+  }
 
   const primaryEffect =
     overrideEffect?.type === 'damage'
       ? { ...overrideEffect, amount }
       : overrideEffect ?? synthesizedDamageEffect(amount);
+
+  const primaryType = primaryEffect?.type;
+  const attackMethod =
+    jsonOverride?.attackMethod ??
+    inferAttackMethodFromTraits(traits, primaryType);
 
   const merged: ActiveSkillDef = {
     ...synthesized,
@@ -67,6 +90,7 @@ export function synthesizeBasicAttackSkill(params: {
     trigger: jsonOverride.trigger ?? synthesized.trigger,
     iconKey: jsonOverride.iconKey,
     effect: [primaryEffect, ...jsonOverride.effect.slice(1)],
+    ...(attackMethod !== undefined ? { attackMethod } : {}),
   };
 
   return merged;

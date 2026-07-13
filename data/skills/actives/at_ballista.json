@@ -19,7 +19,8 @@
           "atkScale": 1
         }
       }
-    ]
+    ],
+    "attackMethod": "ranged"
   },
   {
     "id": "at_ballista_active_1",

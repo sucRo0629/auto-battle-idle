@@ -1,4 +1,4 @@
-import { isRangedAttack } from "../data/entityTraits.ts";
+import { resolveUnitAttackMethod } from "../data/resolveUnitAttackMethod.ts";
 import {
   currentHpRatio,
   getEffectiveAtk,
@@ -17,6 +17,7 @@ import type {
   BuffFilterTag,
   CombatantState,
   DebuffFilterTag,
+  GameData,
   PassiveSkillDef,
   SkillEffectDef,
   SkillHitTarget,
@@ -249,6 +250,8 @@ export interface TargetRuleContext {
   actor: CombatantState;
   allies: CombatantState[];
   enemies: CombatantState[];
+  /** attackType フィルタの attackMethod 解決に使用 */
+  gameData?: Pick<GameData, 'skillRegistry' | 'combatModuleRegistry'>;
   /** 指定時は一致スコープの targetRuleOverride のみ適用 */
   applyScope?: TargetRuleOverrideApplyTo;
 }
@@ -295,7 +298,8 @@ export function resolveTargetSpec(
         override,
         context.actor,
         context.allies,
-        context.enemies
+        context.enemies,
+        context.gameData,
       );
       if (pool.length > 0) return override;
       continue;
@@ -321,7 +325,8 @@ function factionPool(
 
 export function matchesAttackType(
   unit: CombatantState,
-  spec: Extract<TargetSpec, { kind: "attackType" }>
+  spec: Extract<TargetSpec, { kind: "attackType" }>,
+  gameData?: Pick<GameData, 'skillRegistry' | 'combatModuleRegistry'>,
 ): boolean {
   const damageFilters: boolean[] = [];
   if (spec.physical) {
@@ -331,11 +336,15 @@ export function matchesAttackType(
     damageFilters.push(unit.traits.damageType === "magic");
   }
   const rangeFilters: boolean[] = [];
+  const attackMethod =
+    gameData !== undefined
+      ? resolveUnitAttackMethod(unit, gameData)
+      : undefined;
   if (spec.melee) {
-    rangeFilters.push(!isRangedAttack(unit.traits.rangePx));
+    rangeFilters.push(attackMethod === "melee");
   }
   if (spec.ranged) {
-    rangeFilters.push(isRangedAttack(unit.traits.rangePx));
+    rangeFilters.push(attackMethod === "ranged");
   }
 
   const damageOk =
@@ -380,7 +389,8 @@ export function getTargetPool(
   spec: TargetSpec,
   actor: CombatantState,
   allies: CombatantState[],
-  enemies: CombatantState[]
+  enemies: CombatantState[],
+  gameData?: Pick<GameData, 'skillRegistry' | 'combatModuleRegistry'>,
 ): CombatantState[] {
   if (spec.kind === "self") {
     return actor.isAlive ? [actor] : [];
@@ -397,7 +407,7 @@ export function getTargetPool(
   if (spec.kind === "attackType") {
     const pool = factionPool("enemy", actor, allies, enemies);
     if (actor.isEnemy) return pool;
-    return pool.filter((unit) => matchesAttackType(unit, spec));
+    return pool.filter((unit) => matchesAttackType(unit, spec, gameData));
   }
 
   if (spec.kind === "status") {

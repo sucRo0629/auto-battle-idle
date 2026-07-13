@@ -4,7 +4,6 @@ import {
   buildM1TargetClassificationRows,
   logM1TargetClassificationReport,
 } from './test/m1TargetClassificationReport.ts';
-import { isRangedAttack } from './data/entityTraits.ts';
 
 describe('demo M1 target classification (diagnostic)', () => {
   it('logs static M1 target priority bands', () => {
@@ -25,6 +24,5 @@ describe('demo M1 target classification (diagnostic)', () => {
     expect(wardweaver?.inAssassinLowHpPool).toBe(true);
     expect(ballista?.inRangerRangedPool).toBe(true);
     expect(sorcerer?.inRangerRangedPool).toBe(true);
-    expect(isRangedAttack(cleric!.rangePx)).toBe(true);
   });
 });

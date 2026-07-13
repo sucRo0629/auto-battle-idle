@@ -6,11 +6,12 @@ function passesBonusBasicAttackGates(
   actor: CombatantState,
   target: CombatantState,
   passive: PassiveSkillDef,
+  gameData?: Pick<import('./types.ts').GameData, 'skillRegistry' | 'combatModuleRegistry'>,
 ): boolean {
   const conditions = passive.bonusBasicAttackConditions ?? [];
   if (conditions.length > 0) {
     for (const condition of conditions) {
-      if (!evaluateDamageIncreaseCondition(actor, target, condition)) {
+      if (!evaluateDamageIncreaseCondition(actor, target, condition, gameData)) {
         return false;
       }
     }
@@ -33,10 +34,11 @@ export function shouldTriggerBonusBasicAttackOnHit(
   actor: CombatantState,
   target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
+  gameData?: Pick<import('./types.ts').GameData, 'skillRegistry' | 'combatModuleRegistry'>,
 ): boolean {
   for (const passive of getPassiveDefs(actor, passives)) {
     if (passive.effect !== 'bonusBasicAttackOnHit') continue;
-    if (!passesBonusBasicAttackGates(actor, target, passive)) continue;
+    if (!passesBonusBasicAttackGates(actor, target, passive, gameData)) continue;
     const chance = passive.chance ?? 0.5;
     if (chance <= 0) continue;
     if (Math.random() <= Math.min(1, chance)) {
