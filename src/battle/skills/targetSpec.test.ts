@@ -6,6 +6,7 @@ import {
   getTargetPool,
   orderPoolByTarget,
   normalizeTarget,
+  pickDefaultHostileSingleTarget,
   pickMoveAnchorOptions,
   pickTargetFromPool,
   resolveApproachTargetSpec,
@@ -139,11 +140,11 @@ describe('getTargetPool / pickTargetFromPool', () => {
   ];
   const actor = allies[0]!;
 
-  it('picks front enemy by battleX', () => {
+  it('picks front enemy by min battleX (enemy frontline)', () => {
     const spec = { kind: 'distance', side: 'enemy', order: 'nearest' } as const;
     const pool = getTargetPool(spec, actor, allies, enemies);
     const picked = pickTargetFromPool(spec, actor, pool);
-    expect(picked?.id).toBe('e1');
+    expect(picked?.id).toBe('e2');
   });
 
   it('rear toAnchor move anchor picks enemy frontline contact not battle-line depth nearest', () => {
@@ -291,15 +292,39 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(pool.map((u) => u.id)).toEqual(['e3']);
   });
 
-  it('enemy basic attack pools and picks nearest defender by battleX', () => {
+  it('pickDefaultHostileSingleTarget prefers front defender by battleX not actor distance', () => {
+    const enemyActor = mockUnit('e1', 180, { isEnemy: true });
+    const frontDefender = mockUnit('front-def', 220);
+    frontDefender.role = 'defender';
+    const rearDefender = mockUnit('rear-def', 200);
+    rearDefender.role = 'defender';
+    const pool = [frontDefender, rearDefender];
+    expect(pickDefaultHostileSingleTarget(enemyActor, pool)?.id).toBe('front-def');
+  });
+
+  it('pickDefaultHostileSingleTarget ally actor picks min battleX enemy', () => {
+    const ally = mockUnit('a1', 100);
+    const frontEnemy = mockUnit('front', 200, { isEnemy: true });
+    const rearEnemy = mockUnit('rear', 280, { isEnemy: true });
+    expect(
+      pickDefaultHostileSingleTarget(ally, [rearEnemy, frontEnemy])?.id,
+    ).toBe('front');
+  });
+
+  it('pickDefaultHostileSingleTarget tie-breaks equal battleX by id', () => {
+    const ally = mockUnit('a1', 100);
+    const eB = mockUnit('e-b', 200, { isEnemy: true });
+    const eA = mockUnit('e-a', 200, { isEnemy: true });
+    expect(pickDefaultHostileSingleTarget(ally, [eB, eA])?.id).toBe('e-a');
+  });
+
+  it('pickDefaultHostileSingleTarget falls back to full pool frontmost when no defender', () => {
     const enemyActor = mockUnit('e1', 300, { isEnemy: true });
-    const guard = mockUnit('guard', 200, { def: 50 });
-    const healer = mockUnit('healer', 250, { def: 5 });
-    const spec = { kind: 'distance', side: 'enemy', order: 'nearest' } as const;
-    const pool = getTargetPool(spec, enemyActor, [guard, healer], [enemyActor]);
-    expect(pool.map((u) => u.id).sort()).toEqual(['guard', 'healer']);
-    const picked = pickTargetFromPool(spec, enemyActor, pool);
-    expect(picked?.id).toBe('healer');
+    const striker = mockUnit('striker', 220);
+    const backliner = mockUnit('backliner', 80);
+    expect(
+      pickDefaultHostileSingleTarget(enemyActor, [striker, backliner])?.id,
+    ).toBe('striker');
   });
 
   it('enemy default nearest prefers defender role over nearer attacker', () => {

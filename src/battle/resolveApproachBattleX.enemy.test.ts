@@ -1,17 +1,69 @@
 import { describe, expect, it } from 'vitest';
+import { SPRITE_WIDTH } from './battleConstants.ts';
 import { getAttackablePool, isWithinSkillRange } from './skills/rangeUtils.ts';
 import {
   resolveEnemyApproachBattleX,
   resolveEnemyAttackTargetPlayer,
   resolveEnemyChaseTargetPlayer,
+  resolvePlayerChaseTargetEnemy,
   shouldSkipEngagedAutoApproach,
 } from './resolveApproachBattleX.ts';
 import { mockApproachCombatant as mockCombatant, mockApproachGameData } from './testFixtures.ts';
 
 const gameData = mockApproachGameData();
 
+describe('resolvePlayerChaseTargetEnemy', () => {
+  it('picks min battleX enemy frontline by default', () => {
+    const striker = mockCombatant({
+      id: 'striker',
+      formationRow: 'front',
+      battleX: 120,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const frontMelee = mockCombatant({
+      id: 'front-enemy',
+      isEnemy: true,
+      battleX: 280,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const rearEnemy = mockCombatant({
+      id: 'rear-enemy',
+      isEnemy: true,
+      battleX: 340,
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    const target = resolvePlayerChaseTargetEnemy(
+      striker,
+      [striker],
+      [frontMelee, rearEnemy],
+      gameData,
+    );
+
+    expect(target?.id).toBe('front-enemy');
+  });
+});
+
 describe('resolveEnemyChaseTargetPlayer', () => {
-  it('picks nearest defender when two defenders are in pool', () => {
+  it('picks frontmost defender by battleX when two defenders are in pool', () => {
     const nearDefender = mockCombatant({
       id: 'def-near',
       role: 'defender',
@@ -61,7 +113,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
     expect(target?.id).toBe('def-near');
   });
 
-  it('picks nearest player when no defender is alive', () => {
+  it('picks frontmost player when no defender is alive', () => {
     const striker = mockCombatant({
       id: 'striker',
       formationRow: 'front',
@@ -573,7 +625,7 @@ describe('resolveEnemyApproachBattleX', () => {
       gameData,
     );
 
-    expect(approachX).toBe(200 + 0);
+    expect(approachX).toBe(200 + SPRITE_WIDTH);
     meleeEnemy.battleX = approachX;
     const spec = {
       kind: 'distance' as const,
@@ -581,9 +633,9 @@ describe('resolveEnemyApproachBattleX', () => {
       order: 'nearest' as const,
     };
     expect(
-      getAttackablePool(spec, meleeEnemy, [guard], [meleeEnemy], 0),
+      getAttackablePool(spec, meleeEnemy, [guard], [meleeEnemy], SPRITE_WIDTH),
     ).toHaveLength(1);
-    expect(isWithinSkillRange(meleeEnemy, guard, 0)).toBe(true);
+    expect(isWithinSkillRange(meleeEnemy, guard, SPRITE_WIDTH)).toBe(true);
   });
 
   it('stops at skill range from chase target', () => {

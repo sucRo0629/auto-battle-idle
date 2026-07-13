@@ -558,7 +558,8 @@ function enemyForwardFacingPool(
   return pool.filter((unit) => !isPlayerRearAssaultAccess(unit, actorX));
 }
 
-export function isDefaultEnemyChaseSpec(spec: TargetSpec): boolean {
+/** combat.md §敵対単体ターゲット選定 — デフォルト spec（distance/enemy/nearest） */
+export function isDefaultHostileChaseSpec(spec: TargetSpec): boolean {
   return (
     spec.kind === "distance" &&
     spec.side === "enemy" &&
@@ -566,24 +567,46 @@ export function isDefaultEnemyChaseSpec(spec: TargetSpec): boolean {
   );
 }
 
-function pickNearestByBattleXWithIdTieBreak(
-  actor: CombatantState,
-  pool: CombatantState[]
-): CombatantState {
-  return pickEnemyByActorDistance(actor, pool, "nearest");
+/** @deprecated use isDefaultHostileChaseSpec */
+export function isDefaultEnemyChaseSpec(spec: TargetSpec): boolean {
+  return isDefaultHostileChaseSpec(spec);
 }
 
-export function pickEnemyDefaultNearestTarget(
+function pickFrontmostOnOpponentLine(
+  pool: CombatantState[],
+  preferMaxBattleX: boolean
+): CombatantState {
+  return pool.reduce((a, b) => {
+    const ax = getBattleX(a);
+    const bx = getBattleX(b);
+    if (ax !== bx) {
+      return preferMaxBattleX ? (ax > bx ? a : b) : ax < bx ? a : b;
+    }
+    return a.id.localeCompare(b.id) <= 0 ? a : b;
+  });
+}
+
+/**
+ * combat.md §敵対単体ターゲット選定 — 敵味方共通デフォルト（Chase / Attack）。
+ * defender 優先後、相手戦線の最前（味方 actor → min battleX / 敵 actor → max battleX）。
+ */
+export function pickDefaultHostileSingleTarget(
   actor: CombatantState,
   pool: CombatantState[]
 ): CombatantState | null {
   const living = pool.filter((unit) => unit.isAlive);
   if (living.length === 0) return null;
   const defenders = living.filter((unit) => unit.role === "defender");
-  if (defenders.length > 0) {
-    return pickNearestByBattleXWithIdTieBreak(actor, defenders);
-  }
-  return pickNearestByBattleXWithIdTieBreak(actor, living);
+  const candidates = defenders.length > 0 ? defenders : living;
+  return pickFrontmostOnOpponentLine(candidates, actor.isEnemy);
+}
+
+/** @deprecated use pickDefaultHostileSingleTarget */
+export function pickEnemyDefaultNearestTarget(
+  actor: CombatantState,
+  pool: CombatantState[]
+): CombatantState | null {
+  return pickDefaultHostileSingleTarget(actor, pool);
 }
 
 /** combat.md §敵の単体ターゲット選定 — Chase / Attack 共通 */
@@ -603,14 +626,14 @@ export function pickEnemySingleTargetFromPool(
   );
   if (dominanceDuelist) return dominanceDuelist;
 
-  if (!isDefaultEnemyChaseSpec(spec)) {
+  if (!isDefaultHostileChaseSpec(spec)) {
     const overridePick = pickTargetFromPool(spec, enemy, facingPool, {
       singleTargetAttack: true,
     });
     if (overridePick) return overridePick;
   }
 
-  return pickEnemyDefaultNearestTarget(enemy, facingPool);
+  return pickDefaultHostileSingleTarget(enemy, facingPool);
 }
 
 export function pickTargetFromPool(
@@ -634,21 +657,22 @@ export function pickTargetFromPool(
   }
 
   if (
-    actor.isEnemy &&
     spec.kind === "distance" &&
     spec.side === "enemy" &&
-    spec.order === "nearest" &&
+    isDefaultHostileChaseSpec(spec) &&
     !options?.moveAnchor
   ) {
-    const facingPool = enemyForwardFacingPool(actor, pool);
-    if (facingPool.length === 0) return null;
-    if (options?.singleTargetAttack) {
-      const dominanceDuelist = facingPool.find(
+    const hostilePool = actor.isEnemy
+      ? enemyForwardFacingPool(actor, pool)
+      : pool;
+    if (hostilePool.length === 0) return null;
+    if (options?.singleTargetAttack && actor.isEnemy) {
+      const dominanceDuelist = hostilePool.find(
         (unit) => unit.isAlive && isArenaDominanceActive(unit)
       );
       if (dominanceDuelist) return dominanceDuelist;
     }
-    return pickEnemyDefaultNearestTarget(actor, facingPool);
+    return pickDefaultHostileSingleTarget(actor, hostilePool);
   }
 
   if (
@@ -662,7 +686,6 @@ export function pickTargetFromPool(
   }
 
   if (
-    actor.isEnemy &&
     spec.kind === "distance" &&
     spec.side === "enemy" &&
     spec.order === "farthest" &&
@@ -708,11 +731,9 @@ export function pickTargetFromPool(
         return pickEnemyByActorDistance(actor, pool, spec.order);
       }
     }
-    // Target Intent: AttackTarget. Player enemy nearest/farthest follows battle-line depth.
-    if (spec.order === "nearest") {
-      return pool.reduce((a, b) => (getBattleX(a) >= getBattleX(b) ? a : b));
+    if (spec.order === "nearest" || spec.order === "farthest") {
+      return pickEnemyByActorDistance(actor, pool, spec.order);
     }
-    return pool.reduce((a, b) => (getBattleX(a) <= getBattleX(b) ? a : b));
   }
 
   if (spec.kind === "stat") {
@@ -772,25 +793,23 @@ export function orderPoolByTarget(
   if (spec.kind === "self" || spec.kind === "all") return copy;
 
   if (
-    actor.isEnemy &&
     spec.kind === "distance" &&
     spec.side === "enemy" &&
-    spec.order === "nearest"
+    isDefaultHostileChaseSpec(spec)
   ) {
-    const actorX = getBattleX(actor);
+    const preferMax = actor.isEnemy;
     return copy.sort((a, b) => {
       const aDef = a.role === "defender" ? 0 : 1;
       const bDef = b.role === "defender" ? 0 : 1;
       if (aDef !== bDef) return aDef - bDef;
-      const da = Math.abs(getBattleX(a) - actorX);
-      const db = Math.abs(getBattleX(b) - actorX);
-      if (da !== db) return da - db;
+      const ax = getBattleX(a);
+      const bx = getBattleX(b);
+      if (ax !== bx) return preferMax ? bx - ax : ax - bx;
       return a.id.localeCompare(b.id);
     });
   }
 
   if (
-    actor.isEnemy &&
     spec.kind === "distance" &&
     spec.side === "enemy" &&
     spec.order === "farthest"
@@ -820,10 +839,14 @@ export function orderPoolByTarget(
   }
 
   if (spec.kind === "distance" && spec.side === "enemy") {
-    if (spec.order === "nearest") {
-      return copy.sort((a, b) => getBattleX(b) - getBattleX(a));
+    if (spec.order === "nearest" || spec.order === "farthest") {
+      const actorX = getBattleX(actor);
+      return copy.sort((a, b) => {
+        const da = Math.abs(getBattleX(a) - actorX);
+        const db = Math.abs(getBattleX(b) - actorX);
+        return spec.order === "nearest" ? da - db : db - da;
+      });
     }
-    return copy.sort((a, b) => getBattleX(a) - getBattleX(b));
   }
 
   if (spec.kind === "stat") {

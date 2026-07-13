@@ -507,7 +507,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 **ヘイト（Threat）ランタイムは廃止する。** オートバトルでは Kill 職が単体攻撃の主ターゲットになることを避け、Survival の **被害入口** は `role: defender` と優先ターゲット条件で表現する。
 
-実装（目標）: `pickDefaultHostileSingleTarget`（`src/battle/skills/targetSpec.ts`）を敵味方の Chase / Attack デフォルト正本とし、`resolveEnemyChaseTargetPlayer` / `resolvePlayerChaseTargetEnemy` から共有する。現行の味方 `distance/enemy/nearest` → `battleX` 最大（敵編成の奥）は **実装バグ** であり、本節のデフォルトに置換する。
+実装: `pickDefaultHostileSingleTarget`（`src/battle/skills/targetSpec.ts`）を敵味方の Chase / Attack デフォルト正本とし、`resolveEnemyChaseTargetPlayer` / `resolvePlayerChaseTargetEnemy` から共有する。
 
 ### スコープ
 

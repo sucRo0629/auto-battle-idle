@@ -173,7 +173,7 @@ export function resolvePlayerAttackTargetEnemy(
   return pickTargetFromPool(spec, player, pool);
 }
 
-/** 敵: combat.md §敵の単体ターゲット選定 — defender 優先・最近傍 chase */
+/** 敵: combat.md §敵対単体ターゲット選定 — defender 優先・相手戦線最前 chase */
 export function resolveEnemyChaseTargetPlayer(
   enemy: CombatantState,
   players: CombatantState[],
