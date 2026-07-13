@@ -13,7 +13,10 @@ import {
 import {
   stripPassivesAurasFromSource,
 } from './passiveEffects.ts';
-import { isRangedAttack } from './data/entityTraits.ts';
+import {
+  isMeleeAttackMethod,
+  isRangedAttackMethod,
+} from './data/resolveUnitAttackMethod.ts';
 import { isWithinSkillRange } from './skills/rangeUtils.ts';
 import { isAllyOnCombatFrontline } from './combatPosition.ts';
 import type {
@@ -24,6 +27,7 @@ import type {
   DamageType,
   PassiveSkillDef,
   StatusEffect,
+  AttackMethod,
 } from './types.ts';
 import { asStatusEffectStatList } from './types.ts';
 
@@ -47,7 +51,7 @@ function tryApplyPassiveCounterResponses(
   if (chance <= 0 || !responses?.length) return;
   if (!isPassiveCounterInRange(passive, counterActor, attacker)) return;
   if (
-    !matchesCounterAttackRangeBand(ctx.attackRangePx, {
+    !matchesCounterAttackMethod(ctx.attackMethod, {
       counterMelee: passive.counterMelee,
       counterRanged: passive.counterRanged,
     })
@@ -76,8 +80,8 @@ export interface CounterRetaliationContext {
   attackKind: CounterAttackKind;
   appliedDamage: number;
   isCounterDamage?: boolean;
-  /** 被攻撃の実効射程（px）。未指定時は帯フィルタを適用しない */
-  attackRangePx?: number;
+  /** 被攻撃の attackMethod。未指定時は帯フィルタを適用しない */
+  attackMethod?: AttackMethod;
 }
 
 export interface CounterRetaliationCallbacks {
@@ -109,19 +113,19 @@ export interface GrantCounterStatusParams {
   sourceId?: string;
 }
 
-export function matchesCounterAttackRangeBand(
-  attackRangePx: number | undefined,
+export function matchesCounterAttackMethod(
+  attackMethod: AttackMethod | undefined,
   filter: CounterAttackRangeBandFilter,
 ): boolean {
   const { counterMelee, counterRanged } = filter;
   if (!counterMelee && !counterRanged) return true;
-  if (attackRangePx === undefined) return true;
+  if (attackMethod === undefined) return true;
   const rangeFilters: boolean[] = [];
   if (counterMelee) {
-    rangeFilters.push(!isRangedAttack(attackRangePx));
+    rangeFilters.push(isMeleeAttackMethod(attackMethod));
   }
   if (counterRanged) {
-    rangeFilters.push(isRangedAttack(attackRangePx));
+    rangeFilters.push(isRangedAttackMethod(attackMethod));
   }
   return rangeFilters.some((value) => value);
 }
@@ -563,7 +567,7 @@ export function applyCounterRetaliation(
   for (const counterEffect of counters) {
     if (!isCounterInTriggerRange(counterEffect, victim, attacker)) continue;
     if (
-      !matchesCounterAttackRangeBand(ctx.attackRangePx, {
+      !matchesCounterAttackMethod(ctx.attackMethod, {
         counterMelee: counterEffect.counterMelee,
         counterRanged: counterEffect.counterRanged,
       })

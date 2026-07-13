@@ -40,6 +40,7 @@ const gameData = {
       bow_basic: {
         id: 'bow_basic',
         displayName: 'Bow',
+        attackMethod: 'ranged',
         effect: [
           {
             type: 'damage',
@@ -50,6 +51,7 @@ const gameData = {
       slash_basic: {
         id: 'slash_basic',
         displayName: 'Slash',
+        attackMethod: 'melee',
         effect: [
           {
             type: 'damage',

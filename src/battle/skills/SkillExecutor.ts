@@ -103,6 +103,10 @@ import { resolveEffectiveAmountSpecForActiveEffect } from "../skillAmountOverrid
 import { resolveEffectiveBasicAttackSkill } from "../resolveEffectiveBasicAttack.ts";
 import { basicAttackTransformSpecFromEffect } from "../resolveEffectiveBasicAttack.ts";
 import {
+  resolveSkillAttackMethod,
+  resolveUnitAttackMethod,
+} from "../data/resolveUnitAttackMethod.ts";
+import {
   resolveAttackBattleX,
   resolveMoveBattleX,
   isHostileRearAssaultMove,
@@ -215,7 +219,7 @@ export interface SkillExecutorDeps {
       skillId?: string;
       isCounterDamage?: boolean;
       hpDamage?: number;
-      attackRangePx?: number;
+      attackMethod?: import("../types.ts").AttackMethod;
       didBlock?: boolean;
       barrierHpBefore?: number;
       barrierDamage?: number;
@@ -1002,7 +1006,7 @@ export class SkillExecutor {
         slotKind: cd.slotKind,
         skillId: skill.id,
         hpDamage: damageResult.hpDamage,
-        attackRangePx: resolveSkillRangePx(actor, effectDef),
+        attackMethod: resolveSkillAttackMethod(skill),
       });
       this.emit({
         type: "skill",
@@ -1289,7 +1293,10 @@ export class SkillExecutor {
                     attackKind: "damage",
                     isCounterDamage: true,
                     hpDamage: damageResult.hpDamage,
-                    attackRangePx: resolveHostileEngageRangePx(defender.traits.rangePx),
+                    attackMethod: resolveUnitAttackMethod(
+                      defender,
+                      this.deps.gameData,
+                    ),
                   }
                 );
                 if (damageResult.lethal) {
@@ -1361,7 +1368,7 @@ export class SkillExecutor {
         slotKind: cd.slotKind,
         skillId: skill.id,
         hpDamage: damageResult.hpDamage,
-        attackRangePx: resolveSkillRangePx(actor, effectDef),
+        attackMethod: resolveSkillAttackMethod(skill),
         didBlock,
         barrierHpBefore,
         barrierDamage: damageResult.barrierDamage,
@@ -1447,7 +1454,7 @@ export class SkillExecutor {
               slotKind: cd.slotKind,
               skillId: skill.id,
               hpDamage: explosionIncoming.damageResult.hpDamage,
-              attackRangePx: resolveSkillRangePx(actor, effectDef),
+              attackMethod: resolveSkillAttackMethod(skill),
             }
           );
           this.emit({
@@ -1507,7 +1514,7 @@ export class SkillExecutor {
             slotKind: cd.slotKind,
             skillId: skill.id,
             hpDamage: splashResult.hpDamage,
-            attackRangePx: resolveSkillRangePx(actor, effectDef),
+            attackMethod: resolveSkillAttackMethod(skill),
           });
           this.emit({
             type: "skill",

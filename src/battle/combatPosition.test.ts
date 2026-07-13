@@ -15,7 +15,6 @@ import {
   isPlayerRearAssaultAccess,
   resolvePlayerFrontlineOwners,
   getEnemyContactX,
-  getMeleeEnemyContactX,
   isEnemyVisibleOnScreen,
   resolveAttackBattleX,
   resolveApproachAttackBattleX,
@@ -25,7 +24,6 @@ import {
   resolveBasicAttackRangePx,
   resolveMoveBattleX,
   resolveMaxEffectiveRangePx,
-  resolveRangedRearBattleXCap,
   separateByGap,
   enemyDeployOffScreenBattleX,
   resolveEnemyDeployTargets,
@@ -51,6 +49,7 @@ const gameData = {
       basic: {
         id: 'basic',
         name: 'basic',
+        attackMethod: 'melee',
         trigger: { kind: 'time', value: 2 },
         effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 } }],
       },
@@ -63,6 +62,7 @@ const gameData = {
       bow: {
         id: 'bow',
         name: 'bow',
+        attackMethod: 'ranged',
         trigger: { kind: 'time', value: 2 },
         effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 100 }],
       },
@@ -118,24 +118,6 @@ describe('combatPosition', () => {
     const on = mockCombatant({ id: 'e2', isEnemy: true, battleX: BATTLE_ENEMY_VISIBLE_MAX_X });
     expect(isEnemyVisibleOnScreen(off)).toBe(false);
     expect(isEnemyVisibleOnScreen(on)).toBe(true);
-  });
-
-  it('ranged approach stays behind melee front line', () => {
-    const melee = mockCombatant({
-      id: 'melee',
-      isEnemy: true,
-      battleX: 250,
-      traits: mockMeleeTraits(),
-    });
-    const ranged = mockCombatant({
-      id: 'ranged',
-      isEnemy: true,
-      traits: mockRangedTraits(),
-      battleX: 240,
-      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
-    });
-    const rearCap = resolveRangedRearBattleXCap([melee, ranged], gameData);
-    expect(rearCap).toBe(250 + enemyRangedRearGap());
   });
 
   it('ranged enemies approach attack range in either direction', () => {
@@ -254,23 +236,6 @@ describe('combatPosition', () => {
     expect(getEnemyContactX([e1, e2])).toBe(220);
   });
 
-  it('getMeleeEnemyContactX ignores ranged enemies', () => {
-    const melee = mockCombatant({
-      id: 'm',
-      isEnemy: true,
-      battleX: 250,
-      traits: mockMeleeTraits(),
-    });
-    const ranged = mockCombatant({
-      id: 'r',
-      isEnemy: true,
-      battleX: 220,
-      traits: mockRangedTraits(),
-    });
-    expect(getMeleeEnemyContactX([melee, ranged], gameData)).toBe(250);
-    expect(getMeleeEnemyContactX([ranged], gameData)).toBeNull();
-  });
-
   it('melee player and enemy converge to body-gap standoff when declared range is 0', () => {
     const player = mockCombatant({
       id: 'paladin',
@@ -285,10 +250,10 @@ describe('combatPosition', () => {
     });
 
     for (let i = 0; i < 120; i++) {
-      const meleeContact = getMeleeEnemyContactX([enemy], gameData)!;
+      const enemyContact = getEnemyContactX([enemy])!;
       updateUnitApproach(
         player,
-        resolveAttackBattleX(player, meleeContact, gameData),
+        resolveAttackBattleX(player, enemyContact, gameData),
         8,
       );
       updateUnitApproach(

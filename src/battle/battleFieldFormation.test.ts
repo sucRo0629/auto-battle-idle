@@ -16,7 +16,6 @@ import {
   isEngagedFormationRangePx,
   resolveOverlaps,
 } from './battleLayout.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import { loadGameData } from './data/loadGameData.ts';
 import { CANVAS_W } from './battleConstants.ts';
 
@@ -89,11 +88,9 @@ describe('battle-field formation spec (F-*)', () => {
 
   it('F-§4.2-01: enemy stop uses effectiveRangePx without body-gap add-on (L10)', () => {
     expect(computeEnemyStopX(30, 200, 0)).toBe(230);
-    expect(computeEnemyStopX(RANGED_ATTACK_MIN_PX, 200, 0)).toBe(
-      200 + RANGED_ATTACK_MIN_PX,
-    );
-    expect(isEngagedFormationRangePx(RANGED_ATTACK_MIN_PX - 1)).toBe(false);
-    expect(isEngagedFormationRangePx(RANGED_ATTACK_MIN_PX)).toBe(true);
+    expect(computeEnemyStopX(100, 200, 0)).toBe(300);
+    expect(isEngagedFormationRangePx(99, 'melee')).toBe(false);
+    expect(isEngagedFormationRangePx(100, 'ranged')).toBe(true);
   });
 
   it('clampEngagedEnemyGroupOnScreen keeps group inside canvas horizontally', () => {

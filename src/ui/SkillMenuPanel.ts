@@ -5,8 +5,8 @@ import { getMemberStatLabels } from "../i18n/memberStatLabels.ts";
 import { getLocale, subscribeLocaleChange } from "../i18n/locale.ts";
 import { t } from "../i18n/t.ts";
 import { resolveClassIconKey, resolveClassSpriteKey } from "../render/entityVisuals.ts";
+import { resolvePresetBasicAttackMethod } from "../battle/data/resolveUnitAttackMethod.ts";
 import {
-  isMeleeRangePx,
   type ActiveSkillDef,
   type ClassId,
   type ClassPreset,
@@ -84,10 +84,15 @@ function attackerSubRoleLabel(subRole: AttackerSubRole): string {
   return t(`role.${subRole}`);
 }
 
-function resolveAttackerSubRole(preset: ClassPreset): AttackerSubRole {
+function resolveAttackerSubRole(
+  preset: ClassPreset,
+  skillRegistry: GameData["skillRegistry"],
+): AttackerSubRole {
   if (preset.traits.damageType === "magic") return "caster";
-  if (isMeleeRangePx(preset.traits.rangePx)) return "fighter";
-  return "shooter";
+  if (resolvePresetBasicAttackMethod(preset, skillRegistry) === "ranged") {
+    return "shooter";
+  }
+  return "fighter";
 }
 
 export interface SkillMenuPanelCallbacks {
@@ -726,7 +731,7 @@ export class SkillMenuPanel {
       img.className = "skill-menu-roster-card-sprite-img";
       img.alt = "";
       img.decoding = "async";
-      img.src = getSpriteUrl(resolveClassSpriteKey(preset));
+      img.src = getSpriteUrl(resolveClassSpriteKey(preset, this.gameData.skillRegistry));
       img.setAttribute("aria-hidden", "true");
       spriteWrap.appendChild(img);
     }
@@ -905,7 +910,7 @@ export class SkillMenuPanel {
     const rolePart = document.createElement("span");
     rolePart.className = "skill-menu-class-summary-role";
     if (preset.role === "attacker") {
-      rolePart.textContent = `${roleLabel(preset.role)} · ${attackerSubRoleLabel(resolveAttackerSubRole(preset))}`;
+      rolePart.textContent = `${roleLabel(preset.role)} · ${attackerSubRoleLabel(resolveAttackerSubRole(preset, this.gameData.skillRegistry))}`;
     } else {
       rolePart.textContent = roleLabel(preset.role);
     }
@@ -1291,7 +1296,7 @@ export class SkillMenuPanel {
           classRegistry: this.gameData.classRegistry,
         }) ?? "";
     } else if (preset) {
-      resolvedUrl = getClassIconUrl(resolveClassIconKey(preset));
+      resolvedUrl = getClassIconUrl(resolveClassIconKey(preset, this.gameData.skillRegistry));
     }
 
     if (!resolvedUrl) {
@@ -1344,7 +1349,7 @@ export class SkillMenuPanel {
           const subClassIds = classIds.filter((classId) => {
             const preset = this.gameData.classRegistry[classId];
             return (
-              preset && resolveAttackerSubRole(preset) === subRole
+              preset && resolveAttackerSubRole(preset, this.gameData.skillRegistry) === subRole
             );
           });
           if (subClassIds.length === 0) continue;

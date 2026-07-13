@@ -23,17 +23,39 @@ const testTraits = {
 const defenderPreset = {
   id: 'df_guardian',
   role: 'defender' as const,
+  basicAttackSkillId: 'df_guardian_basic_attack',
   traits: testTraits,
 };
 
 const swordsmanPreset = {
   id: 'at_swordsman',
   role: 'attacker' as const,
+  basicAttackSkillId: 'at_swordsman_basic_attack',
   traits: testTraits,
+};
+
+const skillRegistry = {
+  actives: {
+    at_swordsman_basic_attack: {
+      id: 'at_swordsman_basic_attack',
+      name: 'basic',
+      attackMethod: 'melee' as const,
+      trigger: { kind: 'time' as const, value: 2 },
+      effect: [],
+    },
+    test_ranged_basic_attack: {
+      id: 'test_ranged_basic_attack',
+      name: 'bow',
+      attackMethod: 'ranged' as const,
+      trigger: { kind: 'time' as const, value: 2 },
+      effect: [],
+    },
+  },
 };
 
 const rangedEnemy = {
   id: 'test_ranged',
+  basicAttackSkillId: 'test_ranged_basic_attack',
   traits: {
     rangePx: 100,
     damageType: 'physical' as const,
@@ -47,7 +69,7 @@ describe('entityVisuals', () => {
   });
 
   it('falls back to role placeholder when class icon asset is missing', () => {
-    expect(resolveClassIconKey(swordsmanPreset)).toBe(
+    expect(resolveClassIconKey(swordsmanPreset, skillRegistry)).toBe(
       PLACEHOLDER_SPRITE_KEYS.attackerMelee,
     );
   });
@@ -59,21 +81,21 @@ describe('entityVisuals', () => {
   });
 
   it('falls back to role placeholder when sprite asset is missing', () => {
-    expect(resolveClassSpriteKey(swordsmanPreset)).toBe(
+    expect(resolveClassSpriteKey(swordsmanPreset, skillRegistry)).toBe(
       PLACEHOLDER_SPRITE_KEYS.attackerMelee,
     );
   });
 
   it('uses enemy id when sprite asset exists', () => {
     expect(
-      resolveEnemySpriteKey({ id: 'stage1_1', traits: testTraits }),
+      resolveEnemySpriteKey({ id: 'stage1_1', traits: testTraits, basicAttackSkillId: 'basic' }),
     ).toBe(
       'stage1_1',
     );
   });
 
   it('falls back to ranged attacker placeholder for ranged enemies without assets', () => {
-    expect(resolveEnemySpriteKey(rangedEnemy)).toBe(
+    expect(resolveEnemySpriteKey(rangedEnemy, skillRegistry)).toBe(
       PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical,
     );
   });

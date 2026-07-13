@@ -17,7 +17,6 @@ import { BattleEngine } from './BattleEngine.ts';
 import { createMemberFromClass } from '../progression/partyCompose.ts';
 import { reconcileMemberBuildFromGameData } from '../progression/skillBuild.ts';
 import type { CombatantState } from './types.ts';
-import { isMeleeRangePx } from './types.ts';
 
 function createAlchemistGuardianEngine(): BattleEngine {
   const gameData = structuredClone(loadGameData());
@@ -89,14 +88,12 @@ function mockAlchemist(battleX: number, overrides: Partial<CombatantState> = {})
 describe('alchemist approach (melee-band active range regression)', () => {
   const gameData = loadGameData();
 
-  it('active ready: basic and approach range stay in ranged band', () => {
+  it('active ready: basic and approach range use effective skill range', () => {
     const alchemist = mockAlchemist(80);
     const basic = resolveBasicAttackRangePx(alchemist, gameData, 4);
     const approach = resolveApproachRangePx(alchemist, gameData, 4);
     expect(basic).toBeGreaterThanOrEqual(100);
-    expect(isMeleeRangePx(basic)).toBe(false);
     expect(approach).toBeGreaterThanOrEqual(100);
-    expect(isMeleeRangePx(approach)).toBe(false);
   });
 
   it('resolveApproachAttackBattleX never returns left of current battleX (melee-band heal range)', () => {

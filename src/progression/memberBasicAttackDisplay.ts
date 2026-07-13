@@ -1,7 +1,8 @@
 import type { AppLocale } from '../i18n/locale.ts';
 import { getLocale } from '../i18n/locale.ts';
 import { getBasicAttackAttributeLabel } from '../i18n/memberStatLabels.ts';
-import { formatRangeBand } from '../battle/rangeLimits.ts';
+import { formatAttackMethodLabel } from '../battle/rangeLimits.ts';
+import { resolvePresetBasicAttackMethod } from '../battle/data/resolveUnitAttackMethod.ts';
 import { formatUiDistanceValue } from '../ui/formatUiDistance.ts';
 import type {
   ActiveSkillDef,
@@ -68,14 +69,15 @@ export function resolveMemberBasicAttackDisplay(
 
   const rangePx = resolveBasicAttackRangePx(preset, skill);
   const attribute = resolveMemberBasicAttackAttribute(preset, skill);
-  const bandLabel = formatRangeBand(rangePx, locale);
+  const attackMethod = resolvePresetBasicAttackMethod(preset, skillRegistry);
+  const methodLabel = formatAttackMethodLabel(attackMethod, locale);
   const rangeDisplay = formatUiDistanceValue(rangePx);
 
   return {
     rangeLabel:
       locale === 'en'
-        ? `${rangeDisplay} (${bandLabel})`
-        : `${rangeDisplay}（${bandLabel}）`,
+        ? `${rangeDisplay} (${methodLabel})`
+        : `${rangeDisplay}（${methodLabel}）`,
     attributeLabel: getBasicAttackAttributeLabel(attribute, locale),
   };
 }

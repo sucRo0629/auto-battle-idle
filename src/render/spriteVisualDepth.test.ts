@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { RANGED_ATTACK_MIN_PX } from '../battle/types.ts';
 import {
   assignVisualDepthOffsets,
   MAX_VISUAL_DEPTH_RISE,
@@ -26,7 +25,7 @@ describe('spriteVisualDepth', () => {
         x: 50,
         isEnemy: false,
         role: 'attacker' as const,
-        rangePx: 0,
+        attackMethod: 'melee' as const,
       },
     ];
     const offsets = assignVisualDepthOffsets(layouts, 1);
@@ -37,7 +36,7 @@ describe('spriteVisualDepth', () => {
   it('scales depth step with sprite scale', () => {
     const layouts = [
       { id: 'back', x: 20, isEnemy: false, role: 'supporter' as const },
-      { id: 'front', x: 84, isEnemy: false, role: 'attacker' as const, rangePx: 0 },
+      { id: 'front', x: 84, isEnemy: false, role: 'attacker' as const, attackMethod: 'melee' as const },
     ];
     const offsets = assignVisualDepthOffsets(layouts, 2);
     expect(offsets.get('back')).toBe(VISUAL_DEPTH_STEP_PX * 2);
@@ -63,9 +62,9 @@ describe('spriteVisualDepth', () => {
         x: 50,
         isEnemy: false,
         role: 'attacker' as const,
-        rangePx: RANGED_ATTACK_MIN_PX,
+        attackMethod: 'ranged' as const,
       },
-      { id: 'melee', x: 50, isEnemy: false, role: 'attacker' as const, rangePx: 0 },
+      { id: 'melee', x: 50, isEnemy: false, role: 'attacker' as const, attackMethod: 'melee' as const },
     ];
     const offsets = assignVisualDepthOffsets(layouts, 1);
     expect(offsets.get('supporter')).toBe(VISUAL_DEPTH_STEP_PX * 3);
@@ -83,9 +82,9 @@ describe('spriteVisualDepth', () => {
         x: 50,
         isEnemy: false,
         role: 'attacker' as const,
-        rangePx: RANGED_ATTACK_MIN_PX,
+        attackMethod: 'ranged' as const,
       },
-      { id: 'melee', x: 50, isEnemy: false, role: 'attacker' as const, rangePx: 0 },
+      { id: 'melee', x: 50, isEnemy: false, role: 'attacker' as const, attackMethod: 'melee' as const },
     ];
     const offsets = assignVisualDepthOffsets(layouts, 1);
     const maxOffset = Math.max(...offsets.values());

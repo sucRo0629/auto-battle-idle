@@ -1,5 +1,4 @@
-import type { DamageType, Role } from './types.ts';
-import { isRangedAttack } from './data/entityTraits.ts';
+import type { AttackMethod, DamageType, Role } from './types.ts';
 
 export const PLACEHOLDER_SPRITE_KEYS = {
   defender: 'placeholder_df',
@@ -20,12 +19,12 @@ const PLACEHOLDER_SPRITE_KEY_SET = new Set<string>(
 
 export function resolvePlaceholderSpriteKey(
   role: Role,
-  rangePx: number,
+  attackMethod: AttackMethod | undefined,
   damageType: DamageType = 'physical',
 ): PlaceholderSpriteKey {
   if (role === 'defender') return PLACEHOLDER_SPRITE_KEYS.defender;
   if (role === 'supporter') return PLACEHOLDER_SPRITE_KEYS.supporter;
-  if (isRangedAttack(rangePx)) {
+  if (attackMethod === 'ranged') {
     return damageType === 'magic'
       ? PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic
       : PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical;
@@ -35,10 +34,10 @@ export function resolvePlaceholderSpriteKey(
 
 export function resolvePlaceholderIconKey(
   role: Role,
-  rangePx: number,
+  attackMethod: AttackMethod | undefined,
   damageType: DamageType = 'physical',
 ): PlaceholderSpriteKey {
-  return resolvePlaceholderSpriteKey(role, rangePx, damageType);
+  return resolvePlaceholderSpriteKey(role, attackMethod, damageType);
 }
 
 export function isPlaceholderSpriteKey(spriteKey: string): boolean {

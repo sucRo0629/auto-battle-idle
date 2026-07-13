@@ -1778,15 +1778,14 @@ Conductor は自身でダメージを与えるキャスターではない。
 
 ## 配置
 
-`formationRow`（前衛 / 後衛）は **`role` + `traits.rangePx` から実行時導出**する。`classes.json` には保存しない（legacy フィールド。読み込み時に JSON 値は無視）。
+`formationRow`（前衛 / 後衛）は **`classes.json` の明示フィールド**を正本とする。読み込み時に `ClassPreset.formationRow` へ正規化し、戦闘ユニット生成時に `CombatantState.formationRow` へ設定する。
 
-| ロール      | 導出ルール                                                             |
-| ----------- | ---------------------------------------------------------------------- |
-| `defender`  | `front`                                                                |
-| `attacker`  | 近接帯（`rangePx < 100`）→ `front`、遠隔帯（`rangePx >= 100`）→ `back` |
-| `supporter` | `rangePx < 100` → `front`、それ以外 → `back`（`sp_alchemist` 等の近接帯） |
+| ロール      | 省略時フォールバック |
+| ----------- | -------------------- |
+| `defender`  | `front`              |
+| それ以外    | `back`               |
 
-実装: `partyFormation.ts` の `resolveClassFormationRow`。戦闘ユニット生成時に `CombatantState.formationRow` へ設定。
+実装: `partyFormation.ts` の `resolveClassFormationRow`（第 2 引数に明示 `formationRow` を渡す）。
 
 `formationRow` で列を決定：`front` → `back`（左＝敵側）。
 
@@ -1802,7 +1801,7 @@ Conductor は自身でダメージを与えるキャスターではない。
 
 | フィールド       | 省略時                                                                                                                                                                                                                                          |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rangePx`        | `0`（分類用: 0〜99 は近接帯、100 以上は遠隔帯）                                                                                                                                                                                                 |
+| `rangePx`        | `0`（連続距離 px。停止・射程計算に使用）                                                                                                                                                                                                          |
 | `damageType`     | `physical`                                                                                                                                                                                                                                      |
 | `basicAttackVfx` | 省略時は未設定。**通常攻撃（`slotKind: basic`）専用**の PNG VFX 定義（`SkillVfxDef`）。`enabled` / `placement` / strip フェーズ。対応 PNG は `sheets/vfx/{entityId}_basic_attack_vfx.png`。effect `vfx` や skill `vfx` にはフォールバックしない |
 
@@ -1868,7 +1867,7 @@ Conductor は自身でダメージを与えるキャスターではない。
 | `sheets/skills/{id}_basic_attack.png` **あり** | skill anim 再生 | `traits.basicAttackVfx` + `sheets/vfx/{id}_basic_attack_vfx.png`                        |
 | body PNG **なし**                              | なし            | `basicAttackVfx` と `_basic_attack_vfx.png` が揃えば VFX のみ。どちらも無ければ演出なし |
 
-**遠隔**（`rangePx >= RANGED_ATTACK_MIN_PX`）も同じ。弓引き PNG を置けば body 再生する。VFX strip も `sheets/vfx/` に配置する。
+**遠隔**（解決済み `attackMethod: ranged`）も同じ。弓引き PNG を置けば body 再生する。VFX strip も `sheets/vfx/` に配置する。
 
 ### 演出解決（コード）
 
@@ -1920,9 +1919,9 @@ flowchart TD
 
 **設定上限:** `traits.rangePx` および `effect.range` は `0〜CONFIGURABLE_RANGE_PX_MAX` px（`rangeLimits.ts`: `CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）。
 
-`attackType` フィルタの `melee` / `ranged` は `traits.rangePx` 帯ではなく、対象の解決済み通常攻撃 `attackMethod`（`resolveUnitAttackMethod`）で判定する。`traits.rangePx >= RANGED_ATTACK_MIN_PX` の遠隔帯は隊形・UI・反撃帯など別用途。`traits.damageType === 'magic'` で `magicAttackingEnemy`（attackType.physical/magic フィルタ）。
+`attackType` フィルタの `melee` / `ranged` は対象の解決済み通常攻撃 `attackMethod`（`resolveUnitAttackMethod`）で判定する。`traits.damageType === 'magic'` で `magicAttackingEnemy`（attackType.physical/magic フィルタ）。
 
-距離用途では [battle-field.md §2.5](./battle-field.md#25-攻撃位置move新軸) の `effectiveRangePx` 共通式を使う。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX）で、停止位置や移動量の計算に 100px 境界は使わない。敵対接近・攻撃の実効射程は `engagedMinBodyGap()` を下回らない（宣言 `rangePx` が短い双刃士などでも体幅より手前で停止）。隊形順・帯分類は raw `traits.rangePx`。
+距離用途では [battle-field.md §2.5](./battle-field.md#25-攻撃位置move新軸) の `effectiveRangePx` 共通式を使う。敵対接近・攻撃の実効射程は `engagedMinBodyGap()` を下回らない（宣言 `rangePx` が短い双刃士などでも体幅より手前で停止）。隊形順は raw `traits.rangePx` 昇順。近接/遠隔の**分類**は `attackMethod`（通常攻撃 JSON または合成 basic の明示フィールド）。
 
 **クラス `rangePx`（正本は `classes.json`。以下は転記確認用）：**
 
@@ -1939,7 +1938,7 @@ flowchart TD
 | `at_ranger` / `at_hunter` / `at_conductor` | 弓術士 / 狩猟士 / 法陣師 | 300 |
 | `at_ballista` | 弩砲士 | 400 |
 
-数値変更時は JSON のみ更新し、本表を食い違ったら同作業で直す。分類境界（近接帯 / 遠隔帯）は上記数値ではなく `RANGED_ATTACK_MIN_PX`（100）を使う。
+数値変更時は JSON のみ更新し、本表を食い違ったら同作業で直す。
 
 ## クラスステータスと成長（Phase 4）
 

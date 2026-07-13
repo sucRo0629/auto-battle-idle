@@ -9,10 +9,9 @@ import {
   assertConfigurableRangePx,
   configurableRangeHintJa,
   counterAttackRangeBandEditorHintJa,
-  formatRangeBandJa,
+  formatAttackMethodLabel,
   parseConfigurableRangePxInput,
 } from './rangeLimits.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
 
 describe('rangeLimits', () => {
   it('CONFIGURABLE_RANGE_PX_MAX spans safe area from party anchor to right edge', () => {
@@ -25,29 +24,23 @@ describe('rangeLimits', () => {
     expect(configurableRangeHintJa()).toContain(String(CONFIGURABLE_RANGE_PX_MAX));
   });
 
-  it('editor band hints reference RANGED_ATTACK_MIN_PX', () => {
-    const threshold = String(RANGED_ATTACK_MIN_PX);
-    expect(counterAttackRangeBandEditorHintJa()).toContain(threshold);
+  it('editor hints reference attackMethod for ranged filters', () => {
+    expect(counterAttackRangeBandEditorHintJa()).toContain('attackMethod');
     expect(attackTypeRangedBandEditorHintJa()).toContain('attackMethod');
   });
 
-  it('hint describes bands with ranged minimum px', () => {
+  it('hint describes continuous px range without band thresholds', () => {
     const hint = configurableRangeHintJa();
-    expect(hint).toContain('遠隔帯');
-    expect(hint).toContain(`${RANGED_ATTACK_MIN_PX} 以上`);
-    expect(hint).not.toMatch(/\d+ 以上=遠隔帯/);
+    expect(hint).toContain('連続値');
+    expect(hint).not.toContain('遠隔帯');
+    expect(hint).not.toContain('近接帯');
   });
 
-  it('formatRangeBandJa follows melee/ranged band threshold', () => {
-    expect(formatRangeBandJa(0)).toBe('近接帯');
-    expect(formatRangeBandJa(RANGED_ATTACK_MIN_PX - 1)).toBe('近接帯');
-    expect(formatRangeBandJa(RANGED_ATTACK_MIN_PX)).toBe('遠隔帯');
-  });
-
-  it('formatRangeBand returns English band labels', async () => {
-    const { formatRangeBand } = await import('./rangeLimits.ts');
-    expect(formatRangeBand(8, 'en')).toBe('Melee band');
-    expect(formatRangeBand(RANGED_ATTACK_MIN_PX, 'en')).toBe('Ranged band');
+  it('formatAttackMethodLabel maps melee and ranged', () => {
+    expect(formatAttackMethodLabel('melee', 'ja')).toBe('近接');
+    expect(formatAttackMethodLabel('ranged', 'ja')).toBe('遠隔');
+    expect(formatAttackMethodLabel('melee', 'en')).toBe('Melee');
+    expect(formatAttackMethodLabel('ranged', 'en')).toBe('Ranged');
   });
 
   it('assertConfigurableRangePx rejects out-of-range values', () => {

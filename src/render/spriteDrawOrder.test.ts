@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { RANGED_ATTACK_MIN_PX } from '../battle/types.ts';
 import {
   allyRoleBackDepth,
   compareSpriteDrawOrder,
@@ -108,14 +107,14 @@ describe('spriteDrawOrder', () => {
       x: 50,
       isEnemy: false,
       role: 'attacker' as const,
-      rangePx: RANGED_ATTACK_MIN_PX,
+      attackMethod: 'ranged' as const,
     };
     const melee = {
       id: 'melee',
       x: 50,
       isEnemy: false,
       role: 'attacker' as const,
-      rangePx: 0,
+      attackMethod: 'melee' as const,
     };
     expect(compareSpriteDrawOrder(supporter, defender)).toBeLessThan(0);
     expect(compareSpriteDrawOrder(defender, ranged)).toBeLessThan(0);
@@ -148,7 +147,7 @@ describe('spriteDrawOrder', () => {
         x: 0,
         isEnemy: false,
         role: 'attacker',
-        rangePx: RANGED_ATTACK_MIN_PX,
+        attackMethod: 'ranged',
       }),
     ).toBe(2);
     expect(
@@ -157,7 +156,7 @@ describe('spriteDrawOrder', () => {
         x: 0,
         isEnemy: false,
         role: 'attacker',
-        rangePx: 0,
+        attackMethod: 'melee',
       }),
     ).toBe(3);
   });

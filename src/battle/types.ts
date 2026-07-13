@@ -1,18 +1,6 @@
 export type Role = "defender" | "attacker" | "supporter";
 export type ClassId = string;
 export type FormationRow = "front" | "back";
-/** 遠隔帯の下限（px）。`rangePx >= RANGED_ATTACK_MIN_PX` が遠隔帯（100 含む） */
-export const RANGED_ATTACK_MIN_PX = 100;
-/** {@link RANGED_ATTACK_MIN_PX} の別名（遠距離判定閾値） */
-export const LONG_RANGE_THRESHOLD_PX = RANGED_ATTACK_MIN_PX;
-/** 近接帯の上限（px）。rangePx < RANGED_ATTACK_MIN_PX */
-export const MELEE_RANGE_MAX_PX = RANGED_ATTACK_MIN_PX - 1;
-/** @deprecated 互換用。近接帯上限 = MELEE_RANGE_MAX_PX */
-export const RANGED_ATTACK_THRESHOLD_PX = MELEE_RANGE_MAX_PX;
-
-export function isMeleeRangePx(rangePx: number): boolean {
-  return rangePx < RANGED_ATTACK_MIN_PX;
-}
 
 /** @deprecated traits.rangePx を使用 */
 export type AttackRange = "melee" | "ranged";
@@ -114,7 +102,7 @@ export interface ClassPreset extends CombatStats {
   summary?: ClassLocaleText;
   /** 編成 UI 概要の短い戦闘傾向タグ（任意） */
   featureTags?: ClassFeatureTags;
-  /** 実行時導出（role + traits.rangePx）。classes.json には保存しない */
+  /** クラスマスタの前衛/後衛（classes.json 正本） */
   formationRow?: FormationRow;
   traits: NormalizedEntityTraits;
   /** 未指定時は `{id}_basic_attack` */
@@ -1877,6 +1865,8 @@ export interface CombatantSnapshot {
   res: number;
   role?: Role;
   rangePx: number;
+  /** 解決済み通常攻撃の attackMethod（描画タイブレーク用） */
+  basicAttackMethod?: AttackMethod;
   /** 現在の実効射程（effect.range も含めた最大値） */
   effectiveRangePx: number;
   damageType: DamageType;

@@ -382,7 +382,7 @@ resolveApproachBattleX
   → matchesAttackType（attackType.ranged: rangePx >= 100 + excludeRoles 任意）
 ```
 
-- 正本定数: `RANGED_ATTACK_MIN_PX = 100`（`src/battle/types.ts`）。`rangePx >= 100` が遠隔帯（100 含む）。
+- 距離は連続 `rangePx` / `effectiveRangePx`。分類は解決済み `attackMethod`。
 - 弓術士 P2: `{ kind: "attackType", ranged: true, excludeRoles: ["supporter"] }`（`at_ranger_passive_2`）。
 - P3 特効・P4 二の矢も **同じ attackType 条件**（`at_ranger_passive_3` / `_4`）。
 - `excludeRoles` 未指定の既存 `attackType.ranged`（例: `df_duelist_active_2`）は従来どおり `role` を見ない。

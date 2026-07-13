@@ -1,9 +1,4 @@
-import type { DamageType, EntityTraits, NormalizedEntityTraits } from '../types.ts';
-import { RANGED_ATTACK_MIN_PX } from '../types.ts';
-
-export function isRangedAttack(rangePx: number): boolean {
-  return rangePx >= RANGED_ATTACK_MIN_PX;
-}
+import type { EntityTraits, NormalizedEntityTraits } from '../types.ts';
 
 export function normalizeEntityTraits(
   raw: EntityTraits | undefined,

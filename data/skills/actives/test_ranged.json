@@ -1,0 +1,25 @@
+[
+  {
+    "id": "test_ranged_basic_attack",
+    "name": "test_ranged_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ],
+    "attackMethod": "ranged"
+  }
+]

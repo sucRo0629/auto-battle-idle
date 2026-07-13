@@ -759,7 +759,7 @@ A4 **早鳴りの印** は戦場の全乾印・坤印の残り時間を短縮し
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 付与対象      | 常に自身（`target: self`）                                                                                                                                                             |
 | 射程          | `resolveCounterRangePx(counter.range, 持有者)` — 未指定・`0` = 持有者 `traits.rangePx`。正の値は絶対 px。距離判定は `isWithinSkillRange`（`|getBattleX(actor) - getBattleX(target)| <= effectiveRangePx`）で行う |
-| 種別フィルタ  | `matchesCounterAttackRangeBand` → `isRangedAttack(attackRangePx)`。距離計算とは分離し、近接帯/遠隔帯の分類のみで使う                                                                   |
+| 種別フィルタ  | `matchesCounterAttackMethod` → 被攻撃の `attackMethod`（`melee` / `ranged`）。距離計算とは分離                                                                   |
 | レスポンス    | `damage` / `debuff` / `dot` / `stun` / `knockback` から 1 種別以上。被攻撃 1 回で選択種別を同時適用                                                                                    |
 | トリガー      | 直接 `damage` および DoT tick                                                                                                                                                          |
 | 非トリガー    | 回避・0 ダメージ・反撃ダメージ（連鎖反撃なし）・射程外                                                                                                                                 |

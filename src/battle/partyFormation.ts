@@ -1,5 +1,4 @@
-import type { DamageType, FormationRow, Role } from './types.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
+import type { AttackMethod, DamageType, FormationRow, Role } from './types.ts';
 import {
   BATTLE_ALLY_MARCH_VISIBLE_MIN_X,
   resolvePartyDeployTravelPx,
@@ -13,28 +12,30 @@ export interface PartyFormationUnit {
   rangePx: number;
   damageType: DamageType;
   formationRow?: FormationRow;
+  attackMethod?: AttackMethod;
 }
 
 /** クラスマスタの formationRow 既定（classes-and-skills.md §配置） */
 export function resolveClassFormationRow(
   role: Role,
-  rangePx: number,
+  explicitFormationRow?: FormationRow,
 ): FormationRow {
+  if (explicitFormationRow !== undefined) return explicitFormationRow;
   if (role === 'defender') return 'front';
-  return rangePx < RANGED_ATTACK_MIN_PX ? 'front' : 'back';
+  return 'back';
 }
 
-/** 前列の近接最前帯: attacker/defender かつ rangePx < RANGED_ATTACK_MIN_PX */
+/** 前列の近接最前帯: attacker/defender かつ attackMethod === melee */
 export function isMeleeFormationSlot(unit: PartyFormationUnit): boolean {
   return (
-    unit.rangePx < RANGED_ATTACK_MIN_PX &&
+    unit.attackMethod === 'melee' &&
     (unit.role === 'attacker' || unit.role === 'defender')
   );
 }
 
 /**
  * 隊形スロット比較（§3.3）: 射程昇順 → id 辞書順。
- * formationRow・近接帯は X 配置に使わない。
+ * formationRow・attackMethod は X 配置に使わない。
  */
 export function comparePartyFormationSlot(
   a: PartyFormationUnit,

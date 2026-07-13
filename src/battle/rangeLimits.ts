@@ -4,28 +4,36 @@ import {
 } from './battleConstants.ts';
 import { COMBAT_SAFE_RIGHT } from './combatSafeArea.ts';
 import type { AppLocale } from '../i18n/locale.ts';
-import {
-  isMeleeRangePx,
-  MELEE_RANGE_MAX_PX,
-  RANGED_ATTACK_MIN_PX,
-} from './types.ts';
+import type { AttackMethod } from './types.ts';
 
 /** traits.rangePx / スキル effect.range の設定上限（px）。安全領域左端から右端まで。 */
 export const CONFIGURABLE_RANGE_PX_MAX =
   COMBAT_SAFE_RIGHT - PARTY_FORMATION_LEFT_ANCHOR;
 
-/** traits.rangePx の近接帯 / 遠隔帯ラベル */
+/** 編集 UI 向け attackMethod ラベル（表示専用） */
+export function formatAttackMethodLabel(
+  attackMethod: AttackMethod | undefined,
+  locale: AppLocale = 'ja',
+): string {
+  if (attackMethod === 'ranged') {
+    return locale === 'en' ? 'Ranged' : '遠隔';
+  }
+  if (attackMethod === 'melee') {
+    return locale === 'en' ? 'Melee' : '近接';
+  }
+  return locale === 'en' ? '—' : '—';
+}
+
+/** @deprecated use {@link formatAttackMethodLabel} */
 export function formatRangeBand(
   rangePx: number,
   locale: AppLocale = 'ja',
 ): string {
-  if (locale === 'en') {
-    return isMeleeRangePx(rangePx) ? 'Melee band' : 'Ranged band';
-  }
-  return isMeleeRangePx(rangePx) ? '近接帯' : '遠隔帯';
+  void rangePx;
+  return locale === 'en' ? '—' : '—';
 }
 
-/** @deprecated use {@link formatRangeBand} */
+/** @deprecated use {@link formatAttackMethodLabel} */
 export function formatRangeBandJa(rangePx: number): string {
   return formatRangeBand(rangePx, 'ja');
 }
@@ -33,14 +41,14 @@ export function formatRangeBandJa(rangePx: number): string {
 /** エディタ補足・バリデーション文言用 */
 export function configurableRangeHintJa(): string {
   return (
-    `0〜${CONFIGURABLE_RANGE_PX_MAX} px（近接帯 0〜${MELEE_RANGE_MAX_PX}、遠隔帯 ${RANGED_ATTACK_MIN_PX} 以上）` +
+    `0〜${CONFIGURABLE_RANGE_PX_MAX} px の連続値（距離計算・停止位置に使用）` +
     '。+数値で traits.rangePx に加算'
   );
 }
 
-/** エディタ: 反撃可能対象の近接／遠隔帯補足 */
+/** エディタ: 反撃可能対象の近接／遠隔補足 */
 export function counterAttackRangeBandEditorHintJa(): string {
-  return `未選択 = 全区間。遠隔 = 実効射程が遠隔帯（${RANGED_ATTACK_MIN_PX} px 以上）。`;
+  return '未選択 = 全区間。遠隔 = 被攻撃の attackMethod が ranged。';
 }
 
 /** エディタ: target.attackType の遠隔補足 */

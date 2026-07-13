@@ -19,7 +19,7 @@ import {
 import type { SkillSequenceRunner } from "../skills/skillSequence.ts";
 import {
   DEFAULT_MELEE_RANGE_PX,
-  RANGED_ATTACK_MIN_PX,
+  type AttackMethod,
   type CombatantSnapshot,
   type CombatantState,
   type GameData,
@@ -402,12 +402,16 @@ export function enemyRangePx(enemy: { rangePx?: number }): number {
   return enemy.rangePx ?? DEFAULT_MELEE_RANGE_PX;
 }
 
-export function isShortRangeEnemy(enemy: { rangePx?: number }): boolean {
-  return enemyRangePx(enemy) < RANGED_ATTACK_MIN_PX;
+export function isShortRangeEnemy(enemy: {
+  basicAttackMethod?: AttackMethod;
+}): boolean {
+  return enemy.basicAttackMethod !== 'ranged';
 }
 
-export function isLongRangeEnemy(enemy: { rangePx?: number }): boolean {
-  return enemyRangePx(enemy) >= RANGED_ATTACK_MIN_PX;
+export function isLongRangeEnemy(enemy: {
+  basicAttackMethod?: AttackMethod;
+}): boolean {
+  return enemy.basicAttackMethod === 'ranged';
 }
 
 /** Engaged window: short-range enemies dead, long-range alive, allies alive. */

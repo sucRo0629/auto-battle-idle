@@ -16,7 +16,7 @@ import {
   TICK_DT,
 } from './test/battleFieldSpec.harness.ts';
 import { resolveAllPlayerApproachBattleX } from './resolveApproachBattleX.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
+import { resolveUnitAttackMethod } from './data/resolveUnitAttackMethod.ts';
 
 const levelCurves = loadLevelCurves(levelCurvesJson);
 
@@ -104,13 +104,13 @@ describe('ranged_test ally left drift', () => {
     expect(minX).toBeGreaterThan(SCREEN_MIN_X);
   });
 
-  it('ranged_test spawn bands: guardian short, hunter long', () => {
-    const enemies = createEnemiesForStage(loadGameData(), 'ranged_test', 0, levelCurves);
-    expect(enemies.find((e) => e.classId === 'df_guardian')!.traits.rangePx).toBeLessThan(
-      RANGED_ATTACK_MIN_PX,
-    );
+  it('ranged_test spawn bands: guardian melee, hunter ranged', () => {
+    const gameData = loadGameData();
+    const enemies = createEnemiesForStage(gameData, 'ranged_test', 0, levelCurves);
+    const guardian = enemies.find((e) => e.classId === 'df_guardian')!;
+    expect(resolveUnitAttackMethod(guardian, gameData)).not.toBe('ranged');
     for (const hunter of enemies.filter((e) => e.classId === 'at_hunter')) {
-      expect(hunter.traits.rangePx).toBeGreaterThanOrEqual(RANGED_ATTACK_MIN_PX);
+      expect(resolveUnitAttackMethod(hunter, gameData)).toBe('ranged');
     }
   });
 });

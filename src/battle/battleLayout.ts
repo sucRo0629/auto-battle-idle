@@ -1,9 +1,11 @@
 import type {
   CombatantState,
+  DamageType,
   FormationRow,
+  GameData,
   Role,
+  AttackMethod,
 } from './types.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import {
   resolveApproachFormationRangePx,
   resolveFormationRangePx,
@@ -12,6 +14,11 @@ import {
   PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
   type PlayerRearAssaultBattleContext,
 } from './combatPosition.ts';
+import {
+  isMeleeAttackMethod,
+  isRangedAttackMethod,
+  resolveUnitAttackMethod,
+} from './data/resolveUnitAttackMethod.ts';
 import {
   CANVAS_W,
   ENGAGED_VISUAL_TUNING,
@@ -33,7 +40,6 @@ import {
   partyFormationDepthPx,
   type PartyFormationUnit,
 } from './partyFormation.ts';
-import type { DamageType } from './types.ts';
 
 export interface PlayerPlacementInput {
   id: string;
@@ -41,6 +47,7 @@ export interface PlayerPlacementInput {
   formationRow: FormationRow;
   rangePx: number;
   damageType?: DamageType;
+  attackMethod?: AttackMethod;
   isAlive: boolean;
 }
 
@@ -59,9 +66,19 @@ export const FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX = 3;
 /** 接敵深度の列内ステップ（px） */
 export const FORMATION_DEPTH_STEP_PX = FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
 
-/** 接敵 layout: effectiveRangePx が遠隔帯（formation depth + 凍結ターゲット） */
-export function isEngagedFormationRangePx(effectiveRangePx: number): boolean {
-  return effectiveRangePx >= RANGED_ATTACK_MIN_PX;
+/** 接敵 layout: attackMethod が ranged（formation depth + 凍結ターゲット） */
+export function isRangedEngagedFormation(
+  attackMethod: AttackMethod | undefined,
+): boolean {
+  return isRangedAttackMethod(attackMethod);
+}
+
+/** @deprecated use {@link isRangedEngagedFormation} */
+export function isEngagedFormationRangePx(
+  _effectiveRangePx: number,
+  attackMethod?: AttackMethod,
+): boolean {
+  return isRangedEngagedFormation(attackMethod);
 }
 
 interface Placement {
@@ -89,6 +106,7 @@ function toPartyFormationUnit(
     rangePx: input.rangePx,
     damageType: input.damageType ?? 'physical',
     formationRow: input.formationRow,
+    attackMethod: input.attackMethod,
   };
 }
 
@@ -211,7 +229,7 @@ function minContactEnemyRangePx(
   enemies: EngagedLayoutEnemyInput[],
 ): number {
   const contact = enemies.filter(
-    (e) => e.isAlive && !isEngagedFormationRangePx(e.rangePx),
+    (e) => e.isAlive && !isRangedEngagedFormation(e.attackMethod),
   );
   if (contact.length === 0) return 0;
   return Math.min(...contact.map((e) => e.rangePx));
@@ -481,7 +499,7 @@ function resolveEngagedContactEnemyBattleX(
   frontLineTargetX: number,
 ): Map<string, number> {
   const contact = enemies
-    .filter((e) => e.isAlive && !isEngagedFormationRangePx(e.rangePx))
+    .filter((e) => e.isAlive && !isRangedEngagedFormation(e.attackMethod))
     .sort(compareEngagedContactEnemyOrder);
   if (contact.length === 0) return new Map();
 
@@ -525,6 +543,7 @@ export interface EngagedLayoutEnemyInput {
   id: string;
   isAlive: boolean;
   rangePx: number;
+  attackMethod?: AttackMethod;
   battleX: number;
   /** 接敵開始時に固定する射程 px 奥行きスロット */
   engagedMeleeDepthSlot?: number;
@@ -763,7 +782,7 @@ export function computeEngagedLayout(
   const enemyBattleX = new Map<string, number>();
   for (const enemy of ctx.enemies) {
     if (!enemy.isAlive) continue;
-    if (isEngagedFormationRangePx(enemy.rangePx)) {
+    if (isRangedEngagedFormation(enemy.attackMethod)) {
       const targetX = ctx.resolveRangedTargetBattleX(enemy.id);
       if (targetX === null) continue;
       const rangeStopX = computeEnemyStopX(enemy.rangePx, targetX, 0);
@@ -785,7 +804,7 @@ export function computeEngagedLayout(
     [...enemyBattleX.entries()]
       .filter(([id]) => {
         const enemy = ctx.enemies.find((e) => e.id === id);
-        return enemy !== undefined && isEngagedFormationRangePx(enemy.rangePx);
+        return enemy !== undefined && isRangedEngagedFormation(enemy.attackMethod);
       })
       .map(([id, x]) => ({
         id,
@@ -800,7 +819,7 @@ export function computeEngagedLayout(
 
   let maxContactBattleX = Number.NEGATIVE_INFINITY;
   for (const enemy of ctx.enemies) {
-    if (!enemy.isAlive || isEngagedFormationRangePx(enemy.rangePx)) continue;
+    if (!enemy.isAlive || isRangedEngagedFormation(enemy.attackMethod)) continue;
     const contactX = enemyBattleX.get(enemy.id);
     if (contactX !== undefined) {
       maxContactBattleX = Math.max(maxContactBattleX, contactX);
@@ -809,7 +828,7 @@ export function computeEngagedLayout(
   if (Number.isFinite(maxContactBattleX)) {
     const rangedRearCap = maxContactBattleX + enemyRangedRearGap();
     for (const enemy of ctx.enemies) {
-      if (!enemy.isAlive || !isEngagedFormationRangePx(enemy.rangePx)) continue;
+      if (!enemy.isAlive || !isRangedEngagedFormation(enemy.attackMethod)) continue;
       const ideal = enemyBattleX.get(enemy.id);
       if (ideal === undefined) continue;
       enemyBattleX.set(enemy.id, Math.max(ideal, rangedRearCap));
@@ -876,6 +895,7 @@ interface EngagedFormationOverlapOptions {
 
 function resolveEngagedMeleeOverlapClusterIds(
   players: CombatantState[],
+  gameData: GameData,
 ): Set<string> {
   const living = players.filter((player) => player.isAlive);
   if (living.length === 0) return new Set();
@@ -885,7 +905,7 @@ function resolveEngagedMeleeOverlapClusterIds(
     living
       .filter(
         (player) =>
-          resolveApproachFormationRangePx(player) < RANGED_ATTACK_MIN_PX &&
+          isMeleeAttackMethod(resolveUnitAttackMethod(player, gameData)) &&
           player.battleX >= maxX - depthLimit,
       )
       .map((player) => player.id),
@@ -895,6 +915,7 @@ function resolveEngagedMeleeOverlapClusterIds(
 export function resolveEngagedFormationOverlaps(
   players: CombatantState[],
   isOnField: (unit: CombatantState) => boolean,
+  gameData: GameData,
   isInSkillMotion?: (id: string) => boolean,
   options?: EngagedFormationOverlapOptions & {
     battleContext?: PlayerRearAssaultBattleContext;
@@ -912,12 +933,12 @@ export function resolveEngagedFormationOverlaps(
       (battleContext === undefined ||
         !isPlayerRearAssaultAccess(player, battleContext)),
   );
-  const overlapIds = resolveEngagedMeleeOverlapClusterIds(onFieldLiving);
+  const overlapIds = resolveEngagedMeleeOverlapClusterIds(onFieldLiving, gameData);
   const frontUnits = onFieldLiving.filter((player) => overlapIds.has(player.id));
   if (frontUnits.length < 2) return;
 
-  const allContactBand = frontUnits.every(
-    (player) => resolveApproachFormationRangePx(player) < RANGED_ATTACK_MIN_PX,
+  const allContactBand = frontUnits.every((player) =>
+    isMeleeAttackMethod(resolveUnitAttackMethod(player, gameData)),
   );
 
   if (allContactBand) {

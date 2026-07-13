@@ -5,13 +5,15 @@ import type {
   MoveSkillEffect,
   SkillCooldown,
 } from './types.ts';
-import { isMeleeRangePx } from './types.ts';
+import {
+  isMeleeAttackMethod,
+  resolveUnitAttackMethod,
+} from './data/resolveUnitAttackMethod.ts';
 import {
   BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
   BATTLE_ENEMY_VISIBLE_MAX_X,
   DEFAULT_SURROUND_AURA_RADIUS_PX,
   resolvePartyDeployTravelPx,
-  enemyRangedRearGap,
   SPRITE_GAP,
   resolveEnemyMarchEngageGap,
   resolveEnemySpawnBattleX,
@@ -44,7 +46,7 @@ export function isMeleeUnit(
   unit: CombatantState,
   gameData: GameData,
 ): boolean {
-  return isMeleeRangePx(resolveMaxEffectiveRangePx(unit, gameData));
+  return isMeleeAttackMethod(resolveUnitAttackMethod(unit, gameData));
 }
 
 export function getBattleX(unit: CombatantState): number {
@@ -67,18 +69,6 @@ export function getEnemyLeadingContactX(
   enemies: CombatantState[],
 ): number | null {
   return getEnemyContactX(enemies);
-}
-
-/** 最前線生存近接敵の battleX */
-export function getMeleeEnemyContactX(
-  enemies: CombatantState[],
-  gameData: GameData,
-): number | null {
-  const living = enemies.filter(
-    (e) => e.isAlive && isMeleeUnit(e, gameData),
-  );
-  if (living.length === 0) return null;
-  return Math.min(...living.map((e) => e.battleX));
 }
 
 function livingPlayersOnLeadingRow(
@@ -588,34 +578,11 @@ export function resolveEngageLineX(
   return resolveEnemyMarchCapX(frontEnemy, players, gameData, enemies);
 }
 
-/** 近接前線より後方（battleX 大）に ranged を置く下限 */
-export function resolveRangedRearBattleXCap(
-  enemies: CombatantState[],
-  gameData: GameData,
-  minGap: number = enemyRangedRearGap(5),
-): number | null {
-  const meleeContact = getMeleeEnemyContactX(enemies, gameData);
-  if (meleeContact === null) return null;
-  return meleeContact + minGap;
-}
-
-function capRangedApproachBehindMelee(
-  enemy: CombatantState,
-  enemies: CombatantState[],
-  gameData: GameData,
-  approachX: number,
-): number {
-  if (isMeleeUnit(enemy, gameData)) return approachX;
-  const rearCap = resolveRangedRearBattleXCap(enemies, gameData);
-  if (rearCap === null) return approachX;
-  return Math.max(approachX, rearCap);
-}
-
 export function resolveEnemyMarchCapX(
   enemy: CombatantState,
   players: CombatantState[],
   gameData: GameData,
-  enemies: CombatantState[] = [],
+  _enemies: CombatantState[] = [],
 ): number | null {
   const playerContact = getPlayerContactX(players);
   const contactPlayer = leadingRowContactPlayer(players);
@@ -624,8 +591,7 @@ export function resolveEnemyMarchCapX(
     resolveMaxEffectiveRangePx(contactPlayer, gameData),
     resolveMaxEffectiveRangePx(enemy, gameData),
   );
-  let cap = playerContact + gap;
-  return capRangedApproachBehindMelee(enemy, enemies, gameData, cap);
+  return playerContact + gap;
 }
 
 export function shouldStartApproach(

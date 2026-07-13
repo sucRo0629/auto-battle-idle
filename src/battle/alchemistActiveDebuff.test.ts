@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from './data/loadGameData.ts';
-import { isMeleeRangePx } from './types.ts';
 
 describe('sp_alchemist_active_1 melee HoT', () => {
-  it('class data uses melee band as front-row supporter', () => {
+  it('class data uses front-row supporter placement', () => {
     const alchemistClass = loadGameData().classRegistry['sp_alchemist'];
-    expect(isMeleeRangePx(alchemistClass?.traits.rangePx ?? 0)).toBe(true);
     expect(alchemistClass?.formationRow).toBe('front');
   });
 

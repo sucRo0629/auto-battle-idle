@@ -1,5 +1,5 @@
-import type { Role } from '../battle/types.ts';
-import { isRangedAttack } from '../battle/data/entityTraits.ts';
+import type { Role, AttackMethod } from '../battle/types.ts';
+import { isRangedAttackMethod } from '../battle/data/resolveUnitAttackMethod.ts';
 
 /** スプライト重なり判定に使う最小フィールド */
 export interface SpriteDrawOrderInput {
@@ -11,6 +11,8 @@ export interface SpriteDrawOrderInput {
   role?: Role;
   /** 敵の重なり順に使う射程。長いほど下層、短いほど上層 */
   rangePx?: number;
+  /** 味方 attacker の近接/遠隔タイブレーク */
+  attackMethod?: AttackMethod;
 }
 
 /**
@@ -29,7 +31,7 @@ export function allyRoleBackDepth(layout: SpriteDrawOrderInput): number {
   const role = layout.role ?? 'attacker';
   if (role === 'supporter') return 0;
   if (role === 'defender') return 1;
-  return isRangedAttack(layout.rangePx ?? 0) ? 2 : 3;
+  return isRangedAttackMethod(layout.attackMethod) ? 2 : 3;
 }
 
 /** 敵のみ: 値が小さいほど下層。射程が長いほど先に描画される。 */

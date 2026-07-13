@@ -197,33 +197,14 @@ effectiveRangePx =
 
 ### 2.7 スプライト描画順（重なり）
 
-Canvas 2D の描画順（先に描いた方が下層）で重なりを決める。実装：`src/render/spriteDrawOrder.ts` → `BattleCanvas.ts`。
+Canvas 2D の描画順（先に描いた方が下層）で重なりを決める。実装：`src/render/spriteVisualDepth.ts`（`assignVisualDepthOffsets`）→ `BattleCanvas.ts`。
 
-| 優先 | ルール                           | 意味                                     |
-| ---- | -------------------------------- | ---------------------------------------- |
-| 1    | **`depthOffsetY` の大きい順に描画** | 画面上で奥（§2.8）のユニットを先に描き、手前が上に重なる（陣営横断） |
-| 2    | **同深度は §2.7 キーでタイブレーク** | 下表のロール帯・射程帯・battleX 奥行き。同深度かつ敵味方では敵を先に描画（味方が上） |
-| 3    | **味方はロール帯で重なり**       | 下表の順で手前に重なる（上→下）          |
-| 4    | **敵内は射程が長い方を先に描画** | 射程の短い敵ほど上に重なる               |
-| 5    | **同一帯内は後方を先に描画**     | 手前に立つユニットが後方ユニットより上   |
+| 優先 | ルール | 意味 |
+| ---- | ------ | ---- |
+| 1 | **`depthOffsetY` の大きい順に描画** | 画面上で奥（§2.8）のユニットを先に描き、手前が上に重なる（陣営横断） |
+| 2 | **同深度のタイブレーク** | `compareSpriteDrawOrder`：`allyRoleBackDepth`（`role` + 解決済み `basicAttackMethod`）、敵は `rangePx` 降順、`factionBackDepth`（`battleX` 奥行き）。敵味方同深度は敵を先に描画（味方が上）。同値は `id` 辞書順 |
 
-**味方のロール帯（手前＝上層 → 奥＝下層）：**
-
-| 手前（上） | ロール帯                  | 判定                                        |
-| ---------- | ------------------------- | ------------------------------------------- |
-| 1          | 近接 `attacker` UI ロール | `role === "attacker"` かつ `rangePx < RANGED_ATTACK_MIN_PX` |
-| 2          | 遠隔 `attacker` UI ロール | `role === "attacker"` かつ `rangePx >= RANGED_ATTACK_MIN_PX` |
-| 3          | ディフェンダー            | `role === "defender"`                       |
-| 4          | `supporter` UI ロール     | `role === "supporter"`                      |
-
-**後方の定義（陣営ごとの battleX 向き）：**
-
-| 陣営         | 後方（下層）                       | 前方（上層）                       |
-| ------------ | ---------------------------------- | ---------------------------------- |
-| プレイヤー側 | 小さい `battleX`（画面左）         | 大きい `battleX`（敵寄り）         |
-| 敵           | 大きい `battleX`（画面右・退却側） | 小さい `battleX`（プレイヤー寄り） |
-
-ソートキーは `assignVisualDepthOffsets` で陣営ごとに `depthOffsetY` を割当（§2.8）。**描画パス**は `depthOffsetY` 降順（奥→手前）。同深度のタイブレークは `compareSpriteDrawOrder`：味方同士は `allyRoleBackDepth`（0〜3 の昇順）、敵同士は `rangePx` の降順（長い方が下層）、同一帯内は `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。敵味方が同深度のときは敵を先に描画（味方が上）。同深度は `id` 辞書順。
+近接/遠隔の分類は `traits.rangePx` 帯ではなく、解決済み通常攻撃の `attackMethod`（`CombatantSnapshot.basicAttackMethod`）を使う。距離計算は連続 `rangePx` / `effectiveRangePx` のみ（[classes-and-skills.md](classes-and-skills.md) §射程）。
 
 ### 2.8 擬似奥行き（Y オフセット）
 
@@ -237,7 +218,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | 描画 Y       | `spriteDrawY = layout.y - depthOffsetY`                                           |
 | 段幅         | `VISUAL_DEPTH_STEP_PX`（10px × スプライト scale）                                 |
 
-実装：`src/render/spriteVisualDepth.ts`（`assignVisualDepthOffsets`）→ `BattleCanvas.ts`、VFX・ポップアップは `spriteDrawY` を参照。§2.7 の描画順と同一キーで深度を決める。
+実装：`src/render/spriteVisualDepth.ts`（`assignVisualDepthOffsets`）→ `BattleCanvas.ts`、VFX・ポップアップは `spriteDrawY` を参照。§2.7 のタイブレークキーと同一。
 
 **背景（§2.8 続き）：** 地面は水平のまま固定。草タイル帯は `MAX_VISUAL_DEPTH_RISE`（最大オフセット 30px + 余白 10px = 40px）だけ上へ延長し、最大奥行きユニットの足元が草の上端に乗らないよう余白を確保。パララックス（`worldOffsetX`）のみ動的。キャンバス上端は `VISUAL_DEPTH_TOP_PAD_PX`（30px）を追加。
 
@@ -364,7 +345,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 ### 4.4 自動接近（`battleX`）
 
 接近（chase）と攻撃停止（attack）は **同じ target 判定系** を共有し、停止距離だけ `effectiveRangePx` で解く（`resolveApproachBattleX.ts`）。defender も例外にせず、全ロール共通で `ChaseTarget → standoff battleX → AttackTarget` の順に扱う。
-`getEnemyContactX` / `getMeleeEnemyContactX` は contact / frontline / clamp / 表示 helper 用で、ロール専用の接近停止正本ではない。
+`getEnemyContactX` は contact / frontline / clamp / 表示 helper 用で、ロール専用の接近停止正本ではない。
 
 **Target Intent 境界:** 接近・攻撃・移動・表示は対象選択の目的が異なる。
 
@@ -683,7 +664,7 @@ CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering:
 
 **戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左・右とも画面マージン + 48px gap。右 HUD 列は Phase 2 以降なし）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`ENEMY_SPAWN_ORIGIN_X` は安全領域右寄り（`COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH × 2/3`）。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
 
-**遠距離判定:** `RANGED_ATTACK_MIN_PX`（= `LONG_RANGE_THRESHOLD_PX`、100）。`rangePx >= 100` が遠隔帯（100 含む）。閾値は `types.ts` の単一定数。
+**距離・分類:** 停止位置・移動量は連続 `rangePx` / `effectiveRangePx` のみ。近接/遠隔の分類は `attackMethod`（[classes-and-skills.md](classes-and-skills.md) §射程）。
 
 **Canvas 外枠:** `battle-canvas` に枠線・下部帯を付けない。編成ボタン・Debug トグルは暫定 / 開発用として `battle-transient-controls-dock`（味方 HUD **右上**・カード列の外、`battleRootLayout.ts` の `BATTLE_TRANSIENT_CONTROLS_TOP`）。Party / Enemy HUD・中央戦場とは混ぜない。プレイヤー Lv 表示は戦闘 HUD から外す。
 

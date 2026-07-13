@@ -27,6 +27,7 @@ const gameData = {
       basic: {
         id: 'basic',
         name: 'basic',
+        attackMethod: 'melee',
         trigger: { kind: 'time', value: 2 },
         effect: [
           {
@@ -110,6 +111,7 @@ describe('battleLayout snapshots', () => {
           id: 'ranged',
           isAlive: true,
           rangePx: 100,
+          attackMethod: 'ranged',
           battleX: 320,
         },
       ],
@@ -241,6 +243,7 @@ describe('battleLayout snapshots', () => {
           id: 'ranged',
           isAlive: true,
           rangePx: 100,
+          attackMethod: 'ranged',
           battleX: 320,
         },
       ],
@@ -378,6 +381,7 @@ describe('resolveEngagedFormationOverlaps', () => {
     resolveEngagedFormationOverlaps(
       [assassin, guardian],
       () => true,
+      gameData as GameData,
       (id) => id === 'as',
     );
     expect(guardian.battleX).toBe(guardianX);
@@ -406,6 +410,7 @@ describe('resolveEngagedFormationOverlaps', () => {
     resolveEngagedFormationOverlaps(
       [warrior, guardian, assassin],
       () => true,
+      gameData as GameData,
       (id) => id === 'as',
     );
     expect(guardian.battleX).toBeGreaterThanOrEqual(warrior.battleX + 3);
@@ -428,6 +433,7 @@ describe('resolveEngagedFormationOverlaps', () => {
     resolveEngagedFormationOverlaps(
       [warrior, guardian],
       () => true,
+      gameData as GameData,
       undefined,
       { maxCorrectionPx: 2 },
     );
@@ -452,6 +458,7 @@ describe('resolveEngagedFormationOverlaps', () => {
     resolveEngagedFormationOverlaps(
       [guardian, assassin],
       () => true,
+      gameData as GameData,
       undefined,
       {
         battleContext: {
@@ -488,6 +495,7 @@ describe('resolveEngagedFormationOverlaps', () => {
     resolveEngagedFormationOverlaps(
       [warrior, guardian],
       () => true,
+      gameData as GameData,
       undefined,
       {
         maxCorrectionPx: 2,

@@ -3,11 +3,9 @@ import {
   applyCounterRetaliation,
   applyPassiveCounterRetaliation,
   isCounterInTriggerRange,
-  matchesCounterAttackRangeBand,
+  matchesCounterAttackMethod,
   resolveCounterRangePx,
 } from './counterEffects.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
-import { parseSkillEffect } from './data/validateGameData.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -15,6 +13,7 @@ import type {
   PassiveSkillDef,
   StatusEffect,
 } from './types.ts';
+import { parseSkillEffect } from './data/validateGameData.ts';
 import { mockCombatant as mockCombatantBase } from './testFixtures.ts';
 
 const passives: Record<string, PassiveSkillDef> = {};
@@ -435,28 +434,28 @@ describe('applyPassiveCounterRetaliation', () => {
   });
 });
 
-describe('matchesCounterAttackRangeBand', () => {
+describe('matchesCounterAttackMethod', () => {
   it('allows all bands when filter is empty', () => {
-    expect(matchesCounterAttackRangeBand(0, {})).toBe(true);
-    expect(matchesCounterAttackRangeBand(RANGED_ATTACK_MIN_PX, {})).toBe(true);
+    expect(matchesCounterAttackMethod('melee', {})).toBe(true);
+    expect(matchesCounterAttackMethod('ranged', {})).toBe(true);
   });
 
   it('filters melee and ranged attacks with OR semantics', () => {
     expect(
-      matchesCounterAttackRangeBand(40, { counterMelee: true }),
+      matchesCounterAttackMethod('melee', { counterMelee: true }),
     ).toBe(true);
     expect(
-      matchesCounterAttackRangeBand(RANGED_ATTACK_MIN_PX, {
+      matchesCounterAttackMethod('ranged', {
         counterMelee: true,
       }),
     ).toBe(false);
     expect(
-      matchesCounterAttackRangeBand(RANGED_ATTACK_MIN_PX, {
+      matchesCounterAttackMethod('ranged', {
         counterRanged: true,
       }),
     ).toBe(true);
     expect(
-      matchesCounterAttackRangeBand(40, {
+      matchesCounterAttackMethod('melee', {
         counterMelee: true,
         counterRanged: true,
       }),
@@ -491,7 +490,7 @@ describe('applyCounterRetaliation range band filter', () => {
       {
         attackKind: 'damage',
         appliedDamage: 10,
-        attackRangePx: RANGED_ATTACK_MIN_PX,
+        attackMethod: 'ranged',
       },
       passives,
       actives,
@@ -528,7 +527,7 @@ describe('applyCounterRetaliation range band filter', () => {
       {
         attackKind: 'damage',
         appliedDamage: 10,
-        attackRangePx: 40,
+        attackMethod: 'melee',
       },
       passives,
       actives,

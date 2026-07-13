@@ -124,11 +124,13 @@ describe('partyFormation', () => {
     );
   });
 
-  it('resolveClassFormationRow follows role and range band defaults', () => {
-    expect(resolveClassFormationRow('defender', 200)).toBe('front');
-    expect(resolveClassFormationRow('attacker', 50)).toBe('front');
-    expect(resolveClassFormationRow('attacker', 100)).toBe('back');
-    expect(resolveClassFormationRow('supporter', 50)).toBe('front');
-    expect(resolveClassFormationRow('supporter', 128)).toBe('back');
+  it('resolveClassFormationRow uses explicit formationRow or role fallback', () => {
+    expect(resolveClassFormationRow('defender', 'front')).toBe('front');
+    expect(resolveClassFormationRow('attacker', 'front')).toBe('front');
+    expect(resolveClassFormationRow('attacker', 'back')).toBe('back');
+    expect(resolveClassFormationRow('supporter', 'front')).toBe('front');
+    expect(resolveClassFormationRow('supporter', 'back')).toBe('back');
+    expect(resolveClassFormationRow('attacker')).toBe('back');
+    expect(resolveClassFormationRow('defender')).toBe('front');
   });
 });

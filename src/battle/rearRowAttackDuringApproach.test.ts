@@ -9,7 +9,7 @@ import {
   resolveEnemyApproachBattleX,
   resolvePlayerApproachBattleX,
 } from './resolveApproachBattleX.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
+import { resolveUnitAttackMethod } from './data/resolveUnitAttackMethod.ts';
 import {
   asBattleEngineInternals,
   createStage1Engine,
@@ -99,7 +99,7 @@ describe('battle-field §4.4 rear row attack during approach', () => {
     const longRangeEnemy = internal.enemies.find(
       (e) =>
         e.isAlive &&
-        (e.traits.rangePx ?? 0) >= RANGED_ATTACK_MIN_PX &&
+        resolveUnitAttackMethod(e, internal.gameData) === 'ranged' &&
         e.name === 'test_ranged',
     );
     expect(archer).toBeDefined();

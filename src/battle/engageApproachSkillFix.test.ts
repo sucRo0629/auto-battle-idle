@@ -6,7 +6,7 @@ import { isWithinSkillRange } from './skills/rangeUtils.ts';
 import { resolveMaxEffectiveRangePx } from './combatPosition.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
-import { isRangedAttack } from './data/entityTraits.ts';
+import { isRangedAttackMethod, resolveUnitAttackMethod } from './data/resolveUnitAttackMethod.ts';
 import { shouldSkipEngagedAutoApproach } from './resolveApproachBattleX.ts';
 import {
   asBattleEngineInternals,
@@ -204,7 +204,7 @@ describe('engage approach skill fixes', () => {
         onDamageApplied: (actor, target, amount) => {
           if (
             actor.isEnemy &&
-            isRangedAttack(actor.traits.rangePx ?? 0) &&
+            isRangedAttackMethod(resolveUnitAttackMethod(actor, gameData)) &&
             target.isEnemy === false &&
             amount > 0
           ) {

@@ -1,5 +1,4 @@
 import type { ClassId, ClassPreset, GameData } from '../types.ts';
-import { RANGED_ATTACK_MIN_PX } from '../types.ts';
 import type { RangerBasicAttackDiagnostics } from './rangerBasicAttackDiagnostic.ts';
 
 /** Demo enemy classes that at_ranger is designed to prioritize (back / ranged band). */
@@ -78,8 +77,7 @@ export function isRangerPriorityEnemyClass(
   const preset = classRegistry?.[classId];
   if (!preset) return false;
   if (preset.formationRow === 'back') return true;
-  const rangePx = preset.traits?.rangePx ?? 0;
-  return rangePx >= RANGED_ATTACK_MIN_PX;
+  return false;
 }
 
 function sumRecordValues(record: Partial<Record<string, number>>): number {

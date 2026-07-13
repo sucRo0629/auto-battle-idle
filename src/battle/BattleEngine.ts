@@ -27,6 +27,7 @@ import {
 } from "./damageDelay.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveBasicAttackSkillIdFromGameData } from "./data/resolveCombatModuleBasic.ts";
+import { resolveUnitAttackMethod } from "./data/resolveUnitAttackMethod.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
   getEnemyContactX,
@@ -220,7 +221,7 @@ export interface BattleEngineOptions {
       statusId?: string;
       isCounterDamage?: boolean;
       hpDamage?: number;
-      attackRangePx?: number;
+      attackMethod?: import('./types.ts').AttackMethod;
       didBlock?: boolean;
       barrierHpBefore?: number;
       barrierDamage?: number;
@@ -313,7 +314,7 @@ export class BattleEngine {
       statusId?: string;
       isCounterDamage?: boolean;
       hpDamage?: number;
-      attackRangePx?: number;
+      attackMethod?: import('./types.ts').AttackMethod;
       didBlock?: boolean;
       barrierHpBefore?: number;
       barrierDamage?: number;
@@ -402,7 +403,7 @@ export class BattleEngine {
       statusId?: string;
       isCounterDamage?: boolean;
       hpDamage?: number;
-      attackRangePx?: number;
+      attackMethod?: import('./types.ts').AttackMethod;
       didBlock?: boolean;
       barrierHpBefore?: number;
       barrierDamage?: number;
@@ -447,7 +448,7 @@ export class BattleEngine {
         attackKind: meta.attackKind,
         appliedDamage: amount,
         isCounterDamage: meta.isCounterDamage,
-        attackRangePx: meta.attackRangePx,
+        attackMethod: meta.attackMethod,
       };
       const counterBeforeById = this.captureBattleXDebugBefore([
         ...this.players,
@@ -1152,6 +1153,7 @@ export class BattleEngine {
           role: ally.role,
           formationRow: ally.formationRow,
           rangePx: resolveFormationRangePx(ally),
+          attackMethod: resolveUnitAttackMethod(ally, this.gameData),
           isAlive: ally.isAlive,
           battleX: ally.battleX,
         })),
@@ -1159,6 +1161,7 @@ export class BattleEngine {
         id: enemy.id,
         isAlive: enemy.isAlive,
         rangePx: resolveMaxEffectiveRangePx(enemy, this.gameData),
+        attackMethod: resolveUnitAttackMethod(enemy, this.gameData),
         battleX: enemy.battleX,
         engagedMeleeDepthSlot: enemy.engagedMeleeDepthSlot,
       })),
@@ -1979,6 +1982,7 @@ export class BattleEngine {
       res: c.res,
       role: c.isEnemy ? undefined : c.role,
       rangePx: c.traits.rangePx,
+      basicAttackMethod: resolveUnitAttackMethod(c, this.gameData),
       effectiveRangePx: resolveMaxEffectiveRangePx(c, this.gameData),
       damageType: c.traits.damageType,
       basicAttackVfx: c.traits.basicAttackVfx,
@@ -2159,6 +2163,7 @@ export class BattleEngine {
       resolveEngagedFormationOverlaps(
         this.players,
         (unit) => this.isOnBattlefield(unit),
+        this.gameData,
         (id) =>
           this.skillSequenceRunner.isActorInSkillMotion(id) ||
           this.skillSequenceRunner.isActorUseLockPauseApproach(id),
@@ -2462,7 +2467,7 @@ export class BattleEngine {
         skillId: effect.skillId,
         statusId: effect.id,
         hpDamage: damageResult.hpDamage,
-        attackRangePx: resolveHostileEngageRangePx(source.traits.rangePx),
+        attackMethod: resolveUnitAttackMethod(source, this.gameData),
         barrierHpBefore,
         barrierDamage: damageResult.barrierDamage,
       });

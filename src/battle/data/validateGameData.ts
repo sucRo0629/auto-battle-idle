@@ -5433,8 +5433,10 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
     const summary = parseClassSummary(obj.summary, context);
     const featureTags = parseClassFeatureTags(obj.featureTags, `${context}.featureTags`);
     const traitsRaw = parseEntityTraits(obj.traits, `${context}.traits`);
-    // legacy JSON フィールド — 読み込み時は無視し role + rangePx から導出
-    const formationRow = resolveClassFormationRow(role, traitsRaw.rangePx ?? 0);
+    const formationRow =
+      obj.formationRow === undefined
+        ? resolveClassFormationRow(role)
+        : requireEnum(obj, 'formationRow', context, FORMATION_ROWS_SET);
     const maxHp = requireNumber(obj, 'maxHp', context);
     const atk = requireNumber(obj, 'atk', context);
     const def = requireNumber(obj, 'def', context);

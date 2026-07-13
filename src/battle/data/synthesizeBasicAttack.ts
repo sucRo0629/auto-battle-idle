@@ -6,7 +6,6 @@ import type {
   NormalizedEntityTraits,
   ResourceAmountSpec,
 } from '../types.ts';
-import { RANGED_ATTACK_MIN_PX } from '../types.ts';
 
 export const DEFAULT_BASIC_ATTACK_INTERVAL_SEC = 2;
 
@@ -25,11 +24,10 @@ function synthesizedDamageEffect(
 }
 
 function inferAttackMethodFromTraits(
-  traits: NormalizedEntityTraits,
   primaryEffectType: string | undefined,
 ): AttackMethod | undefined {
   if (primaryEffectType !== 'damage') return undefined;
-  return traits.rangePx >= RANGED_ATTACK_MIN_PX ? 'ranged' : 'melee';
+  return 'melee';
 }
 
 export function synthesizeBasicAttackSkill(params: {
@@ -65,7 +63,6 @@ export function synthesizeBasicAttackSkill(params: {
 
   if (!jsonOverride) {
     const attackMethod = inferAttackMethodFromTraits(
-      traits,
       synthesized.effect[0]?.type,
     );
     return attackMethod !== undefined
@@ -81,7 +78,7 @@ export function synthesizeBasicAttackSkill(params: {
   const primaryType = primaryEffect?.type;
   const attackMethod =
     jsonOverride?.attackMethod ??
-    inferAttackMethodFromTraits(traits, primaryType);
+    inferAttackMethodFromTraits(primaryType);
 
   const merged: ActiveSkillDef = {
     ...synthesized,

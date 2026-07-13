@@ -1,5 +1,31 @@
-import type { ActiveSkillDef, AttackMethod, CombatantState, GameData } from '../types.ts';
+import type {
+  ActiveSkillDef,
+  AttackMethod,
+  ClassPreset,
+  CombatantState,
+  GameData,
+} from '../types.ts';
 import { isCombatModuleBasicSkillId } from './resolveCombatModuleBasic.ts';
+
+export function isMeleeAttackMethod(
+  attackMethod: AttackMethod | undefined,
+): boolean {
+  return attackMethod !== 'ranged';
+}
+
+export function isRangedAttackMethod(
+  attackMethod: AttackMethod | undefined,
+): boolean {
+  return attackMethod === 'ranged';
+}
+
+export function resolvePresetBasicAttackMethod(
+  preset: Pick<ClassPreset, 'basicAttackSkillId'>,
+  skillRegistry: Pick<GameData['skillRegistry'], 'actives'>,
+): AttackMethod | undefined {
+  const skill = skillRegistry.actives[preset.basicAttackSkillId];
+  return resolveSkillAttackMethod(skill);
+}
 
 export function resolveBasicSlotSkillId(
   unit: CombatantState,
