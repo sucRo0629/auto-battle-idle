@@ -955,7 +955,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 Defender は共通して「前列で被害入口を作る」役割を持つが、初期 passive は全員同一の block にしない。Lv0 passive は 2 枠までであり、各 Defender の受け口設計に合わせて分ける。
 
-- Guardian は、`role: defender` と敵の default ターゲット（[combat.md](combat.md) §敵の単体ターゲット選定）により単体の主受け口となる main tank。`df_guardian_passive_1` の block 等で一点を維持する
+- Guardian は、`role: defender` と敵対デフォルトターゲット（[combat.md](combat.md) §敵対単体ターゲット選定）により単体の主受け口となる main tank。`df_guardian_passive_1` の block 等で一点を維持する
 - Paladin は、front 全体の被害分担を安定させる shared tank。自己 block（盾受け）ではなく、**護法陣**（半径 50px `damageReduction` aura）+ 前列 block 付与を初期 passive の柱にする。block は Lv0 では物理直接ダメージ対策に留め、魔法も block 可能にする拡張は後半 passive 候補とする
 - Duelist は、被弾を control / counter へ変換する local tank
 
@@ -1790,7 +1790,7 @@ Conductor は自身でダメージを与えるキャスターではない。
 
 `formationRow` で列を決定：`front` → `back`（左＝敵側）。
 
-敵のデフォルト単体ターゲットは [combat.md](combat.md) §敵の単体ターゲット選定 — 生存 `defender` がいればその中の最近傍、いなければプール内最近傍。近接 Kill / Flow が前列にいても、defender ロールが単体の主受け口になる。
+敵対単体の **デフォルト** は [combat.md](combat.md) §敵対単体ターゲット選定 — 相手戦線で最前の `defender` 優先、いなければ最前キャラ。近接 Kill / Flow が前列にいても、defender ロールが単体の主受け口になる。
 
 同一 `formationRow` 内の X 深度（左＝後方、右＝前方）は [battle-field.md](battle-field.md) §2.6（`partyFormation.ts` の近接帯深度）を正とする。
 
@@ -2255,11 +2255,29 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 
 effect・パッシブのターゲットは構造化オブジェクト `target` で指定する。読み込み時に旧 `targetRule` 文字列は正規化される（書き込みは `target` のみ）。
 
+### エディタでの選び方（2 種類）
+
+スキルエディタ・パッシブエディタで敵対単体の狙い方を設定するとき、UI は次の **2 モード** に分ける（実装は段階的に `SkillEditorStep` / `skillEditorCombatFields` を追従）。
+
+| モード | 意味 | データ |
+| ------ | ---- | ------ |
+| **デフォルト** | [combat.md](combat.md) §敵対単体ターゲット選定の共通ルール（相手戦線の最前・defender 優先） | `target` 未指定、または `distance/enemy/nearest` のみ（優先条件なし） |
+| **優先ターゲット** | 兵科固有の条件でプールを絞り込み | `targetRuleOverride` または effect `target`（`stat` / `attackType` / `status` 等） |
+
+**例外（デフォルト列に含めない）:**
+
+| 用途 | 正本 |
+| ---- | ---- |
+| 味方回復（ヒーラー basic 等） | **デフォルト** = HP 割合が最も低い負傷味方（[combat.md](combat.md) §回復 PHT）。敵対デフォルトとは別 UI ラベル |
+| `move` の MoveAnchor | 使用者距離・敵前衛 min 等。AttackTarget デフォルトとは別 |
+
+優先ターゲットで候補 0 のときは、毎 tick 敵対デフォルトへフォールバックする。
+
 ### 種別一覧
 
 | `kind`       | 説明                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false）                                                                                                                                                |
+| `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。**敵対単体 AttackTarget のデフォルト**は `distance/enemy/nearest` だが、実行時は [combat.md](combat.md) §敵対単体ターゲット選定（相手戦線の最前）に解決する。`order: nearest` を「使用者からの距離」や「編成の奥」と解釈しない。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false） |
 | `stat`       | `side` + `stat`（hp/maxHp/atk/def/res）+ `order`（highest/lowest/ratio）。`stat: hp` + `lowest` = 現在 HP 絶対値（`unit.hp`）最小（例: `lowestHpEnemy` / 双刃士 P1）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外。`poolFromEffectIndex`（任意）= 同一スキル内の先行 effect 命中プール内だけで stat 選定 |
 | `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線                                                                                                                                                                                                                                                   |
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線                                                                                                                                                                                                                                            |
@@ -2409,7 +2427,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 - `targetShape` は **single のみ**（Phase 1）
 - `toAnchor` は任意 side の `target` + `anchorOffsetPx` で位置決定（offset 0 = anchor 座標そのもの）
 - `engage` は敵向け `target` が一般的（射程内へ自動計算）
-- move の `target` で `order: nearest` / `farthest` を指定した場合、anchor は **使用者との battleX 距離**で選ぶ（自動接近 chase の「編成奥 = max battleX」とは別）
+- move の `target` で `order: nearest` / `farthest` を指定した場合、anchor は **使用者との battleX 距離**で選ぶ（MoveAnchor Intent。敵対 AttackTarget デフォルトの「相手戦線の最前」とは別）
 - move を含むスキルは effect 列を **順序実行**（`buildSkillSequence` → `SkillSequenceRunner`）。各 step は `applyAtBattleSec` でスケジュールされ、move 完了後に次 effect へ進む
 - 任意 effect の **`waitAfterSec`** は step 適用後の tail 待機。最終 step の tail 中も `isActorInSkillMotion` を維持
 - CD はシーケンス全 step 完了後にリセット

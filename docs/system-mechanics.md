@@ -205,7 +205,7 @@ Stage 5-12（想定 Lv 20）
 
 | Intent | 役割 | 距離 / ターゲットの扱い |
 | ------ | ---- | ----------------------- |
-| `AttackTarget` | damage / heal / buff / debuff の実対象 | 射程内プールから選ぶ。敵の対プレイヤー通常対象は [combat.md](spec/combat.md) §敵の単体ターゲット選定 |
+| `AttackTarget` | damage / heal / buff / debuff の実対象 | 射程内プールから選ぶ。敵対単体デフォルトは [combat.md](spec/combat.md) §敵対単体ターゲット選定。回復は §回復 PHT |
 | `MoveAnchor` | `move` の到達基準 | 射程外も anchor にできる。使用者との `battleX` 距離 |
 | `ChaseTarget` | 自動接近の追跡対象 | 敵は上記 combat 節、味方はスキル / 通常攻撃の target spec |
 | `DisplayAnchor` | VFX・描画凍結用 | 戦闘判定へ逆流させない。実装: `CombatantState.engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper） |
@@ -409,7 +409,7 @@ chain と multiLock は、単なる演出ではなくターゲット形状シス
 | 項目                                                | 状態                                                             |
 | --------------------------------------------------- | ---------------------------------------------------------------- |
 | 味方回復 PHT（接近・withhold・selfOrigin aoe）      | 仕様確定済 — [combat.md](spec/combat.md) §回復 PHT。実装整合は Phase 3d 延長作業 |
-| 敵側優先ターゲット（高 MaxHP 等）の詳細             | `targetRuleOverride` / `resolveUnitTargetSpec` — [combat.md](spec/combat.md) §敵の単体ターゲット選定 手順 3 |
+| 敵側優先ターゲット（高 MaxHP 等）の詳細             | `targetRuleOverride` / `resolveUnitTargetSpec` — [combat.md](spec/combat.md) §敵対単体ターゲット選定 手順 3 |
 | Attack / Hit / Gauge の厳密な内部仕様ドキュメント化 | **R2** へ。legacy 実装に `hitCount`・カウントトリガーあり |
 | 戦闘中の attackSpeed tier 変更                      | **廃止方向**（§0.3 攻撃間隔へ置換）                         |
 | 各兵科 2 戦闘方式                                   | **R2** 未確定                                               |

@@ -85,6 +85,28 @@ describe('EnemyHudPanel group click', () => {
     expect(onGroupClick).toHaveBeenCalledWith('test_dummy', 'expand');
   });
 
+  /**
+   * Chromium suppresses click when the mousedown node is detached before
+   * mouseup, so per-frame update() must not re-append connected slot roots
+   * (real mouse presses span multiple frames; emulated taps do not).
+   */
+  it('does not detach slot roots on steady-state update', () => {
+    const { panel, slot } = mountPanel();
+
+    const slotsBody = slot.querySelector('.enemy-hud-panel-slots') as HTMLElement;
+    const groupRoot = slotsBody.querySelector('.enemy-hud-group') as HTMLElement;
+    expect(groupRoot).toBeTruthy();
+
+    const appendSpy = vi.spyOn(slotsBody, 'appendChild');
+    const insertSpy = vi.spyOn(slotsBody, 'insertBefore');
+    panel.update([sampleGroup()]);
+    panel.update([sampleGroup()]);
+
+    expect(appendSpy).not.toHaveBeenCalled();
+    expect(insertSpy).not.toHaveBeenCalled();
+    expect(groupRoot.isConnected).toBe(true);
+  });
+
   it('collapses when clicking the expanded top card', () => {
     const onGroupClick = vi.fn();
     const { panel } = mountPanel(onGroupClick);

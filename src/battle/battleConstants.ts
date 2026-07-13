@@ -75,6 +75,8 @@ export const BATTLE_ENEMY_VISIBLE_MAX_X = CANVAS_W + 32;
 export const BATTLE_ENEMY_MARCH_VISIBLE_MIN_X = -40;
 /** PartyDeploy 中: 味方が画面外左にいる間は非表示 */
 export const BATTLE_ALLY_MARCH_VISIBLE_MIN_X = -40;
+/** Engaged 中: 味方 battleX の下限（左画面外への流出ガード。battle-field §4.4 回帰と同値） */
+export const BATTLE_ALLY_ENGAGED_MIN_BATTLE_X = -18;
 
 /** @deprecated カメラ廃止後は battleX 直 clamp 用に残す */
 export const BATTLE_ENEMY_MARCH_VISIBLE_MAX_X = CANVAS_W + 200;

@@ -3,6 +3,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { GameTermPanel } from "./GameTermPanel.ts";
+import { isGameUiOverlayOpen } from "./gameUiOverlay.ts";
 
 function createAnchor(label = "ダメージ軽減"): HTMLButtonElement {
   const button = document.createElement("button");
@@ -57,11 +58,11 @@ describe("GameTermPanel", () => {
     const panelEl = host.querySelector(".game-term-panel") as HTMLElement;
 
     panel.openFromTerm("damageReduction", anchor);
-    expect(panelEl.hidden).toBe(false);
+    expect(isGameUiOverlayOpen(panelEl)).toBe(true);
     expect(anchor.getAttribute("aria-expanded")).toBe("true");
 
     panel.openFromTerm("damageReduction", anchor);
-    expect(panelEl.hidden).toBe(true);
+    expect(isGameUiOverlayOpen(panelEl)).toBe(false);
     expect(anchor.getAttribute("aria-expanded")).toBe("false");
   });
 
@@ -101,9 +102,9 @@ describe("GameTermPanel", () => {
     document.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     );
-    expect((host.querySelector(".game-term-panel") as HTMLElement).hidden).toBe(
-      true,
-    );
+    expect(
+      isGameUiOverlayOpen(host.querySelector(".game-term-panel") as HTMLElement),
+    ).toBe(false);
   });
 
   it("closes and clears history when detail scroll root scrolls", () => {
@@ -112,9 +113,9 @@ describe("GameTermPanel", () => {
     panel.openFromTerm("stun", anchor);
 
     scrollRoot.dispatchEvent(new Event("scroll"));
-    expect((host.querySelector(".game-term-panel") as HTMLElement).hidden).toBe(
-      true,
-    );
+    expect(
+      isGameUiOverlayOpen(host.querySelector(".game-term-panel") as HTMLElement),
+    ).toBe(false);
   });
 
   it("does not close when clicking inside the panel body", () => {
@@ -127,7 +128,7 @@ describe("GameTermPanel", () => {
     body.dispatchEvent(
       new PointerEvent("pointerdown", { bubbles: true, cancelable: true }),
     );
-    expect(panelEl.hidden).toBe(false);
+    expect(isGameUiOverlayOpen(panelEl)).toBe(true);
   });
 
   it("closes on outside pointer down", () => {
@@ -140,9 +141,9 @@ describe("GameTermPanel", () => {
     outside.dispatchEvent(
       new PointerEvent("pointerdown", { bubbles: true, cancelable: true }),
     );
-    expect((host.querySelector(".game-term-panel") as HTMLElement).hidden).toBe(
-      true,
-    );
+    expect(
+      isGameUiOverlayOpen(host.querySelector(".game-term-panel") as HTMLElement),
+    ).toBe(false);
   });
 
   it("does not close when clicking status badge anchor", () => {
@@ -170,7 +171,7 @@ describe("GameTermPanel", () => {
     badgeHit.dispatchEvent(
       new PointerEvent("pointerdown", { bubbles: true, cancelable: true }),
     );
-    expect(panelEl.hidden).toBe(false);
+    expect(isGameUiOverlayOpen(panelEl)).toBe(true);
   });
 
   it("shows status icon only when HUD PNG is registered", () => {
@@ -181,11 +182,11 @@ describe("GameTermPanel", () => {
     const iconEl = host.querySelector(
       ".game-term-panel-icon",
     ) as HTMLImageElement;
-    expect(iconEl.hidden).toBe(true);
+    expect(iconEl.classList.contains("game-ui-fragment--hidden")).toBe(true);
     expect(iconEl.hasAttribute("src")).toBe(false);
 
     panel.openFromTerm("stun", createAnchor("スタン"));
-    expect(iconEl.hidden).toBe(false);
+    expect(iconEl.classList.contains("game-ui-fragment--hidden")).toBe(false);
     expect(iconEl.getAttribute("src")).toBeTruthy();
   });
 
@@ -206,7 +207,7 @@ describe("GameTermPanel", () => {
     const iconEl = host.querySelector(
       ".game-term-panel-icon",
     ) as HTMLImageElement;
-    expect(iconEl.hidden).toBe(false);
+    expect(iconEl.classList.contains("game-ui-fragment--hidden")).toBe(false);
     expect(iconEl.getAttribute("src")).toBeTruthy();
     expect(host.querySelector(".game-term-panel-title")?.textContent).toBe(
       "魔法ブロック",
@@ -230,10 +231,123 @@ describe("GameTermPanel", () => {
     const panelEl = frame.querySelector(
       ".game-term-panel--hud-layer",
     ) as HTMLElement;
-    expect(panelEl.hidden).toBe(false);
+    expect(isGameUiOverlayOpen(panelEl)).toBe(true);
     expect(panelEl.parentElement).toBe(frame);
     expect(frame.lastElementChild).toBe(panelEl);
     expect(Number.parseFloat(panelEl.style.top)).toBeGreaterThanOrEqual(0);
     expect(Number.parseFloat(panelEl.style.left)).toBeGreaterThanOrEqual(0);
+  });
+
+  it("positions from the pointer in zoomed battle HUD coordinates", () => {
+    const frame = document.createElement("div");
+    document.body.appendChild(frame);
+    Object.defineProperties(frame, {
+      clientWidth: { value: 400 },
+      clientHeight: { value: 300 },
+    });
+    frame.getBoundingClientRect = () =>
+      ({
+        top: 50,
+        left: 100,
+        bottom: 650,
+        right: 900,
+        width: 800,
+        height: 600,
+        x: 100,
+        y: 50,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    panel = new GameTermPanel(frame, {
+      locale: "ja",
+      frameMount: frame,
+    });
+    panel.mount();
+
+    const panelEl = frame.querySelector(".game-term-panel") as HTMLElement;
+    panelEl.getBoundingClientRect = () =>
+      ({
+        top: 200,
+        left: 300,
+        bottom: 400,
+        right: 500,
+        width: 200,
+        height: 200,
+        x: 300,
+        y: 200,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    panel.openFromTerm("stun", createAnchor(), {
+      clientX: 300,
+      clientY: 400,
+    });
+
+    expect(panelEl.style.left).toBe("112px");
+    expect(panelEl.style.top).toBe("63px");
+  });
+
+  it("keeps panel position when navigating via inner term link in battle HUD layer", () => {
+    const frame = document.createElement("div");
+    document.body.appendChild(frame);
+    Object.defineProperties(frame, {
+      clientWidth: { value: 400 },
+      clientHeight: { value: 300 },
+    });
+    frame.getBoundingClientRect = () =>
+      ({
+        top: 50,
+        left: 100,
+        bottom: 650,
+        right: 900,
+        width: 800,
+        height: 600,
+        x: 100,
+        y: 50,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    panel = new GameTermPanel(frame, {
+      locale: "ja",
+      frameMount: frame,
+    });
+    panel.mount();
+
+    const anchor = createAnchor("障壁");
+    const panelEl = frame.querySelector(".game-term-panel") as HTMLElement;
+    panelEl.getBoundingClientRect = () =>
+      ({
+        top: 200,
+        left: 300,
+        bottom: 400,
+        right: 500,
+        width: 200,
+        height: 200,
+        x: 300,
+        y: 200,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    panel.openFromTerm("wardBarrier", anchor, {
+      clientX: 300,
+      clientY: 400,
+    });
+    const openedLeft = panelEl.style.left;
+    const openedTop = panelEl.style.top;
+    expect(openedLeft).toBe("112px");
+    expect(openedTop).toBe("63px");
+
+    anchor.remove();
+
+    const innerLink = panelEl.querySelector(
+      '.game-term-link[data-game-term-id="barrier"]',
+    ) as HTMLButtonElement;
+    innerLink.click();
+
+    expect(panelEl.style.left).toBe(openedLeft);
+    expect(panelEl.style.top).toBe(openedTop);
+    expect(panelEl.querySelector(".game-term-panel-title")?.textContent).toBe(
+      "バリア",
+    );
   });
 });

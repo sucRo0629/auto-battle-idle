@@ -31,6 +31,7 @@ Hensei-Only の UI は Web アプリ・管理画面・ダッシュボード風�
 
 - プレーンテキスト Web tooltip にしない
 - HUD 情報プレート・固定詳細エリア・枠付きポップオーバー（`GameTermPanel` 等）を使う
+- 開閉は `hidden` 属性を使わない — [game-ui-overlay-visibility.mdc](game-ui-overlay-visibility.mdc) / `gameUiOverlay.ts`
 
 ## Important
 

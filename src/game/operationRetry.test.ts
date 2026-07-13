@@ -166,6 +166,12 @@ describe('Operation retry (R6i)', () => {
     expect(session.getClearedWaveCount()).toBe(0);
     expect(session.getOperationState()?.isActive).toBe(true);
     expect(session.getOperationState()?.isDefeated).toBe(false);
+    expect(session.getCurrentScreen()).toBe('formation');
+
+    document.body
+      .querySelector<HTMLButtonElement>('.skill-menu-return-to-battle-button')
+      ?.click();
+    expect(session.getCurrentScreen()).toBe('battle');
     expect(getEngine(session).getSnapshot().waveIndex).toBe(0);
   });
 

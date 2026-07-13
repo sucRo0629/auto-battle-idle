@@ -6,6 +6,7 @@ import {
   isPartyHudFloatingTooltipAnchorVisible,
   PartyHudFloatingTooltip,
 } from './partyHudFloatingTooltip.ts';
+import { isGameUiOverlayOpen } from './gameUiOverlay.ts';
 
 describe('isPartyHudFloatingTooltipAnchorVisible', () => {
   it('returns false when anchor is detached or hidden', () => {
@@ -56,6 +57,7 @@ describe('PartyHudFloatingTooltip', () => {
     const initialTop = Number.parseFloat(root.style.top);
     expect(initialLeft).toBeGreaterThan(0);
     expect(initialTop).toBeGreaterThan(0);
+    expect(initialTop + root.offsetHeight).toBeLessThan(90);
 
     anchor.dispatchEvent(
       new MouseEvent('mousemove', {
@@ -66,6 +68,42 @@ describe('PartyHudFloatingTooltip', () => {
     );
     expect(Number.parseFloat(root.style.left)).toBeLessThan(initialLeft);
     expect(Number.parseFloat(root.style.top)).toBeLessThan(initialTop);
+
+    tooltip.destroy();
+    mount.remove();
+  });
+
+  it('opens to the right of a left-edge pointer instead of slot-index alignEnd', () => {
+    const mount = document.createElement('div');
+    mount.style.cssText =
+      'position:relative;width:1280px;height:720px;overflow:hidden;';
+    document.body.appendChild(mount);
+
+    const anchor = document.createElement('button');
+    anchor.style.cssText =
+      'position:absolute;left:40px;top:600px;width:24px;height:24px;';
+    mount.appendChild(anchor);
+
+    const tooltip = new PartyHudFloatingTooltip(mount);
+    // Legacy callers still pass alignEnd for high visual indices (left cards under
+    // row-reverse). Pointer placement must ignore that and open toward free space.
+    tooltip.bindHit(anchor, 'Sorcerer', { alignEnd: true });
+
+    anchor.dispatchEvent(
+      new MouseEvent('mouseenter', {
+        clientX: 52,
+        clientY: 610,
+        bubbles: true,
+      }),
+    );
+
+    const root = mount.querySelector('.party-hud-floating-tooltip') as HTMLElement;
+    expect(isGameUiOverlayOpen(root)).toBe(true);
+    expect(root.hasAttribute('hidden')).toBe(false);
+    expect(root.classList.contains('party-hud-floating-tooltip--align-end')).toBe(
+      false,
+    );
+    expect(Number.parseFloat(root.style.left)).toBeGreaterThan(52);
 
     tooltip.destroy();
     mount.remove();
@@ -87,7 +125,8 @@ describe('PartyHudFloatingTooltip', () => {
 
     const root = mount.querySelector('.party-hud-floating-tooltip') as HTMLElement;
     expect(root).toBeTruthy();
-    expect(root.hidden).toBe(false);
+    expect(isGameUiOverlayOpen(root)).toBe(true);
+    expect(root.hasAttribute('hidden')).toBe(false);
     expect(root.classList.contains('party-hud-floating-tooltip--below-start')).toBe(
       true,
     );

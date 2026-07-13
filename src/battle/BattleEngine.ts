@@ -61,6 +61,7 @@ import {
 } from "./resolveApproachBattleX.ts";
 import { resolveFacingSign } from "./combatFacing.ts";
 import {
+  BATTLE_ALLY_ENGAGED_MIN_BATTLE_X,
   CANVAS_W as BATTLE_CANVAS_W,
   COMBAT_SAFE_RIGHT,
   MOVE_PX_PER_SEC,
@@ -928,6 +929,11 @@ export class BattleEngine {
     return battleX;
   }
 
+  private clampAllyEngagedBattleX(battleX: number): number {
+    if (!this.engaged) return battleX;
+    return Math.max(battleX, BATTLE_ALLY_ENGAGED_MIN_BATTLE_X);
+  }
+
   private applyEnemyFieldFromBattle(): void {
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
@@ -1036,6 +1042,7 @@ export class BattleEngine {
       }
       if (target === undefined) continue;
       updateUnitApproach(ally, target, moveStep);
+      ally.battleX = this.clampAllyEngagedBattleX(ally.battleX);
       if (
         ally.accessState === "rearAssault" &&
         shouldClearRearAssaultAccess(ally, this.players, this.enemies)

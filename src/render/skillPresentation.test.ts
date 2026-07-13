@@ -3,16 +3,117 @@ import {
   __registerVfxAnimForTest,
   __resetVfxAnimsForTest,
 } from "./vfxAnimRegistry.ts";
-import { playSkillHitFeedback } from "./skillPresentation.ts";
+import {
+  __registerSkillAnimForTest,
+  __resetSkillAnimsForTest,
+} from "./skillAnimRegistry.ts";
+import {
+  playSkillBody,
+  playSkillHitFeedback,
+  resolveBasicAttackPresentationSkillId,
+} from "./skillPresentation.ts";
 
 function mockImage(width: number): HTMLImageElement {
   return { width, height: 64 } as HTMLImageElement;
 }
 
+describe("resolveBasicAttackPresentationSkillId", () => {
+  it("maps combat module runtime id to legacy basic attack assets", () => {
+    expect(
+      resolveBasicAttackPresentationSkillId(
+        "df_guardian_mod_nearest_strike",
+        "df_guardian",
+      ),
+    ).toBe("df_guardian_basic_attack");
+  });
+
+  it("keeps legacy basic attack id unchanged", () => {
+    expect(
+      resolveBasicAttackPresentationSkillId(
+        "at_ranger_basic_attack",
+        "at_ranger",
+      ),
+    ).toBe("at_ranger_basic_attack");
+  });
+});
+
+describe("playSkillBody", () => {
+  afterEach(() => {
+    __resetSkillAnimsForTest();
+  });
+
+  it("plays legacy basic attack body strip for combat module basics", () => {
+    __registerSkillAnimForTest(
+      "df_guardian_basic_attack",
+      mockImage(192),
+    );
+    const canvas = {
+      isSkillAnimActive: vi.fn(() => false),
+      playSkillAnim: vi.fn(),
+      playAnim: vi.fn(),
+    };
+    const skill = {
+      id: "df_guardian_mod_nearest_strike",
+      effect: [
+        {
+          type: "damage",
+          target: { kind: "distance", side: "enemy", order: "nearest" },
+          damageType: "physical",
+          amount: { kind: "atkBased", atkScale: 1 },
+        },
+      ],
+    } as never;
+
+    playSkillBody(canvas, "ally-0", skill, 0, {
+      rangePx: 30,
+      damageType: "physical",
+      classId: "df_guardian",
+    }, "basic");
+
+    expect(canvas.playSkillAnim).toHaveBeenCalledWith(
+      "ally-0",
+      "df_guardian_basic_attack",
+      expect.any(Object),
+    );
+    expect(canvas.playAnim).not.toHaveBeenCalled();
+  });
+});
+
 describe("playSkillHitFeedback", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     __resetVfxAnimsForTest();
+  });
+
+  it("uses legacy basic attack vfx sheets for combat module basics", () => {
+    __registerVfxAnimForTest("df_guardian_basic_attack_vfx", mockImage(256));
+    const canvas = {
+      playSkillVfx: vi.fn(),
+      showDamagePopup: vi.fn(),
+      showHealPopup: vi.fn(),
+    };
+    const effect = { type: "damage" } as never;
+    const presentation = { vfx: {} } as never;
+
+    playSkillHitFeedback(canvas, {
+      sourceId: "ally-0",
+      targetId: "enemy-0",
+      presentation,
+      effect,
+      skillId: "df_guardian_mod_nearest_strike",
+      effectIndex: 0,
+      slotKind: "basic",
+      classId: "df_guardian",
+    });
+
+    expect(canvas.playSkillVfx).toHaveBeenCalled();
+    expect(canvas.playSkillVfx.mock.calls[0]?.[4]).toEqual(
+      expect.objectContaining({
+        skillId: "df_guardian_basic_attack",
+        effectIndex: 0,
+        kind: "main",
+      }),
+    );
   });
 
   it("spawns main and hit VFX with unique instance ids", () => {

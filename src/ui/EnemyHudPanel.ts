@@ -263,6 +263,9 @@ export class EnemyHudPanel {
       this.slotsBody.appendChild(slot.root);
     }
 
+    // Slots stay in index order, so never re-append connected slot roots here:
+    // detaching a node between mousedown and mouseup makes Chromium suppress
+    // the click, which broke group expand/pause for real mouse presses.
     for (let i = 0; i < aliveGroups.length; i++) {
       const slot = this.slots[i];
       const group = aliveGroups[i];
@@ -271,7 +274,6 @@ export class EnemyHudPanel {
       slot.root.dataset.enemyUnitId = group.representativeEnemy.id;
       this.updateGroupSlot(slot, group);
       this.syncSlotHighlightClasses(slot, group);
-      this.slotsBody.appendChild(slot.root);
     }
 
     for (let i = aliveGroups.length; i < this.slots.length; i++) {

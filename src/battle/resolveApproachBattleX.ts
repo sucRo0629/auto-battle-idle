@@ -828,24 +828,38 @@ export function shouldSkipEngagedAutoApproach(
   options?: { approachTargetX?: number },
 ): boolean {
   if (isStationaryUnit(unit)) return true;
-  const approachTargetX = options?.approachTargetX;
-  if (
-    !unit.isEnemy &&
-    approachTargetX !== undefined &&
-    approachTargetX < unit.battleX - APPROACH_SETTLE_EPSILON_PX
-  ) {
-    return false;
-  }
   if (unit.isEnemy) {
     return (
       resolveEnemyAttackTargetPlayer(unit, players, enemies, gameData) !== null
     );
   }
+
+  const approachTargetX = options?.approachTargetX;
+  const retreatingToApproachTarget =
+    approachTargetX !== undefined &&
+    approachTargetX < unit.battleX - APPROACH_SETTLE_EPSILON_PX;
+
   if (isAllyHealBasicAttack(unit, gameData)) {
-    return (
-      resolveDamagedAllyHealTarget(unit, players, enemies, gameData) !== null
-    );
+    if (resolveDamagedAllyHealTarget(unit, players, enemies, gameData) !== null) {
+      return true;
+    }
+    if (
+      resolveOutOfRangeDamagedAllyHealTarget(unit, players, enemies, gameData) !==
+      null
+    ) {
+      return false;
+    }
+    if (retreatingToApproachTarget) return false;
+    return true;
   }
+
+  if (!isPierceEnemyBasicAttack(unit, gameData)) {
+    if (resolvePlayerAttackTargetEnemy(unit, players, enemies, gameData) !== null) {
+      return true;
+    }
+    if (retreatingToApproachTarget) return false;
+  }
+
   if (isPierceEnemyBasicAttack(unit, gameData)) {
     const contact = getEnemyContactX(enemies);
     if (contact === null) return true;

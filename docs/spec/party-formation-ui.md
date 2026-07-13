@@ -589,7 +589,7 @@ Class Summary は **右ペイン上部** に表示する。左ペイン Class Se
 ### 7.1 操作
 
 - 未選択クラスをクリックし、`selectedClassIds.length < 4` なら編成に追加する
-- 選択済みクラスをクリックすると `selectedClassIds` から解除する
+- 選択済みクラスを **フォーカス済みの状態で再クリック** すると `selectedClassIds` から解除する。未フォーカスの選択済みクラスをクリックしたときは `focusedClassId` の更新のみ（編成は維持）
 - `selectedClassIds.length === 4` の状態で未選択クラスをクリックしても追加しない。差し替えモードにはせず、軽いフィードバック（例: `編成は4人までです`）を出す
 - クラス札 hover / focus / click で `focusedClassId` をそのクラスへ更新し、**右ペイン Detail** に表示する
 - 解除操作は Class Select 側の再クリックのみ。確認モード（verify mode）中も専用の `外す` ボタンは表示しない

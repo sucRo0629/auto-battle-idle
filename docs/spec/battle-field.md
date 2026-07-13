@@ -274,12 +274,12 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ### 3.3 プレイヤー隊形（射程順一列）
 
-1. **X 配置正本** — 全生存味方を **射程降順（長い＝左）** で一列。同射程は **物理 `attacker`** を左
-2. **スロット間隔** — 左端 `PARTY_FORMATION_LEFT_ANCHOR`（20px）、以降 `+32px`
-3. **`formationRow`** — Y 描画・編成分類（**`role` + `rangePx` から導出**。JSON 正本ではない）。**X 深度・接敵・aura 範囲には使わない**
+1. **X 配置正本** — 全生存味方を **射程昇順（ASC）** で並べ、**右＝前（Top）** として割り当てる（短射程ほど右＝敵寄り）
+2. **スロット間隔** — 左端 `PARTY_FORMATION_LEFT_ANCHOR`（20px）、以降 `+32px`（昇順ソート後、右端スロットから逆順に割当てるか同等の右 Top 配置）
+3. **`formationRow`** — Y 描画・編成分類のみ。**X 初期配置・接敵・ターゲットには使わない**
 4. **overlap 解消** — §4.2（接敵時プレイヤー必須）
 
-分類用途の `isMeleeRangePx` / `isMeleeUnit` は本書の距離計算・layout 正本から除外し、[combat.md](combat.md) / [classes-and-skills.md](classes-and-skills.md) に委譲する。
+敵の初期 `spawnX` は **射程 ASC・左＝前（Top）**（味方の鏡像）。`enemyFormation.ts` の `compareEnemyFormationSlot` を正とする。
 
 ### 3.4 Wave ライフサイクル（Legacy — 現行実装）
 
@@ -371,16 +371,17 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 | Intent           | この章での用途                 | 正本                                                                                          |
 | ---------------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
-| `ChaseTarget`    | 自動接近で追う相手             | 敵は [combat.md](combat.md) §敵の単体ターゲット選定、味方は target spec / target rule |
+| `ChaseTarget`    | 自動接近で追う相手             | [combat.md](combat.md) §敵対単体ターゲット選定（デフォルト敵味方共通） |
 | `AttackTarget`   | 射程内停止と実際の攻撃対象     | 敵は `ChaseTarget` の射程内判定。味方は同じ target spec 系の attack プール                     |
-| `MoveAnchor`     | スキル `move` の到達基準       | 通常は使用者との `battleX` 距離。敵対 rear `toAnchor`（正 `anchorOffsetPx`）の distance nearest 既定は**敵前衛＝プレイヤー寄り**（min `battleX`）。`targetRuleOverride`（例: 双刃士 薄命狩り）が enemy scope で効くときは MoveAnchor もその選定に従う。AttackTarget の battle-line `nearest`（奥＝max）とは別                                                                 |
+| `MoveAnchor`     | スキル `move` の到達基準       | 通常は使用者との `battleX` 距離。敵対 `toAnchor`（正 `anchorOffsetPx`）の distance nearest は**敵前衛＝プレイヤー寄り**（min `battleX`）。`targetRuleOverride`（例: 双刃士 薄命狩り）が enemy scope で効くときは MoveAnchor もその選定に従う。AttackTarget のデフォルト（相手戦線の最前）とは別 |
 | `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない      |
 | `DisplayAnchor`  | 遠隔敵の表示凍結・VFX 基準     | 描画専用。`engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper）。戦闘判定へ逆流させない |
 
 | 側                                     | chase（毎 tick 再評価）                                                                                                                       | attack / 停止判定                                                   |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 敵                                     | [combat.md](combat.md) §敵の単体ターゲット選定（`resolveEnemyChaseTargetPlayer`）                                                             | `ChaseTarget` が射程内のときのみその 1 体（`resolveEnemyAttackTargetPlayer`） |
-| 味方（全ロール共通）                   | target spec / target rule の敵プールから `ChaseTarget` を選ぶ。既定 `distance/enemy/nearest` は battle-line depth の **奥**（`battleX` 最大） | 同じ target spec 系の attack プールで `effectiveRangePx` 内なら停止 |
+| 敵                                     | [combat.md](combat.md) §敵対単体ターゲット選定（`resolveEnemyChaseTargetPlayer`）                                                             | `ChaseTarget` が射程内のときのみその 1 体（`resolveEnemyAttackTargetPlayer`） |
+| 味方（敵対・全ロール共通）             | 同上デフォルト（相手戦線の最前 defender 優先）または優先ターゲット spec | 同じ spec 系の attack プールで `effectiveRangePx` 内なら停止 |
+| 味方（回復 basic 等）                  | [combat.md](combat.md) §回復 PHT（HP 割合最小の負傷味方） | 射程内に PHT がいれば停止 |
 | 味方（ally-heal 通常攻撃の supporter） | 射程外の **PHT**（[combat.md](combat.md) §回復 PHT）へ接近。全員健康なら **現位置維持**（敵 chase しない）                                      | 射程内に **PHT** がいれば停止（`shouldSkipEngagedAutoApproach`）。任意の軽傷者では停止しない |
 
 敵の chase 候補は敵の前方側にいるプレイヤー（`enemyForwardFacingPool`）。rear assault アクセス中のプレイヤーは敵の新しい `ChaseTarget` や前線所有者にはしない。
@@ -404,9 +405,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 **自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。`test_ranged` も通常の attack プールとして扱う。
 
-**pierce 敵向け通常攻撃の接近停止（`isPierceEnemyBasicAttack`）：** `selfOrigin` + `pierce` の敵向け通常攻撃は、接近停止の正本が「射程内に敵 1 体」ではない（上記 `shouldSkipEngagedAutoApproach` の単体射程内停止を使わない）。停止目標 `battleX` = `getEnemyContactX() − effectiveRangePx`（`resolvePierceApproachStopBattleX` / `capOnFieldBeforeEnemyContact` と同式）。pierce basic 持ちユニットはこの停止 X に到達するまで接近を継続する（`shouldSkipEngagedAutoApproach` 相当の意味。実装は別タスク）。`battleX >= pierceStopX − settleEpsilon` で接近停止。過前進（`battleX > pierceStopX`）時は `shouldSkip` を false のまま `updateUnitApproach` の双方向補間で `pierceStopX` へ戻す。接近目標 X も chase 個体ではなく contact 基準（`resolvePlayerChaseApproachBattleX`）。battle-line depth の **nearest**（`battleX` 最大＝戦線奥）を pierce 接近アンカーにしない。後列遠隔に引きずられて前進しすぎない。停止は contact 基準。
-
-**用語（battle-line depth）：** プレイヤー敵 target の `nearest` = 奥（`battleX` 最大）、`farthest` = 手前。本節の pierce 接近はこの depth 用語と混同しない。
+**pierce 敵向け通常攻撃の接近停止（`isPierceEnemyBasicAttack`）：** `selfOrigin` + `pierce` の敵向け通常攻撃は、接近停止の正本が「射程内に敵 1 体」ではない。停止目標 `battleX` = `getEnemyContactX() − effectiveRangePx`（`resolvePierceApproachStopBattleX` / `capOnFieldBeforeEnemyContact` と同式）。pierce basic 持ちユニットはこの停止 X に到達するまで接近を継続する。`battleX >= pierceStopX − settleEpsilon` で接近停止。過前進時は `shouldSkip` を false のまま双方向補間で `pierceStopX` へ戻す。接近目標 X も chase 個体ではなく contact 基準（`resolvePlayerChaseApproachBattleX`）。停止は contact 基準。
 
 貫通形状・ターゲット仕様は [combat.md](combat.md) の `pierce` / `selfOrigin` 節を参照。
 
@@ -417,7 +416,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 - 接近ターゲットの depth-order clamp は全 on-field ユニット共通で、`applyPartyFormationApproachSpacing`（partyFormation ソート順）の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
 - rear assault 中の味方は `applyFormationMarchFollow` の leader / follower から除外。`baseApproach` は formation chain 用に clamp し、背後位置を他ユニットの spacing 基準にしない
 
-**敵の追い替え：** 毎 tick 手順 4（defender 優先・最近傍）または `targetRuleOverride` / 闘技場の掟で再選定する。ヒステリシスや `threatFocusTargetId` は使わない（[combat.md](combat.md) §敵の単体ターゲット選定）。射程内に入ったら attack プールで停止・攻撃。
+**敵の追い替え：** 毎 tick [combat.md](combat.md) §敵対単体ターゲット選定（デフォルトまたは優先ターゲット / 闘技場の掟）で再選定。ヒステリシスや `threatFocusTargetId` は使わない。射程内に入ったら attack プールで停止・攻撃。
 
 **遠隔敵の表示凍結：** 接敵開始時 `engagedDisplayAnchorPlayerId`（`battleDisplay.getEngagedDisplayAnchorPlayerId` / `setEngagedDisplayAnchorPlayerId`）は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。DisplayAnchor は描画専用で `AttackTarget` / `ChaseTarget` / `MoveAnchor` へ逆流させない。
 
@@ -555,7 +554,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | 要素 | 内容 |
 | ---- | ---- |
 | 起動 | **overlay（戦闘画面）:** `.party-hud-header-row`（アイコン・クラス名・HP バーを含む識別行）へ **マウスオーバー**。**lane 詳細:** `.party-hud-icon-wrap` / `.party-hud-bars` へマウスオーバー。パネル上にカーソルがあれば表示維持。離れたら非表示 |
-| 配置 | マウスカーソル付近（右下 12px オフセット。右側スロットは左側へ展開）。Canvas 外へはみ出さない（`clampElementToMountBounds`）。lane 詳細で pointer 未供給時のみ識別行直上にフォールバック |
+| 配置 | マウスカーソル付近（右下 12px オフセット）。**画面右寄り**では左側へ展開し、**画面左寄り**（味方 HUD は `row-reverse` のため視覚左端＝後衛）では右側へ展開する。DOM の slot index は使わない。Canvas 外へはみ出さない（`clampElementToMountBounds`）。lane 詳細で pointer 未供給時のみ識別行直上にフォールバック |
 | 対象 | **選択中スロット 1 人のみ** |
 | 表示項目 | **HP**（`現在HP / 実効MaxHP`）、**攻撃力 / 防御力 / 魔法耐性**、最終行に **攻撃間隔**（CombatModule 兵科）または **攻撃速度**（legacy 兵科）。**射程・基本攻撃は表示しない** |
 | 攻撃間隔（R9.5b） | CombatModule 通常行動が解決された兵科は **秒単位**の「攻撃間隔」を表示（例 `攻撃間隔: 2秒` / `1.5秒`）。値の正本は runtime で解決された CombatModule の `attackIntervalSec`（選択中 module の上書きを優先）。整数秒は小数桁を省略、`1.25` 等は小数第 2 位まで保持。`NaN秒` / `0秒` などの不正表記は出さない。legacy `attackSpeedTier` は新表示の正本にしない。buff/debuff による実効間隔のリアルタイム反映はしない（基礎値表示） |

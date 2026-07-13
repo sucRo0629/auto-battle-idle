@@ -21,7 +21,9 @@ export class ElectronBattleMenuHost implements MenuHost {
   }
 
   open(initialView: MetaMenuInitialView = 'hub'): void {
-    if (this.opened) return;
+    if (this.opened) {
+      this.dismiss();
+    }
     const api = window.battleElectronAPI;
     if (!api) return;
 
@@ -32,8 +34,13 @@ export class ElectronBattleMenuHost implements MenuHost {
 
   close(): void {
     if (!this.opened) return;
-    this.opened = false;
+    this.dismiss();
     this.context.onScreenChange('battle');
+  }
+
+  dismiss(): void {
+    if (!this.opened) return;
+    this.opened = false;
   }
 
   isOpen(): boolean {

@@ -11,6 +11,7 @@ export type GameTermTextSegment =
 export type GameTermClickHandler = (
   termId: GameTermId,
   anchor: HTMLButtonElement,
+  event: MouseEvent,
 ) => void;
 
 interface AliasMatch {
@@ -165,7 +166,7 @@ export function annotateGameTerms(
     }
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      onTermClick(segment.termId, button);
+      onTermClick(segment.termId, button, event);
     });
     fragment.appendChild(button);
   }

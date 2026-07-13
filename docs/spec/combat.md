@@ -112,10 +112,10 @@ Wave ごとに各兵科へ **2 方式** を選択する。全兵科を「単体 
 
 **Fallback（優先対象が不在または射程外）:**
 
-§Legacy [敵の単体ターゲット選定](#敵の単体ターゲット選定) の共通規則をベースに、複雑化しない範囲で次を適用する。
+§Legacy [敵対単体ターゲット選定](#敵対単体ターゲット選定) のデフォルトをベースに、複雑化しない範囲で次を適用する。
 
 1. 優先 spec に合致する生存対象を **攻撃可能プール**（射程内）から選ぶ
-2. 候補 0 → **defender 優先・最近傍** 等の default ルールへ（陣営・ロールに応じ §Legacy と同型）
+2. 候補 0 → [§敵対単体ターゲット選定](#敵対単体ターゲット選定) の **デフォルト** へ
 3. プール全体が空 → Attack を **保留**（間隔タイマーの扱いは R5 試作）
 
 ### ダメージ属性
@@ -503,42 +503,67 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 **スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、使用者として通常攻撃・アクティブを発動せず、ターゲット選択も行わない。スタン中のユニットは他ユニットからの攻撃・回復・効果対象にはなり得る。スタンは **CD 進行の停止** 効果を持たない。**付与成功時** に対象の **通常攻撃 CD のみ** 満タンにリセットする（アクティブ CD・イベントゲージはリセット／停止しない）。
 
-## 敵の単体ターゲット選定
+## 敵対単体ターゲット選定
 
-**ヘイト（Threat）ランタイムは廃止する。** オートバトルでは Kill 職が単体攻撃の主ターゲットになることを避け、Survival の **被害入口** は `role: defender` とスキル由来のターゲット上書きで表現する。
+**ヘイト（Threat）ランタイムは廃止する。** オートバトルでは Kill 職が単体攻撃の主ターゲットになることを避け、Survival の **被害入口** は `role: defender` と優先ターゲット条件で表現する。
 
-実装：`resolveEnemyChaseTargetPlayer` / `resolveEnemyAttackTargetPlayer`（`resolveApproachBattleX.ts`）、`pickTargetFromPool`（`src/battle/skills/targetSpec.ts`）。
+実装（目標）: `pickDefaultHostileSingleTarget`（`src/battle/skills/targetSpec.ts`）を敵味方の Chase / Attack デフォルト正本とし、`resolveEnemyChaseTargetPlayer` / `resolvePlayerChaseTargetEnemy` から共有する。現行の味方 `distance/enemy/nearest` → `battleX` 最大（敵編成の奥）は **実装バグ** であり、本節のデフォルトに置換する。
+
+### スコープ
+
+| 分類 | 正本 |
+| ---- | ---- |
+| **敵対単体デフォルト** | 本節（敵→味方・味方→敵で共通） |
+| **優先ターゲット** | `targetRuleOverride` 等（本節の手順 3）。エディタは「デフォルト / 優先条件」の 2 種 — [classes-and-skills.md §ターゲット指定](classes-and-skills.md#ターゲット指定target-targetspec) |
+| **味方回復デフォルト** | [§回復 PHT](#priority-heal-targetpht)（HP 割合が最も低い負傷味方）。敵対デフォルトの対象外 |
+| **moveAnchor** | 使用者との `battleX` 距離等。Intent が異なるため本節と独立 |
 
 ### 設計意図
 
-- **単体攻撃の主受け口** — 生存中の `defender` がいれば、敵の Chase / Attack は基本的に defender のみを狙う
-- **被害チャンネルの分離** — 単体（defender 固定）と範囲・貫通・魔法等の巻き込み（軽減・barrier・護法陣 aura）を分ける。与ダメ量でターゲットが奪われる仕組みは持たない
+- **単体攻撃の主受け口** — 生存中の `defender` がいれば、敵対デフォルトは **相手戦線で最前の defender** を狙う
+- **被害チャンネルの分離** — 単体（defender 優先の前線）と範囲・貫通・魔法等の巻き込みを分ける
 - **Position / Move / Target の分離** — [system-mechanics.md](../system-mechanics.md) §Target Intent を正とする
 
-移動型アタッカーや背後侵入は恒久的な被害入口にならない。双刃士などの rear assault は **短時間アクセスによる Kill 成立** として扱う。
-座標・接敵は [battle-field.md](battle-field.md) を正本とする。敵 chase の候補は敵前方側プレイヤー（`enemyForwardFacingPool`）。背後侵入中は `isPlayerRearAssaultAccess` により Chase / 前線所有者から除外する。
+移動型アタッカーや背後侵入は恒久的な被害入口にならない。rear assault は **短時間アクセスによる Kill 成立** として扱う。
 
-### 判定順（敵 → プレイヤー、Chase / Attack 共通）
+### デフォルト（敵味方共通・Chase / Attack）
 
-毎 tick、対象敵ごとに次の順で 1 体を選ぶ。`threat` / `threatFocusTargetId` / ヒステリシスは **使わない**。
+**相手戦線で一番手前にいるユニット** を基準とする。`battleX` の前後は陣営で反転する。
 
-1. **プール** — 生存プレイヤーから `enemyForwardFacingPool`（rear assault 除外）
-2. **闘技場の掟** — 単体 chase / attack のとき、生存中かつ `arenaDominance` 有効な闘技士がいれば **闘技士固定**（`targetRuleOverride` より優先。既存 [§闘技士 v1](#闘技士-v1-専用メカニクス) どおり）
-3. **優先ターゲット（`targetRuleOverride` 等）** — `resolveUnitTargetSpec(敵)` が default `distance/enemy/nearest` **以外** のとき、既存 `pickTargetFromPool` で spec どおりに選ぶ。候補 0 なら手順 4 へフォールバック
-   - 敵もプレイヤーと同じクラスデータを使うため、例: 剣術士の「DEF 最高」、弓術士の「遠隔攻撃」、双刃士の「最低 HP（現在値）」優先などがそのまま例外になる
-   - `side: "enemy"` は敵 actor 視点で **プレイヤー側** を指す（`factionPool`）
-4. **デフォルト（defender 優先・最近傍）** — spec が default nearest のとき:
-   - プール内に生存 `defender` が 1 人以上いれば、その中から **当該敵との `battleX` 距離** `|enemy.battleX − player.battleX|` が最小の defender
-   - いなければ、プール内の生存プレイヤーで同様に最近傍
-   - 同距離タイ — `id` 辞書順
+| actor | 相手プールでの「最前」 |
+| ----- | ---------------------- |
+| 味方 → 敵 | `battleX` **最小**（プレイヤー寄り＝敵前衛） |
+| 敵 → 味方 | `battleX` **最大**（敵寄り＝味方前衛） |
+
+**優先順（単体 1 体）:**
+
+1. プール内に生存 `defender` がいれば、defender のみに絞る
+2. 絞り込み後（または defender 0 のときはプール全体）、上記「最前」`battleX` の 1 体
+3. 同値タイ — `id` 辞書順
+
+先頭 defender が射程外・死亡・プール外になったときは、**次に前の defender** → … → defender がいなくなれば **プール全体の最前キャラ** へフォールバックする（毎 tick 再評価。ヒステリシスなし）。
+
+**旧実装との差分（修正対象）:**
+
+- 味方デフォルトが敵の **奥**（`max battleX`）を選んでいた — バグ
+- 敵デフォルトが defender の **敵からの距離最近傍** だった — 本節の「最前 defender」に統一
+
+### 判定順（毎 tick・1 actor あたり 1 体）
+
+`threat` / `threatFocusTargetId` / ヒステリシスは **使わない**。
+
+1. **プール** — 生存対象。敵 actor は `enemyForwardFacingPool`（rear assault 除外）。味方 actor は target spec の敵プール
+2. **闘技場の掟**（敵 actor の単体のみ）— 生存中かつ `arenaDominance` 有効な闘技士がいれば **闘技士固定**（優先ターゲットより先。[§闘技士 v1](#闘技士-v1-専用メカニクス)）
+3. **優先ターゲット** — `resolveUnitTargetSpec(actor)` がデフォルト（`distance/enemy/nearest` かつ優先条件なし）**以外** のとき、`pickTargetFromPool` で spec どおり。候補 0 なら手順 4 へ
+4. **デフォルト** — 上記「デフォルト（敵味方共通）」
 
 ### Chase / Attack の関係
 
 1. **ChaseTarget** — 上記手順で選んだ 1 体
-2. **AttackTarget** — ChaseTarget が `effectiveRangePx` 内にいるときのみその 1 体。それ以外は null（射程内の別味方は攻撃しない）
+2. **AttackTarget** — ChaseTarget が `effectiveRangePx` 内にいるときのみその 1 体。それ以外は null
 3. **接近停止** — AttackTarget !== null のときのみ（フォーカスが射程外の間は接近継続）
 
-`moveAnchor` 向けの `distance/enemy/farthest` 等は従来どおり使用者との `battleX` 距離で選び、手順 4 とは独立。
+`moveAnchor` 向けの `distance` nearest / farthest は使用者との `battleX` 距離で選び、本節デフォルトとは独立。
 
 ### Defender 三分岐（Survival）
 

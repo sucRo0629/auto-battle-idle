@@ -285,8 +285,6 @@ export class GameSession {
         },
       },
     );
-    this.setGameScreen(this.verifyMode ? 'battle' : 'stageSelect');
-
     this.menuHost = createMenuHost({
       gameData,
       levelCurves: this.levelCurves,
@@ -305,6 +303,7 @@ export class GameSession {
       resolveFormationCloseScreen: () => this.resolveFormationCloseScreen(),
       getFormationReturnOptions: () => this.getFormationReturnOptions(),
     });
+    this.setGameScreen(this.verifyMode ? 'battle' : 'stageSelect');
 
     this.engine.onEvent((event) => {
       if (event.type === 'waveCleared') {
@@ -492,7 +491,6 @@ export class GameSession {
     this.operationState?.endWavePrepEditing();
 
     if (!this.beginOperation(stageId, 0)) return false;
-    this.engine.restartBattle();
     if (this.menuHost.isOpen()) {
       this.menuHost.close();
     }
@@ -574,7 +572,6 @@ export class GameSession {
       this.operationResult = savedResult;
       return false;
     }
-    this.engine.restartBattle();
     this.persistSave();
     if (this.menuHost.isOpen()) {
       this.menuHost.close();
@@ -705,6 +702,9 @@ export class GameSession {
     if (screen === 'stageSelect') {
       this.clearOperationResult();
     }
+    if (screen !== 'formation') {
+      this.menuHost.dismiss();
+    }
     if (this.currentScreen === screen) {
       this.view.refreshVictoryResultOverlay();
       return;
@@ -755,8 +755,9 @@ export class GameSession {
 
     this.save.stageProgress.currentStageId = resolvedStageId;
     this.stageDamageStats.resetForStage(resolvedStageId);
-    this.beginOperation(resolvedStageId, this.resolveOperationStartWaveIndex());
-    this.engine.restartBattle();
+    if (!this.beginOperation(resolvedStageId, this.resolveOperationStartWaveIndex())) {
+      return;
+    }
     this.persistSave();
     this.view.setBattlePaused(false);
     this.view.refreshVictoryResultOverlay();
@@ -799,6 +800,17 @@ export class GameSession {
     this.clearPartySlotCombatModule(slotIndex);
   }
 
+  private shouldDeferBattleRestartForFormation(): boolean {
+    return this.currentScreen === 'formation';
+  }
+
+  private requestBattleReloadAfterPartyEdit(): void {
+    if (this.shouldDeferBattleRestartForFormation()) {
+      return;
+    }
+    this.engine.restartBattle();
+  }
+
   tryUpdatePartySlot(
     slotIndex: number,
     member: PartySlotState,
@@ -829,7 +841,7 @@ export class GameSession {
         this.save.party[slotIndex] = null;
         this.resolveCombatModuleSelection().clearSelectedCombatModuleId(slotIndex);
         this.persistSave();
-        this.engine.restartBattle();
+        this.requestBattleReloadAfterPartyEdit();
       }
       return { ok: true };
     }
@@ -840,7 +852,7 @@ export class GameSession {
 
     this.save.party[slotIndex] = member ? structuredClone(member) : null;
     this.persistSave();
-    this.engine.restartBattle();
+    this.requestBattleReloadAfterPartyEdit();
     return { ok: true };
   }
 
@@ -1305,8 +1317,62 @@ export class GameSession {
     if (this.wavePrepSuspended && this.isAwaitingNextWave()) {
       return 'wavePrep';
     }
+    if (this.operationState?.isDefeated) {
+      this.resumeBattleAfterDefeatFormationPrep();
+    } else {
+      this.applyFormationPartyEditsBeforeBattle();
+    }
     this.wavePrepSuspended = false;
     return 'battle';
+  }
+
+  /**
+   * formation 確定時に Save 側の編成を OperationState / 戦闘へ反映する。
+   * 出撃直後は beginOperation が編成確定前の snapshot を持つため、戦闘へ戻る直前に同期する。
+   */
+  private applyFormationPartyEditsBeforeBattle(): void {
+    if (this.operationState === null || this.operationState.isCompleted) {
+      return;
+    }
+
+    if (!this.operationState.trySyncPartyFromSave(this.save.party, this.gameData).ok) {
+      return;
+    }
+
+    this.commitCheckpointFromCurrentOperationState();
+
+    const waveIndex = this.operationState.currentWaveIndex;
+    this.suppressOperationWaveReload = true;
+    try {
+      this.engine.restartBattleAtWave(waveIndex);
+    } finally {
+      this.suppressOperationWaveReload = false;
+    }
+  }
+
+  /**
+   * 敗北後 formation から戦闘へ戻る際に現 Wave を再開する。
+   * formation 中の Save party 編集を OperationState へ反映する。
+   */
+  private resumeBattleAfterDefeatFormationPrep(): void {
+    if (this.operationState === null || !this.operationState.isDefeated) return;
+
+    const waveIndex = this.operationState.currentWaveIndex;
+    if (!this.operationState.trySyncPartyFromSave(this.save.party, this.gameData).ok) {
+      return;
+    }
+
+    this.operationState.resumeAfterDefeatFormationPrep();
+    this.clearOperationResult();
+    this.commitCheckpointFromCurrentOperationState();
+
+    this.suppressOperationWaveReload = true;
+    try {
+      this.engine.restartBattleAtWave(waveIndex);
+    } finally {
+      this.suppressOperationWaveReload = false;
+    }
+    this.view.setBattlePaused(false);
   }
 
   /** R7d: formation フッター戻りボタン（suspend 中は Wave 準備へ） */

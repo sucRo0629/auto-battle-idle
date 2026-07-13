@@ -1,6 +1,11 @@
 import "../styles/game-term-tooltip.css";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
 import {
+  bindGameUiOverlayClosed,
+  isGameUiOverlayOpen,
+  setGameUiOverlayOpen,
+} from "./gameUiOverlay.ts";
+import {
   resolveGameTermTitle,
   resolveGameTermTooltip,
   type GameTermId,
@@ -12,6 +17,14 @@ export interface GameTermTooltipContent {
   body: string;
 }
 
+export interface GameTermTooltipPointer {
+  clientX: number;
+  clientY: number;
+}
+
+const TOOLTIP_POINTER_GAP_PX = 12;
+const TOOLTIP_MOUNT_MARGIN_PX = 8;
+
 export class GameTermTooltip {
   private readonly root: HTMLElement;
   private readonly titleEl: HTMLElement;
@@ -20,10 +33,11 @@ export class GameTermTooltip {
   private currentTermId: GameTermId | null = null;
   private locale: GameTermLocale = "ja";
   private history: GameTermId[] = [];
+  private pointerAnchor: GameTermTooltipPointer | null = null;
   private listenersAttached = false;
 
   private readonly onDocumentPointerDown = (event: PointerEvent) => {
-    if (this.root.hidden) return;
+    if (!isGameUiOverlayOpen(this.root)) return;
     const target = event.target;
     if (!(target instanceof Node)) return;
     if (this.root.contains(target)) return;
@@ -34,7 +48,7 @@ export class GameTermTooltip {
   };
 
   private readonly onDocumentKeyDown = (event: KeyboardEvent) => {
-    if (this.root.hidden || event.key !== "Escape") return;
+    if (!isGameUiOverlayOpen(this.root) || event.key !== "Escape") return;
     event.preventDefault();
     event.stopPropagation();
     if (this.history.length > 0) {
@@ -51,7 +65,7 @@ export class GameTermTooltip {
   constructor(private readonly mount: HTMLElement) {
     this.root = document.createElement("div");
     this.root.className = "game-term-tooltip";
-    this.root.hidden = true;
+    bindGameUiOverlayClosed(this.root);
     this.root.setAttribute("role", "dialog");
     this.root.setAttribute("aria-modal", "false");
 
@@ -84,9 +98,10 @@ export class GameTermTooltip {
     termId: GameTermId,
     anchor: HTMLElement,
     locale: GameTermLocale,
+    pointer?: GameTermTooltipPointer,
   ): void {
     if (
-      !this.root.hidden &&
+      isGameUiOverlayOpen(this.root) &&
       this.anchor === anchor &&
       this.currentTermId === termId &&
       this.history.length === 0
@@ -99,8 +114,9 @@ export class GameTermTooltip {
     this.anchor = anchor;
     this.locale = locale;
     this.history = [];
+    this.pointerAnchor = pointer ?? null;
     this.renderTermContent();
-    this.root.hidden = false;
+    setGameUiOverlayOpen(this.root, true);
     this.reposition();
   }
 
@@ -133,13 +149,18 @@ export class GameTermTooltip {
     }
   }
 
-  show(anchor: HTMLElement, content: GameTermTooltipContent): void {
+  show(
+    anchor: HTMLElement,
+    content: GameTermTooltipContent,
+    pointer?: GameTermTooltipPointer,
+  ): void {
     this.anchor = anchor;
     this.currentTermId = null;
     this.history = [];
+    this.pointerAnchor = pointer ?? null;
     this.titleEl.textContent = content.title;
     this.bodyEl.textContent = content.body;
-    this.root.hidden = false;
+    setGameUiOverlayOpen(this.root, true);
     this.reposition();
   }
 
@@ -147,31 +168,60 @@ export class GameTermTooltip {
     this.anchor = null;
     this.currentTermId = null;
     this.history = [];
-    this.root.hidden = true;
+    this.pointerAnchor = null;
+    setGameUiOverlayOpen(this.root, false);
     this.bodyEl.replaceChildren();
   }
 
   isVisible(): boolean {
-    return !this.root.hidden;
+    return isGameUiOverlayOpen(this.root);
   }
 
   reposition(): void {
-    if (!this.anchor || this.root.hidden) return;
+    if (!this.anchor || !isGameUiOverlayOpen(this.root)) return;
 
     const mountRect = this.mount.getBoundingClientRect();
     const anchorRect = this.anchor.getBoundingClientRect();
     const tooltipRect = this.root.getBoundingClientRect();
+    const localWidth = this.mount.clientWidth || this.mount.offsetWidth;
+    const scale = localWidth > 0 ? mountRect.width / localWidth : 1;
+    const safeScale = scale > 0 ? scale : 1;
+    const mountWidth = localWidth || mountRect.width;
+    const mountHeight =
+      this.mount.clientHeight || this.mount.offsetHeight || mountRect.height;
+    const tooltipWidth = tooltipRect.width / safeScale;
+    const tooltipHeight = tooltipRect.height / safeScale;
 
-    let left =
-      anchorRect.left - mountRect.left + anchorRect.width / 2 - tooltipRect.width / 2;
-    let top = anchorRect.top - mountRect.top - tooltipRect.height - 6;
-
-    const maxLeft = mountRect.width - tooltipRect.width - 8;
-    left = Math.max(8, Math.min(left, maxLeft));
-
-    if (top < 8) {
-      top = anchorRect.bottom - mountRect.top + 6;
+    let left: number;
+    let top: number;
+    if (this.pointerAnchor) {
+      const pointerX =
+        (this.pointerAnchor.clientX - mountRect.left) / safeScale;
+      const pointerY =
+        (this.pointerAnchor.clientY - mountRect.top) / safeScale;
+      left = pointerX + TOOLTIP_POINTER_GAP_PX;
+      top = pointerY - tooltipHeight - TOOLTIP_POINTER_GAP_PX;
+      if (top < TOOLTIP_MOUNT_MARGIN_PX) {
+        top = pointerY + TOOLTIP_POINTER_GAP_PX;
+      }
+    } else {
+      left =
+        (anchorRect.left - mountRect.left + anchorRect.width / 2) / safeScale -
+        tooltipWidth / 2;
+      top =
+        (anchorRect.top - mountRect.top) / safeScale - tooltipHeight - 6;
+      if (top < TOOLTIP_MOUNT_MARGIN_PX) {
+        top = (anchorRect.bottom - mountRect.top) / safeScale + 6;
+      }
     }
+
+    const maxLeft =
+      mountWidth - tooltipWidth - TOOLTIP_MOUNT_MARGIN_PX;
+    left = Math.max(
+      TOOLTIP_MOUNT_MARGIN_PX,
+      Math.min(left, maxLeft),
+    );
+    top = Math.max(TOOLTIP_MOUNT_MARGIN_PX, top);
 
     this.root.style.left = `${left}px`;
     this.root.style.top = `${top}px`;
@@ -182,18 +232,28 @@ export class GameTermTooltip {
     hit: HTMLElement,
     resolveContent: () => GameTermTooltipContent | null,
   ): void {
-    const show = () => {
+    const show = (pointer?: GameTermTooltipPointer) => {
       const content = resolveContent();
       if (!content || content.body.length === 0) return;
-      this.show(hit, content);
+      this.show(hit, content, pointer);
     };
     const hide = () => {
       if (this.anchor === hit) this.hide();
     };
 
-    hit.addEventListener("mouseenter", show);
+    hit.addEventListener("mouseenter", (event) => {
+      show({ clientX: event.clientX, clientY: event.clientY });
+    });
+    hit.addEventListener("mousemove", (event) => {
+      if (this.anchor !== hit || !isGameUiOverlayOpen(this.root)) return;
+      this.pointerAnchor = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+      this.reposition();
+    });
     hit.addEventListener("mouseleave", hide);
-    hit.addEventListener("focus", show);
+    hit.addEventListener("focus", () => show());
     hit.addEventListener("blur", hide);
   }
 

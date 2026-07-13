@@ -142,6 +142,11 @@ export class SkillMenuPanel {
   private readonly isVerifyMode: () => boolean;
   private selectedClassIds: ClassId[];
   private focusedClassId: ClassId | null = null;
+  /** pointerdown 時点の focus。focusin→click で誤解除しないための gesture 判定。 */
+  private classSelectPointerGesture: {
+    classId: ClassId;
+    focusedBefore: ClassId | null;
+  } | null = null;
   private rosterAnimationFromSlots: (ClassId | null)[] | null = null;
   private selectionFeedback = "";
 
@@ -236,6 +241,18 @@ export class SkillMenuPanel {
     this.classArchiveListEl = document.createElement("div");
     this.classArchiveListEl.className =
       "skill-menu-class-archive-list";
+    this.classArchiveListEl.addEventListener("pointerdown", (event) => {
+      const listItem = (event.target as Element | null)?.closest(
+        ".skill-menu-picker-list-item"
+      );
+      if (!(listItem instanceof HTMLButtonElement)) return;
+      const classId = listItem.dataset.pickerClassId;
+      if (!classId) return;
+      this.classSelectPointerGesture = {
+        classId,
+        focusedBefore: this.focusedClassId,
+      };
+    });
     this.classArchiveListEl.addEventListener("click", (event) => {
       const listItem = (event.target as Element | null)?.closest(
         ".skill-menu-picker-list-item"
@@ -353,7 +370,13 @@ export class SkillMenuPanel {
     return getClassSelectionVisibleClassIds(this.gameData);
   }
 
+  /** Hidden formation must not mutate save party (stage-select overlay, etc.). */
+  private canAcceptClassSelectionInput(): boolean {
+    return this.root.isConnected && this.root.offsetParent !== null;
+  }
+
   private focusClass(classId: ClassId): void {
+    if (!this.canAcceptClassSelectionInput()) return;
     if (this.focusedClassId === classId) return;
     this.focusedClassId = classId;
     this.renderRoster();
@@ -363,9 +386,21 @@ export class SkillMenuPanel {
   }
 
   private toggleClassSelection(classId: ClassId): void {
-    this.focusedClassId = classId;
+    if (!this.canAcceptClassSelectionInput()) return;
+
+    const gesture = this.classSelectPointerGesture;
+    this.classSelectPointerGesture = null;
+    const wasAlreadyFocused =
+      gesture?.classId === classId && gesture.focusedBefore === classId;
+
     const selectedIndex = this.selectedClassIds.indexOf(classId);
     if (selectedIndex >= 0) {
+      if (!wasAlreadyFocused) {
+        this.focusClass(classId);
+        return;
+      }
+
+      this.focusedClassId = classId;
       this.rosterAnimationFromSlots = this.getSummarySlots();
       this.selectedClassIds.splice(selectedIndex, 1);
       this.selectionFeedback = "";
@@ -373,6 +408,8 @@ export class SkillMenuPanel {
       this.render();
       return;
     }
+
+    this.focusClass(classId);
 
     if (this.selectedClassIds.length >= 4) {
       this.selectionFeedback = t("party.partyFull");
@@ -406,19 +443,22 @@ export class SkillMenuPanel {
         createMemberFromClass(classId, this.gameData);
     });
 
+    for (let index = 0; index < nextParty.length; index++) {
+      const member = nextParty[index];
+      if (!member) continue;
+      const validation = validatePartyClassAssignment(
+        nextParty,
+        index,
+        member.classId,
+      );
+      if (!validation.ok) {
+        this.selectionFeedback = PARTY_DUPLICATE_CLASS_MESSAGE;
+        return;
+      }
+    }
+
     nextParty.forEach((member, index) => {
       const current = this.draftParty[index];
-      if (member) {
-        const validation = validatePartyClassAssignment(
-          this.draftParty,
-          index,
-          member.classId,
-        );
-        if (!validation.ok) {
-          this.selectionFeedback = PARTY_DUPLICATE_CLASS_MESSAGE;
-          return;
-        }
-      }
       if (current?.classId === member?.classId) {
         this.draftParty[index] = member;
         return;
@@ -1165,8 +1205,15 @@ export class SkillMenuPanel {
     return annotateGameTerms(
       text,
       locale,
-      (termId, anchor) => {
-        this.gameTermTooltip.openFromTerm(termId, anchor, locale);
+      (termId, anchor, event) => {
+        this.gameTermTooltip.openFromTerm(
+          termId,
+          anchor,
+          locale,
+          event.detail > 0
+            ? { clientX: event.clientX, clientY: event.clientY }
+            : undefined,
+        );
       },
       options,
     );

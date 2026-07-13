@@ -1,3 +1,5 @@
+@import './game-ui-overlay.css';
+
 .party-member-effective-stats {
   position: absolute;
   z-index: 5;
@@ -20,10 +22,6 @@
 
 .party-member-effective-stats--slot-above.party-member-effective-stats--align-end {
   transform: translate(-100%, -100%);
-}
-
-.party-member-effective-stats[hidden] {
-  display: none !important;
 }
 
 .party-member-effective-stats-header {

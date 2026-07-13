@@ -7,6 +7,7 @@ import { readBattleHudTheme } from '../render/battleHudTheme.ts';
 import { GameTermPanel } from './GameTermPanel.ts';
 import { syncEnemyHudStatusBadgeHits } from './enemyHudStatusRow.ts';
 import { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
+import { isGameUiOverlayOpen } from './gameUiOverlay.ts';
 
 function badge(category: StatusEffectBadgeDisplay['category']): StatusEffectBadgeDisplay {
   return { category, kind: 'debuff' };
@@ -80,9 +81,9 @@ describe('enemyHud status badge hits DOM', () => {
       }) as DOMRect;
 
     hit.dispatchEvent(
-      new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }),
+      new MouseEvent('click', { bubbles: true, cancelable: true, clientX: 90, clientY: 90 }),
     );
-    expect(mount.querySelector('.game-term-panel')?.hidden).toBe(false);
+    expect(isGameUiOverlayOpen(mount.querySelector('.game-term-panel') as HTMLElement)).toBe(true);
     expect(mount.querySelector('.game-term-panel-title')?.textContent).toBe(
       'スタン N',
     );

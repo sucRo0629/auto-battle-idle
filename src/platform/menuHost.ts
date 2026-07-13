@@ -40,6 +40,8 @@ export interface MenuHostContext {
 export interface MenuHost {
   open(initialView?: MetaMenuInitialView): void;
   close(): void;
+  /** Tear down menu UI without changing game screen (stage-select transitions, etc.). */
+  dismiss(): void;
   isOpen(): boolean;
 }
 

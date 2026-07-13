@@ -269,4 +269,28 @@ describe('GameSession defeat retry (R7c)', () => {
     expect(session.getOperationState()).toBeNull();
     expect(session.getSaveState().stageProgress.currentStageId).toBe(stageId);
   });
+
+  it('10. return to formation after defeat then back to battle restarts current wave', () => {
+    session = createSession();
+    session.start();
+    enterBattleFromStageSelect(session);
+    waitForEngaged(getEngine(session));
+    const playersBefore = asBattleEngineInternals(getEngine(session)).players;
+    playersBefore[0].hp = 1;
+    triggerDefeat(session);
+
+    clickDefeatRetryButton(document.body, '準備へ戻る');
+    expect(session.getCurrentScreen()).toBe('formation');
+
+    document.body
+      .querySelector<HTMLButtonElement>('.skill-menu-return-to-battle-button')
+      ?.click();
+
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.shouldShowDefeatRetry()).toBe(false);
+    expect(session.getOperationState()?.isDefeated).toBe(false);
+    const playersAfter = asBattleEngineInternals(getEngine(session)).players;
+    expect(playersAfter[0].hp).toBe(playersAfter[0].maxHp);
+    expect(getEngine(session).getSnapshot().phase).not.toBe('defeat');
+  });
 });

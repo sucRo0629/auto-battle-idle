@@ -361,6 +361,43 @@ export class OperationState {
     this.clearedWaveCountValue = 0;
   }
 
+  /**
+   * 敗北後 formation 編集からの復帰用。
+   * Wave 進行・パッシブ・module は維持し、再戦可能な active へ正規化する。
+   */
+  resumeAfterDefeatFormationPrep(): void {
+    this.endWavePrepEditing();
+    this.isActiveValue = true;
+    this.isDefeatedValue = false;
+    this.isCompletedValue = false;
+  }
+
+  /** Save party を作戦 snapshot へ同期（敗北後 formation 編集の反映）。 */
+  trySyncPartyFromSave(
+    party: PartySlotState[],
+    gameData: GameData,
+  ): PartyClassAssignmentResult {
+    const normalized = normalizePartySlots(
+      party.map((slot) => (slot ? structuredClone(slot) : null)),
+    );
+    if (!validatePartyClassIds(normalized).ok) {
+      return { ok: false };
+    }
+
+    for (const member of normalized) {
+      if (!member) continue;
+      if (!gameData.classRegistry[member.classId]) {
+        return { ok: false };
+      }
+    }
+
+    this.partySlots.length = 0;
+    for (const slot of normalized) {
+      this.partySlots.push(slot);
+    }
+    return { ok: true };
+  }
+
   /** テスト用: party 参照が Save と別であることの検証 */
   getPartySlotsReference(): readonly PartySlotState[] {
     return this.partySlots;

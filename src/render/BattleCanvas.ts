@@ -41,13 +41,16 @@ import type {
   IBattleRenderer,
   type PlaySkillVfxOptions,
 } from "./IBattleRenderer.ts";
-import {
-  readBattleHudTheme,
-  type BattleHudTheme,
-} from "./battleHudTheme.ts";
+import { readBattleHudTheme, type BattleHudTheme } from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
 import { WaveOverlay } from "./WaveOverlay.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
+import {
+  BasicAttackLungePlayback,
+  resolveBasicAttackLungeDirection,
+  resolveBasicAttackLungeDistancePx,
+  type BasicAttackLungeHint,
+} from "./basicAttackLungePlayback.ts";
 import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
 import { drawAllyRangePassiveBands } from "./battleRangePassiveBandDraw.ts";
 import type { AllyRangePassiveBand } from "../battle/allyRangePassiveBands.ts";
@@ -57,14 +60,12 @@ import {
   drawTargetIndicatorForLayout,
 } from "./battleFieldIndicatorDraw.ts";
 import { sortForSpriteDrawPass } from "./spriteDrawOrder.ts";
-import {
-  applyVisualDepthOffsets,
-  spriteDrawY,
-} from "./spriteVisualDepth.ts";
+import { applyVisualDepthOffsets, spriteDrawY } from "./spriteVisualDepth.ts";
 
 const CANVAS_H = battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE);
 const SPRITE_SIZE = SPRITE_LAYOUT_SIZE;
 const SPRITE_SCALE = BATTLE_FIELD_SPRITE_SCALE;
+const BASIC_ATTACK_LUNGE_MAX_PX = 5 * SPRITE_SCALE;
 
 export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;
@@ -76,6 +77,7 @@ export class BattleCanvas implements IBattleRenderer {
   private combatReactionPopups = new CombatReactionPopupManager();
   private buffGlows = new BuffGlowManager();
   private deathPlayback = new DeathPlaybackManager();
+  private basicAttackLungePlayback = new BasicAttackLungePlayback();
   private victoryOverlay = new VictoryOverlay();
   private waveOverlay = new WaveOverlay();
   private waveAnnouncementWaveIndex = 0;
@@ -105,7 +107,7 @@ export class BattleCanvas implements IBattleRenderer {
       this.layouts,
       canvasX,
       canvasY,
-      SPRITE_SCALE,
+      SPRITE_SCALE
     );
     this.onFieldHoverChange(hit?.id ?? null);
   };
@@ -130,7 +132,7 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   setFieldHoverListener(
-    listener: ((unitId: string | null) => void) | null,
+    listener: ((unitId: string | null) => void) | null
   ): void {
     this.onFieldHoverChange = listener;
   }
@@ -196,7 +198,7 @@ export class BattleCanvas implements IBattleRenderer {
   playSkillAnim(
     combatantId: string,
     skillAnimKey: string,
-    playback?: SkillAnimPlaybackOptions,
+    playback?: SkillAnimPlaybackOptions
   ): void {
     this.animator.setSkillAnim(combatantId, skillAnimKey, playback);
   }
@@ -205,12 +207,39 @@ export class BattleCanvas implements IBattleRenderer {
     return this.animator.isSkillAnimActive(combatantId, skillAnimKey);
   }
 
+  playBasicAttackLunge(
+    actorId: string,
+    _targetId: string,
+    hint?: BasicAttackLungeHint
+  ): void {
+    const resolvedHint =
+      hint ??
+      (() => {
+        const source = this.layouts.find((layout) => layout.id === actorId);
+        const target = this.layouts.find((layout) => layout.id === _targetId);
+        if (!source || !target) return null;
+        return {
+          sourceX: source.x,
+          targetX: target.x,
+          facingSign: source.facingSign,
+          isEnemy: source.isEnemy,
+        };
+      })();
+    if (!resolvedHint) return;
+
+    this.basicAttackLungePlayback.trigger(
+      actorId,
+      resolveBasicAttackLungeDirection(resolvedHint),
+      resolveBasicAttackLungeDistancePx(BASIC_ATTACK_LUNGE_MAX_PX)
+    );
+  }
+
   playSkillVfx(
     instanceId: string,
     actorId: string,
     targetId: string,
     vfx: SkillVfxDef,
-    options: PlaySkillVfxOptions,
+    options: PlaySkillVfxOptions
   ): void {
     if (vfx.enabled === false) return;
 
@@ -218,7 +247,7 @@ export class BattleCanvas implements IBattleRenderer {
     const vfxKey = resolveVfxAnimKey(
       options.skillId,
       options.effectIndex,
-      kind,
+      kind
     );
     const hasParticles = isParticleDefActive(vfx.particles);
     if (!vfxKey && !hasParticles) return;
@@ -232,7 +261,7 @@ export class BattleCanvas implements IBattleRenderer {
       placement,
       source,
       target,
-      SPRITE_SIZE * SPRITE_SCALE,
+      SPRITE_SIZE * SPRITE_SCALE
     );
     const layer = resolveVfxLayer(placement);
 
@@ -242,7 +271,7 @@ export class BattleCanvas implements IBattleRenderer {
         vfxKey,
         worldPos,
         toVfxPlaybackOptions(vfx, options),
-        layer,
+        layer
       );
     }
 
@@ -252,7 +281,7 @@ export class BattleCanvas implements IBattleRenderer {
         particlePlacement,
         source,
         target,
-        SPRITE_SIZE * SPRITE_SCALE,
+        SPRITE_SIZE * SPRITE_SCALE
       );
       const particleLayer = resolveVfxLayer(particlePlacement);
       const presetDef = getParticlePresetDef(vfx.particles.preset);
@@ -261,7 +290,7 @@ export class BattleCanvas implements IBattleRenderer {
         particleWorldPos,
         particleLayer,
         vfx.particles,
-        presetDef,
+        presetDef
       );
     }
   }
@@ -270,7 +299,7 @@ export class BattleCanvas implements IBattleRenderer {
     targetId: string,
     amount: number,
     variant: "damage" | "dot" = "damage",
-    dotFlavor?: import("../battle/types.ts").DotFlavor,
+    dotFlavor?: import("../battle/types.ts").DotFlavor
   ): void {
     this.damagePopups.spawn(targetId, amount, variant, dotFlavor);
   }
@@ -330,13 +359,17 @@ export class BattleCanvas implements IBattleRenderer {
     this.combatReactionPopups.tick(deltaMs);
     this.buffGlows.tick(deltaMs);
     this.deathPlayback.tick(deltaMs);
+    this.basicAttackLungePlayback.tick(deltaMs);
     this.victoryOverlay.tick(deltaMs);
     this.draw();
   }
 
   destroy(): void {
     this.canvas.removeEventListener("mousemove", this.handleCanvasPointerMove);
-    this.canvas.removeEventListener("mouseleave", this.handleCanvasPointerLeave);
+    this.canvas.removeEventListener(
+      "mouseleave",
+      this.handleCanvasPointerLeave
+    );
     this.canvas.remove();
   }
 
@@ -440,7 +473,7 @@ export class BattleCanvas implements IBattleRenderer {
         res: player.res,
         role: player.role,
         isEnemy: false,
-          rangePx: player.rangePx,
+        rangePx: player.rangePx,
         isAlive: player.hp > 0,
         facingSign: player.facingSign,
         anim: animState.anim,
@@ -468,7 +501,7 @@ export class BattleCanvas implements IBattleRenderer {
       snapshot.phase,
       snapshot.alliesOffScreen,
       snapshot.victoryUseTimerFade,
-      snapshot.victoryAwaitExitMarch,
+      snapshot.victoryAwaitExitMarch
     );
     this.waveAnnouncementWaveIndex = snapshot.waveIndex;
     this.waveAnnouncementElapsedMs = snapshot.waveAnnouncementActive
@@ -479,7 +512,7 @@ export class BattleCanvas implements IBattleRenderer {
   private syncMovementAnim(
     combatantId: string,
     bodyAnimMarching: boolean,
-    isAlive: boolean,
+    isAlive: boolean
   ): void {
     const wasMarching = this.isMarching.get(combatantId) ?? false;
 
@@ -498,7 +531,7 @@ export class BattleCanvas implements IBattleRenderer {
     if (bodyAnimMarching) {
       this.marchIdleHoldFrames.set(
         combatantId,
-        BattleCanvas.MARCH_IDLE_HOLD_FRAMES,
+        BattleCanvas.MARCH_IDLE_HOLD_FRAMES
       );
       if (!wasMarching || animState.anim === "idle") {
         this.animator.setAnim(combatantId, "move");
@@ -515,8 +548,7 @@ export class BattleCanvas implements IBattleRenderer {
 
     this.isMarching.set(
       combatantId,
-      bodyAnimMarching ||
-        (this.marchIdleHoldFrames.get(combatantId) ?? 0) > 0,
+      bodyAnimMarching || (this.marchIdleHoldFrames.get(combatantId) ?? 0) > 0
     );
   }
 
@@ -549,7 +581,7 @@ export class BattleCanvas implements IBattleRenderer {
       this.ctx,
       this.allyRangePassiveBands,
       groundLineY(canvas.height),
-      this.theme,
+      this.theme
     );
 
     const drawOrderLayouts = sortForSpriteDrawPass(this.layouts);
@@ -559,7 +591,13 @@ export class BattleCanvas implements IBattleRenderer {
 
     // battle-field.md §2.7 — depthOffsetY で陣営横断の前後を決め、同深度のみ §2.7 キーでタイブレーク
     for (const layout of drawOrderLayouts) {
-      this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
+      const lungeOffsetX = this.basicAttackLungePlayback.getOffsetX(layout.id);
+      this.drawSprite(
+        layout,
+        layout.x + lungeOffsetX,
+        spriteDrawY(layout),
+        SPRITE_SCALE
+      );
     }
 
     if (this.hoverHighlightUnitIds.size > 0) {
@@ -576,7 +614,7 @@ export class BattleCanvas implements IBattleRenderer {
           this.theme,
           layout.x,
           spriteDrawY(layout),
-          hoverGlowElapsedMs,
+          hoverGlowElapsedMs
         );
       }
     }
@@ -593,7 +631,7 @@ export class BattleCanvas implements IBattleRenderer {
           layout,
           SPRITE_SCALE,
           this.theme,
-          targetIndicatorElapsedMs,
+          targetIndicatorElapsedMs
         );
       }
     }
@@ -606,14 +644,14 @@ export class BattleCanvas implements IBattleRenderer {
       this.layouts,
       SPRITE_SIZE * SPRITE_SCALE,
       SPRITE_SCALE,
-      this.theme,
+      this.theme
     );
     this.combatReactionPopups.draw(
       this.ctx,
       this.layouts,
       SPRITE_SIZE * SPRITE_SCALE,
       SPRITE_SCALE,
-      this.theme,
+      this.theme
     );
 
     this.waveOverlay.draw(
@@ -622,26 +660,21 @@ export class BattleCanvas implements IBattleRenderer {
       canvas.height,
       this.theme,
       this.waveAnnouncementWaveIndex,
-      this.waveAnnouncementElapsedMs,
+      this.waveAnnouncementElapsedMs
     );
-    this.victoryOverlay.draw(
-      this.ctx,
-      canvas.width,
-      canvas.height,
-      this.theme,
-    );
+    this.victoryOverlay.draw(this.ctx, canvas.width, canvas.height, this.theme);
   }
 
   private drawSprite(
     layout: CombatantLayout,
     x: number,
     y: number,
-    scale: number,
+    scale: number
   ): void {
     const { ctx } = this;
     const { layoutSize, bufferSize } = resolveCombatantSpriteDrawMetrics(
       layout,
-      scale,
+      scale
     );
     const deathAlpha = this.deathPlayback.isActive(layout.id)
       ? this.deathPlayback.getAlpha(layout.id)
@@ -655,13 +688,13 @@ export class BattleCanvas implements IBattleRenderer {
         this.theme,
         x,
         y,
-        { deathAlpha },
+        { deathAlpha }
       );
     };
 
     const buffGlow = this.buffGlows.getIntensity(
       layout.id,
-      this.theme.buffGlowPeak,
+      this.theme.buffGlowPeak
     );
 
     if (layout.anim === "death") {
@@ -682,20 +715,19 @@ export class BattleCanvas implements IBattleRenderer {
             scale,
             this.theme,
             pixelSize / 2 - layoutSize / 2,
-            pixelSize - layoutSize - offsetY,
+            pixelSize - layoutSize - offsetY
           );
         },
         this.theme.buffGlowR,
         this.theme.buffGlowG,
         this.theme.buffGlowB,
         x,
-        y,
+        y
       );
     } else {
       drawLocalSprite(ctx);
     }
   }
-
 }
 
 export { CANVAS_W, CANVAS_H };

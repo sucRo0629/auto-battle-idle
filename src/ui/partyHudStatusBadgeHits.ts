@@ -100,10 +100,7 @@ function bindHoverTooltipHit(
   options: { wide?: boolean; alignEnd?: boolean; placement?: 'above' | 'below' },
 ): void {
   if (context.floatingTooltip) {
-    context.floatingTooltip.bindHit(hit, text, {
-      placement: 'below',
-      ...options,
-    });
+    context.floatingTooltip.bindHit(hit, text, options);
     return;
   }
 
@@ -120,18 +117,12 @@ function resolveBadgeLocale(): GameTermLocale {
   return getLocale();
 }
 
-/** 用語パネルで説明できるバッジには、表示名のみの hover tooltip を出さない。 */
+/** 状態バッジの hover では表示名（title）を常に出す。詳細説明はクリックで用語パネル。 */
 export function shouldShowStatusBadgeTextTooltip(
-  badge: StatusEffectBadgeDisplay,
-  context: PartyHudStatusBadgeHitContext,
-  locale: GameTermLocale = resolveBadgeLocale(),
+  _badge: StatusEffectBadgeDisplay,
+  _context: PartyHudStatusBadgeHitContext,
+  _locale: GameTermLocale = resolveBadgeLocale(),
 ): boolean {
-  if (
-    statusBadgeHasClickableGameTerm(badge, locale) &&
-    context.gameTermPanel
-  ) {
-    return false;
-  }
   return true;
 }
 
@@ -163,11 +154,13 @@ function bindIndividualStatusBadgeHit(
     hit.setAttribute('aria-controls', panel.getPanelId());
   }
 
-  hit.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
+  hit.addEventListener('click', (event) => {
     event.stopPropagation();
     context.floatingTooltip?.hide();
-    panel.openFromTerm(termId, hit);
+    panel.openFromTerm(termId, hit, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
   });
 }
 

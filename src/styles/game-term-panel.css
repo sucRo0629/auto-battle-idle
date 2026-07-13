@@ -1,3 +1,4 @@
+@import './game-ui-overlay.css';
 @import './pixel-icon-frame.css';
 
 .game-term-panel {
@@ -33,10 +34,6 @@
   pointer-events: auto;
 }
 
-.game-term-panel[hidden] {
-  display: none !important;
-}
-
 .game-term-panel-header {
   display: flex;
   align-items: center;
@@ -66,10 +63,6 @@
   display: block;
   width: 24px;
   height: 24px;
-}
-
-.game-term-panel-icon[hidden] {
-  display: none !important;
 }
 
 .game-term-panel-title {

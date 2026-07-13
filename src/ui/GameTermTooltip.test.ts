@@ -3,6 +3,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { GameTermTooltip } from "./GameTermTooltip.ts";
+import { isGameUiOverlayOpen } from "./gameUiOverlay.ts";
 
 function createAnchor(label = "マルチロック"): HTMLButtonElement {
   const button = document.createElement("button");
@@ -50,13 +51,13 @@ describe("GameTermTooltip", () => {
     const tooltipEl = host.querySelector(".game-term-tooltip") as HTMLElement;
 
     tooltip.openFromTerm("multiLock", anchor, "ja");
-    expect(tooltipEl.hidden).toBe(false);
+    expect(isGameUiOverlayOpen(tooltipEl)).toBe(true);
     expect(tooltipEl.querySelector(".game-term-tooltip-title")?.textContent).toBe(
       "マルチロック N",
     );
 
     tooltip.openFromTerm("multiLock", anchor, "ja");
-    expect(tooltipEl.hidden).toBe(true);
+    expect(isGameUiOverlayOpen(tooltipEl)).toBe(false);
   });
 
   it("links other terms in tooltip body but not the current term", () => {
@@ -89,5 +90,47 @@ describe("GameTermTooltip", () => {
     const body = host.querySelector(".game-term-tooltip-body");
     expect(body?.textContent).toContain("魔法ダメージ");
     expect(body?.textContent).toContain("最大5スタック");
+  });
+
+  it("positions from the pointer in scaled mount coordinates", () => {
+    setupTooltip();
+    Object.defineProperties(host, {
+      clientWidth: { value: 400 },
+      clientHeight: { value: 300 },
+    });
+    host.getBoundingClientRect = () =>
+      ({
+        top: 50,
+        left: 100,
+        bottom: 650,
+        right: 900,
+        width: 800,
+        height: 600,
+        x: 100,
+        y: 50,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    const tooltipEl = host.querySelector(".game-term-tooltip") as HTMLElement;
+    tooltipEl.getBoundingClientRect = () =>
+      ({
+        top: 200,
+        left: 300,
+        bottom: 400,
+        right: 500,
+        width: 200,
+        height: 200,
+        x: 300,
+        y: 200,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    tooltip.openFromTerm("multiLock", createAnchor(), "ja", {
+      clientX: 300,
+      clientY: 400,
+    });
+
+    expect(tooltipEl.style.left).toBe("112px");
+    expect(tooltipEl.style.top).toBe("63px");
   });
 });

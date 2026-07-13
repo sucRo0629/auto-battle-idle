@@ -168,10 +168,7 @@ function bindHoverTooltipHit(
 ): void {
   const floatingTooltip = context.floatingTooltip;
   if (floatingTooltip) {
-    floatingTooltip.bindHit(hit, text, {
-      placement: 'below',
-      ...options,
-    });
+    floatingTooltip.bindHit(hit, text, options);
     return;
   }
 
@@ -206,11 +203,13 @@ function bindIndividualStatusBadgeHit(
     hit.setAttribute('aria-controls', panel.getPanelId());
   }
 
-  hit.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
+  hit.addEventListener('click', (event) => {
     event.stopPropagation();
     context.floatingTooltip?.hide();
-    panel.openFromTerm(termId, hit);
+    panel.openFromTerm(termId, hit, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
   });
 }
 

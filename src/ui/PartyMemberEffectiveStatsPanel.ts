@@ -1,5 +1,10 @@
 import '../styles/party-member-effective-stats.css';
 import { clampElementToMountBounds } from './clampElementToMountBounds.ts';
+import {
+  bindGameUiOverlayClosed,
+  setGameUiFragmentHidden,
+  setGameUiOverlayOpen,
+} from './gameUiOverlay.ts';
 import type { AttackSpeedTier, CombatantSnapshot } from '../battle/types.ts';
 import { getClassIconUrl } from '../render/IconRegistry.ts';
 import {
@@ -10,6 +15,7 @@ import {
   buildCombatantBattleStatRows,
   type CombatantBattleStatRow,
 } from './combatantBattleStatsDisplay.ts';
+import { resolveHudPointerTooltipAlignEnd } from './resolveHudPointerTooltipAlignEnd.ts';
 
 export interface PartyMemberEffectiveStatsPanelData {
   displayName: string;
@@ -48,7 +54,6 @@ export class PartyMemberEffectiveStatsPanel {
   private readonly frameMount: HTMLElement | null;
   private visible = false;
   private anchoredSlot: HTMLElement | null = null;
-  private anchoredSlotIndex: number | null = null;
   private pointerAnchor: PartyMemberEffectiveStatsPointer | null = null;
 
   constructor(
@@ -62,7 +67,7 @@ export class PartyMemberEffectiveStatsPanel {
 
     this.root = document.createElement('aside');
     this.root.className = 'party-member-effective-stats';
-    this.root.hidden = true;
+    bindGameUiOverlayClosed(this.root);
     this.root.setAttribute('role', 'tooltip');
     this.root.setAttribute('aria-label', '戦闘中ステータス');
     this.root.addEventListener('mouseenter', () => {
@@ -104,9 +109,8 @@ export class PartyMemberEffectiveStatsPanel {
     }
   }
 
-  attachToSlot(slotElement: HTMLElement | null, slotIndex?: number): void {
+  attachToSlot(slotElement: HTMLElement | null): void {
     this.anchoredSlot = slotElement;
-    this.anchoredSlotIndex = slotIndex ?? null;
     if (this.visible) {
       this.reposition();
     }
@@ -118,7 +122,7 @@ export class PartyMemberEffectiveStatsPanel {
 
   show(data: PartyMemberEffectiveStatsPanelData): void {
     this.visible = true;
-    this.root.hidden = false;
+    setGameUiOverlayOpen(this.root, true);
     if (this.frameMount) {
       this.frameMount.appendChild(this.root);
     }
@@ -129,9 +133,8 @@ export class PartyMemberEffectiveStatsPanel {
   hide(): void {
     if (!this.visible) return;
     this.visible = false;
-    this.root.hidden = true;
+    setGameUiOverlayOpen(this.root, false);
     this.anchoredSlot = null;
-    this.anchoredSlotIndex = null;
     this.pointerAnchor = null;
   }
 
@@ -157,44 +160,67 @@ export class PartyMemberEffectiveStatsPanel {
 
     const frame = this.frameMount.getBoundingClientRect();
     const slot = this.anchoredSlot.getBoundingClientRect();
-    const alignEnd = (this.anchoredSlotIndex ?? 0) >= 2;
+    const scale = this.readMountCoordinateScale();
+    const slotCenterLocalX =
+      ((slot.left + slot.right) / 2 - frame.left) / scale;
+    const alignEnd = resolveHudPointerTooltipAlignEnd(
+      slotCenterLocalX,
+      this.frameMount.clientWidth || this.frameMount.offsetWidth,
+    );
 
     if (alignEnd) {
-      this.root.style.left = `${slot.right - frame.left}px`;
+      this.root.style.left = `${(slot.right - frame.left) / scale}px`;
       this.root.classList.add('party-member-effective-stats--align-end');
     } else {
-      this.root.style.left = `${slot.left - frame.left}px`;
+      this.root.style.left = `${(slot.left - frame.left) / scale}px`;
       this.root.classList.remove('party-member-effective-stats--align-end');
     }
-    this.root.style.top = `${slot.top - frame.top}px`;
+    this.root.style.top = `${(slot.top - frame.top) / scale}px`;
     this.root.classList.toggle('party-member-effective-stats--slot-above', true);
     clampElementToMountBounds(this.root, this.frameMount);
+  }
+
+  private readMountCoordinateScale(): number {
+    if (!this.frameMount) return 1;
+    const frame = this.frameMount.getBoundingClientRect();
+    const localWidth = this.frameMount.clientWidth || this.frameMount.offsetWidth;
+    if (localWidth <= 0) return 1;
+    return frame.width / localWidth;
   }
 
   private repositionNearPointer(): void {
     if (!this.frameMount || !this.pointerAnchor) return;
 
     const frame = this.frameMount.getBoundingClientRect();
-    const scale =
-      frame.width > 0 && this.frameMount.clientWidth > 0
-        ? frame.width / this.frameMount.clientWidth
-        : 1;
+    const scale = this.readMountCoordinateScale();
+    const mountWidth =
+      this.frameMount.clientWidth || this.frameMount.offsetWidth;
     const localX = (this.pointerAnchor.clientX - frame.left) / scale;
     const localY = (this.pointerAnchor.clientY - frame.top) / scale;
-    const alignEnd = (this.anchoredSlotIndex ?? 0) >= 2;
 
     this.root.classList.remove('party-member-effective-stats--slot-above');
 
-    let left = localX + POINTER_ANCHOR_GAP_PX;
-    let top = localY + POINTER_ANCHOR_GAP_PX;
-    this.root.style.left = `${left}px`;
-    this.root.style.top = `${top}px`;
+    // Measure with a provisional placement so offsetWidth / offsetHeight are valid.
+    this.root.style.left = `${localX + POINTER_ANCHOR_GAP_PX}px`;
+    this.root.style.top = `${localY + POINTER_ANCHOR_GAP_PX}px`;
+    const width = this.root.offsetWidth;
+    const height = this.root.offsetHeight;
+    const alignEnd = resolveHudPointerTooltipAlignEnd(
+      localX,
+      mountWidth,
+      width,
+      POINTER_ANCHOR_GAP_PX,
+    );
+    this.root.classList.toggle(
+      'party-member-effective-stats--align-end',
+      alignEnd,
+    );
 
-    if (alignEnd) {
-      const width = this.root.offsetWidth;
-      left = localX - width - POINTER_ANCHOR_GAP_PX;
-      this.root.style.left = `${left}px`;
-    }
+    const left = alignEnd
+      ? localX - width - POINTER_ANCHOR_GAP_PX
+      : localX + POINTER_ANCHOR_GAP_PX;
+    this.root.style.left = `${left}px`;
+    this.root.style.top = `${localY - height - POINTER_ANCHOR_GAP_PX}px`;
 
     clampElementToMountBounds(this.root, this.frameMount);
   }
@@ -224,12 +250,12 @@ export class PartyMemberEffectiveStatsPanel {
     this.iconWrap.classList.remove('party-member-effective-stats-icon--empty');
     if (iconUrl) {
       this.iconImg.src = iconUrl;
-      this.iconImg.hidden = false;
+      setGameUiFragmentHidden(this.iconImg, false);
       this.iconWrap.style.backgroundColor = '';
       return;
     }
 
-    this.iconImg.hidden = true;
+    setGameUiFragmentHidden(this.iconImg, true);
     this.iconImg.removeAttribute('src');
     this.iconWrap.classList.add('party-member-effective-stats-icon--empty');
     this.iconWrap.style.backgroundColor = resolveClassIconPlaceholderColor(

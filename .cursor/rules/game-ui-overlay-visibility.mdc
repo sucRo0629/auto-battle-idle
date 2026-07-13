@@ -1,0 +1,68 @@
+---
+description: ゲーム UI の表示切替で HTML hidden 属性を使わない。gameUiOverlay を正本とする。
+alwaysApply: true
+---
+
+# Game UI Overlay Visibility（hidden 禁止）
+
+ツールチップ・用語パネル・HUD ポップオーバーなど、**ゲーム UI の開閉**では HTML の `hidden` 属性と `[hidden] { display: none }` を使わない。`display: none` はレイアウト計測を壊し、開閉と配置の競合バグの温床になる。
+
+## 正本
+
+- 実装: `src/ui/gameUiOverlay.ts`
+- スタイル: `src/styles/game-ui-overlay.css`
+- 既存例: `PartyHudFloatingTooltip`, `GameTermPanel`, `GameTermTooltip`, `PartyMemberEffectiveStatsPanel`
+
+## 使い方
+
+```typescript
+import {
+  bindGameUiOverlayClosed,
+  isGameUiOverlayOpen,
+  setGameUiFragmentHidden,
+  setGameUiOverlayOpen,
+} from "./gameUiOverlay.ts";
+
+// ルート（オーバーレイ本体）
+bindGameUiOverlayClosed(root); // 初期化
+setGameUiOverlayOpen(root, true); // 表示
+setGameUiOverlayOpen(root, false); // 非表示
+isGameUiOverlayOpen(root); // 状態判定
+
+// 子要素の出し分け（アイコン・戻るボタン等）
+setGameUiFragmentHidden(iconEl, true);
+```
+
+```css
+@import './game-ui-overlay.css';
+
+/* 閉じる: visibility + pointer-events。display:none にしない */
+.game-ui-overlay--closed { ... }
+
+/* 断片の非表示のみ display:none 可 */
+.game-ui-fragment--hidden { ... }
+```
+
+## Avoid
+
+- `element.hidden = true/false`
+- `removeAttribute("hidden")` を開閉の主経路にする
+- 新規の `.foo[hidden] { display: none !important; }`
+- 配置前に `hidden` をトグルして `getBoundingClientRect()` する
+
+## Prefer
+
+- ルートの開閉: `game-ui-overlay--closed` + `aria-hidden`
+- 位置計測: 表示状態のまま `getBoundingClientRect()`（必要なら一時的に `visibility: hidden` のみ）
+- 既存の `hidden` 経路を触るときは、同じ変更内で `gameUiOverlay` へ寄せる
+
+## 例外
+
+- **仕様上の HTML 意味**（`<option hidden>` 等）やブラウザ/Electron の必須属性は対象外
+- 他コンポーネントが `hidden` の祖先かどうかの**読み取り**（`node.hidden`）は、全面移行まで暫定可
+- 戦闘シェル等、未移行の `hidden` コードを見つけたら新規追加はせず、触る範囲で `gameUiOverlay` へ寄せる
+
+## テスト
+
+- `element.hidden` の真偽値ではなく `isGameUiOverlayOpen(element)` を使う
+- 可能なら `element.hasAttribute("hidden")` が false であることも確認する

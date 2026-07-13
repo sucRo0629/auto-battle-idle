@@ -1,0 +1,12 @@
+/*
+ * Overlay open/close without the HTML hidden attribute.
+ * visibility:hidden keeps layout measurable for positioning (unlike display:none).
+ */
+.game-ui-overlay--closed {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.game-ui-fragment--hidden {
+  display: none;
+}

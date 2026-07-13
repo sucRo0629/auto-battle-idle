@@ -130,4 +130,25 @@ describe('shouldSkipEngagedAutoApproach', () => {
       shouldSkipEngagedAutoApproach(archer, [archer], [testRanged], gameData),
     ).toBe(true);
   });
+
+  it('skips archer in attack range even when approach target is further left', () => {
+    const archer = mockUnit({ id: 'archer', battleX: 250 });
+    const rangedEnemy = mockUnit({
+      id: 'ranged',
+      isEnemy: true,
+      battleX: 210,
+      traits: {
+        rangePx: 100,
+        damageType: 'physical',
+        basicAttackVfx: { enabled: true },
+      },
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+
+    expect(
+      shouldSkipEngagedAutoApproach(archer, [archer], [rangedEnemy], gameData, {
+        approachTargetX: 180,
+      }),
+    ).toBe(true);
+  });
 });

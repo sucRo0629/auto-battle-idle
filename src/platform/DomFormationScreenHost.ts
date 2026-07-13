@@ -8,7 +8,9 @@ export class DomFormationScreenHost implements MenuHost {
   constructor(private readonly context: MenuHostContext) {}
 
   open(initialView: MetaMenuInitialView = 'hub'): void {
-    if (this.opened) return;
+    if (this.opened) {
+      this.dismiss();
+    }
     this.opened = true;
     this.context.onScreenChange('formation');
     this.overlay = new MetaMenuOverlay(
@@ -40,11 +42,16 @@ export class DomFormationScreenHost implements MenuHost {
 
   close(): void {
     if (!this.opened) return;
+    this.dismiss();
+    const nextScreen = this.context.resolveFormationCloseScreen?.() ?? 'battle';
+    this.context.onScreenChange(nextScreen);
+  }
+
+  dismiss(): void {
+    if (!this.opened) return;
     this.overlay?.destroy();
     this.overlay = null;
     this.opened = false;
-    const nextScreen = this.context.resolveFormationCloseScreen?.() ?? 'battle';
-    this.context.onScreenChange(nextScreen);
   }
 
   isOpen(): boolean {

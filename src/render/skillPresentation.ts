@@ -25,9 +25,12 @@ import {
 export interface SkillPresentationActor {
   role?: Role;
   rangePx: number;
+  effectiveRangePx?: number;
   damageType: DamageType;
   basicAttackVfx?: SkillVfxDef;
   spriteKey?: string;
+  /** 通常攻撃 body / VFX シートの `{classId}_basic_attack` フォールバック用 */
+  classId?: string;
 }
 
 export interface SkillBodyPlaybackOptions {
@@ -49,6 +52,19 @@ export interface SkillHitFeedbackRequest {
   skipMainVfx?: boolean;
   /** overlay DoT/HoT の periodic tick。VFX は出さず popup のみ */
   overlayTick?: boolean;
+  slotKind?: SkillSlotKind;
+  classId?: string;
+}
+
+/** CombatModule 通常行動は runtime skillId が module だが、演出 PNG は legacy `{classId}_basic_attack` を使う。 */
+export function resolveBasicAttackPresentationSkillId(
+  runtimeSkillId: string,
+  classId: string | undefined,
+): string {
+  if (!classId) return runtimeSkillId;
+  const legacySkillId = `${classId}_basic_attack`;
+  if (runtimeSkillId === legacySkillId) return runtimeSkillId;
+  return legacySkillId;
 }
 
 export function isOverlayTickSkillEvent(event: {
@@ -122,6 +138,10 @@ export function buildSkillPresentationContext(
   skillId: string,
   effectIndex: number,
 ): SkillVfxContext {
+  const presentationSkillId =
+    slotKind === "basic"
+      ? resolveBasicAttackPresentationSkillId(skillId, actor?.classId)
+      : skillId;
   return {
     role: actor?.role,
     rangePx: actor?.rangePx ?? 0,
@@ -131,7 +151,7 @@ export function buildSkillPresentationContext(
     effectKind: effectKindForPresentation(effect),
     targetShape: effect.targetShape,
     effectVfxOnly: true,
-    skillId,
+    skillId: presentationSkillId,
     effectIndex,
   };
 }
@@ -145,6 +165,10 @@ export function resolveSkillPresentation(
     ...ctx,
     effectVfxOnly: ctx.effectVfxOnly ?? true,
   });
+}
+
+function shouldPlayAttackLunge(effect: SkillEffectDef): boolean {
+  return effect.type === "damage";
 }
 
 export function playSkillBody(
@@ -167,27 +191,38 @@ export function playSkillBody(
     effect,
     buildSkillPresentationContext(actor, slotKind, effect, skill.id, effectIndex),
   );
-  const skillAnimKey = resolveSkillAnimKey(skill.id, effectIndex);
+  const presentationSkillId =
+    slotKind === "basic"
+      ? resolveBasicAttackPresentationSkillId(skill.id, actor?.classId)
+      : skill.id;
+  const skillAnimKey = resolveSkillAnimKey(presentationSkillId, effectIndex);
+  let playedSkillAnim = false;
   if (skillAnimKey) {
     if (
       options?.restartIfPlaying !== true &&
       canvas.isSkillAnimActive(actorId, skillAnimKey)
     ) {
-      return presentation;
+      playedSkillAnim = true;
+    } else {
+      const holdSec = actor ? resolveSkillAnimHoldSec(skill, actor, slotKind) : 0;
+      canvas.playSkillAnim(
+        actorId,
+        skillAnimKey,
+        toSkillAnimPlaybackOptions(
+          resolveSkillBodyAnimFields(skill, effectIndex),
+          holdSec,
+        ),
+      );
+      playedSkillAnim = true;
     }
-    const holdSec = actor ? resolveSkillAnimHoldSec(skill, actor, slotKind) : 0;
-    canvas.playSkillAnim(
-      actorId,
-      skillAnimKey,
-      toSkillAnimPlaybackOptions(
-        resolveSkillBodyAnimFields(skill, effectIndex),
-        holdSec,
-      ),
-    );
-    return presentation;
   }
 
-  if (presentation.anim && slotKind !== "basic") {
+  if (
+    !playedSkillAnim &&
+    presentation.anim &&
+    shouldPlayAttackLunge(effect) &&
+    slotKind !== "basic"
+  ) {
     canvas.playAnim(actorId, presentation.anim, actor?.spriteKey);
   }
 
@@ -238,7 +273,11 @@ export function playSkillHitFeedback(
     kind,
   } = request;
   const hitIndex = request.hitIndex ?? 0;
-  const vfxOptions = { skillId, effectIndex };
+  const vfxSkillId =
+    request.slotKind === "basic"
+      ? resolveBasicAttackPresentationSkillId(skillId, request.classId)
+      : skillId;
+  const vfxOptions = { skillId: vfxSkillId, effectIndex };
   const overlayTick = request.overlayTick ?? false;
 
   if (
@@ -265,7 +304,7 @@ export function playSkillHitFeedback(
   const hitVfx = overlayTick
     ? null
     : resolveHitVfxForFeedback(presentation, {
-        skillId,
+        skillId: vfxSkillId,
         effectIndex,
         skipMainVfx: request.skipMainVfx ?? false,
       });

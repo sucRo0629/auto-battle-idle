@@ -2,6 +2,12 @@ import "../styles/game-term-panel.css";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { clampElementToMountBounds } from "./clampElementToMountBounds.ts";
 import {
+  bindGameUiOverlayClosed,
+  isGameUiOverlayOpen,
+  setGameUiFragmentHidden,
+  setGameUiOverlayOpen,
+} from "./gameUiOverlay.ts";
+import {
   getGameTermEntry,
   type GameTermId,
   type GameTermLocale,
@@ -14,6 +20,11 @@ export interface GameTermPanelOptions {
   detailScrollRoot?: HTMLElement | null;
   /** When set, panel uses absolute coords inside this layer (battle HUD tooltip layer). */
   frameMount?: HTMLElement | null;
+}
+
+export interface GameTermPanelPointer {
+  clientX: number;
+  clientY: number;
 }
 
 const HUD_LAYER_ANCHOR_GAP_PX = 12;
@@ -35,6 +46,7 @@ export class GameTermPanel {
   private isOpen = false;
   private currentTermId: GameTermId | null = null;
   private anchor: HTMLElement | null = null;
+  private pointerAnchor: GameTermPanelPointer | null = null;
   private history: GameTermId[] = [];
 
   private readonly onDocumentPointerDown = (event: PointerEvent) => {
@@ -79,14 +91,14 @@ export class GameTermPanel {
     this.root = document.createElement("div");
     this.root.className = "game-term-panel";
     this.root.id = this.panelId;
-    this.root.hidden = true;
+    bindGameUiOverlayClosed(this.root);
     this.root.setAttribute("role", "dialog");
     this.root.setAttribute("aria-modal", "false");
 
     this.backButton = document.createElement("button");
     this.backButton.type = "button";
     this.backButton.className = "game-term-panel-back";
-    this.backButton.hidden = true;
+    setGameUiFragmentHidden(this.backButton, true);
     this.backButton.addEventListener("click", (event) => {
       event.stopPropagation();
       this.popHistory();
@@ -100,7 +112,7 @@ export class GameTermPanel {
     this.iconEl.width = 24;
     this.iconEl.height = 24;
     this.iconEl.alt = "";
-    this.iconEl.hidden = true;
+    setGameUiFragmentHidden(this.iconEl, true);
 
     this.titleEl = document.createElement("h3");
     this.titleEl.className = "game-term-panel-title";
@@ -142,7 +154,11 @@ export class GameTermPanel {
     return this.panelId;
   }
 
-  openFromTerm(termId: GameTermId, anchor: HTMLElement): void {
+  openFromTerm(
+    termId: GameTermId,
+    anchor: HTMLElement,
+    pointer?: GameTermPanelPointer,
+  ): void {
     if (this.isOpen && this.currentTermId === termId) {
       this.close();
       return;
@@ -155,13 +171,14 @@ export class GameTermPanel {
     this.history = [];
     this.currentTermId = termId;
     this.anchor = anchor;
+    this.pointerAnchor = pointer ?? null;
     this.renderCurrentTerm();
-    this.positionNearAnchor(anchor);
     if (this.frameMount) {
       this.frameMount.appendChild(this.root);
     }
-    this.root.hidden = false;
+    setGameUiOverlayOpen(this.root, true);
     this.isOpen = true;
+    this.positionNearAnchor(anchor, pointer);
     this.setAnchorExpanded(anchor, true);
   }
 
@@ -191,18 +208,19 @@ export class GameTermPanel {
   }
 
   close(): void {
-    if (!this.isOpen && this.root.hidden) {
+    if (!this.isOpen && !isGameUiOverlayOpen(this.root)) {
       this.history = [];
       this.currentTermId = null;
       return;
     }
     this.setAnchorExpanded(this.anchor, false);
     this.anchor = null;
+    this.pointerAnchor = null;
     this.history = [];
     this.currentTermId = null;
-    this.root.hidden = true;
+    setGameUiOverlayOpen(this.root, false);
     this.isOpen = false;
-    this.backButton.hidden = true;
+    setGameUiFragmentHidden(this.backButton, true);
     this.bodyEl.replaceChildren();
   }
 
@@ -223,10 +241,10 @@ export class GameTermPanel {
     const iconUrl = resolveGameTermStatusIconUrl(entry);
     if (iconUrl) {
       this.iconEl.src = iconUrl;
-      this.iconEl.hidden = false;
+      setGameUiFragmentHidden(this.iconEl, false);
     } else {
       this.iconEl.removeAttribute("src");
-      this.iconEl.hidden = true;
+      setGameUiFragmentHidden(this.iconEl, true);
     }
 
     if (this.history.length > 0) {
@@ -235,12 +253,12 @@ export class GameTermPanel {
         previousId !== undefined
           ? getGameTermEntry(previousId)?.title[this.locale]
           : undefined;
-      this.backButton.hidden = false;
+      setGameUiFragmentHidden(this.backButton, false);
       this.backButton.textContent = previousTitle
         ? `← ${previousTitle}`
         : "← 戻る";
     } else {
-      this.backButton.hidden = true;
+      setGameUiFragmentHidden(this.backButton, true);
     }
 
     this.bodyEl.replaceChildren();
@@ -256,9 +274,17 @@ export class GameTermPanel {
     }
   }
 
-  private positionNearAnchor(anchor: HTMLElement): void {
+  private measurePanelRect(): DOMRect {
+    return this.root.getBoundingClientRect();
+  }
+
+  private positionNearAnchor(
+    anchor: HTMLElement,
+    pointer?: GameTermPanelPointer,
+  ): void {
+    const resolvedPointer = pointer ?? this.pointerAnchor ?? undefined;
     if (this.frameMount) {
-      this.positionNearAnchorInFrame(anchor);
+      this.positionNearAnchorInFrame(anchor, resolvedPointer);
       return;
     }
 
@@ -266,12 +292,7 @@ export class GameTermPanel {
     const margin = 8;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-
-    this.root.style.visibility = "hidden";
-    this.root.hidden = false;
-    const panelRect = this.root.getBoundingClientRect();
-    this.root.hidden = true;
-    this.root.style.visibility = "";
+    const panelRect = this.measurePanelRect();
 
     let top = rect.bottom + margin;
     let left = rect.left;
@@ -294,7 +315,10 @@ export class GameTermPanel {
     this.root.style.left = `${left}px`;
   }
 
-  private positionNearAnchorInFrame(anchor: HTMLElement): void {
+  private positionNearAnchorInFrame(
+    anchor: HTMLElement,
+    pointer?: GameTermPanelPointer,
+  ): void {
     const mount = this.frameMount;
     if (!mount) return;
 
@@ -302,30 +326,39 @@ export class GameTermPanel {
     const gap = HUD_LAYER_ANCHOR_GAP_PX;
     const frame = mount.getBoundingClientRect();
     const rect = anchor.getBoundingClientRect();
+    const localWidth = mount.clientWidth || mount.offsetWidth;
+    const scale = localWidth > 0 ? frame.width / localWidth : 1;
+    const safeScale = scale > 0 ? scale : 1;
+    const panelRect = this.measurePanelRect();
+    const panelWidth = panelRect.width / safeScale;
+    const panelHeight = panelRect.height / safeScale;
+    const pointerLeft = pointer
+      ? (pointer.clientX - frame.left) / safeScale
+      : null;
+    const pointerTop = pointer
+      ? (pointer.clientY - frame.top) / safeScale
+      : null;
+    const anchorLeft = (rect.left - frame.left) / safeScale;
+    const anchorTop = (rect.top - frame.top) / safeScale;
+    const anchorBottom = (rect.bottom - frame.top) / safeScale;
 
-    this.root.style.visibility = "hidden";
-    this.root.hidden = false;
-    const panelRect = this.root.getBoundingClientRect();
-    this.root.hidden = true;
-    this.root.style.visibility = "";
-
-    let top = rect.bottom - frame.top + gap;
-    let left = rect.left - frame.left;
+    let top = (pointerTop ?? anchorTop) - panelHeight - gap;
+    let left = (pointerLeft ?? anchorLeft) + (pointer ? gap : 0);
 
     const mountH = mount.clientHeight || frame.height;
     const mountW = mount.clientWidth || frame.width;
 
-    if (left + panelRect.width > mountW - margin) {
-      left = Math.max(margin, mountW - panelRect.width - margin);
+    if (left + panelWidth > mountW - margin) {
+      left = Math.max(margin, mountW - panelWidth - margin);
     }
     if (left < margin) {
       left = margin;
     }
 
-    if (top + panelRect.height > mountH - margin) {
-      const above = rect.top - frame.top - gap - panelRect.height;
-      if (above >= margin) {
-        top = above;
+    if (top < margin) {
+      const below = (pointerTop ?? anchorBottom) + gap;
+      if (below + panelHeight <= mountH - margin) {
+        top = below;
       }
     }
 

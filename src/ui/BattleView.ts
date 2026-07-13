@@ -5,6 +5,7 @@ import "../styles/party-hud-overlay.css";
 import "../styles/party-hud-floating-tooltip.css";
 import type { BattleEngine } from "../battle/BattleEngine.ts";
 import type { BattleEvent } from "../battle/events.ts";
+import { isCombatModuleBasicSkillId } from "../battle/data/resolveCombatModuleBasic.ts";
 import { resolveSkillRangePx } from "../battle/skills/rangeUtils.ts";
 import type {
   BattleSnapshot,
@@ -23,6 +24,7 @@ import {
 } from "../progression/stageProgression.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
+import type { BasicAttackLungeHint } from "../render/basicAttackLungePlayback.ts";
 import { subscribeLocaleChange, getLocale } from "../i18n/locale.ts";
 import { t } from "../i18n/t.ts";
 import type { UiMessageKey } from "../i18n/uiMessages.ts";
@@ -981,10 +983,7 @@ export class BattleView {
     const slotRoot = this.partyHud.getMemberStatsAnchor(
       this.hoveredMemberStatsSlotIndex,
     );
-    this.memberStatsPanel.attachToSlot(
-      slotRoot,
-      this.hoveredMemberStatsSlotIndex,
-    );
+    this.memberStatsPanel.attachToSlot(slotRoot);
     this.memberStatsPanel.setPointerAnchor(this.memberStatsPointer);
 
     if (this.memberStatsPanel.isVisible()) {
@@ -1147,6 +1146,14 @@ export class BattleView {
       const skillDef = this.gameData.skillRegistry.actives[event.skillId];
       const effectDef = skillDef?.effect[event.effectIndex];
       if (!skillDef || !effectDef) return;
+      this.tryPlayBasicAttackLunge(snapshot, {
+        actorId: event.actorId,
+        targetId: event.targetId,
+        slotKind,
+        skillId: event.skillId,
+        effectIndex: event.effectIndex,
+        windupOnlyWhenDeferred: true,
+      });
       playSkillBody(
         this.canvas,
         event.actorId,
@@ -1227,6 +1234,14 @@ export class BattleView {
       }
       const effectDef = skillDef?.effect[event.effectIndex ?? 0];
       if (effectDef) {
+        this.tryPlayBasicAttackLunge(snapshot, {
+          actorId: event.actorId,
+          targetId: event.targetId,
+          slotKind,
+          effectType: event.effect,
+          skillId: event.skillId,
+          effectIndex: event.effectIndex ?? 0,
+        });
         this.flashDebugSkillRange(event.actorId, effectDef);
         const skipBodyAnim = effectDef.applyFrame !== undefined;
         const presentation = !skipBodyAnim && skillDef
@@ -1271,6 +1286,8 @@ export class BattleView {
             event.effect === "dot" ? event.dotFlavor : undefined,
           popupDedupeKey: this.resolveSkillPopupDedupeKey(event),
           skipMainVfx: (event.hitIndex ?? 0) > 0,
+          slotKind,
+          classId: actor?.classId,
         });
       }
     } else if (event.type === "basicAttackCountCharged") {
@@ -1322,6 +1339,100 @@ export class BattleView {
         this.pushLog("Returning to previous stage...");
       }
     }
+  }
+
+  private tryPlayBasicAttackLunge(
+    snapshot: BattleSnapshot,
+    params: {
+      actorId: string;
+      targetId: string;
+      slotKind: "basic" | "active";
+      effectType?: string;
+      skillId?: string;
+      effectIndex?: number;
+      windupOnlyWhenDeferred?: boolean;
+    },
+  ): void {
+    if (!this.isBasicAttackPresentation(params)) return;
+
+    const skillDef =
+      params.skillId !== undefined
+        ? this.gameData.skillRegistry.actives[params.skillId]
+        : undefined;
+    const effectDef =
+      skillDef?.effect[params.effectIndex ?? 0] ??
+      (params.effectType === "damage"
+        ? ({ type: "damage" } as SkillEffectDef)
+        : params.effectType === "heal"
+          ? ({ type: "heal" } as SkillEffectDef)
+          : undefined);
+    if (!effectDef || !this.shouldLungeForBasicEffect(effectDef)) return;
+
+    if (
+      params.windupOnlyWhenDeferred === true &&
+      effectDef.applyFrame === undefined
+    ) {
+      return;
+    }
+
+    const hint = this.resolveBasicAttackLungeHint(
+      snapshot,
+      params.actorId,
+      params.targetId,
+    );
+    if (!hint) return;
+
+    this.canvas.playBasicAttackLunge(
+      params.actorId,
+      params.targetId,
+      hint,
+    );
+  }
+
+  private shouldLungeForBasicEffect(effect: SkillEffectDef): boolean {
+    return effect.type === "damage" || effect.type === "heal";
+  }
+
+  private isBasicAttackPresentation(params: {
+    slotKind: "basic" | "active";
+    skillId?: string;
+  }): boolean {
+    if (params.slotKind === "basic") return true;
+    if (!params.skillId) return false;
+    if (
+      isCombatModuleBasicSkillId(
+        params.skillId,
+        this.gameData.combatModuleRegistry,
+      )
+    ) {
+      return true;
+    }
+    return params.skillId.endsWith("_basic_attack");
+  }
+
+  private resolveBasicAttackLungeHint(
+    snapshot: BattleSnapshot,
+    actorId: string,
+    targetId: string,
+  ): BasicAttackLungeHint | null {
+    const actor = this.findCombatantSnapshot(snapshot, actorId);
+    const target = this.findCombatantSnapshot(snapshot, targetId);
+    if (!actor || !target) return null;
+    return {
+      sourceX: actor.battleX,
+      targetX: target.battleX,
+      facingSign: actor.facingSign,
+      isEnemy: actor.isEnemy,
+    };
+  }
+
+  private findCombatantSnapshot(
+    snapshot: BattleSnapshot,
+    combatantId: string,
+  ): CombatantSnapshot | undefined {
+    return [...snapshot.allies, ...snapshot.enemies].find(
+      (unit) => unit.id === combatantId,
+    );
   }
 
   private pushLog(message: string): void {

@@ -1,4 +1,10 @@
 import { clampElementToMountBounds } from './clampElementToMountBounds.ts';
+import {
+  bindGameUiOverlayClosed,
+  isGameUiOverlayOpen,
+  setGameUiOverlayOpen,
+} from './gameUiOverlay.ts';
+import { resolveHudPointerTooltipAlignEnd } from './resolveHudPointerTooltipAlignEnd.ts';
 
 /** Gap between anchor and tooltip so the label clears the cursor on small HUD hits. */
 const TOOLTIP_ANCHOR_GAP_PX = 12;
@@ -41,7 +47,7 @@ export class PartyHudFloatingTooltip {
     this.mount = mount;
     this.root = document.createElement('div');
     this.root.className = 'party-hud-floating-tooltip';
-    this.root.hidden = true;
+    bindGameUiOverlayClosed(this.root);
     mount.appendChild(this.root);
   }
 
@@ -65,7 +71,7 @@ export class PartyHudFloatingTooltip {
       'party-hud-floating-tooltip--below-start',
       placement === 'below' && !alignEnd,
     );
-    this.root.hidden = false;
+    setGameUiOverlayOpen(this.root, true);
     this.root.style.zIndex = '10';
     this.mount.appendChild(this.root);
     this.reposition();
@@ -74,7 +80,7 @@ export class PartyHudFloatingTooltip {
   hide(): void {
     this.anchor = null;
     this.pointerAnchor = null;
-    this.root.hidden = true;
+    setGameUiOverlayOpen(this.root, false);
   }
 
   getAnchor(): HTMLElement | null {
@@ -82,20 +88,20 @@ export class PartyHudFloatingTooltip {
   }
 
   hideIfAnchorDetached(): void {
-    if (!this.anchor || this.root.hidden) return;
+    if (!this.anchor || !isGameUiOverlayOpen(this.root)) return;
     if (!isPartyHudFloatingTooltipAnchorVisible(this.anchor)) {
       this.hide();
     }
   }
 
   isVisible(): boolean {
-    return !this.root.hidden;
+    return isGameUiOverlayOpen(this.root);
   }
 
   reposition(): void {
-    if (!this.anchor || this.root.hidden) return;
+    if (!this.anchor || !isGameUiOverlayOpen(this.root)) return;
     this.hideIfAnchorDetached();
-    if (!this.anchor || this.root.hidden) return;
+    if (!this.anchor || !isGameUiOverlayOpen(this.root)) return;
 
     if (this.pointerAnchor) {
       this.repositionNearPointer();
@@ -169,22 +175,30 @@ export class PartyHudFloatingTooltip {
 
     const frame = this.mount.getBoundingClientRect();
     const scale = this.readMountCoordinateScale();
+    const mountWidth = this.mount.clientWidth || this.mount.offsetWidth;
     const localX = (this.pointerAnchor.clientX - frame.left) / scale;
     const localY = (this.pointerAnchor.clientY - frame.top) / scale;
-    const alignEnd = this.options.alignEnd ?? false;
 
     this.root.classList.add('party-hud-floating-tooltip--pointer');
 
-    let left = localX + TOOLTIP_ANCHOR_GAP_PX;
-    const top = localY + TOOLTIP_ANCHOR_GAP_PX;
-    this.root.style.left = `${left}px`;
-    this.root.style.top = `${top}px`;
+    const width = this.root.offsetWidth;
+    const height = this.root.offsetHeight;
+    const alignEnd = resolveHudPointerTooltipAlignEnd(
+      localX,
+      mountWidth,
+      width,
+      TOOLTIP_ANCHOR_GAP_PX,
+    );
+    this.root.classList.toggle(
+      'party-hud-floating-tooltip--align-end',
+      alignEnd,
+    );
 
-    if (alignEnd) {
-      const width = this.root.offsetWidth;
-      left = localX - width - TOOLTIP_ANCHOR_GAP_PX;
-      this.root.style.left = `${left}px`;
-    }
+    const left = alignEnd
+      ? localX - width - TOOLTIP_ANCHOR_GAP_PX
+      : localX + TOOLTIP_ANCHOR_GAP_PX;
+    this.root.style.left = `${left}px`;
+    this.root.style.top = `${localY - height - TOOLTIP_ANCHOR_GAP_PX}px`;
 
     clampElementToMountBounds(this.root, this.mount);
   }
