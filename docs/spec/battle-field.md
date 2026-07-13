@@ -193,8 +193,7 @@ effectiveRangePx =
 | `front` | 近接帯の attacker/defender を最前帯（右）。帯内は `rangePx` 降順 → 同値は `id` 順。それ以外（supporter・前列遠隔など）は後方帯（左） |
 | `back`  | ロール順: attacker → supporter → defender → `rangePx` 降順 → `id` 順（従来どおり）                                                   |
 
-前列の supporter は近接最前帯（attacker/defender かつ `rangePx < RANGED_ATTACK_MIN_PX`）の手前に留める。接敵接近では supporter の停止 X をその最前帯の手前に cap する（`resolveApproachBattleX.ts` の `capFrontRowSupporterBehindMeleeFront`）。
-この例外は defender の代替壁を作るためではなく、`sp_alchemist` のような近接帯 Survival に **前線直後から局所 sustain を差し込む位置** を与えるためのものとして扱う。
+前列の supporter は近接最前帯より左（後方）に配置されるが、接敵接近の停止 X は **ChaseTarget ± effectiveRangePx** が正本。前列 sustain 用の個別 depth cap は持たない（`resolveEngagedFormationOverlaps` で X 重なりのみ解消）。
 
 ### 2.7 スプライト描画順（重なり）
 
@@ -395,7 +394,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 接敵 context の判定順: (1) `accessState === "rearAssault"` (2) 生存味方 peer 集合の固定点から「最前線 + `PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX`（3px）より前方」を除外 (3) **単独生存時のみ** `battleX > getEnemyContactX` fallback。遠隔だけ残って contact が大きく振れても、peer frontline で戦線外を判定する。
 
-rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormationOverlaps`・spacing の **基準から除外**する（戦線外の単独アクセス）。`applyPartyFormationApproachSpacing` は dead-chain 維持のため on-field 全スロットを入力に含めるが、戦線外ユニットの `baseApproach` は clamp する。
+rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormationOverlaps` の **基準から除外**する（戦線外の単独アクセス）。戦線外ユニットの `baseApproach` は march follow で前進側へ押し出さない。
 
 立てる条件: 味方 actor が敵対 anchor へ `moveMode: "toAnchor"` かつ `anchorOffsetPx > 0` の move を適用したとき（効果形状で判定）。解除: 非 rear の move 適用時、**`shouldClearRearAssaultAccess`（peer frontline 付近へ戻ったとき）**、スキルシーケンス完了時（同条件）、死亡・wave reset。`waitAfterSec` 中も move 完了だけでは解除しない。敵側のプレイヤー背後 move は本 spec のスコープ外。
 
@@ -411,10 +410,9 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 **味方の共有 clamp / formation レイヤ：**
 
-- 戦線 on-field ユニット（rear assault 除外）：生存敵 contact より右へ過進軍しない（`capOnFieldBeforeEnemyContact`）。`formationRow` は使わない。**例外（遠隔 rear chase）：** 遠隔帯ユニットかつ `attackType.ranged` または敵 `farthest` 優先の ChaseTarget を持ち、ChaseTarget が敵 contact より奥にいるときは、停止 X を `ChaseTarget.battleX − effectiveRangePx` まで contact cap より前進側へ緩和する。ただし後列ユニットは `getPlayerFrontlineContactX − FORMATION_DEPTH_STEP_PX` を超えない（前列追越禁止）。近接 / defender / healer の通常接近は変更しない
-- 前列 supporter（`role: supporter`）：近接最前帯の直後へ留める（`capFrontRowSupporterBehindMeleeFront`）。battleX / 近接帯で判定し `formationRow` は使わない。これは defender 代替壁ではなく前線直後 sustain 用の formation clamp。PHT 接近は cap 位置まで試み、cap 到達後も PHT が selfOrigin aoe / basic heal 射程内に入るまで withhold で空振りしない（[combat.md](combat.md) §回復 PHT）
-- 接近ターゲットの depth-order clamp は全 on-field ユニット共通で、`applyPartyFormationApproachSpacing`（partyFormation ソート順）の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
-- rear assault 中の味方は `applyFormationMarchFollow` の leader / follower から除外。`baseApproach` は formation chain 用に clamp し、背後位置を他ユニットの spacing 基準にしない
+- 戦線 on-field ユニット（rear assault 除外）：生存敵 contact より右へ過進軍しない（`capOnFieldBeforeEnemyContact`）。`formationRow` は使わない
+- Engaged 接近目標の X 深度積み上げ（`applyPartyFormationApproachSpacing` 等）は持たない。各ユニットの approach target は **ChaseTarget ± effectiveRangePx** が正本。同 X 重なりは `resolveEngagedFormationOverlaps` のみで解消
+- rear assault 中の味方は `applyFormationMarchFollow` の leader / follower から除外。`baseApproach` は背後位置を他ユニットの march follow 基準にしない
 
 **敵の追い替え：** 毎 tick [combat.md](combat.md) §敵対単体ターゲット選定（デフォルトまたは優先ターゲット / 闘技場の掟）で再選定。ヒステリシスや `threatFocusTargetId` は使わない。射程内に入ったら attack プールで停止・攻撃。
 

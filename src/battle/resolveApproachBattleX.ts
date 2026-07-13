@@ -8,11 +8,9 @@ import {
   resolvePlayerRearAssaultHoldBattleX,
   type PlayerRearAssaultBattleContext,
   resolveApproachAttackBattleX,
-  resolveApproachFormationRangePx,
   resolveAttackBattleX,
   resolveApproachRangePx,
   resolveFormationRangePx,
-  resolvePlayerFrontlineOwners,
 } from "./combatPosition.ts";
 import { pickTargetFromPool, resolvePriorityHealTarget, resolveTargetSpec } from "./skills/targeting.ts";
 import {
@@ -22,13 +20,11 @@ import {
   resolveApproachTargetSpec,
 } from "./skills/targetSpec.ts";
 import { getAttackablePool, isWithinSkillRange } from "./skills/rangeUtils.ts";
-import { isRangedAttack, isStationaryUnit } from "./data/entityTraits.ts";
-import { applyPartyFormationApproachSpacing } from "./battleLayout.ts";
-import { FORMATION_DEPTH_STEP_PX } from "./battleLayout.ts";
+import { isStationaryUnit } from "./data/entityTraits.ts";
+import { FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX } from "./battleLayout.ts";
 import {
   comparePartyFormationSlot,
   computePartyFormationBattleX,
-  isMeleeFormationSlot,
 } from "./partyFormation.ts";
 import {
   isAllyHealBasicAttack,
@@ -208,108 +204,6 @@ export function resolveEnemyBasicAttackTarget(
   return resolveEnemyAttackTargetPlayer(enemy, players, enemies, gameData);
 }
 
-function hasRangedPriorityChaseTargetRule(
-  player: CombatantState,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-): boolean {
-  const spec = resolveUnitTargetSpec(player, players, enemies, gameData);
-  if (spec.kind === "attackType" && spec.ranged === true) return true;
-  return (
-    spec.kind === "distance" &&
-    spec.side === "enemy" &&
-    spec.order === "farthest"
-  );
-}
-
-/** 後列遠隔が前列味方の battleX を追い越さない上限（null = 自ユニットが前線帯） */
-function resolveAllyFrontlineSafetyCapX(
-  player: CombatantState,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-  contact: number,
-): number | null {
-  const owners = resolvePlayerFrontlineOwners(players, enemies);
-  if (owners.length === 0) return null;
-  if (owners.some((ally) => ally.id === player.id)) return null;
-
-  const allyCount = livingAllyCount(players);
-  let maxFrontlineX = Number.NEGATIVE_INFINITY;
-  for (const ally of owners) {
-    const allyApproach = resolveSharedPlayerApproachBattleX(
-      ally,
-      players,
-      enemies,
-      gameData,
-      contact,
-    );
-    const allyContactCap = resolveApproachAttackBattleX(
-      ally,
-      contact,
-      gameData,
-      allyCount,
-      contact,
-    );
-    maxFrontlineX = Math.max(
-      maxFrontlineX,
-      ally.battleX,
-      Math.min(allyApproach, allyContactCap),
-    );
-  }
-  return maxFrontlineX - FORMATION_DEPTH_STEP_PX;
-}
-
-/**
- * contact より奥の ranged 優先 ChaseTarget 向けに cap を緩和する。
- * chase 停止 X が contact cap より前進側なら、前列追越 cap まで許可する。
- */
-function resolveRangedRearChaseContactCapX(
-  player: CombatantState,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-  contact: number,
-  contactCapX: number,
-): number {
-  if (!isRangedAttack(resolveApproachFormationRangePx(player))) {
-    return contactCapX;
-  }
-  if (!hasRangedPriorityChaseTargetRule(player, players, enemies, gameData)) {
-    return contactCapX;
-  }
-  const chase = resolvePlayerChaseTargetEnemy(
-    player,
-    players,
-    enemies,
-    gameData,
-  );
-  if (!chase || chase.battleX <= contact) {
-    return contactCapX;
-  }
-  const chaseStopX = resolveApproachAttackBattleX(
-    player,
-    chase.battleX,
-    gameData,
-    livingAllyCount(players),
-    contact,
-  );
-  if (chaseStopX <= contactCapX) {
-    return contactCapX;
-  }
-  const safetyCap = resolveAllyFrontlineSafetyCapX(
-    player,
-    players,
-    enemies,
-    gameData,
-    contact,
-  );
-  return safetyCap === null
-    ? chaseStopX
-    : Math.min(chaseStopX, safetyCap);
-}
-
 /**
  * 共有 clamp / formation safety layer。
  * 前衛が敵最前線を越えて過進軍しないための cap であり、ChaseTarget の正本ではない。
@@ -332,15 +226,7 @@ function capOnFieldBeforeEnemyContact(
     livingAllyCount(players),
     contact,
   );
-  const maxForward = resolveRangedRearChaseContactCapX(
-    player,
-    players,
-    enemies,
-    gameData,
-    contact,
-    contactCapX,
-  );
-  return Math.min(approachX, maxForward);
+  return Math.min(approachX, contactCapX);
 }
 
 /** pierce 敵向け通常攻撃の接近停止 X（contact − effectiveRangePx） */
@@ -449,69 +335,6 @@ function resolveSharedPlayerApproachBattleX(
   );
 }
 
-function toPlacementInput(unit: CombatantState) {
-  return {
-    id: unit.id,
-    role: unit.role,
-    formationRow: unit.formationRow,
-    rangePx: resolveApproachFormationRangePx(unit),
-    isAlive: unit.isAlive,
-  };
-}
-
-function toMeleeFormationSlot(unit: CombatantState): {
-  id: string;
-  role: CombatantState["role"];
-  rangePx: number;
-  damageType: CombatantState["traits"]["damageType"];
-  formationRow: CombatantState["formationRow"];
-} {
-  return {
-    id: unit.id,
-    role: unit.role,
-    rangePx: resolveApproachFormationRangePx(unit),
-    damageType: unit.traits.damageType,
-    formationRow: unit.formationRow,
-  };
-}
-
-function capFrontRowSupporterBehindMeleeFront(
-  player: CombatantState,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-  contact: number,
-  approachX: number,
-): number {
-  if (player.role !== "supporter") {
-    return approachX;
-  }
-  const livingOnField = players.filter(
-    (ally) =>
-      ally.isAlive &&
-      !isPlayerRearAssaultAccess(ally, { players, enemies }),
-  );
-  if (livingOnField.length === 0) return approachX;
-  const contactX = Math.max(...livingOnField.map((ally) => ally.battleX));
-  let maxMeleeFrontX = Number.NEGATIVE_INFINITY;
-  for (const ally of players) {
-    if (!ally.isAlive) continue;
-    if (isPlayerRearAssaultAccess(ally, { players, enemies })) continue;
-    if (!isMeleeFormationSlot(toMeleeFormationSlot(ally))) continue;
-    if (ally.battleX < contactX - FORMATION_DEPTH_STEP_PX) continue;
-    const meleeX = resolvePlayerChaseApproachBattleX(
-      ally,
-      players,
-      enemies,
-      gameData,
-      contact,
-    );
-    maxMeleeFrontX = Math.max(maxMeleeFrontX, meleeX);
-  }
-  if (maxMeleeFrontX === Number.NEGATIVE_INFINITY) return approachX;
-  return Math.min(approachX, maxMeleeFrontX - FORMATION_DEPTH_STEP_PX);
-}
-
 function resolvePlayerApproachWithoutEnemyContact(
   players: CombatantState[],
 ): Map<string, number> {
@@ -532,7 +355,7 @@ function resolvePlayerApproachWithoutEnemyContact(
   const targets = new Map<string, number>();
   for (const player of living) {
     const deployX = formation.get(player.id) ?? player.battleX;
-    if (player.battleX > partyFrontDeployX + FORMATION_DEPTH_STEP_PX) {
+    if (player.battleX > partyFrontDeployX + FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX) {
       targets.set(player.id, deployX);
     } else {
       targets.set(player.id, player.battleX);
@@ -555,21 +378,12 @@ function resolveIndividualPlayerApproachBattleX(
   gameData: GameData,
   contact: number,
 ): number {
-  let approachX = resolveSharedPlayerApproachBattleX(
+  const approachX = resolveSharedPlayerApproachBattleX(
     player,
     players,
     enemies,
     gameData,
     contact,
-  );
-
-  approachX = capFrontRowSupporterBehindMeleeFront(
-    player,
-    players,
-    enemies,
-    gameData,
-    contact,
-    approachX,
   );
 
   return capOnFieldBeforeEnemyContact(
@@ -583,31 +397,11 @@ function resolveIndividualPlayerApproachBattleX(
 }
 
 /**
- * spacing 後: supporter の個別接近意図を連鎖で上書きしない。
- * 後列 attacker の深追い chase が heal supporter の現位置維持を引きずらない。
- */
-function capApproachFormationOrder(
-  targets: Map<string, number>,
-  individualBases: Map<string, number>,
-  players: CombatantState[],
-): void {
-  for (const player of players) {
-    if (!player.isAlive || player.role !== "supporter") continue;
-    const base = individualBases.get(player.id);
-    const spaced = targets.get(player.id);
-    if (base === undefined || spaced === undefined) continue;
-    if (spaced > base) {
-      targets.set(player.id, base);
-    }
-  }
-}
-
-/**
- * 戦線外 rear assault の接近目標は spacing で前進側へ押し出さない。
+ * 戦線外 rear assault の接近目標は march follow で前進側へ押し出さない。
  * 個別 base（rear return 等）より手前に出ると射程外で停止デッドロックになる。
  */
-function clampRearAssaultApproachAfterSpacing(
-  spaced: Map<string, number>,
+function clampRearAssaultApproachAfterMarchFollow(
+  targets: Map<string, number>,
   baseApproach: Map<string, number>,
   players: CombatantState[],
   battleContext: PlayerRearAssaultBattleContext,
@@ -616,49 +410,15 @@ function clampRearAssaultApproachAfterSpacing(
     if (!player.isAlive) continue;
     if (!isPlayerRearAssaultAccess(player, battleContext)) continue;
     const base = baseApproach.get(player.id);
-    const target = spaced.get(player.id);
+    const target = targets.get(player.id);
     if (base === undefined || target === undefined) continue;
     if (target > base) {
-      spaced.set(player.id, base);
+      targets.set(player.id, base);
     }
   }
 }
 
-function capRangedRearChaseAfterFormationSpacing(
-  targets: Map<string, number>,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-  contact: number,
-): void {
-  const battleContext: PlayerRearAssaultBattleContext = { players, enemies };
-  for (const player of players) {
-    if (!player.isAlive) continue;
-    if (isPlayerRearAssaultAccess(player, battleContext)) continue;
-    const contactCapX = resolveApproachAttackBattleX(
-      player,
-      contact,
-      gameData,
-      livingAllyCount(players),
-      contact,
-    );
-    const maxForward = resolveRangedRearChaseContactCapX(
-      player,
-      players,
-      enemies,
-      gameData,
-      contact,
-      contactCapX,
-    );
-    if (maxForward <= contactCapX) continue;
-    const target = targets.get(player.id);
-    if (target !== undefined && target > maxForward) {
-      targets.set(player.id, maxForward);
-    }
-  }
-}
-
-/** 全味方の接敵目標 battleX（列内スペーシング適用済み） */
+/** 全味方の接敵目標 battleX */
 export function resolveAllPlayerApproachBattleX(
   players: CombatantState[],
   enemies: CombatantState[],
@@ -670,6 +430,7 @@ export function resolveAllPlayerApproachBattleX(
   }
 
   const battleContext: PlayerRearAssaultBattleContext = { players, enemies };
+  const targets = new Map<string, number>();
   const baseApproach = new Map<string, number>();
   for (const player of players) {
     let base = resolveIndividualPlayerApproachBattleX(
@@ -692,35 +453,25 @@ export function resolveAllPlayerApproachBattleX(
       }
     }
     baseApproach.set(player.id, base);
+    targets.set(player.id, base);
   }
 
-  const spacingInputs = players.map(toPlacementInput);
-
-  const spaced = applyPartyFormationApproachSpacing(baseApproach, spacingInputs);
-  capApproachFormationOrder(spaced, baseApproach, players);
-  clampRearAssaultApproachAfterSpacing(
-    spaced,
-    baseApproach,
-    players,
-    battleContext,
-  );
   applyFormationMarchFollow(
-    spaced,
+    targets,
     players.filter(
       (player) =>
         player.isAlive &&
         !isPlayerRearAssaultAccess(player, battleContext),
     ),
   );
-  capRangedRearChaseAfterFormationSpacing(
-    spaced,
+  clampRearAssaultApproachAfterMarchFollow(
+    targets,
+    baseApproach,
     players,
-    enemies,
-    gameData,
-    contact,
+    battleContext,
   );
 
-  return spaced;
+  return targets;
 }
 
 /**

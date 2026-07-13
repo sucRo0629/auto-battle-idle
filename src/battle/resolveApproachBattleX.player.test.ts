@@ -77,7 +77,7 @@ describe("resolvePlayerApproachBattleX", () => {
     expect(approachX).toBe(280 - MELEE_STOP_GAP);
   });
 
-  it("relaxes contact cap for ranged rear chase target behind enemy contact", () => {
+  it("applies contact cap even when rear enemy is behind contact", () => {
     const archer = mockCombatant({ id: "archer" });
     const frontMelee = mockCombatant({
       id: "melee",
@@ -119,11 +119,11 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData,
     );
 
-    expect(approachX).toBe(320 - 100);
-    expect(approachX).toBeGreaterThan(280 - 100);
+    expect(approachX).toBe(280 - 100);
+    expect(approachX).toBeLessThan(320 - 100);
   });
 
-  it("does not let rear ranged overtake ally frontline when chasing rear target", () => {
+  it("rear ranged chases front enemy without depth push past ally frontline", () => {
     const longRangeGameData: GameData = {
       ...gameData,
       skillRegistry: {
@@ -213,8 +213,8 @@ describe("resolvePlayerApproachBattleX", () => {
       longRangeGameData,
     );
 
-    expect(approachX).toBe(374);
-    expect(approachX).toBeLessThan(506 - 0);
+    expect(approachX).toBe(506 - 300);
+    expect(approachX).toBeLessThanOrEqual(guard.battleX);
   });
 
   it("front row clamp prevents advancing beyond the enemy front line", () => {
@@ -276,7 +276,7 @@ describe("resolvePlayerApproachBattleX", () => {
     expect(approachX).toBe(280 - MELEE_STOP_GAP);
   });
 
-  it("melee band: front row separates by rangePx depth (L10)", () => {
+  it("melee band: short ranges share contact stop line (overlap separates X)", () => {
     const guardian = mockCombatant({
       id: "guardian",
       role: "defender",
@@ -341,8 +341,7 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData,
     );
 
-    // Both short ranges floor to body gap → same stop line; contact cap
-    // prevents spacing from pushing past sharedStop.
+    // Both short ranges floor to body gap → same stop line; overlap resolves X.
     const sharedStop = 280 - MELEE_STOP_GAP;
     expect(warriorX).toBe(sharedStop);
     expect(guardianX).toBe(sharedStop);
@@ -908,7 +907,7 @@ describe("resolvePlayerApproachBattleX", () => {
     expect(stop).toBe(220);
   });
 
-  it("front row survivor inherits forward depth when same-range tank falls", () => {
+  it("front row survivor keeps chase stop when same-range tank falls", () => {
     const meleeEnemy = mockCombatant({
       id: "melee",
       isEnemy: true,
@@ -953,11 +952,11 @@ describe("resolvePlayerApproachBattleX", () => {
       [meleeEnemy],
       gameData as unknown as GameData,
     );
-    const soloForwardStop = 300 - MELEE_STOP_GAP + 3;
+    const soloForwardStop = 300 - MELEE_STOP_GAP;
     expect(assassinX).toBe(soloForwardStop);
   });
 
-  it("same-range front row melee separates by id not role", () => {
+  it("same-range front row melee share approach stop (overlap separates X)", () => {
     const meleeEnemy = mockCombatant({
       id: "melee",
       isEnemy: true,
@@ -1008,10 +1007,10 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData as unknown as GameData,
     );
 
-    expect(assassinX).toBeLessThan(duelistX);
+    expect(assassinX).toBe(duelistX);
   });
 
-  it("front row melee allies approach to per-unit range stop", () => {
+  it("front row melee allies approach to per-unit range stop when above body gap", () => {
     const meleeEnemy = mockCombatant({
       id: "melee",
       isEnemy: true,
@@ -1028,7 +1027,7 @@ describe("resolvePlayerApproachBattleX", () => {
       formationRow: "front",
       role: "defender",
       traits: {
-        rangePx: 5,
+        rangePx: 40,
         damageType: "physical",
         basicAttackVfx: { enabled: true },
       },
@@ -1040,7 +1039,7 @@ describe("resolvePlayerApproachBattleX", () => {
       formationRow: "front",
       role: "attacker",
       traits: {
-        rangePx: 8,
+        rangePx: 48,
         damageType: "physical",
         basicAttackVfx: { enabled: true },
       },
@@ -1063,7 +1062,7 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData as unknown as GameData,
     );
 
-    expect(guardStop - warriorStop).toBe(3);
+    expect(guardStop - warriorStop).toBe(8);
     expect(guardStop).toBeGreaterThan(guardian.battleX);
     expect(warriorStop).toBeGreaterThan(warrior.battleX);
   });

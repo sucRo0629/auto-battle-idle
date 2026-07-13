@@ -102,65 +102,13 @@ function sortPlayersInFormationRow(
 /**
  * 接敵: partyFormation ソート順で baseApproach を深度積み上げ。
  * 死体スロットはチェーン維持用に含める（戦死後の前線継承）。
+ * @deprecated Engaged 接近は ChaseTarget ± effectiveRangePx が正本。overlap で X 重なりを解消する。
  */
 export function applyPartyFormationApproachSpacing(
   baseApproachById: Map<string, number>,
   players: PlayerPlacementInput[],
 ): Map<string, number> {
-  const result = new Map<string, number>();
-  const sorted = [...players].sort((a, b) =>
-    comparePartyFormationSlot(toPartyFormationUnit(a), toPartyFormationUnit(b)),
-  );
-  const living = livingPlayers(players);
-
-  if (living.length === 1 && players.length >= 2) {
-    const unit = living[0]!;
-    const ownBase = baseApproachById.get(unit.id);
-    if (ownBase !== undefined) {
-      let prevX = Number.NEGATIVE_INFINITY;
-      let forwardmostX = ownBase;
-      for (const input of sorted) {
-        const unitBase = baseApproachById.get(input.id) ?? forwardmostX;
-        const x =
-          prevX === Number.NEGATIVE_INFINITY
-            ? unitBase
-            : Math.max(unitBase, prevX + FORMATION_DEPTH_STEP_PX);
-        forwardmostX = x;
-        prevX = x;
-      }
-      result.set(unit.id, forwardmostX);
-    }
-    return result;
-  }
-
-  let prevX = Number.NEGATIVE_INFINITY;
-  let prevDeployRow: FormationRow | null = null;
-  for (const input of sorted) {
-    const base = baseApproachById.get(input.id);
-    if (base === undefined) continue;
-
-    const deployRow = toPartyFormationUnit(input).formationRow ?? 'front';
-    if (prevDeployRow !== null && deployRow !== prevDeployRow) {
-      prevX = Number.NEGATIVE_INFINITY;
-    }
-    prevDeployRow = deployRow;
-
-    if (!input.isAlive) {
-      if (prevX !== Number.NEGATIVE_INFINITY) {
-        prevX += FORMATION_DEPTH_STEP_PX;
-      }
-      continue;
-    }
-
-    const x =
-      prevX === Number.NEGATIVE_INFINITY
-        ? base
-        : Math.max(base, prevX + FORMATION_DEPTH_STEP_PX);
-    result.set(input.id, x);
-    prevX = x;
-  }
-
-  return result;
+  return new Map(baseApproachById);
 }
 
 /** @deprecated applyPartyFormationApproachSpacing を使用 */
@@ -171,14 +119,12 @@ export function applyFormationRowApproachSpacing(
   return applyPartyFormationApproachSpacing(baseApproachById, players);
 }
 
-/** @deprecated applyFormationRowApproachSpacing を使用 */
+/** @deprecated Engaged 接近深度は廃止 */
 export function resolveFrontRowSameRangeMeleeDepthPx(
   player: PlayerPlacementInput,
   players: PlayerPlacementInput[],
 ): number {
-  const base = new Map<string, number>([[player.id, 0]]);
-  const spaced = applyFormationRowApproachSpacing(base, players);
-  return spaced.get(player.id) ?? 0;
+  return 0;
 }
 
 function placementToFormationUnit(p: Placement): PartyFormationUnit {
