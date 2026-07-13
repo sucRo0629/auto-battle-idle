@@ -2,8 +2,10 @@ import type { CombatantState, GameData, TargetSpec } from "./types.ts";
 import { getPassiveDefs } from "./combatMath.ts";
 import {
   getEnemyContactX,
+  getPlayerFrontlineContactX,
   isPlayerRearAssaultAccess,
   PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
+  resolvePlayerFrontlineOwners,
   resolvePlayerRearAssaultAttackRangePx,
   resolvePlayerRearAssaultHoldBattleX,
   type PlayerRearAssaultBattleContext,
@@ -21,6 +23,7 @@ import {
 } from "./skills/targetSpec.ts";
 import { getAttackablePool, isWithinSkillRange } from "./skills/rangeUtils.ts";
 import { isStationaryUnit } from "./data/entityTraits.ts";
+import { SPRITE_WIDTH } from "./battleConstants.ts";
 import { FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX } from "./battleLayout.ts";
 import {
   comparePartyFormationSlot,
@@ -96,23 +99,41 @@ function resolveDamagedAllyHealTarget(
   return pht;
 }
 
-/** 射程外の PHT（接近目標） */
-function resolveOutOfRangeDamagedAllyHealTarget(
+/** ally-heal: 味方最前線が heal 射程内か（接近停止の正本） */
+function isAllyFrontlineInHealRange(
   player: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
-): CombatantState | null {
-  if (!isAllyHealBasicAttack(player, gameData)) return null;
-  const pht = resolvePriorityHealTarget(livingPlayers(players));
-  if (!pht) return null;
+): boolean {
+  if (!isAllyHealBasicAttack(player, gameData)) return false;
+  const owners = resolvePlayerFrontlineOwners(players, enemies);
+  if (owners.length === 0) return false;
   const range = resolveApproachRangePx(
     player,
     gameData,
     livingAllyCount(players),
   );
-  if (isWithinSkillRange(player, pht, range)) return null;
-  return pht;
+  return owners.some((owner) => isWithinSkillRange(player, owner, range));
+}
+
+/** ally-heal: 味方最前線 contact を heal 射程内に入れる停止 battleX */
+export function resolveAllyFrontlineHealApproachBattleX(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): number {
+  const frontlineContactX = getPlayerFrontlineContactX(players, enemies);
+  if (frontlineContactX === null) {
+    return player.battleX;
+  }
+  return resolveApproachAttackBattleX(
+    player,
+    frontlineContactX,
+    gameData,
+    livingAllyCount(players),
+  );
 }
 
 function resolveUnitTargetSpec(
@@ -300,31 +321,13 @@ function resolveSharedPlayerApproachBattleX(
   gameData: GameData,
   contact: number,
 ): number {
-  const allyCount = livingAllyCount(players);
   if (isAllyHealBasicAttack(player, gameData)) {
-    const outOfRange = resolveOutOfRangeDamagedAllyHealTarget(
+    return resolveAllyFrontlineHealApproachBattleX(
       player,
       players,
       enemies,
       gameData,
     );
-    if (outOfRange) {
-      const healStop = resolveApproachAttackBattleX(
-        player,
-        outOfRange.battleX,
-        gameData,
-        allyCount,
-      );
-      const enemyStopX = resolvePlayerChaseApproachBattleX(
-        player,
-        players,
-        enemies,
-        gameData,
-        contact,
-      );
-      return Math.min(healStop, enemyStopX);
-    }
-    return player.battleX;
   }
   return resolvePlayerChaseApproachBattleX(
     player,
@@ -594,18 +597,35 @@ export function shouldSkipEngagedAutoApproach(
     if (resolveDamagedAllyHealTarget(unit, players, enemies, gameData) !== null) {
       return true;
     }
-    if (
-      resolveOutOfRangeDamagedAllyHealTarget(unit, players, enemies, gameData) !==
-      null
-    ) {
-      return false;
+    if (isAllyFrontlineInHealRange(unit, players, enemies, gameData)) {
+      return true;
     }
     if (retreatingToApproachTarget) return false;
-    return true;
+    return false;
   }
 
   if (!isPierceEnemyBasicAttack(unit, gameData)) {
-    if (resolvePlayerAttackTargetEnemy(unit, players, enemies, gameData) !== null) {
+    const attackTarget = resolvePlayerAttackTargetEnemy(
+      unit,
+      players,
+      enemies,
+      gameData,
+    );
+    if (attackTarget !== null) {
+      const allyCount = livingAllyCount(players);
+      const stopX = resolveApproachAttackBattleX(
+        unit,
+        attackTarget.battleX,
+        gameData,
+        allyCount,
+        getEnemyContactX(enemies) ?? attackTarget.battleX,
+      );
+      const approachRange = resolveApproachRangePx(unit, gameData, allyCount);
+      const meleeStandoffRetreat =
+        approachRange <= SPRITE_WIDTH &&
+        unit.battleX < attackTarget.battleX &&
+        unit.battleX > stopX + APPROACH_SETTLE_EPSILON_PX;
+      if (meleeStandoffRetreat) return false;
       return true;
     }
     if (retreatingToApproachTarget) return false;

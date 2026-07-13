@@ -1843,6 +1843,8 @@ export interface BattleXDebugTraceEntry {
     approachTargetX?: number;
     shouldSkipEngagedAutoApproach?: boolean;
     priorityHealTargetId?: string;
+    frontlineContactX?: number;
+    frontlineOwnerIds?: string;
     healWithholdReason?: string;
     bodyAnimMarching?: boolean;
     isActorUseLocked?: boolean;

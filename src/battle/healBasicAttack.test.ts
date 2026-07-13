@@ -328,10 +328,14 @@ describe('heal basic attack approach', () => {
     ).toBe(true);
   });
 
-  it('does not skip approach while a wounded ally is out of heal range', () => {
+  it('does not skip approach while frontline is out of heal range', () => {
     const cleric = mockHealCleric(20);
-    const guardian = mockGuardian(200, 25);
-    const players = [cleric, guardian];
+    const guardian = mockGuardian(180, 25);
+    const duelist = mockGuardian(176, 100);
+    duelist.id = 'duelist';
+    duelist.role = 'attacker';
+    duelist.classId = 'at_duelist';
+    const players = [cleric, duelist, guardian];
     const rangedEnemy = {
       id: 'ranged',
       name: 'ranged',
@@ -380,13 +384,18 @@ describe('heal basic attack approach', () => {
       [rangedEnemy],
       gameData,
     );
-    expect(approachX).toBeGreaterThanOrEqual(200 - 128);
+    expect(approachX).toBeGreaterThan(cleric.battleX);
+    expect(approachX).toBeGreaterThanOrEqual(176 - 128);
   });
 
-  it('does not chase deepest enemy when all allies are healthy', () => {
+  it('advances toward frontline when all allies are healthy', () => {
     const cleric = mockHealCleric(80);
     const guardian = mockGuardian(234, 235);
-    const players = [cleric, guardian];
+    const duelist = mockGuardian(230, 100);
+    duelist.id = 'duelist';
+    duelist.role = 'attacker';
+    duelist.classId = 'at_duelist';
+    const players = [cleric, duelist, guardian];
     const frontEnemy = {
       ...mockGuardian(234, 100),
       id: 'front',
@@ -407,8 +416,8 @@ describe('heal basic attack approach', () => {
       [frontEnemy, deepEnemy],
       gameData,
     );
-    expect(approachX).toBe(80);
-    expect(approachX).toBeLessThan(guardian.battleX);
+    expect(approachX).toBeGreaterThan(cleric.battleX);
+    expect(approachX).toBeLessThan(duelist.battleX);
   });
 
   it('healthy cleric is not pulled forward by back-row caster spacing chain', () => {

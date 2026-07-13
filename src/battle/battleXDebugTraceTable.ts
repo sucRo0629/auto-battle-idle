@@ -9,6 +9,8 @@ function hasApproachDebugDetails(
     details.approachTargetX !== undefined ||
     details.shouldSkipEngagedAutoApproach !== undefined ||
     details.priorityHealTargetId !== undefined ||
+    details.frontlineContactX !== undefined ||
+    details.frontlineOwnerIds !== undefined ||
     details.healWithholdReason !== undefined
   );
 }
@@ -54,6 +56,12 @@ export function formatBattleXTraceDetails(entry: BattleXDebugTraceEntry): string
     details.priorityHealTargetId === undefined
       ? null
       : `pht=${details.priorityHealTargetId}`,
+    details.frontlineContactX === undefined
+      ? null
+      : `frontline=${formatPx(details.frontlineContactX)}`,
+    details.frontlineOwnerIds === undefined
+      ? null
+      : `frontlineOwners=${details.frontlineOwnerIds}`,
     details.healWithholdReason === undefined
       ? null
       : `withhold=${details.healWithholdReason}`,

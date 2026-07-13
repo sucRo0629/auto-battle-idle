@@ -350,8 +350,8 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 | 用途 | ルール |
 | ---- | ------ |
 | 味方 `stat` + `order: ratio` 単体 heal / hot | PHT を選ぶ（従来 spec と同一意味を PHT 名で正本化） |
-| ally-heal 自動接近 | PHT が通常攻撃 heal 射程内に入るまで前進。全員満タンは現位置維持（敵 chase しない） |
-| ally-heal 接近停止 | 射程内に **PHT** がいれば停止（任意の軽傷者ではない） |
+| ally-heal 自動接近 | 味方最前線（`getPlayerFrontlineContactX`）が通常攻撃 heal 射程内に入るまで前進。全員満タンでも同じ（敵 chase しない） |
+| ally-heal 接近停止 | 最前線が heal 射程内なら停止（PHT 不在でも可）。回復発動対象は引き続き PHT |
 | heal / hot withhold — 単体・`stat` | PHT が射程内にいなければ保留（CD 進行なし） |
 | heal / hot withhold — `selfOrigin` + `aoe` | **PHT が aoe 半径内**（使用者足元）にいなければ保留 |
 | heal / hot withhold — `kind: all` + ally | パーティに負傷者（≡ PHT が存在）がいなければ保留。位置制約なし |

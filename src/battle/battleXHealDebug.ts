@@ -1,6 +1,10 @@
 import { isAllyHealBasicAttack, resolveBasicAttackEffect } from './allyHealBasicAttack.ts';
 import { getPassiveDefs } from './combatMath.ts';
 import {
+  getPlayerFrontlineContactX,
+  resolvePlayerFrontlineOwners,
+} from './combatPosition.ts';
+import {
   evaluateHealWithholdReason,
   resolvePriorityHealTarget,
 } from './skills/targeting.ts';
@@ -21,8 +25,15 @@ export function resolveApproachHealDebugDetails(
 
   const living = players.filter((player) => player.isAlive);
   const pht = resolvePriorityHealTarget(living);
+  const frontlineOwners = resolvePlayerFrontlineOwners(players, enemies);
+  const frontlineContactX = getPlayerFrontlineContactX(players, enemies);
   const details: NonNullable<BattleXDebugTraceEntry['details']> = {
     priorityHealTargetId: pht?.id,
+    frontlineContactX: frontlineContactX ?? undefined,
+    frontlineOwnerIds:
+      frontlineOwners.length > 0
+        ? frontlineOwners.map((owner) => owner.id).join(',')
+        : undefined,
   };
 
   const passives = getPassiveDefs(unit, gameData.skillRegistry.passives);

@@ -28,6 +28,7 @@ import {
 import { flattenSkillEffectsForRuntime } from './skills/effectConditions.ts';
 import { getEffectTarget, targetSpecFaction } from './skills/targetSpec.ts';
 import type { SkillEffectDef } from './types.ts';
+import { isAllyHealBasicAttack } from './allyHealBasicAttack.ts';
 
 /** 隊形順・帯分類の正本（body gap 下限なし） */
 export function resolveFormationRangePx(unit: CombatantState): number {
@@ -751,6 +752,9 @@ export function resolveApproachAttackBattleX(
   const rangePx = resolveApproachRangePx(unit, gameData, livingAllyCount);
   const stopX = resolveAttackBattleX(unit, contactX, gameData, rangePx);
   if (!unit.isEnemy && stopX < unit.battleX) {
+    if (isAllyHealBasicAttack(unit, gameData)) {
+      return unit.battleX;
+    }
     const basicRange = resolveBasicAttackRangePx(
       unit,
       gameData,

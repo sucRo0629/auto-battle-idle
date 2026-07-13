@@ -213,11 +213,11 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
   const gameData = alchemistGameData();
   const enemy = mockEnemy(280);
 
-  it('does not stop approach when only a non-PHT ally is in heal range', () => {
+  it('does not stop approach when frontline is out of heal range even if a rear ally is in range', () => {
     const alchemist = mockAlchemist(52);
-    const guardian = mockGuardian(224, 47);
+    const guardian = mockGuardian(204, 47);
     const sorcerer = mockSorcerer(20, 76);
-    const duelist = mockDuelist(180);
+    const duelist = mockDuelist(200);
     const players = [guardian, duelist, sorcerer, alchemist];
 
     expect(resolvePriorityHealTarget(players)?.id).toBe('guardian');
@@ -226,11 +226,11 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
     ).toBe(false);
   });
 
-  it('advances toward out-of-range PHT instead of staying at rear position', () => {
+  it('advances toward frontline when frontline is out of heal range', () => {
     const alchemist = mockAlchemist(52);
-    const guardian = mockGuardian(224, 47);
+    const guardian = mockGuardian(204, 47);
     const sorcerer = mockSorcerer(20, 76);
-    const duelist = mockDuelist(180);
+    const duelist = mockDuelist(200);
     const players = [guardian, duelist, sorcerer, alchemist];
 
     const approachX = resolvePlayerApproachBattleX(
@@ -240,9 +240,10 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
       gameData,
     );
     expect(approachX).toBeGreaterThan(alchemist.battleX);
+    expect(approachX).toBeLessThan(duelist.battleX);
   });
 
-  it('stops approach when PHT is within basic heal range', () => {
+  it('stops approach when frontline is within basic heal range', () => {
     const alchemist = mockAlchemist(160);
     const guardian = mockGuardian(224, 47);
     const sorcerer = mockSorcerer(20, 76);
@@ -253,11 +254,12 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
     ).toBe(true);
   });
 
-  it('holds position when every ally is at full HP', () => {
+  it('advances toward frontline when every ally is at full HP', () => {
     const alchemist = mockAlchemist(52);
-    const guardian = mockGuardian(224, 235);
+    const guardian = mockGuardian(204, 235);
     const sorcerer = mockSorcerer(20, 80);
-    const players = [guardian, sorcerer, alchemist];
+    const duelist = mockDuelist(200);
+    const players = [guardian, duelist, sorcerer, alchemist];
 
     expect(
       shouldSkipEngagedAutoApproach(alchemist, players, [enemy], gameData),
@@ -269,7 +271,7 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
         [enemy],
         gameData,
       ),
-    ).toBe(alchemist.battleX);
+    ).toBeGreaterThan(alchemist.battleX);
   });
 
   it('withholds sp_alchemist_active_1 when PHT is outside selfOrigin aoe', () => {

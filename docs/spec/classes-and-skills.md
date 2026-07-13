@@ -1195,7 +1195,7 @@ Defender 共通 passive と各 Defender の受け口設計は同一視しない�
 
 | 枠                  | target 形状                               | PHT との関係                                                                                           |
 | ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| basic               | `stat` ally / `order: ratio`              | 単体 PHT へ HoT。ally-heal 接近の停止・追跡対象                                                        |
+| basic               | `stat` ally / `order: ratio`              | 単体 PHT へ HoT。接近は味方最前線基準・回復対象は PHT（[combat.md](combat.md) §回復 PHT） |
 | active_1            | `distance` ally / `selfOrigin` + `aoe` 70 | 発動: PHT ∈ 足元半径。命中: 半径内全負傷味方（庇護の帷型 `poolFromEffectIndex` は採用しない — 方針 A） |
 | active_2 / active_3 | `all` ally                                | withhold: パーティに負傷者がいれば可（位置無関係）                                                     |
 | active_4 条件分岐   | `stat` ally / `order: ratio`              | 最低 HP ≤50% への濃縮 HoT                                                                              |

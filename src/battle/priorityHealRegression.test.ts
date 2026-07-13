@@ -155,9 +155,10 @@ describe('resolveApproachHealDebugDetails', () => {
       },
     ];
 
-    const guardian = mockUnit('guardian', 224, { hp: 47, maxHp: 235 });
+    const guardian = mockUnit('guardian', 200, { hp: 47, maxHp: 235 });
+    const duelist = mockUnit('duelist', 200);
     const sorcerer = mockUnit('sorcerer', 20, { hp: 76, maxHp: 80 });
-    const party = [alchemist, guardian, sorcerer];
+    const party = [alchemist, duelist, guardian, sorcerer];
 
     const details = resolveApproachHealDebugDetails(
       alchemist,
@@ -166,6 +167,9 @@ describe('resolveApproachHealDebugDetails', () => {
       gameData,
     );
     expect(details?.priorityHealTargetId).toBe('guardian');
+    expect(details?.frontlineContactX).toBe(200);
+    expect(details?.frontlineOwnerIds).toContain('duelist');
+    expect(details?.frontlineOwnerIds).toContain('guardian');
     expect(details?.healWithholdReason).toContain('basic:pht_out_of_range');
     expect(details?.healWithholdReason).toContain(
       'sp_alchemist_active_1:pht_outside_aoe',
