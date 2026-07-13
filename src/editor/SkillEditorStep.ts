@@ -120,7 +120,9 @@ import {
   appendSkillSharedTargetingFields,
   appendDamagePierceFields,
   targetSpecForPierceShape,
+  shouldUseHostileTargetEditorModeForEffect,
 } from "./skillEditorCombatFields.ts";
+import { defaultHostileChaseTargetSpec, shouldUseHostileTargetEditorMode } from "../battle/skills/targetSpec.ts";
 import { editorFieldLabel } from "./editorFieldLabels.ts";
 import {
   appendGrid,
@@ -554,11 +556,6 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
   switch (passive.effect) {
     case "targetRuleOverride":
       passive.targetRuleOverrideApplyTo ??= "enemy";
-      passive.targetRuleOverride ??= {
-        kind: "distance",
-        side: "enemy",
-        order: "nearest",
-      };
       break;
     case "evasionChance":
       passive.evasionChance ??= 0.1;
@@ -1194,18 +1191,26 @@ function appendBasicAttackTransformFields(
       )
     );
     if (effect.primaryPatch?.target !== undefined) {
-      appendTargetSpecFields(detailGrid, effect.primaryPatch.target, (target) =>
-        patchEffect(
-          (prev) => {
-            if (prev.type !== "basicAttackTransform") return prev;
-            return {
-              ...prev,
-              target: { kind: "self" },
-              primaryPatch: { ...(prev.primaryPatch ?? {}), target },
-            };
-          },
-          { rerender: false }
-        )
+      appendTargetSpecFields(
+        detailGrid,
+        effect.primaryPatch.target,
+        (target) =>
+          patchEffect(
+            (prev) => {
+              if (prev.type !== "basicAttackTransform") return prev;
+              return {
+                ...prev,
+                target: { kind: "self" },
+                primaryPatch: { ...(prev.primaryPatch ?? {}), target },
+              };
+            },
+            { rerender: false }
+          ),
+        {
+          hostileTargetMode: shouldUseHostileTargetEditorMode(
+            effect.primaryPatch.target,
+          ),
+        },
       );
       detailGrid.appendChild(
         createActionButton(
@@ -1408,26 +1413,33 @@ function appendBasicAttackTransformFields(
       override.type !== "counter" &&
       override.type !== "basicAttackTransform"
     ) {
-      appendTargetSpecFields(detailGrid, getEffectTarget(override), (target) =>
-        patchEffect(
-          (prev) => {
-            if (
-              prev.type !== "basicAttackTransform" ||
-              !prev.primaryEffectOverride
-            ) {
-              return prev;
-            }
-            return {
-              ...prev,
-              target: { kind: "self" },
-              primaryEffectOverride: {
-                ...prev.primaryEffectOverride,
-                target,
-              },
-            };
-          },
-          { rerender: false }
-        )
+      appendTargetSpecFields(
+        detailGrid,
+        getEffectTarget(override),
+        (target) =>
+          patchEffect(
+            (prev) => {
+              if (
+                prev.type !== "basicAttackTransform" ||
+                !prev.primaryEffectOverride
+              ) {
+                return prev;
+              }
+              return {
+                ...prev,
+                target: { kind: "self" },
+                primaryEffectOverride: {
+                  ...prev.primaryEffectOverride,
+                  target,
+                },
+              };
+            },
+            { rerender: false }
+          ),
+        {
+          hostileTargetMode:
+            shouldUseHostileTargetEditorModeForEffect(override),
+        },
       );
     }
   }
@@ -2661,11 +2673,7 @@ export class SkillEditorStep {
         );
         appendTargetSpecFields(
           effectGrid,
-          passive.targetRuleOverride ?? {
-            kind: "distance",
-            side: "enemy",
-            order: "nearest",
-          },
+          passive.targetRuleOverride ?? defaultHostileChaseTargetSpec(),
           (targetRuleOverride) => {
             this.patchPassive(
               index,
@@ -2674,7 +2682,8 @@ export class SkillEditorStep {
               },
               { rerender: true }
             );
-          }
+          },
+          { hostileTargetMode: true }
         );
         break;
       case "evasionChance":
@@ -5232,7 +5241,12 @@ export class SkillEditorStep {
               { rerender: true }
             );
           },
-          { lockSelfOrigin, effectIndex: sequenceContext?.effectIndex }
+          {
+            lockSelfOrigin,
+            effectIndex: sequenceContext?.effectIndex,
+            hostileTargetMode:
+              shouldUseHostileTargetEditorModeForEffect(normalizedEffect),
+          }
         );
       } else {
         grid.appendChild(

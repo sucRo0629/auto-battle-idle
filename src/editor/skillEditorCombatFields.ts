@@ -34,9 +34,15 @@ import {
 } from "../battle/data/gameDataSchema.ts";
 import { GLOBAL_MAX_CHARGES_CAP } from "../battle/skills/chargeBank.ts";
 import {
-  formatTargetLabel,
+  EDITOR_HOSTILE_TARGET_MODE_LABELS,
+  defaultHostileChaseTargetSpec,
   distanceSpecIncludesSelf,
+  formatTargetLabel,
+  getEffectTarget,
   normalizeTarget,
+  resolveEditorHostileTargetMode,
+  shouldUseHostileTargetEditorMode,
+  type EditorHostileTargetMode,
 } from "../battle/skills/targetSpec.ts";
 import {
   PASSIVE_DISPEL_TRIGGER_KINDS,
@@ -1314,6 +1320,33 @@ export interface AppendTargetSpecFieldsOptions {
   lockSelfOrigin?: boolean;
   /** stat.poolFromEffectIndex 用: 現在の effect インデックス */
   effectIndex?: number;
+  /** 敵対単体の 2 モード UI（デフォルト / 優先ターゲット）。自身・味方は未指定のまま */
+  hostileTargetMode?: boolean;
+}
+
+/** アクティブ effect が敵対 2 モード UI 対象か（heal / buff 等の味方・自身は除外） */
+export function shouldUseHostileTargetEditorModeForEffect(
+  effect: SkillEffectDef,
+): boolean {
+  const type = effect.type;
+  if (
+    type === "heal" ||
+    type === "barrier" ||
+    type === "dispel" ||
+    type === "move" ||
+    type === "buff" ||
+    type === "block" ||
+    type === "counter" ||
+    type === "placedField" ||
+    type === "dotCompress" ||
+    type === "dotExtend" ||
+    type === "grantNextOutgoingDamage" ||
+    type === "conditionalEffect" ||
+    type === "basicAttackTransform"
+  ) {
+    return false;
+  }
+  return shouldUseHostileTargetEditorMode(getEffectTarget(effect));
 }
 
 /** 貫通形状選択時に effect / スキル共通ターゲットへ selfOrigin を揃える */
@@ -1388,7 +1421,7 @@ export function appendSkillSharedTargetingFields(
     const lockSelfOrigin = (skill.targetShape ?? "single") === "pierce";
     appendTargetSpecFields(
       fieldsWrap,
-      skill.target ?? { kind: "distance", side: "enemy", order: "nearest" },
+      skill.target ?? defaultHostileChaseTargetSpec(),
       (target) => {
         patchActive((current) => {
           current.target = lockSelfOrigin
@@ -1396,7 +1429,7 @@ export function appendSkillSharedTargetingFields(
             : target;
         }, { rerender: true });
       },
-      { lockSelfOrigin },
+      { lockSelfOrigin, hostileTargetMode: true },
     );
     appendSkillEffectTargetingFields(
       fieldsWrap,
@@ -1453,10 +1486,82 @@ export function appendTargetSpecFields(
   options?: AppendTargetSpecFieldsOptions
 ): void {
   const wrap = createEl("div", "editor-target-spec-fields");
+  parent.appendChild(wrap);
+
+  if (options?.hostileTargetMode) {
+    let mode = resolveEditorHostileTargetMode(normalizeTarget(target));
+
+    const render = (): void => {
+      wrap.replaceChildren();
+      wrap.appendChild(
+        createFieldRow(
+          "狙い方",
+          createSelect(
+            mode,
+            (["default", "priority"] as const).map((value) => ({
+              value,
+              label: EDITOR_HOSTILE_TARGET_MODE_LABELS[value],
+            })),
+            (nextMode) => {
+              mode = nextMode as EditorHostileTargetMode;
+              if (mode === "default") {
+                onChange(defaultHostileChaseTargetSpec());
+              } else if (
+                resolveEditorHostileTargetMode(normalizeTarget(target)) ===
+                "default"
+              ) {
+                onChange({
+                  kind: "stat",
+                  side: "enemy",
+                  stat: "hp",
+                  order: "lowest",
+                });
+              }
+              render();
+            }
+          )
+        )
+      );
+
+      if (mode === "default") {
+        const defaultSpec = defaultHostileChaseTargetSpec();
+        wrap.appendChild(
+          createEl(
+            "p",
+            "editor-hint",
+            "combat.md §敵対単体ターゲット選定の共通ルール（相手戦線の最前・defender 優先）。保存時に target / targetRuleOverride は出力しません。"
+          )
+        );
+        wrap.appendChild(
+          createEl(
+            "p",
+            "editor-hint",
+            `プレビュー: ${formatTargetLabel(defaultSpec)}`
+          )
+        );
+        return;
+      }
+
+      appendTargetSpecFieldsCore(wrap, target, onChange, options);
+    };
+
+    render();
+    return;
+  }
+
+  appendTargetSpecFieldsCore(wrap, target, onChange, options);
+}
+
+function appendTargetSpecFieldsCore(
+  parent: HTMLElement,
+  target: TargetSpec,
+  onChange: (target: TargetSpec) => void,
+  options?: AppendTargetSpecFieldsOptions
+): void {
   const normalized = normalizeTarget(target);
   const kind = targetSpecKind(normalized);
 
-  wrap.appendChild(
+  parent.appendChild(
     createFieldRow(
       "種別",
       createSelect(
@@ -1484,9 +1589,9 @@ export function appendTargetSpecFields(
     if (options?.lockSelfOrigin === true) {
       distanceSelect.disabled = true;
     }
-    wrap.appendChild(createFieldRow("距離", distanceSelect));
+    parent.appendChild(createFieldRow("距離", distanceSelect));
     if (options?.lockSelfOrigin === true) {
-      wrap.appendChild(
+      parent.appendChild(
         createEl(
           "p",
           "editor-hint",
@@ -1494,7 +1599,7 @@ export function appendTargetSpecFields(
         )
       );
     }
-    wrap.appendChild(
+    parent.appendChild(
       createFieldRow(
         "対象側",
         createSelect(
@@ -1523,9 +1628,9 @@ export function appendTargetSpecFields(
         createEl("label", undefined, "自身を対象に含める")
       );
       includeRow.appendChild(includeInput);
-      wrap.appendChild(includeRow);
+      parent.appendChild(includeRow);
       if (order === "selfOrigin") {
-        wrap.appendChild(
+        parent.appendChild(
           createEl(
             "p",
             "editor-hint",
@@ -1537,7 +1642,7 @@ export function appendTargetSpecFields(
   }
 
   if (normalized.kind === "stat") {
-    wrap.appendChild(
+    parent.appendChild(
       createFieldRow(
         "対象側",
         createSelect(
@@ -1550,7 +1655,7 @@ export function appendTargetSpecFields(
         )
       )
     );
-    wrap.appendChild(
+    parent.appendChild(
       createFieldRow(
         "ステータス",
         createSelect(
@@ -1577,7 +1682,7 @@ export function appendTargetSpecFields(
       normalized.stat === "hp"
         ? TARGET_STAT_ORDER_OPTIONS
         : TARGET_STAT_ORDER_OPTIONS.filter((value) => value !== "ratio");
-    wrap.appendChild(
+    parent.appendChild(
       createFieldRow(
         "順序",
         createSelect(
@@ -1594,7 +1699,7 @@ export function appendTargetSpecFields(
       options?.effectIndex !== undefined &&
       options.effectIndex > 0
     ) {
-      wrap.appendChild(
+      parent.appendChild(
         createFieldRow(
           "先行 effect プール",
           createNumberInput(
@@ -1615,7 +1720,7 @@ export function appendTargetSpecFields(
           ),
         ),
       );
-      wrap.appendChild(
+      parent.appendChild(
         createEl(
           "p",
           "editor-hint",
@@ -1646,14 +1751,14 @@ export function appendTargetSpecFields(
       row.appendChild(input);
       attackRow.appendChild(row);
     }
-    wrap.appendChild(attackRow);
-    wrap.appendChild(
+    parent.appendChild(attackRow);
+    parent.appendChild(
       createEl("p", "editor-hint", attackTypeRangedBandEditorHintJa())
     );
   }
 
   if (normalized.kind === "status") {
-    wrap.appendChild(
+    parent.appendChild(
       createFieldRow(
         "対象側",
         createSelect(
@@ -1667,7 +1772,7 @@ export function appendTargetSpecFields(
       )
     );
     appendStatusTagCheckboxes(
-      wrap,
+      parent,
       normalized.debuffTags ?? [],
       normalized.buffTags ?? [],
       (debuffTags, buffTags) =>
@@ -1680,7 +1785,7 @@ export function appendTargetSpecFields(
   }
 
   if (normalized.kind === "clusterCenter") {
-    wrap.appendChild(
+    parent.appendChild(
       createFieldRow(
         "対象側",
         createSelect(
@@ -1693,7 +1798,7 @@ export function appendTargetSpecFields(
         )
       )
     );
-    wrap.appendChild(
+    parent.appendChild(
       createEl(
         "p",
         "editor-hint",
@@ -1703,7 +1808,7 @@ export function appendTargetSpecFields(
   }
 
   if (normalized.kind === "all") {
-    wrap.appendChild(
+    parent.appendChild(
       createFieldRow(
         "対象側",
         createSelect(
@@ -1718,10 +1823,9 @@ export function appendTargetSpecFields(
     );
   }
 
-  wrap.appendChild(
+  parent.appendChild(
     createEl("p", "editor-hint", `プレビュー: ${formatTargetLabel(normalized)}`)
   );
-  parent.appendChild(wrap);
 }
 
 /** @deprecated appendTargetSpecFields を使用 */
@@ -2108,11 +2212,7 @@ export function appendPassiveDebuffFields(
 
   appendTargetSpecFields(
     parent,
-    passive.debuffTargetRule ?? {
-      kind: "distance",
-      side: "enemy",
-      order: "nearest",
-    },
+    passive.debuffTargetRule ?? defaultHostileChaseTargetSpec(),
     (debuffTargetRule) => {
       patchPassive(
         (current) => {
@@ -2120,7 +2220,8 @@ export function appendPassiveDebuffFields(
         },
         { rerender: true }
       );
-    }
+    },
+    { hostileTargetMode: true },
   );
 
   appendSkillEffectTargetingFields(

@@ -156,6 +156,112 @@ describe('collectSkillsFromDrafts passive sanitize', () => {
     });
   });
 
+  it('strips default hostile targetRuleOverride from targetRuleOverride passive on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'test_passive_default', kind: 'passive' },
+        passive: {
+          id: 'test_passive_default',
+          name: 'test_passive_default',
+          effect: 'targetRuleOverride',
+          targetRuleOverride: {
+            kind: 'distance',
+            side: 'enemy',
+            order: 'nearest',
+          },
+        },
+      },
+    ];
+
+    const { passives } = collectSkillsFromDrafts(entries);
+    expect(passives[0]).toEqual({
+      id: 'test_passive_default',
+      name: 'test_passive_default',
+      effect: 'targetRuleOverride',
+    });
+  });
+
+  it('preserves priority targetRuleOverride attackType.ranged on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'at_ranger_passive_2', kind: 'passive' },
+        passive: {
+          id: 'at_ranger_passive_2',
+          name: 'at_ranger_passive_2',
+          effect: 'targetRuleOverride',
+          targetRuleOverride: {
+            kind: 'attackType',
+            ranged: true,
+          },
+        },
+      },
+    ];
+
+    const { passives } = collectSkillsFromDrafts(entries);
+    expect(passives[0]?.targetRuleOverride).toEqual({
+      kind: 'attackType',
+      ranged: true,
+    });
+  });
+
+  it('strips default hostile effect.target from damage active on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'test_damage_active', kind: 'active' },
+        active: {
+          id: 'test_damage_active',
+          name: 'test_damage_active',
+          trigger: { kind: 'time', value: 5 },
+          effect: [
+            {
+              target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+              type: 'damage',
+              damageType: 'physical',
+              amount: { kind: 'atkBased', atkScale: 1 },
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    expect(actives[0]?.effect[0]).not.toHaveProperty('target');
+  });
+
+  it('preserves ally heal target on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'sp_cleric_basic_attack', kind: 'active' },
+        active: {
+          id: 'sp_cleric_basic_attack',
+          name: 'sp_cleric_basic_attack',
+          trigger: { kind: 'time', value: 2 },
+          effect: [
+            {
+              target: {
+                kind: 'stat',
+                side: 'ally',
+                stat: 'hp',
+                order: 'ratio',
+              },
+              type: 'heal',
+              healSubKind: 'instant',
+              amount: { kind: 'atkBased', atkScale: 1 },
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    expect(actives[0]?.effect[0]?.target).toEqual({
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    });
+  });
+
   it('strips targetRuleOverride from specialEffect heal passive on save', () => {
     const entries: SkillDraftEntry[] = [
       {

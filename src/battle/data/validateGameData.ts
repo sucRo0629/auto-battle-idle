@@ -133,7 +133,7 @@ import {
   PASSIVE_COUNTER_TRIGGER_KINDS,
   TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS,
 } from './gameDataSchema.ts';
-import { normalizeTarget } from '../skills/targetSpec.ts';
+import { normalizeTarget, sanitizeHostileTargetSpecForJson } from '../skills/targetSpec.ts';
 import {
   activeEffectHasAmount,
   inferPassiveAmountField,
@@ -3736,12 +3736,16 @@ function requirePassiveEffectParams(
               context,
               TARGET_RULE_OVERRIDE_APPLY_TO_SET,
             );
+      const rawOverride = obj.targetRuleOverride ?? obj.target;
+      const parsedOverride =
+        rawOverride === undefined
+          ? undefined
+          : parseTargetSpec(rawOverride, `${context}.targetRuleOverride`);
+      const targetRuleOverride =
+        sanitizeHostileTargetSpecForJson(parsedOverride);
       return {
         ...base,
-        targetRuleOverride: parseTargetSpec(
-          obj.targetRuleOverride ?? obj.target,
-          `${context}.targetRuleOverride`,
-        ),
+        ...(targetRuleOverride !== undefined ? { targetRuleOverride } : {}),
         ...(targetRuleOverrideApplyTo !== undefined
           ? { targetRuleOverrideApplyTo }
           : {}),
@@ -4706,13 +4710,14 @@ function requirePassiveEffectParams(
         'ballistaMarkSelfAttackSpeedMul',
         context,
       );
-      const targetRuleOverride =
+      const targetRuleOverride = sanitizeHostileTargetSpecForJson(
         obj.targetRuleOverride !== undefined
           ? parseTargetSpec(
               obj.targetRuleOverride,
               `${context}.targetRuleOverride`,
             )
-          : undefined;
+          : undefined,
+      );
       return {
         ...base,
         ballistaMarkSplashRadiusPx,
@@ -5272,7 +5277,50 @@ export function stripBasicAttackTraitFieldsFromEffect(
   delete (next as { damageType?: unknown }).damageType;
   delete (next as { range?: unknown }).range;
   delete (next as { vfx?: unknown }).vfx;
-  return next;
+  return sanitizeSkillEffectTargetForJson(next);
+}
+
+function sanitizeSkillEffectTargetForJson(
+  effect: SkillEffectDef,
+): SkillEffectDef {
+  if (!('target' in effect) || effect.target === undefined) {
+    return effect;
+  }
+  const sanitized = sanitizeHostileTargetSpecForJson(effect.target);
+  if (sanitized === effect.target) {
+    return effect;
+  }
+  if (sanitized === undefined) {
+    const next = { ...effect };
+    delete next.target;
+    return next;
+  }
+  return { ...effect, target: sanitized };
+}
+
+export function sanitizeActiveSkillForJson(
+  skill: ActiveSkillDef,
+): ActiveSkillDef {
+  const { vfx: _vfx, ...rest } = skill;
+  const next: ActiveSkillDef = { ...rest };
+  if (next.target !== undefined) {
+    const sanitizedTarget = sanitizeHostileTargetSpecForJson(next.target);
+    if (sanitizedTarget === undefined) {
+      delete next.target;
+    } else {
+      next.target = sanitizedTarget;
+    }
+  }
+  return {
+    ...next,
+    effect: skill.effect.map((effect) =>
+      sanitizeSkillEffectTargetForJson(
+        stripDeprecatedThreatFieldsFromEffect(
+          normalizeActiveSkillEffectForEditor(effect),
+        ),
+      ),
+    ),
+  };
 }
 
 export function sanitizeBasicAttackSkillForJson(

@@ -577,6 +577,50 @@ export function isDefaultHostileChaseSpec(spec: TargetSpec): boolean {
   );
 }
 
+export type EditorHostileTargetMode = "default" | "priority";
+
+export const EDITOR_HOSTILE_TARGET_MODE_LABELS: Record<
+  EditorHostileTargetMode,
+  string
+> = {
+  default: "デフォルト（敵対単体共通ルール）",
+  priority: "優先ターゲット",
+};
+
+export function defaultHostileChaseTargetSpec(): TargetSpec {
+  return { kind: "distance", side: "enemy", order: "nearest" };
+}
+
+export function resolveEditorHostileTargetMode(
+  spec: TargetSpec | undefined,
+): EditorHostileTargetMode {
+  if (spec === undefined) return "default";
+  return isDefaultHostileChaseSpec(spec) ? "default" : "priority";
+}
+
+/** エディタ保存時: 敵対デフォルト spec は JSON から省略 */
+export function sanitizeHostileTargetSpecForJson(
+  spec: TargetSpec | undefined,
+): TargetSpec | undefined {
+  if (spec === undefined) return undefined;
+  if (isDefaultHostileChaseSpec(spec)) return undefined;
+  return spec;
+}
+
+/** 敵対 2 モード UI を出すか（自身・味方ターゲットは対象外） */
+export function shouldUseHostileTargetEditorMode(spec: TargetSpec): boolean {
+  if (spec.kind === "self") return false;
+  if (
+    spec.kind === "distance" ||
+    spec.kind === "stat" ||
+    spec.kind === "all" ||
+    spec.kind === "clusterCenter"
+  ) {
+    return spec.side === "enemy";
+  }
+  return spec.kind === "attackType" || spec.kind === "status";
+}
+
 /** @deprecated use isDefaultHostileChaseSpec */
 export function isDefaultEnemyChaseSpec(spec: TargetSpec): boolean {
   return isDefaultHostileChaseSpec(spec);

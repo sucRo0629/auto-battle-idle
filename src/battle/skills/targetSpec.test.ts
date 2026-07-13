@@ -12,6 +12,10 @@ import {
   pickTargetFromPool,
   resolveApproachTargetSpec,
   distanceSpecIncludesSelf,
+  isDefaultHostileChaseSpec,
+  resolveEditorHostileTargetMode,
+  sanitizeHostileTargetSpecForJson,
+  shouldUseHostileTargetEditorMode,
 } from './targetSpec.ts';
 
 function mockUnit(
@@ -441,5 +445,159 @@ describe('getTargetPool / pickTargetFromPool', () => {
       stat: 'maxHp',
       order: 'highest',
     });
+  });
+});
+
+describe('editor hostile target helpers', () => {
+  it('detects default hostile chase spec', () => {
+    expect(
+      isDefaultHostileChaseSpec({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      }),
+    ).toBe(true);
+    expect(
+      isDefaultHostileChaseSpec({
+        kind: 'attackType',
+        ranged: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('sanitizeHostileTargetSpecForJson omits default only', () => {
+    expect(
+      sanitizeHostileTargetSpecForJson({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      }),
+    ).toBeUndefined();
+    expect(
+      sanitizeHostileTargetSpecForJson({
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      }),
+    ).toEqual({
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    });
+  });
+
+  it('shouldUseHostileTargetEditorMode excludes self and ally', () => {
+    expect(shouldUseHostileTargetEditorMode({ kind: 'self' })).toBe(false);
+    expect(
+      shouldUseHostileTargetEditorMode({
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      }),
+    ).toBe(false);
+    expect(
+      shouldUseHostileTargetEditorMode({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      }),
+    ).toBe(true);
+  });
+
+  it('resolveEditorHostileTargetMode maps default vs priority', () => {
+    expect(resolveEditorHostileTargetMode(undefined)).toBe('default');
+    expect(
+      resolveEditorHostileTargetMode({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      }),
+    ).toBe('default');
+    expect(
+      resolveEditorHostileTargetMode({
+        kind: 'attackType',
+        ranged: true,
+      }),
+    ).toBe('priority');
+  });
+});
+
+describe('editor hostile target helpers', () => {
+  it('detects default hostile chase spec', () => {
+    expect(
+      isDefaultHostileChaseSpec({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      }),
+    ).toBe(true);
+    expect(
+      isDefaultHostileChaseSpec({
+        kind: 'attackType',
+        ranged: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('sanitizeHostileTargetSpecForJson omits default only', () => {
+    expect(
+      sanitizeHostileTargetSpecForJson({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      }),
+    ).toBeUndefined();
+    expect(
+      sanitizeHostileTargetSpecForJson({
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      }),
+    ).toEqual({
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    });
+  });
+
+  it('shouldUseHostileTargetEditorMode excludes self and ally', () => {
+    expect(shouldUseHostileTargetEditorMode({ kind: 'self' })).toBe(false);
+    expect(
+      shouldUseHostileTargetEditorMode({
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      }),
+    ).toBe(false);
+    expect(
+      shouldUseHostileTargetEditorMode({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      }),
+    ).toBe(true);
+  });
+
+  it('resolveEditorHostileTargetMode maps default vs priority', () => {
+    expect(resolveEditorHostileTargetMode(undefined)).toBe('default');
+    expect(
+      resolveEditorHostileTargetMode({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      }),
+    ).toBe('default');
+    expect(
+      resolveEditorHostileTargetMode({
+        kind: 'attackType',
+        ranged: true,
+      }),
+    ).toBe('priority');
   });
 });

@@ -3,6 +3,7 @@ import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasi
 import {
   normalizeActiveSkillEffectForEditor,
   normalizeOperationPassiveCatalogForSave,
+  sanitizeActiveSkillForJson,
   sanitizeBasicAttackSkillForJson,
   sanitizePassiveSkillForJson,
   stripDeprecatedThreatFieldsFromEffect,
@@ -1256,7 +1257,6 @@ export function defaultPassiveSkill(id: string): PassiveSkillDef {
     id,
     name: id,
     effect: 'targetRuleOverride',
-    targetRuleOverride: { kind: 'distance', side: 'enemy', order: 'nearest' },
   };
 }
 
@@ -1350,7 +1350,7 @@ export function collectSkillsFromDrafts(entries: SkillDraftEntry[]): {
   for (const entry of entries) {
     if (entry.passive) passives.push(sanitizePassiveSkillForJson(entry.passive));
     if (entry.active) {
-      const active = {
+      const normalized = {
         ...entry.active,
         effect: entry.active.effect.map((effect) =>
           stripDeprecatedThreatFieldsFromEffect(
@@ -1359,9 +1359,9 @@ export function collectSkillsFromDrafts(entries: SkillDraftEntry[]): {
         ),
       };
       actives.push(
-        isBasicAttackSkillIdPattern(active.id)
-          ? sanitizeBasicAttackSkillForJson(active)
-          : active,
+        isBasicAttackSkillIdPattern(normalized.id)
+          ? sanitizeBasicAttackSkillForJson(normalized)
+          : sanitizeActiveSkillForJson(normalized),
       );
     }
   }
