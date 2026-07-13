@@ -32,7 +32,7 @@ describe('battle-field formation spec (F-*)', () => {
     );
   });
 
-  it('F-3.3-02: same range back row sorts attacker left of supporter', () => {
+  it('F-3.3-02: same range sorts by id (not role)', () => {
     const positions = computePlayerPositions([
       { id: 'cleric', role: 'supporter', formationRow: 'back', rangePx: 50, damageType: 'magic', isAlive: true },
       { id: 'ranger', role: 'attacker', formationRow: 'back', rangePx: 50, damageType: 'physical', isAlive: true },

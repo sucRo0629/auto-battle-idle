@@ -764,13 +764,13 @@ function applyFormationMarchFollow(
       },
     ),
   );
-  const leader = sorted[sorted.length - 1]!;
+  const leader = sorted[0]!;
   const leaderTarget = targets.get(leader.id);
   const leaderFormX = formation.get(leader.id);
   if (leaderTarget === undefined || leaderFormX === undefined) return;
   if (leader.battleX >= leaderTarget - 0.5) return;
 
-  for (const unit of sorted.slice(0, -1)) {
+  for (const unit of sorted.slice(1)) {
     const unitFormX = formation.get(unit.id);
     if (unitFormX === undefined) continue;
 

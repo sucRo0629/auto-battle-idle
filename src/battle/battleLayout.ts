@@ -300,7 +300,7 @@ function resolveForwardMeleeFormationUnits(
   const melee = sorted.filter((player) =>
     isMeleeFormationSlot(toPartyFormationUnit(player)),
   );
-  return melee.length > 0 ? melee : [sorted[sorted.length - 1]!];
+  return melee.length > 0 ? melee : [sorted[0]!];
 }
 
 export function getFrontEnemyBattleX(
@@ -990,8 +990,8 @@ export function resolveEngagedFormationOverlaps(
     );
     const minGap = FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
     for (let i = 1; i < sorted.length; i++) {
-      const rear = frontUnits.find((player) => player.id === sorted[i - 1]!.id);
-      const front = frontUnits.find((player) => player.id === sorted[i]!.id);
+      const front = frontUnits.find((player) => player.id === sorted[i - 1]!.id);
+      const rear = frontUnits.find((player) => player.id === sorted[i]!.id);
       if (!rear || !front) continue;
       const minFrontX = rear.battleX + minGap;
       if (front.battleX < minFrontX) {
