@@ -589,6 +589,35 @@ export function resolvePlayerApproachBattleX(
   return all.get(player.id) ?? player.battleX;
 }
 
+/**
+ * 描画向き用 AttackTarget。
+ * ally-heal は heal 停止条件（PHT 射程内 / 最前線 anchor 射程内）を満たすときだけ focus を返す。
+ * 接近中に後方味方だけ射程内の場合は null（既定 +X）とし、進軍向きと背後向きの揺れを防ぐ。
+ */
+export function resolvePlayerFacingFocus(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): CombatantState | null {
+  const attackFocus = resolvePlayerAttackTargetEnemy(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  if (!isAllyHealBasicAttack(player, gameData)) {
+    return attackFocus;
+  }
+  if (
+    resolveDamagedAllyHealTarget(player, players, enemies, gameData) !== null ||
+    isAllyFrontlineInHealRange(player, players, enemies, gameData)
+  ) {
+    return attackFocus;
+  }
+  return null;
+}
+
 export function resolveEnemyApproachBattleX(
   enemy: CombatantState,
   players: CombatantState[],

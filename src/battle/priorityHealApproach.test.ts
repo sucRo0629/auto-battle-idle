@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from './data/loadGameData.ts';
 import {
   resolvePlayerApproachBattleX,
+  resolvePlayerFacingFocus,
   shouldSkipEngagedAutoApproach,
 } from './resolveApproachBattleX.ts';
+import { resolveFacingSign } from './combatFacing.ts';
 import { isWithinSkillRange, resolveSkillRangePx } from './skills/rangeUtils.ts';
 import { resolvePriorityHealTarget, resolveEffectResolution } from './skills/targeting.ts';
 import type { CombatantState, GameData } from './types.ts';
@@ -266,6 +268,8 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
     expect(
       shouldSkipEngagedAutoApproach(alchemist, players, [enemy], gameData),
     ).toBe(false);
+    expect(resolvePlayerFacingFocus(alchemist, players, [enemy], gameData)).toBeNull();
+    expect(resolveFacingSign(alchemist, null)).toBe(1);
   });
 
   it('advances toward frontline when frontline is out of heal range', () => {
@@ -294,6 +298,24 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
     expect(
       shouldSkipEngagedAutoApproach(alchemist, players, [enemy], gameData),
     ).toBe(true);
+    const focus = resolvePlayerFacingFocus(alchemist, players, [enemy], gameData);
+    expect(focus?.id).toBe('guardian');
+    expect(resolveFacingSign(alchemist, focus)).toBe(1);
+  });
+
+  it('flips toward rear PHT when healing an ally behind', () => {
+    const cleric = mockCleric(100);
+    const guardian = mockGuardian(400, 235);
+    const sorcerer = mockSorcerer(20, 30);
+    const players = [guardian, sorcerer, cleric];
+
+    expect(resolvePriorityHealTarget(players)?.id).toBe('sorcerer');
+    expect(
+      shouldSkipEngagedAutoApproach(cleric, players, [enemy], gameData),
+    ).toBe(true);
+    const focus = resolvePlayerFacingFocus(cleric, players, [enemy], gameData);
+    expect(focus?.id).toBe('sorcerer');
+    expect(resolveFacingSign(cleric, focus)).toBe(-1);
   });
 
   it('does not cap cleric approach below frontline heal range when frontline is past enemy contact', () => {

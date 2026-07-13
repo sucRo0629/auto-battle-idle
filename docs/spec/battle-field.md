@@ -150,7 +150,8 @@ effectiveRangePx =
 | 項目 | 内容 |
 | ---- | ---- |
 | 既定向き | 味方 **+X（右）** / 敵 **−X（左）** |
-| 反転条件 | **AttackTarget**（`resolvePlayerAttackTargetEnemy` / `resolveEnemyAttackTargetPlayer`）が既定向きの **背後** にいるとき。味方: より小さい `battleX` の敵 / 敵: より大きい `battleX` の味方 |
+| 反転条件 | **AttackTarget**（`resolvePlayerFacingFocus` / `resolveEnemyAttackTargetPlayer`）が既定向きの **背後** にいるとき。味方: より小さい `battleX` の敵または **背後の味方**（ally-heal の PHT 等） / 敵: より大きい `battleX` の味方 |
+| ally-heal 接近中 | heal 停止条件（PHT 射程内 / 最前線 anchor 射程内）未達の間は `resolvePlayerFacingFocus` が null を返し **既定向きのまま**（後方味方だけ射程内でも背後反転しない） |
 | 反転時 | `facingSign` を反転（`resolveFacingSign`）。`isInForwardSegment`（`pierce` 等）とスプライト描画が反転向きを参照する |
 | 射程 | `isWithinSkillRange`（絶対距離）は向き非依存。変更しない |
 | 接敵 | **ChaseTarget / 停止 X / formation clamp / rear assault 復帰** 等の自動接近ルールは本節で変更しない |

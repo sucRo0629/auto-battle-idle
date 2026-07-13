@@ -6,7 +6,7 @@ export function defaultFacingSign(unit: CombatantState): number {
   return unit.isEnemy ? -1 : 1;
 }
 
-/** 既定向きの背後にいる敵対 target か（接敵ルールは変えず向き判定のみ） */
+/** 既定向きの背後にいる focus か（接敵ルールは変えず向き判定のみ） */
 export function isHostileBehindDefaultForward(
   actor: CombatantState,
   target: CombatantState,

@@ -57,7 +57,7 @@ import {
   resolveEnemyApproachBattleX,
   resolveEnemyAttackTargetPlayer,
   resolveEnemyChaseTargetPlayer,
-  resolvePlayerAttackTargetEnemy,
+  resolvePlayerFacingFocus,
   shouldSkipEngagedAutoApproach,
 } from "./resolveApproachBattleX.ts";
 import { resolveFacingSign } from "./combatFacing.ts";
@@ -1967,7 +1967,7 @@ export class BattleEngine {
   private toSnapshot(c: CombatantState) {
     const attackFocus = c.isEnemy
       ? resolveEnemyAttackTargetPlayer(c, this.players, this.enemies, this.gameData)
-      : resolvePlayerAttackTargetEnemy(c, this.players, this.enemies, this.gameData);
+      : resolvePlayerFacingFocus(c, this.players, this.enemies, this.gameData);
     const facingSign = resolveFacingSign(c, attackFocus);
     return {
       id: c.id,

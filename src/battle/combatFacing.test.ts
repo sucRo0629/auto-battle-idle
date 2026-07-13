@@ -28,4 +28,11 @@ describe('combatFacing', () => {
     expect(resolveFacingSign(ally, behind)).toBe(-1);
     expect(resolveFacingSign(ally, null)).toBe(1);
   });
+
+  it('flips facing when healing an ally behind (ally-heal)', () => {
+    const healer = mockUnit('healer', 160);
+    const rearAlly = mockUnit('rear', 20);
+    expect(isHostileBehindDefaultForward(healer, rearAlly)).toBe(true);
+    expect(resolveFacingSign(healer, rearAlly)).toBe(-1);
+  });
 });
