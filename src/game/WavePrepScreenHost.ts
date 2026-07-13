@@ -8,6 +8,7 @@ import {
   type PartyClassAssignmentResult,
 } from '../progression/partyCompose.ts';
 import type { OperationStateReadonlyView } from './OperationState.ts';
+import { OPERATION_PASSIVE_ACQUIRE_COST } from './operationPassiveCatalog.ts';
 import '../styles/wave-prep-screen.css';
 
 export interface WavePrepScreenHostCallbacks {
@@ -23,6 +24,7 @@ export interface WavePrepScreenHostCallbacks {
   getAcquiredOperationPassiveIds: (slotIndex: number) => readonly string[];
   getOperationPassiveCandidates: (slotIndex: number) => readonly string[];
   getPassiveDisplayName: (passiveId: string) => string;
+  getPassiveDescription: (passiveId: string) => string;
   onAcquireOperationPassive: (slotIndex: number, passiveId: string) => boolean;
   onConfirmNextWave: () => boolean;
   shouldShowRetryActions: () => boolean;
@@ -228,10 +230,15 @@ export class WavePrepScreenHost {
       } else {
         this.pendingPassiveSelection.delete(slotIndex);
       }
+      this.updatePassiveDetail(passiveSection, passiveSelect.value || null);
       acquireButton.disabled =
         passiveId === '' ||
-        this.callbacks.getUnspentOperationResource() <= 0;
+        this.callbacks.getUnspentOperationResource() < OPERATION_PASSIVE_ACQUIRE_COST;
     });
+
+    const passiveDetail = document.createElement('p');
+    passiveDetail.className = 'wave-prep-screen__passive-detail';
+    passiveDetail.dataset.slotIndex = String(slotIndex);
 
     const acquireButton = document.createElement('button');
     acquireButton.type = 'button';
@@ -243,7 +250,7 @@ export class WavePrepScreenHost {
     });
 
     passiveControls.append(passiveSelect, acquireButton);
-    passiveSection.append(acquiredEl, passiveControls);
+    passiveSection.append(acquiredEl, passiveControls, passiveDetail);
     row.append(header, passiveSection);
     return row;
   }
@@ -328,9 +335,11 @@ export class WavePrepScreenHost {
     const acquiredIds =
       this.callbacks.getAcquiredOperationPassiveIds(slotIndex);
     if (acquiredIds.length > 0) {
-      const labels = acquiredIds.map((id) =>
-        this.callbacks.getPassiveDisplayName(id),
-      );
+      const labels = acquiredIds.map((id) => {
+        const name = this.callbacks.getPassiveDisplayName(id);
+        const desc = this.callbacks.getPassiveDescription(id);
+        return desc ? `${name}: ${desc}` : name;
+      });
       acquiredEl.textContent = `取得済み: ${labels.join(' / ')}`;
     } else {
       acquiredEl.textContent = '取得済み: なし';
@@ -351,7 +360,8 @@ export class WavePrepScreenHost {
     for (const passiveId of selectableCandidates) {
       const option = document.createElement('option');
       option.value = passiveId;
-      option.textContent = this.callbacks.getPassiveDisplayName(passiveId);
+      const name = this.callbacks.getPassiveDisplayName(passiveId);
+      option.textContent = `${name}（消費 ${OPERATION_PASSIVE_ACQUIRE_COST}）`;
       passiveSelect.appendChild(option);
     }
 
@@ -363,10 +373,21 @@ export class WavePrepScreenHost {
       passiveSelect.value = '';
     }
 
+    const passiveSection = row.querySelector<HTMLElement>(
+      '.wave-prep-screen__passive-section',
+    );
+    if (passiveSection) {
+      this.updatePassiveDetail(
+        passiveSection,
+        passiveSelect.value || null,
+        acquiredIds,
+      );
+    }
+
     const canAcquire =
       selectableCandidates.length > 0 &&
       passiveSelect.value !== '' &&
-      this.callbacks.getUnspentOperationResource() > 0;
+      this.callbacks.getUnspentOperationResource() >= OPERATION_PASSIVE_ACQUIRE_COST;
     passiveSelect.disabled = selectableCandidates.length === 0;
     acquireButton.disabled = !canAcquire;
   }
@@ -419,5 +440,38 @@ export class WavePrepScreenHost {
 
     this.pendingPassiveSelection.delete(slotIndex);
     this.refresh();
+  }
+
+  private updatePassiveDetail(
+    passiveSection: HTMLElement,
+    passiveId: string | null,
+    acquiredIds: readonly string[] = [],
+  ): void {
+    const detailEl = passiveSection.querySelector<HTMLElement>(
+      '.wave-prep-screen__passive-detail',
+    );
+    if (!detailEl) return;
+
+    if (passiveId) {
+      const name = this.callbacks.getPassiveDisplayName(passiveId);
+      const desc = this.callbacks.getPassiveDescription(passiveId);
+      detailEl.textContent = desc
+        ? `${name} — ${desc}（消費 ${OPERATION_PASSIVE_ACQUIRE_COST}）`
+        : `${name}（消費 ${OPERATION_PASSIVE_ACQUIRE_COST}）`;
+      return;
+    }
+
+    if (acquiredIds.length > 0) {
+      detailEl.textContent = '';
+      return;
+    }
+
+    const resource = this.callbacks.getUnspentOperationResource();
+    if (resource < OPERATION_PASSIVE_ACQUIRE_COST) {
+      detailEl.textContent = `リソース不足（必要 ${OPERATION_PASSIVE_ACQUIRE_COST} / 残 ${resource}）`;
+      return;
+    }
+
+    detailEl.textContent = '';
   }
 }

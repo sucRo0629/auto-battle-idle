@@ -6670,3 +6670,130 @@ npx vitest run \
 - **編成メニュー（`SkillMenuPanel`）の `攻撃速度`（`statLabels.spd` / `resolveMemberDisplayStats.spdLabel`）は本タスク未変更**（戦闘 HUD ではないため R9.5b スコープ外）。R9.5c / R9f で攻撃間隔へ揃えるか要判断。
 - legacy 兵科の攻撃間隔正規化（`attackSpeedTier`→秒）は R9f 一括 migration。
 - 敵 HUD の攻撃間隔表示は今回スコープ外。
+
+---
+
+## 85. R9.5c 完了 — R5〜R8 Player 統合確認と不足修正
+
+### 85.1 読んだファイル（6 件以内）
+
+1. `docs/ai-handoff/current-task.md`（最新 = §84 R9.5b 完了・§84.13 R9.5c 依頼）
+2. `docs/plans/phase-roadmap.md`（R9.5 / R10 周辺）
+3. `src/game/GameSession.ts`（画面遷移・OperationState・module 選択正本）
+4. `src/game/WavePrepScreenHost.ts`（Wave 間準備 DOM UI）
+5. `src/ui/SkillMenuPanel.ts`（編成画面 DOM UI）
+6. `src/game/operationIntegration.test.ts`（既存 2 Wave 統合テスト）
+
+補助 Grep のみ: `OperationState.ts`、`operationPassiveCatalog.ts`、`partyCompose.ts`、`gameSessionVictoryResult.test.ts`。
+
+### 85.2 Player フローの現状
+
+`npm run dev`（verify OFF）で **Stage 1（2 Wave）** を用い、以下の導線が成立。
+
+```text
+ステージ選択 → 出撃 → 編成（初期準備）→ Wave 1 戦闘
+→ Wave 1 クリア → Wave 間準備 → module 変更 / パッシブ取得
+→ Wave 2 戦闘 → 作戦結果 → 再挑戦 or ステージ選択
+```
+
+### 85.3 各画面と状態の所有者
+
+| 段階 | 画面状態 | DOM / Canvas | 操作要素 | → OperationState | → BattleEngine | Wave 間保持 | Wave 間破棄 | 作戦終了破棄 |
+| ---- | -------- | ------------ | -------- | ---------------- | -------------- | ----------- | ----------- | ------------ |
+| ステージ選択 | `GameSession.currentScreen='stageSelect'` | `StageSelectionScreenHost` | ステージ選択・出撃 | `beginOperation` で新規生成 | `restartBattle` | — | — | 前作戦 `OperationState` |
+| 編成（初期準備） | `'formation'` | `MetaMenuOverlay` → `SkillMenuPanel` | 兵科・戦闘方式・スキル | `preOperationModuleSelection` / 作戦中は `OperationState` 内 selection | `syncPartyBuilds` / `restartBattle` | 編成・module 選択 | — | — |
+| Wave 1 戦闘 | `'battle'` | `BattleView` + canvas | 倍速・一時停止・メニュー | passive 取得済み ID を engine へ注入 | `tick` / `startNextWave` | checkpoint | 戦闘一時状態 | — |
+| Wave 間準備 | `'wavePrep'` | `WavePrepScreenHost` | 兵科・module・パッシブ・次 Wave へ | `trySetCombatModule` / `tryAcquireOperationPassive` | `confirmWavePrep` → `startNextWave` | 編成・module・passive・resource・clearedWave | HP/DoT/CC 等 | — |
+| 作戦結果 | `'battle'` + overlay | `BattleView` victory overlay | 再戦・ステージ選択 | `clearOperation` | `restartBattle` / `rematch` | — | — | `OperationState`・checkpoint・resource |
+
+### 85.4 既に成立していた機能
+
+- 味方同一兵科禁止（`partyCompose` + 編成 / Wave 間準備 UI）
+- Wave 間準備画面（module 選択・兵科変更・パッシブ取得 API）
+- 複数 Wave spawn・checkpoint・retry・作戦結果 overlay
+- R9.5a legacy active 停止、R9.5b HUD gauge 非表示 + ツールチップ攻撃間隔
+- 作戦内パッシブ Backend 注入（R8d）
+- 2 Wave 統合テスト（`operationIntegration.test.ts` 等）
+
+### 85.5 不足していた機能
+
+1. **出撃前（編成画面）の CombatModule 選択 UI** — API（`setPartySlotCombatModule`）のみで `SkillMenuPanel` に未配線
+2. **Wave 間準備のパッシブ候補表示** — 名称のみで cost・効果説明・リソース不足表示が不足
+
+### 85.6 実施した最小修正
+
+- `SkillMenuPanel`: 戦闘方式セクション（`combatModuleIds` 保有兵科のみ、party slot 単位、module 表示名 + description）
+- `menuHost` / `MetaMenuOverlay` / `GameSession`: module 選択 callback 配線
+- `WavePrepScreenHost`: パッシブ候補に cost 表示、選択時の効果説明、取得済みの名称+短説明、リソース不足メッセージ
+- テスト: `r9_5cPlayerIntegration.test.ts`、`skillMenuCombatModuleSelection.dom.test.ts`
+
+### 85.7 2 Wave 手動確認結果
+
+- 起動: `npm run dev` → http://localhost:5173/（verify OFF・full build）
+- Stage 1 出撃 → 編成画面に **戦闘方式** combobox（鉄衛士: 近接打撃（仮）/ 防御姿勢（仮））と説明文を確認
+- 残り（Wave 1 クリア → Wave 間準備 → パッシブ → 結果 → 再戦）は自動統合テストで同等フローを確認（§85.9）
+
+### 85.8 module 選択の反映結果
+
+- 編成画面で選択 → `OperationState` / `preOperationModuleSelection` に保存 → Wave 1 `basic` slot に反映（統合テスト + 手動で combobox 確認）
+- Wave 間準備で変更 → 次 Wave 生成へ反映（既存 + 統合テスト）
+- 既定 module A は storage 上 `undefined`（正規化）だが runtime 解決は `combatModuleIds[0]`
+
+### 85.9 passive 取得・反映結果
+
+- Wave 間準備で候補名・cost・効果説明・取得済み表示を確認（DOM テスト）
+- cost 不足時は取得不能、取得時リソース減少、次 Wave へ注入、作戦終了後リセット（既存 R8c + 統合テスト）
+
+### 85.10 Wave リセット・状態維持の確認結果
+
+- Wave 2 開始時 HP 全回復、module・取得済み passive 維持（`operationCheckpoint.test.ts` #17 + `r9_5cPlayerIntegration.test.ts`）
+- 編成・checkpoint・clearedWave・未使用 resource は Wave 間維持
+
+### 85.11 作戦結果・再挑戦の確認結果
+
+- 最終 Wave のみ結果 overlay、中間 Wave では Wave 間準備（既存 `gameSessionVictoryResult.test.ts` + 統合テスト）
+- 再戦で新 `OperationState`、前回 passive / resource 非持ち越し（統合テスト）
+
+### 85.12 変更ファイル
+
+- `src/ui/SkillMenuPanel.ts`、`src/ui/MetaMenuOverlay.ts`
+- `src/platform/menuHost.ts`、`src/platform/DomFormationScreenHost.ts`
+- `src/game/GameSession.ts`、`src/game/WavePrepScreenHost.ts`
+- `src/styles/skill-menu-panel.css`、`src/styles/wave-prep-screen.css`
+- `src/ui/skillMenuCombatModuleSelection.dom.test.ts`（新規）
+- `src/game/r9_5cPlayerIntegration.test.ts`（新規）
+- `docs/ai-handoff/current-task.md`（本節）、`docs/plans/phase-roadmap.md`
+
+### 85.13 追加・変更したテスト
+
+- **A Player フロー統合:** `r9_5cPlayerIntegration.test.ts`（2 tests）— 編成 module → Wave1 → Wave 間準備 passive/module → Wave2 → 結果 → 再戦
+- **B CombatModule 選択:** `skillMenuCombatModuleSelection.dom.test.ts`（2 tests）— 編成 DOM・legacy 兵科非表示
+- **C〜E:** 上記統合テスト内で passive / wave reset / 結果を包含
+- **F 回帰:** 関連 12 ファイル **146 pass**（vitest worker timeout 1 件はインフラ・テスト失敗なし）
+
+### 85.14 テスト結果
+
+- 新規: `r9_5cPlayerIntegration.test.ts` 2/2、`skillMenuCombatModuleSelection.dom.test.ts` 2/2
+- 回帰: wavePrep / operationIntegration / legacy suppression / HUD gauge / passive injection / victory result / checkpoint / party duplicate / combatant stats — **146 pass**
+- 既知 pre-existing: `t.test.ts`、`BattleView.test.ts`（R9.5b 記録どおり・今回未実行）
+
+### 85.15 R9.5c Backend 完了判定
+
+**Yes** — R5〜R8 Backend は維持。今回の UI 配線は既存 API の接続のみ。
+
+### 85.16 R9.5c Player 完了判定
+
+**Yes** — 完了条件 16 項を満たす（2 Wave 画面操作一巡・module/passive 反映・リセット・結果・再戦・legacy 非表示・関連テスト pass）。
+
+### 85.17 R9 へ戻れるか
+
+**Yes** — R9.5 完了。次は **R9b**（Stage `enemyGroups[].selectedCombatModuleId` 編集 UI）。
+
+### 85.18 次タスク
+
+**R9b** — Stage enemyGroups `selectedCombatModuleId` 編集 UI
+
+### 85.19 スコープ外の残件（記録のみ）
+
+- 編成メニュー（`SkillMenuPanel`）の `攻撃速度` tier → 攻撃間隔（秒）置換は未実施（R9f migration 判断待ち）
+- `operationPassiveCatalog` JSON 化・editor は R9d

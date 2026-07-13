@@ -27,6 +27,9 @@ export interface MenuHostContext {
   isVerifyMode: () => boolean;
   onBuildChanged: (partyIndex: number, build: CharacterBuild) => void;
   onPartySlotChanged: (slotIndex: number, member: PartySlotState) => void;
+  /** R9.5c: party slot ごとの combat module 選択（Save 非統合） */
+  getPartySlotCombatModule?: (slotIndex: number) => string | undefined;
+  onPartySlotCombatModuleChanged?: (slotIndex: number, moduleId: string) => void;
   onScreenChange: (screen: GameScreen) => void;
   /** R7d: formation 閉じた後の遷移先（省略時 battle） */
   resolveFormationCloseScreen?: () => GameScreen;

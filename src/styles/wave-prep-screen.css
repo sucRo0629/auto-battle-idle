@@ -71,7 +71,7 @@
 
 .wave-prep-screen__passive-acquired {
   font-family: var(--font-ui, inherit);
-  font-size: 0.9rem;
+  font-size: var(--font-body-min-size);
 }
 
 .wave-prep-screen__passive-controls {
@@ -82,6 +82,13 @@
 
 .wave-prep-screen__passive-acquire {
   flex-shrink: 0;
+}
+
+.wave-prep-screen__passive-detail {
+  margin: 0;
+  font-size: var(--font-body-min-size);
+  line-height: 1.45;
+  color: var(--party-text-soft, #c8b8a0);
 }
 
 .wave-prep-screen__confirm {

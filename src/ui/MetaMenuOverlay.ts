@@ -30,6 +30,9 @@ export interface MetaMenuOverlayOptions {
 export interface MetaMenuOverlayCallbacks {
   onBuildChanged: (partyIndex: number, build: CharacterBuild) => void;
   onPartySlotChanged: (slotIndex: number, member: PartySlotState) => void;
+  /** R9.5c: party slot ごとの combat module 選択 */
+  getPartySlotCombatModule?: (slotIndex: number) => string | undefined;
+  onPartySlotCombatModuleChanged?: (slotIndex: number, moduleId: string) => void;
   onClose: () => void;
 }
 
@@ -255,6 +258,11 @@ export class MetaMenuOverlay {
           this.callbacks.onPartySlotChanged(slotIndex, member);
         },
         onPartyDraftChange: () => this.updateFooterButton(),
+        getSelectedCombatModuleId: (slotIndex) =>
+          this.callbacks.getPartySlotCombatModule?.(slotIndex),
+        onCombatModuleChanged: (slotIndex, moduleId) => {
+          this.callbacks.onPartySlotCombatModuleChanged?.(slotIndex, moduleId);
+        },
       },
       {
         isVerifyMode: this.isVerifyMode,

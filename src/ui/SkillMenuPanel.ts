@@ -29,6 +29,7 @@ import {
   compareByClassListOrder,
   sortClassIdsByListOrder,
 } from "../battle/data/classListOrder.ts";
+import { resolveSelectedCombatModuleId } from "../battle/data/resolveCombatModuleBasic.ts";
 import { createMemberFromClass, PARTY_DUPLICATE_CLASS_MESSAGE, validatePartyClassAssignment } from "../progression/partyCompose.ts";
 import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
@@ -96,6 +97,9 @@ export interface SkillMenuPanelCallbacks {
   ) => void;
   onPartySlotChanged: (slotIndex: number, member: PartySlotState) => void;
   onPartyDraftChange?: () => void;
+  /** R9.5c: party slot ごとの combat module 選択 */
+  getSelectedCombatModuleId?: (slotIndex: number) => string | undefined;
+  onCombatModuleChanged?: (slotIndex: number, moduleId: string) => void;
 }
 
 export interface SkillMenuPanelReturnToBattleOptions {
@@ -736,6 +740,10 @@ export class SkillMenuPanel {
 
     const skillsWrap = document.createElement("div");
     skillsWrap.className = "skill-menu-tactical-skills";
+    const combatModuleSection = this.createCombatModuleSection(preset);
+    if (combatModuleSection) {
+      skillsWrap.appendChild(combatModuleSection);
+    }
     skillsWrap.append(
       this.createSkillKindSection("passive", preset, learned, unlockedSlots),
       this.createSkillKindSection("active", preset, learned, unlockedSlots)
@@ -748,6 +756,82 @@ export class SkillMenuPanel {
 
   private shouldHideFutureSkillSlots(): boolean {
     return this.getPlayerLevel() < 10;
+  }
+
+  private resolveFocusedPartySlotIndex(): number | null {
+    const focusedClassId =
+      this.focusedClassId ??
+      this.selectedClassIds[0] ??
+      this.getPickerVisibleClassIds()[0];
+    if (!focusedClassId) return null;
+    const slotIndex = this.draftParty.findIndex(
+      (member) => member?.classId === focusedClassId,
+    );
+    return slotIndex >= 0 ? slotIndex : null;
+  }
+
+  private createCombatModuleSection(preset: ClassPreset): HTMLElement | null {
+    const moduleIds = preset.combatModuleIds;
+    if (!moduleIds || moduleIds.length === 0) return null;
+    if (
+      !this.callbacks.getSelectedCombatModuleId ||
+      !this.callbacks.onCombatModuleChanged
+    ) {
+      return null;
+    }
+
+    const slotIndex = this.resolveFocusedPartySlotIndex();
+    if (slotIndex === null) return null;
+
+    const section = document.createElement("section");
+    section.className =
+      "skill-menu-section skill-menu-combat-module-section";
+
+    const title = document.createElement("h3");
+    title.className = "skill-menu-section-title";
+    title.textContent = "戦闘方式";
+    section.appendChild(title);
+
+    const body = document.createElement("div");
+    body.className = "skill-menu-combat-module-body";
+
+    const moduleSelect = document.createElement("select");
+    moduleSelect.className = "skill-menu-combat-module-select";
+    for (const moduleId of moduleIds) {
+      const moduleDef = this.gameData.combatModuleRegistry[moduleId];
+      const option = document.createElement("option");
+      option.value = moduleId;
+      option.textContent = moduleDef?.displayName ?? moduleId;
+      moduleSelect.appendChild(option);
+    }
+
+    const resolved = resolveSelectedCombatModuleId(
+      preset,
+      this.gameData.combatModuleRegistry,
+      this.callbacks.getSelectedCombatModuleId(slotIndex),
+    );
+    if (resolved) {
+      moduleSelect.value = resolved;
+    }
+
+    moduleSelect.addEventListener("change", () => {
+      this.callbacks.onCombatModuleChanged?.(slotIndex, moduleSelect.value);
+      this.renderBody();
+    });
+
+    const description = document.createElement("p");
+    description.className = "skill-menu-combat-module-description";
+    const selectedDef = this.gameData.combatModuleRegistry[moduleSelect.value];
+    description.textContent = selectedDef?.description ?? "";
+
+    moduleSelect.addEventListener("change", () => {
+      const nextDef = this.gameData.combatModuleRegistry[moduleSelect.value];
+      description.textContent = nextDef?.description ?? "";
+    });
+
+    body.append(moduleSelect, description);
+    section.appendChild(body);
+    return section;
   }
 
   private createEmptySlotDetail(): HTMLElement {

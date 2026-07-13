@@ -1277,6 +1277,31 @@
   line-height: 1.45;
 }
 
+.skill-menu-combat-module-section {
+  margin-bottom: 8px;
+}
+
+.skill-menu-combat-module-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--party-line);
+  background: rgba(12, 10, 8, 0.72);
+}
+
+.skill-menu-combat-module-select {
+  min-height: 32px;
+  font-size: var(--font-body-min-size);
+}
+
+.skill-menu-combat-module-description {
+  margin: 0;
+  font-size: var(--font-body-min-size);
+  line-height: 1.45;
+  color: var(--party-text-soft);
+}
+
 .skill-menu-tab-icon {
   display: inline-flex;
   align-items: center;

@@ -24,6 +24,9 @@ export class DomFormationScreenHost implements MenuHost {
         onPartySlotChanged: (slotIndex, member) => {
           this.context.onPartySlotChanged(slotIndex, member);
         },
+        getPartySlotCombatModule: this.context.getPartySlotCombatModule,
+        onPartySlotCombatModuleChanged:
+          this.context.onPartySlotCombatModuleChanged,
         onClose: () => this.close(),
       },
       {

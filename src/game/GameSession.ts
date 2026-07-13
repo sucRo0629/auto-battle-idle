@@ -51,6 +51,7 @@ import {
 import { createMenuHost, type MenuHost } from '../platform/menuHost.ts';
 import { SaveManager } from '../save/SaveManager.ts';
 import { BattleView } from '../ui/BattleView.ts';
+import { formatPassiveDescription } from '../ui/formatSkillText.ts';
 import type { GameScreen } from './gameScreen.ts';
 import { OperationState, type OperationStateReadonlyView } from './OperationState.ts';
 import {
@@ -187,6 +188,10 @@ export class GameSession {
           this.getOperationPassiveCandidates(slotIndex),
         getPassiveDisplayName: (passiveId) =>
           this.gameData.skillRegistry.passives[passiveId]?.name ?? passiveId,
+        getPassiveDescription: (passiveId) => {
+          const passive = this.gameData.skillRegistry.passives[passiveId];
+          return passive ? formatPassiveDescription(passive) : '';
+        },
         onAcquireOperationPassive: (slotIndex, passiveId) =>
           this.tryAcquireOperationPassive(slotIndex, passiveId),
         onConfirmNextWave: () => this.confirmWavePrepAndStartNextWave(),
@@ -292,6 +297,10 @@ export class GameSession {
       getUnlockedClassIds: () => this.save.unlockedClassIds,
       onPartySlotChanged: (slotIndex, member) =>
         this.updatePartySlot(slotIndex, member),
+      getPartySlotCombatModule: (slotIndex) =>
+        this.getPartySlotCombatModule(slotIndex),
+      onPartySlotCombatModuleChanged: (slotIndex, moduleId) =>
+        this.setPartySlotCombatModule(slotIndex, moduleId),
       onScreenChange: (screen) => this.setGameScreen(screen),
       resolveFormationCloseScreen: () => this.resolveFormationCloseScreen(),
       getFormationReturnOptions: () => this.getFormationReturnOptions(),

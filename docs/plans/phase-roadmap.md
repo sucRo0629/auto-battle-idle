@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9.5a Backend 完了**、**R9.5b 完了**（CombatModule 兵科の legacy 2×2 gauge 非表示 + 戦闘中ステータスの攻撃間隔表示）。**公式次タスク: R9.5c**（出撃前戦闘方式選択）。詳細は [current-task.md §84](../ai-handoff/current-task.md)。
+**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9.5a〜c 完了**（R5 Player 統合確認 + 出撃前/Wave 間戦闘方式選択）。**公式次タスク: R9b**（Stage enemyGroups selectedCombatModuleId 編集 UI）。詳細は [current-task.md §85](../ai-handoff/current-task.md)。
 
 ---
 
@@ -30,12 +30,12 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R2** | 詳細戦闘・兵科仕様 — 攻撃間隔、Attack / Hit、方式効果形状、各兵科 2 方式 | 完了 | 設計 Phase として完了 | **完了** |
 | **R3** | Wave 作戦ループ — 初期準備 → Wave 戦闘 → Wave 間準備 → 次 Wave → 最終結果 | 完了 | 設計 Phase として完了 | **完了** |
 | **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / editor API / legacy 移行（**設計のみ**） | 完了 | 設計 Phase として完了 | **完了** |
-| **R5** | 戦闘方式 runtime 縦切り — 少数兵科・各 2 方式・敵方式指定・同一兵科禁止・module 通常行動 | **完了** | **未達**（R9.5a〜c で解消） | **Backend 完了** |
-| **R6** | 複数 Wave・OperationState — Wave 間準備、checkpoint、retry、複数 Wave spawn | **完了** | R9.5 / R10 で画面導線を確認 | **Backend 完了** |
+| **R5** | 戦闘方式 runtime 縦切り — 少数兵科・各 2 方式・敵方式指定・同一兵科禁止・module 通常行動 | **完了** | **完了**（R9.5a〜c） | **Backend 完了 / Player 完了** |
+| **R6** | 複数 Wave・OperationState — Wave 間準備、checkpoint、retry、複数 Wave spawn | **完了** | R9.5c で画面導線を確認 | **Backend 完了** |
 | **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | **完了** | R10 で再挑戦性を確認 | **Backend 完了** |
 | **R8** | 作戦内パッシブ — 取得・保持・効果縦切り、戦闘中表示、範囲プレースホルダ | **完了** | R10 で判断差を確認 | **Backend 完了** |
 | **R9a** | authoring 骨格 — エディタ現状調査・タスク分割 | 完了 | 開発者向け確認済み | **完了** |
-| **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、出撃前方式選択 | **R9.5a/b 完了** | 未着手 | **公式次: R9.5c** |
+| **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、出撃前方式選択 | **R9.5a〜c 完了** | **完了** | **完了** |
 | **R9b〜f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / closure | R9b 以降未着手 | R10 用作戦反映は未確認 | 未着手 |
 | **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | R9.5・R9 待ち |
 
@@ -439,7 +439,7 @@ R5 実装時点では未達であり、**R9.5a〜c** で解消する。
 | -- | ---- | ---------------- | --------------- | ---- |
 | **R9.5a** | module 兵科の legacy active runtime 停止 | **完了** — 4 兵科で legacy active cooldown を生成せず、`runUnitSkills` から発動しない | 4 兵科を戦闘へ出しても legacy active が一度も発動しない | R5 |
 | **R9.5b** | 味方 HUD 攻撃間隔表示 | **完了** — CombatModule 兵科の legacy 2×2 gauge を HUD から非表示（`hasCombatModuleBasic`）、戦闘中ステータスに攻撃間隔（秒）を表示。攻撃間隔は HUD 本体ではなく §7.1.1 ツールチップ内のみ | 4 兵科に legacy 2×2 gauge がなく、攻撃間隔を読める | R9.5a |
-| **R9.5c** | 出撃前戦闘方式選択 | `SkillMenuPanel` の選択を出撃時 `OperationState` へ確定し、Wave1 生成へ反映 | 出撃前に方式を確認・変更でき、選んだ方式で Wave1 を開始できる | R9.5a、R6 |
+| **R9.5c** | 出撃前戦闘方式選択 + R5〜R8 Player 統合確認 | `SkillMenuPanel` / WavePrep / OperationState 縦切り | 2 Wave 作戦を画面操作で一巡できる | **完了** — R9.5a、R6 |
 
 **対象兵科（`R5_COMBAT_MODULE_CLASS_IDS`）:** `df_guardian`、`at_swordsman`、`at_sorcerer`、`sp_cleric`。別一覧を重複定義しない。
 
@@ -475,7 +475,7 @@ R9 は新仕様の Stage、Wave、敵方式、作戦内パッシブをエディ�
 | **R9e** | preview・validation・参照整合の統合 | 不正 ID・重複・未設定警告 |
 | **R9f** | authoring closure — 回帰テスト・spec 一致・R10 用作戦作成可能判定 | 新規 2 Wave 作戦をエディタだけで起動 |
 
-**次タスク（R9 系列）:** **R9b** — R9.5 完了後に着手。公式次は **R9.5a**。
+**次タスク（R9 系列）:** **R9b** — R9.5 完了後に着手。公式次は **R9b**。
 
 ### R9a §80.6 技術前提（R9 Backend 完了に必要・R9.5 と並行可）
 
