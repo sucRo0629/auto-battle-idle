@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**（Player 未達分は R9.5 へ）。
-- **次の再開タスク:** **R9.5b — 味方 HUD 攻撃間隔表示・legacy gauge 除去**（§83）。**R9.5a Backend 完了**（§83）。
+- **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
+- **次の再開タスク:** **R9b** — Stage `enemyGroups[].selectedCombatModuleId` 編集 UI（§85.18）。R9.5c の暫定 UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6412,7 +6412,8 @@ HUD の legacy gauge 除去は R9.5b のため、本タスク単独では R9.5 P
 
 **R9.5c**
 
-- Player 完了条件: 出撃前の `SkillMenuPanel` で方式を選び、Wave1 へ反映できる。
+- Backend 完了条件: R5〜R8 縦切り・暫定 module / passive 配線・統合テスト。
+- Player 完了条件: **部分完了のみ** — 統合 smoke。正式 作戦準備 UI（CombatModule・作戦内パッシブ）は **R9.6**（§85.20 訂正）。
 - 触る候補: `src/ui/SkillMenuPanel.ts`、`src/game/GameSession.ts`、`src/game/OperationState.ts`、`docs/spec/party-formation-ui.md`
 
 **R9b**
@@ -6666,14 +6667,15 @@ npx vitest run \
 
 ### 84.13 R9.5c へ送る事項
 
-- R9.5c は **R5〜R8 の Player 側統合確認**（出撃前戦闘方式選択・Wave 間準備画面・作戦内 passive 表示・HUD/runtime 統合 smoke）。触る候補: `src/ui/SkillMenuPanel.ts`、`src/game/GameSession.ts`、`src/game/OperationState.ts`、`docs/spec/party-formation-ui.md`。
+- R9.5c は **R5〜R8 の Backend 縦切り確認**（暫定 module / passive 配線・Wave 間準備画面・HUD/runtime 統合 smoke）。触る候補: `src/ui/SkillMenuPanel.ts`、`src/game/GameSession.ts`、`src/game/OperationState.ts`、`docs/spec/party-formation-ui.md`。
+- **正式な 作戦準備 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（R9.5c の UI は配線確認用の暫定 UI）。
 - **編成メニュー（`SkillMenuPanel`）の `攻撃速度`（`statLabels.spd` / `resolveMemberDisplayStats.spdLabel`）は本タスク未変更**（戦闘 HUD ではないため R9.5b スコープ外）。R9.5c / R9f で攻撃間隔へ揃えるか要判断。
 - legacy 兵科の攻撃間隔正規化（`attackSpeedTier`→秒）は R9f 一括 migration。
 - 敵 HUD の攻撃間隔表示は今回スコープ外。
 
 ---
 
-## 85. R9.5c 完了 — R5〜R8 Player 統合確認と不足修正
+## 85. R9.5c — R5〜R8 Player 統合確認と暫定 module 配線（完了判定訂正: §85.20）
 
 ### 85.1 読んだファイル（6 件以内）
 
@@ -6715,14 +6717,14 @@ npx vitest run \
 - 作戦内パッシブ Backend 注入（R8d）
 - 2 Wave 統合テスト（`operationIntegration.test.ts` 等）
 
-### 85.5 不足していた機能
+### 85.5 不足していた機能（当時）
 
 1. **出撃前（編成画面）の CombatModule 選択 UI** — API（`setPartySlotCombatModule`）のみで `SkillMenuPanel` に未配線
 2. **Wave 間準備のパッシブ候補表示** — 名称のみで cost・効果説明・リソース不足表示が不足
 
-### 85.6 実施した最小修正
+### 85.6 実施した最小修正（暫定 UI 含む）
 
-- `SkillMenuPanel`: 戦闘方式セクション（`combatModuleIds` 保有兵科のみ、party slot 単位、module 表示名 + description）
+- `SkillMenuPanel`: **暫定** 戦闘方式セクション（`combatModuleIds` 保有兵科のみ、party slot 単位、combobox + module 表示名 + description）— **配線確認用 UI。正式 Player UI ではない**
 - `menuHost` / `MetaMenuOverlay` / `GameSession`: module 選択 callback 配線
 - `WavePrepScreenHost`: パッシブ候補に cost 表示、選択時の効果説明、取得済みの名称+短説明、リソース不足メッセージ
 - テスト: `r9_5cPlayerIntegration.test.ts`、`skillMenuCombatModuleSelection.dom.test.ts`
@@ -6730,7 +6732,7 @@ npx vitest run \
 ### 85.7 2 Wave 手動確認結果
 
 - 起動: `npm run dev` → http://localhost:5173/（verify OFF・full build）
-- Stage 1 出撃 → 編成画面に **戦闘方式** combobox（鉄衛士: 近接打撃（仮）/ 防御姿勢（仮））と説明文を確認
+- Stage 1 出撃 → 編成画面に **暫定** 戦闘方式 combobox（鉄衛士: 近接打撃（仮）/ 防御姿勢（仮））と説明文を確認 — **配線確認のみ。正式 Player UI 完了根拠にしない**
 - 残り（Wave 1 クリア → Wave 間準備 → パッシブ → 結果 → 再戦）は自動統合テストで同等フローを確認（§85.9）
 
 ### 85.8 module 選択の反映結果
@@ -6779,15 +6781,40 @@ npx vitest run \
 
 ### 85.15 R9.5c Backend 完了判定
 
-**Yes** — R5〜R8 Backend は維持。今回の UI 配線は既存 API の接続のみ。
+**Yes** — 以下を維持。
+
+- CombatModule の Backend / runtime 配線
+- party slot 単位の選択状態更新
+- Wave 1 / 次 Wave への反映
+- 作戦内パッシブの Backend 候補生成
+- cost 判定
+- resource 消費
+- 次 Wave への passive 注入
+- 作戦終了時のリセット
+- DOM / 統合テストによる縦切り確認
+
+暫定 combobox による `setPartySlotCombatModule` 配線、WavePrep passive 表示改善、統合テスト pass は **Backend 縦切り確認** として記録する。
 
 ### 85.16 R9.5c Player 完了判定
 
-**Yes** — 完了条件 16 項を満たす（2 Wave 画面操作一巡・module/passive 反映・リセット・結果・再戦・legacy 非表示・関連テスト pass）。
+**部分完了（No — 正式 Player UI 未完了）**
+
+| 項目 | 判定 |
+| ---- | ---- |
+| 2 Wave 作戦の画面導線・統合 smoke（暫定 UI） | **Yes** |
+| legacy active / gauge / 攻撃間隔（R9.5a〜b 経由） | **Yes** |
+| 出撃前編成画面の**正式な** CombatModule 選択 UI | **No** → **R9.6-A** |
+| Wave 間準備画面の**正式な** CombatModule 選択 UI | **No** → **R9.6-A** |
+| Wave 間準備画面の**正式な**作戦内パッシブ選択 UI | **No** → **R9.6-B** |
+| 候補の違いをプレイヤーが画面上で理解できる情報設計 | **No** → **R9.6** |
+| 1280×720 の実画面で成立するレイアウト | **No** → **R9.6** |
+| 正式 UI に対する手動 Player 確認 | **No** → **R9.6** |
+
+暫定 combobox・候補名 + cost + 短い description の追記は、プレイヤーが各候補の違いを理解して選択できる完成状態ではない。**「出撃前編成画面の CombatModule 選択 UI 完了」「Wave 間準備の作戦内パッシブ選択 UI 完了」という記述は取り下げる。**
 
 ### 85.17 R9 へ戻れるか
 
-**Yes** — R9.5 完了。次は **R9b**（Stage `enemyGroups[].selectedCombatModuleId` 編集 UI）。
+**Yes** — R9.5c Backend 完了。R9.5 Player 全体の完了は R9.6（A+B）後。次は **R9b**（Stage `enemyGroups[].selectedCombatModuleId` 編集 UI）。
 
 ### 85.18 次タスク
 
@@ -6797,3 +6824,235 @@ npx vitest run \
 
 - 編成メニュー（`SkillMenuPanel`）の `攻撃速度` tier → 攻撃間隔（秒）置換は未実施（R9f migration 判断待ち）
 - `operationPassiveCatalog` JSON 化・editor は R9d
+- **作戦準備の正式 Player UI** — **R9.6**（§86）
+
+### 85.20 完了判定訂正（2026-07-13）
+
+**訂正理由:** 当初 §85.16 で R9.5c Player 完了 = Yes、R9.5 全体完了と記録したが、出撃前編成画面の CombatModule 選択・Wave 間準備の module / passive 選択は暫定 UI による配線確認に留まり、プレイヤー向け正式 UI ではない。
+
+**訂正内容:**
+
+| 旧記述 | 訂正後 |
+| ------ | ------ |
+| R9.5c Player 完了 = Yes | **部分完了** — 統合 smoke のみ。正式 Player UI は R9.6 |
+| R9.5 全体完了 | **Backend 完了**。Player 完了は R9.6（A+B）後 |
+| 出撃前 CombatModule 選択 UI 完了 | **取り下げ** — 暫定 combobox = 配線確認用 UI |
+| Wave 間 passive 選択 UI 完了 | **取り下げ** — 候補名 + cost + 短 description = 暫定 UI |
+| R5 Player 完了（R9.5a〜c） | R9.5a〜b 完了。正式 作戦準備 UI は R9.6 |
+
+**Player 完了から取り下げた項目:**
+
+- 出撃前編成画面の正式な CombatModule 選択 UI
+- Wave 間準備画面の正式な CombatModule 選択 UI
+- Wave 間準備画面の正式な作戦内パッシブ選択 UI
+- 候補の違いをプレイヤーが画面上で理解できる情報設計
+- 1280×720 の実画面で成立するレイアウト
+- 正式 UI に対する手動 Player 確認
+
+**Backend 完了として維持した項目:**
+
+- CombatModule の Backend / runtime 配線
+- party slot 単位の選択状態更新
+- Wave 1 / 次 Wave への反映
+- 作戦内パッシブの Backend 候補生成
+- cost 判定
+- resource 消費
+- 次 Wave への passive 注入
+- 作戦終了時のリセット
+- DOM / 統合テストによる縦切り確認
+
+**暫定 UI と正式 UI の区別:**
+
+| 種別 | 内容 | 扱い |
+| ---- | ---- | ---- |
+| 暫定 UI（R9.5c） | `SkillMenuPanel` の combobox。`setPartySlotCombatModule` 配線確認 | Backend 縦切り確認用。**Player 完了根拠にしない** |
+| 暫定 UI（R9.5c） | `WavePrepScreenHost` の候補名 + cost + 短い description | 配線確認用。**Player 完了根拠にしない** |
+| 正式 Player UI（R9.6-A） | CombatModule — 表示名・効果説明・挙動差・選択可否・理由・1280×720 レイアウト | R9.6-A 完了条件 |
+| 正式 Player UI（R9.6-B） | 作戦内パッシブ — cost・効果対象・効果量・条件・状態区別・1280×720 レイアウト | R9.6-B 完了条件 |
+
+**R10 との関係:** R9.6 は R10 Player 評価前の必須依存。CombatModule と作戦内パッシブは作戦中の主要な選択要素であるため、暫定 UI のままでは正式な Player 評価を行えない。Backend pass だけでは R10 Player 完了としない。R10 実装を先行できる場合でも、完了判定は R9.6 に依存する。
+
+---
+
+## 86. R9.6 — 作戦準備 Player UI（新設）
+
+### 86.1 新設理由
+
+R9.5c で暫定 UI による Backend / runtime 配線は成立したが、プレイヤーが CombatModule と作戦内パッシブの候補を理解・比較して選択できる正式 UI は未完了。R9b（Stage editor 敵設定 UI）とは責務を分離し、Player 向け準備 UI を独立 Phase として追加する。
+
+### 86.2 目的
+
+CombatModule と作戦内パッシブを、プレイヤーが理解・比較して選択できる正式な準備 UI を実装する。
+
+**サブフェーズ:**
+
+| ID | 内容 | 対象画面 |
+| -- | ---- | -------- |
+| **R9.6-A** | CombatModule 正式選択 UI | 出撃前編成画面、Wave 間準備画面 |
+| **R9.6-B** | 作戦内パッシブ正式選択 UI | Wave 間準備画面 |
+
+R9.6-A と R9.6-B は実装上分割しても構わないが、**両方が完了するまで R9.6 Player 完了としない。**
+
+---
+
+### 86.3 R9.6-A — CombatModule 正式選択 UI
+
+#### 対象画面
+
+- 出撃前の編成画面（`SkillMenuPanel` 等）
+- Wave 間準備画面（`WavePrepScreenHost`）
+
+#### 必須表示（各候補）
+
+- 表示名
+- 効果説明
+- 戦闘挙動の違い
+- 現在選択中かどうか
+- 選択可能かどうか
+- 選択できない場合の理由
+
+内部 ID や短い description だけで候補の違いを判断させない。
+
+#### 必須挙動
+
+- party slot 単位で選択する
+- 対象クラスまたは兵科に対応する候補だけを出す
+- legacy active skill を混ぜない
+- `classId` 変更時に不正な module を残さない
+- 出撃前選択を Wave 1 に反映する
+- Wave 間選択を次 Wave に反映する
+- 現在選択中の module を明確にする
+
+---
+
+### 86.4 R9.6-B — 作戦内パッシブ正式選択 UI
+
+#### 対象画面
+
+Wave 間準備画面。既存の候補名、cost、description、取得済み表示が存在していても、**正式 Player UI として十分か再評価**する。
+
+#### 必須表示（各パッシブ候補）
+
+- 表示名
+- resource cost
+- 現在の所持 resource
+- 効果説明
+- 効果対象
+- 効果量
+- 発動条件または適用条件
+- 取得済みかどうか
+- 取得可能かどうか
+- 取得できない理由
+
+「攻撃力上昇」などの抽象的な説明だけでなく、データ上取得可能な範囲で、何がどのように変化するかを表示する。例:
+
+- 対象兵科 / 対象クラス
+- 自分のみ／味方全体
+- 基礎攻撃への補正、ダメージ軽減率、回復量補正
+- 効果の重複可否
+- 次 Wave のみか、作戦終了までか
+
+存在しない情報を UI 用に推測して表示しない。表示に必要な構造化情報が Backend に存在しない場合は、R9.6 内で最小限の表示用 metadata 整備を検討する。
+
+#### 選択状態（視覚的・文言的に区別）
+
+- 未取得・取得可能
+- 未取得・resource 不足
+- 取得済み
+- 条件不一致
+- 選択対象外
+- 候補なし
+
+**色だけで状態を区別しない。**
+
+#### 取得操作
+
+- 取得前に cost と効果を確認できる
+- 操作後に取得済み状態へ変化する
+- resource 残量が更新される
+- 二重取得できない
+- resource 不足時は操作できない
+- 取得したパッシブが次 Wave に反映される
+- 作戦終了後にリセットされる
+
+#### 情報設計
+
+CombatModule 選択とパッシブ取得を同じ画面に置く場合も、意味が混ざらないようにセクションを明確に分ける。
+
+- **CombatModule** — 戦闘方式の選択（R9.6-A）
+- **作戦内パッシブ** — resource を消費する作戦中強化（R9.6-B）
+
+両者を同じ select 要素や同じ一覧として扱わない。
+
+---
+
+### 86.5 R9.6 UI 完了条件（Player）
+
+以下をすべて満たした場合のみ **R9.6 Player 完了** とする。
+
+- プレイヤーが内部 ID を知らなくても操作できる
+- CombatModule 候補の違いを画面上で比較できる
+- パッシブ候補の cost と具体的効果を画面上で確認できる
+- 現在選択中・取得済み・取得不能の状態が明確
+- resource 不足理由が分かる
+- 選択／取得結果が次 Wave に反映される
+- legacy active skill と混同しない
+- CombatModule とパッシブの用途が混同されない
+- キーボードまたは通常の UI 操作で利用できる
+- 色以外でも状態を判別できる
+- 1280×720 基準で主要情報が欠落しない
+- スクロールが必要な場合も確定操作や resource 表示を見失わない
+- 実画面による手動確認が完了している
+
+### 86.6 テスト要件（最低限）
+
+**CombatModule（R9.6-A）**
+
+1. slot に対応する候補だけが表示される
+2. 表示名と効果説明が表示される
+3. 現在選択中の候補が分かる
+4. 変更が party slot state に反映される
+5. Wave 1 と次 Wave に反映される
+6. `classId` 変更時に不正な module が残らない
+7. legacy active skill が候補に出ない
+
+**作戦内パッシブ（R9.6-B）**
+
+8. 候補名、cost、効果説明が表示される
+9. 現在 resource が表示される
+10. resource が十分なら取得できる
+11. resource 不足なら取得できず、理由が表示される
+12. 取得時に resource が減少する
+13. 取得済み状態へ変化する
+14. 二重取得できない
+15. 次 Wave に passive が注入される
+16. 作戦終了・再挑戦で仕様どおりリセットされる
+17. 候補なしの状態を正常に表示できる
+
+**レイアウト・操作**
+
+18. CombatModule とパッシブが別セクションとして識別できる
+19. 主要操作が通常の DOM 操作で実行できる
+20. 既存の Wave 間準備、編成、戦闘開始導線を壊さない
+
+### 86.7 フェーズ順
+
+1. **R9b** — Stage `enemyGroups[].selectedCombatModuleId` 編集 UI
+2. 残りの R9 editor 系タスク（R9c〜f）
+3. **R9.6** — 作戦準備 Player UI
+   - **R9.6-A** CombatModule 正式選択 UI
+   - **R9.6-B** 作戦内パッシブ正式選択 UI
+4. **R10** — 2 Wave 以上遊べる試作の正式 Player 評価
+
+R10 の評価軸は、新仕様で 2 Wave 以上遊び、「繰り返し遊びたいか」を確認すること。CombatModule と作戦内パッシブは作戦中の主要な選択要素であるため、暫定 UI のままでは正式な Player 評価を行えない。
+
+- Backend が動作するだけでは R10 Player 完了にならない
+- 暫定 UI による動作確認と正式 UI による体験評価を分ける
+- R9.6 完了後に R10 の正式な Player 評価を行う
+- R10 の実装作業を先行できる場合でも、完了判定は R9.6 に依存する
+
+### 86.8 触る候補
+
+`src/ui/SkillMenuPanel.ts`、`src/game/WavePrepScreenHost.ts`、`src/game/GameSession.ts`、`src/game/OperationState.ts`、`src/platform/menuHost.ts`、`docs/spec/party-formation-ui.md`
+
+正本: [phase-roadmap.md §R9.6](../plans/phase-roadmap.md#r96--作戦準備-player-ui)
