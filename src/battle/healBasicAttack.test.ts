@@ -26,6 +26,7 @@ import {
   TICK_DT,
   waitForEngaged,
 } from './test/battleFieldSpec.harness.ts';
+import { runDemoStageBattle, createDemoStageGameData } from './test/demoStageSim.harness.ts';
 
 const CLERIC_BASIC_ID = 'sp_cleric_basic_attack';
 const CLERIC_MODULE_BASIC_ID = 'sp_cleric_mod_single_mend';
@@ -592,5 +593,18 @@ describe('BattleEngine heal basic attack', () => {
 
     expect(healFired).toBe(true);
     expect(guardian.hp).toBeGreaterThan(Math.floor(guardian.maxHp * 0.3));
+  });
+
+  it('demo_ch1_04: cleric records healing while party is engaged', () => {
+    const gameData = createDemoStageGameData();
+    const result = runDemoStageBattle('demo_ch1_04', {
+      gameData,
+      maxTicks: 12_000,
+    });
+    const clericHeal =
+      result.classStats.find((row) => row.classId === 'sp_cleric')?.healingDealt ??
+      0;
+    expect(clericHeal).toBeGreaterThan(0);
+    expect(result.outcome).not.toBe('defeat');
   });
 });

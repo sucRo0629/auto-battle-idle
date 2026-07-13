@@ -5,7 +5,6 @@ import {
   getPlayerFrontlineContactX,
   isPlayerRearAssaultAccess,
   PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
-  resolvePlayerFrontlineOwners,
   resolvePlayerRearAssaultAttackRangePx,
   resolvePlayerRearAssaultHoldBattleX,
   type PlayerRearAssaultBattleContext,
@@ -100,6 +99,30 @@ function resolveDamagedAllyHealTarget(
   return pht;
 }
 
+/** ally-heal 接近の基準 X（PHT / 最前味方 / 接触線内前線の優先順） */
+function resolveAllyHealApproachAnchorX(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): number | null {
+  const living = livingPlayers(players);
+  if (living.length === 0) return null;
+
+  const range = resolveApproachRangePx(player, gameData, living.length);
+  const pht = resolvePriorityHealTarget(living);
+  if (pht && !isWithinSkillRange(player, pht, range)) {
+    return pht.battleX;
+  }
+
+  const frontlineContactX = getPlayerFrontlineContactX(players, enemies);
+  const maxAllyX = Math.max(...living.map((ally) => ally.battleX));
+  if (frontlineContactX !== null && maxAllyX > frontlineContactX + 1) {
+    return maxAllyX;
+  }
+  return frontlineContactX ?? maxAllyX;
+}
+
 /** ally-heal: 味方最前線が heal 射程内か（接近停止の正本） */
 function isAllyFrontlineInHealRange(
   player: CombatantState,
@@ -108,14 +131,19 @@ function isAllyFrontlineInHealRange(
   gameData: GameData,
 ): boolean {
   if (!isAllyHealBasicAttack(player, gameData)) return false;
-  const owners = resolvePlayerFrontlineOwners(players, enemies);
-  if (owners.length === 0) return false;
+  const anchorX = resolveAllyHealApproachAnchorX(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  if (anchorX === null) return false;
   const range = resolveApproachRangePx(
     player,
     gameData,
     livingAllyCount(players),
   );
-  return owners.some((owner) => isWithinSkillRange(player, owner, range));
+  return Math.abs(anchorX - player.battleX) <= range;
 }
 
 /** ally-heal: 味方最前線 contact を heal 射程内に入れる停止 battleX */
@@ -125,13 +153,18 @@ export function resolveAllyFrontlineHealApproachBattleX(
   enemies: CombatantState[],
   gameData: GameData,
 ): number {
-  const frontlineContactX = getPlayerFrontlineContactX(players, enemies);
-  if (frontlineContactX === null) {
+  const anchorX = resolveAllyHealApproachAnchorX(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  if (anchorX === null) {
     return player.battleX;
   }
   return resolveApproachAttackBattleX(
     player,
-    frontlineContactX,
+    anchorX,
     gameData,
     livingAllyCount(players),
   );
@@ -240,6 +273,10 @@ function capOnFieldBeforeEnemyContact(
   approachX: number,
 ): number {
   if (isPlayerRearAssaultAccess(player, { players, enemies })) {
+    return approachX;
+  }
+  // ally-heal: 接近目標は味方最前線基準。敵接触 cap で手前に抑えると PHT が射程外のままになる。
+  if (isAllyHealBasicAttack(player, gameData)) {
     return approachX;
   }
   const contactCapX = resolveApproachAttackBattleX(

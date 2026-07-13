@@ -4,10 +4,52 @@ import {
   resolvePlayerApproachBattleX,
   shouldSkipEngagedAutoApproach,
 } from './resolveApproachBattleX.ts';
+import { isWithinSkillRange, resolveSkillRangePx } from './skills/rangeUtils.ts';
 import { resolvePriorityHealTarget, resolveEffectResolution } from './skills/targeting.ts';
 import type { CombatantState, GameData } from './types.ts';
 
 const ALCHEMIST_BASIC_ID = 'sp_alchemist_basic_attack';
+const CLERIC_MODULE_BASIC_ID = 'sp_cleric_mod_single_mend';
+
+function mockCleric(
+  battleX: number,
+  overrides: Partial<CombatantState> = {},
+): CombatantState {
+  return {
+    id: 'cleric',
+    name: '療養師',
+    hp: 100,
+    maxHp: 100,
+    atk: 15,
+    def: 11,
+    res: 10,
+    isAlive: true,
+    role: 'supporter',
+    classId: 'sp_cleric',
+    formationRow: 'back',
+    traits: {
+      rangePx: 128,
+      damageType: 'magic',
+      basicAttackVfx: { enabled: true },
+    },
+    build: {
+      learnedPassiveIds: [],
+      learnedActiveIds: [],
+      equippedActiveSlots: [],
+    },
+    cooldowns: [
+      { skillId: CLERIC_MODULE_BASIC_ID, remaining: 0, slotKind: 'basic' },
+    ],
+    statusEffects: [],
+    barrierHp: 0,
+    spriteKey: 'placeholder',
+    iconKey: 'placeholder',
+    isEnemy: false,
+    battleX,
+    corpseVisible: true,
+    ...overrides,
+  };
+}
 
 function mockAlchemist(
   battleX: number,
@@ -251,6 +293,38 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
 
     expect(
       shouldSkipEngagedAutoApproach(alchemist, players, [enemy], gameData),
+    ).toBe(true);
+  });
+
+  it('does not cap cleric approach below frontline heal range when frontline is past enemy contact', () => {
+    const cleric = mockCleric(52);
+    const guardian = mockGuardian(350, 47);
+    const sorcerer = mockSorcerer(20, 76);
+    const players = [guardian, sorcerer, cleric];
+    const enemy = mockEnemy(300);
+
+    const healEffect = gameData.skillRegistry.actives[CLERIC_MODULE_BASIC_ID]?.effect[0];
+    expect(healEffect?.type).toBe('heal');
+    const healRange = resolveSkillRangePx(cleric, healEffect!, players.length);
+    const approachX = resolvePlayerApproachBattleX(
+      cleric,
+      players,
+      [enemy],
+      gameData,
+    );
+
+    expect(approachX).toBeGreaterThan(cleric.battleX);
+    expect(approachX).toBeGreaterThanOrEqual(guardian.battleX - healRange - 1);
+    expect(
+      isWithinSkillRange({ ...cleric, battleX: approachX }, guardian, healRange),
+    ).toBe(true);
+    expect(
+      shouldSkipEngagedAutoApproach(
+        { ...cleric, battleX: approachX },
+        players,
+        [enemy],
+        gameData,
+      ),
     ).toBe(true);
   });
 
