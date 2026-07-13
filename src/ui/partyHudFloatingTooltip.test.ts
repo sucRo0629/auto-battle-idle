@@ -25,6 +25,52 @@ describe('isPartyHudFloatingTooltipAnchorVisible', () => {
 });
 
 describe('PartyHudFloatingTooltip', () => {
+  it('positions near the pointer when opened from bindHit', () => {
+    const mount = document.createElement('div');
+    mount.style.cssText =
+      'position:relative;width:200px;height:120px;overflow:hidden;';
+    document.body.appendChild(mount);
+
+    const anchor = document.createElement('button');
+    anchor.style.cssText =
+      'position:absolute;left:160px;top:80px;width:24px;height:24px;';
+    mount.appendChild(anchor);
+
+    const tooltip = new PartyHudFloatingTooltip(mount);
+    tooltip.bindHit(anchor, 'Block');
+
+    anchor.dispatchEvent(
+      new MouseEvent('mouseenter', {
+        clientX: 170,
+        clientY: 90,
+        bubbles: true,
+      }),
+    );
+
+    const root = mount.querySelector('.party-hud-floating-tooltip') as HTMLElement;
+    expect(root).toBeTruthy();
+    expect(root.classList.contains('party-hud-floating-tooltip--pointer')).toBe(
+      true,
+    );
+    const initialLeft = Number.parseFloat(root.style.left);
+    const initialTop = Number.parseFloat(root.style.top);
+    expect(initialLeft).toBeGreaterThan(0);
+    expect(initialTop).toBeGreaterThan(0);
+
+    anchor.dispatchEvent(
+      new MouseEvent('mousemove', {
+        clientX: 40,
+        clientY: 30,
+        bubbles: true,
+      }),
+    );
+    expect(Number.parseFloat(root.style.left)).toBeLessThan(initialLeft);
+    expect(Number.parseFloat(root.style.top)).toBeLessThan(initialTop);
+
+    tooltip.destroy();
+    mount.remove();
+  });
+
   it('mounts on show and clamps within the canvas host layer', () => {
     const mount = document.createElement('div');
     mount.style.cssText =

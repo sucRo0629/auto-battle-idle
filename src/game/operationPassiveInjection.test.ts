@@ -174,6 +174,7 @@ describe('mergeOperationPassivesIntoBuild (R8d unit)', () => {
         R8D_PASSIVE_ID,
       ],
       gameData.skillRegistry.passives,
+      gameData.operationPassiveCatalog,
     );
     expect(build.learnedPassiveIds).toEqual([
       'df_guardian_passive_1',

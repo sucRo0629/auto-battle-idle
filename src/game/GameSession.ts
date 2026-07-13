@@ -71,9 +71,7 @@ import { WavePrepScreenHost } from './WavePrepScreenHost.ts';
 import {
   getOperationPassiveCandidatesForClass,
   isOperationPassiveCandidateForClass,
-  OPERATION_PASSIVE_ACQUIRE_COST,
-  WAVE_CLEAR_OPERATION_RESOURCE_GRANT,
-} from './operationPassiveCatalog.ts';
+} from './operationPassiveCatalogCore.ts';
 import '../styles/game-shell.css';
 import levelCurvesJson from '../../data/levelCurves.json';
 
@@ -186,6 +184,8 @@ export class GameSession {
           this.getOperationAcquiredPassiveIds(slotIndex),
         getOperationPassiveCandidates: (slotIndex) =>
           this.getOperationPassiveCandidates(slotIndex),
+        getPassiveAcquireCost: () =>
+          this.gameData.operationPassiveCatalog.passiveAcquireCost,
         getPassiveDisplayName: (passiveId) =>
           this.gameData.skillRegistry.passives[passiveId]?.name ?? passiveId,
         getPassiveDescription: (passiveId) => {
@@ -986,7 +986,10 @@ export class GameSession {
     const member = this.operationState.getPartySnapshot()[slotIndex];
     if (!member?.classId) return [];
 
-    return getOperationPassiveCandidatesForClass(member.classId);
+    return getOperationPassiveCandidatesForClass(
+      this.gameData.operationPassiveCatalog,
+      member.classId,
+    );
   }
 
   /**
@@ -1009,27 +1012,32 @@ export class GameSession {
     if (!member?.classId) return false;
 
     const classId = member.classId;
-    if (!isOperationPassiveCandidateForClass(classId, passiveId)) return false;
+    if (
+      !isOperationPassiveCandidateForClass(
+        this.gameData.operationPassiveCatalog,
+        classId,
+        passiveId,
+      )
+    ) {
+      return false;
+    }
     if (!this.gameData.skillRegistry.passives[passiveId]) return false;
 
     const acquired = this.operationState.getAcquiredOperationPassiveIds(slotIndex);
     if (acquired.includes(passiveId)) return false;
 
-    if (
-      this.operationState.getUnspentResource() < OPERATION_PASSIVE_ACQUIRE_COST
-    ) {
+    const acquireCost = this.gameData.operationPassiveCatalog.passiveAcquireCost;
+    if (this.operationState.getUnspentResource() < acquireCost) {
       return false;
     }
 
-    if (
-      !this.operationState.trySpendUnspentResource(OPERATION_PASSIVE_ACQUIRE_COST)
-    ) {
+    if (!this.operationState.trySpendUnspentResource(acquireCost)) {
       return false;
     }
     if (
       !this.operationState.tryAddAcquiredOperationPassiveId(slotIndex, passiveId)
     ) {
-      this.operationState.tryAddUnspentResource(OPERATION_PASSIVE_ACQUIRE_COST);
+      this.operationState.tryAddUnspentResource(acquireCost);
       return false;
     }
     return true;
@@ -1330,7 +1338,7 @@ export class GameSession {
   private openWavePrepScreen(): void {
     if (this.operationState === null || !this.isAwaitingNextWave()) return;
     this.operationState.tryGrantWavePrepResource(
-      WAVE_CLEAR_OPERATION_RESOURCE_GRANT,
+      this.gameData.operationPassiveCatalog.waveClearResourceGrant,
     );
     this.operationState.beginWavePrepEditing();
     this.setGameScreen('wavePrep');

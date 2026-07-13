@@ -120,6 +120,21 @@ function resolveBadgeLocale(): GameTermLocale {
   return getLocale();
 }
 
+/** 用語パネルで説明できるバッジには、表示名のみの hover tooltip を出さない。 */
+export function shouldShowStatusBadgeTextTooltip(
+  badge: StatusEffectBadgeDisplay,
+  context: PartyHudStatusBadgeHitContext,
+  locale: GameTermLocale = resolveBadgeLocale(),
+): boolean {
+  if (
+    statusBadgeHasClickableGameTerm(badge, locale) &&
+    context.gameTermPanel
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function bindIndividualStatusBadgeHit(
   hit: HTMLElement,
   badge: StatusEffectBadgeDisplay,
@@ -129,7 +144,9 @@ function bindIndividualStatusBadgeHit(
   const locale = resolveBadgeLocale();
   const label = resolveStatusBadgeTooltipLabel(badge, locale);
 
-  bindHoverTooltipHit(hit, label, context, options);
+  if (shouldShowStatusBadgeTextTooltip(badge, context, locale)) {
+    bindHoverTooltipHit(hit, label, context, options);
+  }
 
   if (!statusBadgeHasClickableGameTerm(badge, locale)) {
     return;

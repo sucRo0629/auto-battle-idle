@@ -2,20 +2,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ModuleNode, Plugin, ViteDevServer } from 'vite';
-import { parseAndValidateGameDataJson } from './src/battle/data/validateGameData.ts';
+import {
+  parseAndValidateGameDataJson,
+  parseOperationPassiveCatalog,
+} from './src/battle/data/validateGameData.ts';
 import type {
   ActiveSkillDef,
   EnemyTemplate,
+  OperationPassiveCatalogDef,
   PassiveSkillDef,
   SkillVfxDef,
-} from '../battle/types.ts';
+} from './src/battle/types.ts';
 import type { ClassPresetBeforeEnrich } from './src/progression/skillUnlocks.ts';
 import {
+  collectCatalogPassivesToPreserveOnEntityReplace,
   ensureClassGrowthFields,
   normalizeStageDraftForSave,
+  normalizeOperationPassiveCatalogDraftForSave,
   type StageDraft,
 } from './src/editor/editorApi.ts';
 import {
+  getSkillFileStemForSkillId,
   mergeSkillsRootAfterEntityReplace,
   readSkillsRoot,
   replaceEntitySkillsInFiles,
@@ -29,7 +36,28 @@ const READ_FILES = {
   enemies: path.join(DATA_DIR, 'enemies.json'),
   stages: path.join(DATA_DIR, 'stages.json'),
   parties: path.join(DATA_DIR, 'parties.json'),
+  operationPassiveCatalog: path.join(DATA_DIR, 'operation-passive-catalog.json'),
 } as const;
+
+const COMBAT_MODULES_DIR = path.join(DATA_DIR, 'combat-modules');
+
+/** data/combat-modules/*.json を結合して読む（loadGameData の import.meta.glob と同等） */
+function readAllCombatModuleFiles(): unknown[] {
+  if (!fs.existsSync(COMBAT_MODULES_DIR)) {
+    return [];
+  }
+  const files = fs
+    .readdirSync(COMBAT_MODULES_DIR)
+    .filter((name) => name.endsWith('.json'))
+    .sort();
+  return files.flatMap((name) => {
+    const parsed = readJsonFile(path.join(COMBAT_MODULES_DIR, name));
+    if (!Array.isArray(parsed)) {
+      throw new Error(`data/combat-modules/${name} must be a JSON array`);
+    }
+    return parsed as unknown[];
+  });
+}
 
 function readJsonFile(filePath: string): unknown {
   const raw = fs.readFileSync(filePath, 'utf8');
@@ -82,16 +110,20 @@ async function reloadGameDataModules(
 function loadValidationPayload(): {
   classes: unknown;
   skills: unknown;
+  combatModules: unknown;
   enemies: unknown;
   stages: unknown;
   parties: unknown;
+  operationPassiveCatalog: unknown;
 } {
   return {
     classes: readJsonFile(READ_FILES.classes),
     skills: readSkillsRoot(),
+    combatModules: readAllCombatModuleFiles(),
     enemies: readJsonFile(READ_FILES.enemies),
     stages: readJsonFile(READ_FILES.stages),
     parties: readJsonFile(READ_FILES.parties),
+    operationPassiveCatalog: readJsonFile(READ_FILES.operationPassiveCatalog),
   };
 }
 
@@ -164,6 +196,10 @@ interface StageBundleBody {
   stage: StageDraft;
 }
 
+interface OperationPassiveCatalogBody {
+  catalog: OperationPassiveCatalogDef;
+}
+
 async function applyClassBundle(
   body: ClassBundleBody,
   server?: ViteDevServer,
@@ -173,10 +209,27 @@ async function applyClassBundle(
 
   const entityStem = body.class.id.trim();
   const nextClasses = upsertById(classes, body.class);
+
+  // R9d: class pool 外の catalog 参照 passive（作戦内パッシブ）を上書きで消さない
+  const catalog = parseOperationPassiveCatalog(
+    readJsonFile(READ_FILES.operationPassiveCatalog),
+  );
+  const existingStemPassives = skillsRoot.passives.filter(
+    (passive) => getSkillFileStemForSkillId(passive.id) === entityStem,
+  );
+  const nextPassives = [
+    ...body.passives,
+    ...collectCatalogPassivesToPreserveOnEntityReplace(
+      existingStemPassives,
+      body.passives,
+      catalog,
+    ),
+  ];
+
   const nextSkills = mergeSkillsRootAfterEntityReplace(
     skillsRoot,
     entityStem,
-    body.passives,
+    nextPassives,
     body.actives,
   );
 
@@ -190,7 +243,7 @@ async function applyClassBundle(
   writeJsonFile(READ_FILES.classes, nextClasses);
   const writtenSkillFiles = replaceEntitySkillsInFiles(
     entityStem,
-    body.passives,
+    nextPassives,
     body.actives,
   );
   await reloadGameDataModules(server, [READ_FILES.classes, ...writtenSkillFiles]);
@@ -262,6 +315,21 @@ async function applyStageBundle(
 
   writeJsonFile(READ_FILES.stages, nextStages);
   await reloadGameDataModules(server, [READ_FILES.stages]);
+}
+
+async function applyOperationPassiveCatalog(
+  body: OperationPassiveCatalogBody,
+  server?: ViteDevServer,
+): Promise<void> {
+  const normalized = normalizeOperationPassiveCatalogDraftForSave(body.catalog);
+  const validationBase = loadValidationPayload();
+  validateAll({
+    ...validationBase,
+    operationPassiveCatalog: normalized,
+  });
+
+  writeJsonFile(READ_FILES.operationPassiveCatalog, normalized);
+  await reloadGameDataModules(server, [READ_FILES.operationPassiveCatalog]);
 }
 
 async function applyEnemyBundle(
@@ -384,6 +452,13 @@ export function editorApiPlugin(): Plugin {
             sendJson(res, 200, readJsonFile(READ_FILES.stages));
             return;
           }
+          if (
+            req.method === 'GET' &&
+            url.pathname === '/__editor/operation-passive-catalog'
+          ) {
+            sendJson(res, 200, readJsonFile(READ_FILES.operationPassiveCatalog));
+            return;
+          }
 
           if (req.method === 'PUT' && url.pathname === '/__editor/class-bundle') {
             const body = JSON.parse(await readBody(req)) as ClassBundleBody;
@@ -406,6 +481,17 @@ export function editorApiPlugin(): Plugin {
           if (req.method === 'PUT' && url.pathname === '/__editor/stages') {
             const body = JSON.parse(await readBody(req)) as StageBundleBody;
             await applyStageBundle(body, server);
+            sendJson(res, 200, { ok: true });
+            return;
+          }
+          if (
+            req.method === 'PUT' &&
+            url.pathname === '/__editor/operation-passive-catalog'
+          ) {
+            const body = JSON.parse(
+              await readBody(req),
+            ) as OperationPassiveCatalogBody;
+            await applyOperationPassiveCatalog(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }

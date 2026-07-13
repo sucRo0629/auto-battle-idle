@@ -19,6 +19,7 @@ import {
 import {
   buildPartyHudStatusBadgeCanvasSignature,
   buildPartyHudStatusBadgeHitSignature,
+  shouldShowStatusBadgeTextTooltip,
   type PartyHudStatusBadgeHitContext,
 } from './partyHudStatusBadgeHits.ts';
 import {
@@ -190,7 +191,9 @@ function bindIndividualStatusBadgeHit(
 ): void {
   const locale = getLocale() as GameTermLocale;
   const label = resolveStatusBadgeTooltipLabel(badge, locale);
-  bindHoverTooltipHit(hit, label, context);
+  if (shouldShowStatusBadgeTextTooltip(badge, context, locale)) {
+    bindHoverTooltipHit(hit, label, context);
+  }
 
   if (!statusBadgeHasClickableGameTerm(badge, locale)) return;
 

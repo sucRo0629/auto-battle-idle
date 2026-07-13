@@ -4,6 +4,8 @@ import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts
 import type { ActiveSkillDef } from '../battle/types.ts';
 import {
   addStageDraftWave,
+  beginStageEnemyGroupsAuthoring,
+  beginWaveEnemyGroupsAuthoring,
   buildClassPresetFromDraft,
   buildClassSkillsFromEntries,
   canRemoveStageDraftWave,
@@ -1216,5 +1218,59 @@ describe('wave structure authoring helpers (R9c)', () => {
     const reloaded = loadStageDraftById([normalized], 'r9c_two_wave');
     expect(resolveStageDraftCompositionMode(reloaded)).toBe('waveEnemyGroups');
     expect(reloaded.waves?.[1]?.enemyGroups?.[0]?.classId).toBe('at_hunter');
+  });
+
+  it('promotes stage enemyGroups and appends wave when adding from stage authoring', () => {
+    const draft = loadStageDraftById(loadGameData().stages, 'eg_smoke');
+
+    addStageDraftWave(draft, { defaultClassId: 'df_paladin' });
+
+    expect(resolveStageDraftCompositionMode(draft)).toBe('waveEnemyGroups');
+    expect(draft.enemyGroups).toBeUndefined();
+    expect(draft.waves).toHaveLength(2);
+    expect(draft.waves?.[0]?.enemyGroups).toEqual([
+      { classId: 'df_guardian', count: 1 },
+      { classId: 'at_hunter', count: 1 },
+    ]);
+    expect(draft.waves?.[1]?.enemyGroups).toEqual([
+      { classId: 'df_paladin', count: 1 },
+    ]);
+  });
+});
+
+describe('legacy composition authoring helpers', () => {
+  it('begins wave authoring from legacy without leaving stage enemyGroups behind', () => {
+    const draft: StageDraft = {
+      id: 'legacy_wave_start',
+      displayName: 'Legacy Wave Start',
+      waves: [{ enemies: [{ templateId: 'enemy_a', spawnX: 80 }] }],
+    };
+
+    beginWaveEnemyGroupsAuthoring(draft, { defaultClassId: 'df_paladin' });
+
+    expect(resolveStageDraftCompositionMode(draft)).toBe('waveEnemyGroups');
+    expect(draft.enemyGroups).toBeUndefined();
+    expect(draft.waves?.[0]?.enemyGroups).toEqual([
+      { classId: 'df_paladin', count: 1 },
+    ]);
+  });
+
+  it('begins stage authoring from legacy and clears wave enemyGroups', () => {
+    const draft: StageDraft = {
+      id: 'legacy_stage_start',
+      displayName: 'Legacy Stage Start',
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+        },
+      ],
+    };
+
+    beginStageEnemyGroupsAuthoring(draft);
+
+    expect(resolveStageDraftCompositionMode(draft)).toBe('stageEnemyGroups');
+    expect(draft.enemyGroups).toEqual([]);
+    expect(draft.waves?.[0]?.enemyGroups).toBeUndefined();
   });
 });

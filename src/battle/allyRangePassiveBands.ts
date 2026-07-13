@@ -1,5 +1,9 @@
-import { isOperationPassiveCandidateForClass } from '../game/operationPassiveCatalog.ts';
-import type { CombatantState, PassiveSkillDef } from './types.ts';
+import { isOperationPassiveCandidateForClass } from '../game/operationPassiveCatalogCore.ts';
+import type {
+  CombatantState,
+  OperationPassiveCatalogDef,
+  PassiveSkillDef,
+} from './types.ts';
 import { usesBuffAuraMode } from './passivePeriodicTrigger.ts';
 
 /** R8f: 1 次元 ally range buff のフィールド帯（判定と同一 battleX / radius） */
@@ -32,6 +36,7 @@ export function resolveAllyRangePassiveBands(
   allies: readonly CombatantState[],
   passives: Record<string, PassiveSkillDef>,
   getAcquiredOperationPassiveIds: (slotIndex: number) => readonly string[],
+  operationPassiveCatalog: OperationPassiveCatalogDef,
 ): AllyRangePassiveBand[] {
   const bands: AllyRangePassiveBand[] = [];
 
@@ -42,7 +47,15 @@ export function resolveAllyRangePassiveBands(
     const acquiredIds = getAcquiredOperationPassiveIds(slotIndex);
 
     for (const passiveId of acquiredIds) {
-      if (!isOperationPassiveCandidateForClass(ally.classId, passiveId)) continue;
+      if (
+        !isOperationPassiveCandidateForClass(
+          operationPassiveCatalog,
+          ally.classId,
+          passiveId,
+        )
+      ) {
+        continue;
+      }
       const passive = passives[passiveId];
       if (!passive || !isAllyRangeBuffAuraPassive(passive)) continue;
 

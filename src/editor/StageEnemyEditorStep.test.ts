@@ -8,6 +8,7 @@ import type { StageDef } from '../battle/types.ts';
 import {
   loadStageDraftById,
   normalizeStageDraftForSave,
+  resolveStageDraftCompositionMode,
   type StageDraft,
 } from './editorApi.ts';
 
@@ -137,6 +138,30 @@ describe('StageEnemyEditorStep', () => {
     expect(host.textContent).toContain('df_guardian ×1');
     expect(host.textContent).toContain('at_hunter ×1');
     expect(host.textContent).not.toContain('legacy（waves / templateId）');
+    expect(host.textContent).not.toContain('stage 直下 enemyGroups 編集を開始');
+    expect(host.textContent).not.toContain('Wave ごと enemyGroups 編集を開始');
+    expect(host.querySelector('button[data-editor-action="addWave"]')).toBeTruthy();
+  });
+
+  it('adds a second wave from eg_smoke stage authoring UI', () => {
+    const { stages } = loadGameData();
+    const draft = loadStageDraftById(stages, 'eg_smoke');
+    const onDraftChange = vi.fn();
+
+    host = document.createElement('div');
+    new StageEnemyEditorStep(host, makeOptions(draft, stages, { onDraftChange }));
+
+    const addBtn = host.querySelector<HTMLButtonElement>(
+      'button[data-editor-action="addWave"]',
+    );
+    expect(addBtn).toBeTruthy();
+    addBtn!.click();
+
+    const nextDraft = onDraftChange.mock.calls.at(-1)?.[0] as StageDraft;
+    expect(resolveStageDraftCompositionMode(nextDraft)).toBe('waveEnemyGroups');
+    expect(nextDraft.waves).toHaveLength(2);
+    expect(nextDraft.waves?.[0]?.enemyGroups).toHaveLength(2);
+    expect(nextDraft.waves?.[1]?.enemyGroups?.[0]?.classId).toBeTruthy();
   });
 
   it('renders ranged_test as enemyGroups stage from loaded game data', () => {
@@ -151,6 +176,7 @@ describe('StageEnemyEditorStep', () => {
     expect(host.textContent).toContain('df_guardian ×1');
     expect(host.textContent).toContain('at_hunter ×2');
     expect(host.textContent).not.toContain('legacy（waves / templateId）');
+    expect(host.textContent).not.toContain('Wave ごと enemyGroups 編集を開始');
   });
 
   it('loads and previews waves[].enemyGroups per wave', () => {

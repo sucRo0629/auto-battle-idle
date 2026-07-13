@@ -74,6 +74,7 @@ import type {
   CounterResponseKind,
   DamageIncreaseSpec,
   DefenseIgnoreSpec,
+  OperationPassiveCatalogDef,
 } from '../types.ts';
 import { R5_COMBAT_MODULE_CLASS_IDS } from '../types.ts';
 import {
@@ -6200,6 +6201,7 @@ function validateReferences(
   stages: StageDef[],
   parties: Record<string, PartyDef>,
   combatModules: CombatModuleDef[],
+  operationPassiveCatalog: OperationPassiveCatalogDef,
   mode: GameDataValidationMode,
 ): void {
   const passiveIds = new Set(passives.map((p) => p.id));
@@ -6253,6 +6255,11 @@ function validateReferences(
 
   validateCombatModuleData(combatModules, classById);
   validateClassCombatModuleRefs(classes, moduleById);
+  validateOperationPassiveCatalogRefs(
+    operationPassiveCatalog,
+    classById,
+    passiveIds,
+  );
 
   for (const cls of classes) {
     if (!activeIds.has(cls.basicAttackSkillId)) {
@@ -6476,6 +6483,153 @@ export interface ParsedGameDataJson {
   enemies: EnemyTemplate[];
   stages: StageDef[];
   parties: Record<string, PartyDef>;
+  operationPassiveCatalog: OperationPassiveCatalogDef;
+}
+
+const DEFAULT_OPERATION_PASSIVE_CATALOG: OperationPassiveCatalogDef = {
+  passiveAcquireCost: 1,
+  waveClearResourceGrant: 1,
+  candidatesByClass: {},
+};
+
+function parsePositiveIntegerField(
+  record: Record<string, unknown>,
+  field: string,
+  context: string,
+): number {
+  const value = record[field];
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+    throw new Error(
+      `${context}: ${field} must be a positive integer, got ${String(value)}`,
+    );
+  }
+  return value;
+}
+
+function parseNonNegativeIntegerField(
+  record: Record<string, unknown>,
+  field: string,
+  context: string,
+): number {
+  const value = record[field];
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new Error(
+      `${context}: ${field} must be a non-negative integer, got ${String(value)}`,
+    );
+  }
+  return value;
+}
+
+export function parseOperationPassiveCatalog(
+  raw: unknown,
+): OperationPassiveCatalogDef {
+  if (raw === undefined || raw === null) {
+    return structuredClone(DEFAULT_OPERATION_PASSIVE_CATALOG);
+  }
+
+  const record = requireRecord(raw, 'operation-passive-catalog.json');
+  const context = 'operation-passive-catalog.json';
+  const passiveAcquireCost = parsePositiveIntegerField(
+    record,
+    'passiveAcquireCost',
+    context,
+  );
+  const waveClearResourceGrant = parseNonNegativeIntegerField(
+    record,
+    'waveClearResourceGrant',
+    context,
+  );
+
+  const candidatesRaw = record.candidatesByClass;
+  if (candidatesRaw === undefined) {
+    return {
+      passiveAcquireCost,
+      waveClearResourceGrant,
+      candidatesByClass: {},
+    };
+  }
+
+  const candidatesRecord = requireRecord(
+    candidatesRaw,
+    `${context}.candidatesByClass`,
+  );
+  const candidatesByClass: OperationPassiveCatalogDef['candidatesByClass'] = {};
+
+  for (const [classId, passiveIdsRaw] of Object.entries(candidatesRecord)) {
+    if (!classId.trim()) {
+      throw new Error(`${context}.candidatesByClass: empty classId key`);
+    }
+    if (!Array.isArray(passiveIdsRaw)) {
+      throw new Error(
+        `${context}.candidatesByClass["${classId}"] must be an array`,
+      );
+    }
+    const passiveIds: string[] = [];
+    const seen = new Set<string>();
+    for (const passiveIdRaw of passiveIdsRaw) {
+      if (typeof passiveIdRaw !== 'string' || !passiveIdRaw.trim()) {
+        throw new Error(
+          `${context}.candidatesByClass["${classId}"] contains invalid passive id`,
+        );
+      }
+      const passiveId = passiveIdRaw.trim();
+      if (seen.has(passiveId)) {
+        throw new Error(
+          `${context}.candidatesByClass["${classId}"] contains duplicate "${passiveId}"`,
+        );
+      }
+      seen.add(passiveId);
+      passiveIds.push(passiveId);
+    }
+    candidatesByClass[classId] = passiveIds;
+  }
+
+  return {
+    passiveAcquireCost,
+    waveClearResourceGrant,
+    candidatesByClass,
+  };
+}
+
+function validateOperationPassiveCatalogRefs(
+  catalog: OperationPassiveCatalogDef,
+  classById: Map<string, ClassPreset>,
+  passiveIds: Set<string>,
+): void {
+  const context = 'operation-passive-catalog.json';
+  for (const [classId, passiveIdList] of Object.entries(
+    catalog.candidatesByClass,
+  )) {
+    if (!classById.has(classId)) {
+      throw new Error(`${context}: unknown classId "${classId}"`);
+    }
+    for (const passiveId of passiveIdList) {
+      if (!passiveIds.has(passiveId)) {
+        throw new Error(
+          `${context}: unknown passiveId "${passiveId}" for class "${classId}"`,
+        );
+      }
+    }
+  }
+}
+
+export function normalizeOperationPassiveCatalogForSave(
+  catalog: OperationPassiveCatalogDef,
+): OperationPassiveCatalogDef {
+  const candidatesByClass: OperationPassiveCatalogDef['candidatesByClass'] = {};
+  const classIds = Object.keys(catalog.candidatesByClass).sort();
+  for (const classId of classIds) {
+    const passiveIds = catalog.candidatesByClass[classId] ?? [];
+    const normalized = [...new Set(passiveIds.map((id) => id.trim()).filter(Boolean))];
+    if (normalized.length > 0) {
+      candidatesByClass[classId] = normalized;
+    }
+  }
+  return {
+    passiveAcquireCost: catalog.passiveAcquireCost,
+    waveClearResourceGrant: catalog.waveClearResourceGrant,
+    candidatesByClass,
+  };
 }
 
 export function parseAndValidateGameDataJson(
@@ -6486,6 +6640,7 @@ export function parseAndValidateGameDataJson(
     enemies: unknown;
     stages: unknown;
     parties: unknown;
+    operationPassiveCatalog?: unknown;
   },
   options?: ParseAndValidateGameDataOptions,
 ): ParsedGameDataJson {
@@ -6502,6 +6657,9 @@ export function parseAndValidateGameDataJson(
 
   const classesRaw = parseClasses(raw.classes);
   const combatModules = parseCombatModules(raw.combatModules);
+  const operationPassiveCatalog = parseOperationPassiveCatalog(
+    raw.operationPassiveCatalog,
+  );
   const passives = parsePassives(passivesRaw);
   const activesParsed = parseActives(activesRaw);
   const activesById = new Map(activesParsed.map((skill) => [skill.id, skill]));
@@ -6544,8 +6702,18 @@ export function parseAndValidateGameDataJson(
     stages,
     parties,
     combatModules,
+    operationPassiveCatalog,
     mode,
   );
 
-  return { classes, passives, actives, combatModules, enemies, stages, parties };
+  return {
+    classes,
+    passives,
+    actives,
+    combatModules,
+    enemies,
+    stages,
+    parties,
+    operationPassiveCatalog,
+  };
 }

@@ -564,9 +564,9 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 | 表示 | 場所 | ルール |
 | ---- | ---- | ------ |
-| **簡易（Party HUD）** | `PartyHudPanel` | 固定 **1 行・4 スロット幅**。4 件以下は最大 4 バッジ、**5 件以上は 3 バッジ + 第 4 枠 `+N`**（`selectPartyHudCompactStatusBadges`）。**クラス名は表示しない**。状態バッジ行はスロット全幅、24px クラスアイコンは HP/リキャスト行の左（下端揃え）。**全バッジはホバーで表示名 tooltip**（`resolveStatusBadgeTooltipLabel`）。**辞書に `description` があるバッジは加えてクリックで用語パネル**（[party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) と同 `GameTermPanel`）。**`+N` 枠のみホバーで省略分の表示名一覧**（`、` 連結） |
+| **簡易（Party HUD）** | `PartyHudPanel` | 固定 **1 行・4 スロット幅**。4 件以下は最大 4 バッジ、**5 件以上は 3 バッジ + 第 4 枠 `+N`**（`selectPartyHudCompactStatusBadges`）。**クラス名は表示しない**。状態バッジ行はスロット全幅、24px クラスアイコンは HP/リキャスト行の左（下端揃え）。**`description` なしバッジはホバーで表示名 tooltip**（`resolveStatusBadgeTooltipLabel`）。**辞書に `description` があるバッジはホバー tooltip なし・クリックで用語パネル**（[party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) と同 `GameTermPanel`）。**`+N` 枠のみホバーで省略分の表示名一覧**（`、` 連結） |
 | **簡易（敵）** | `BattleCanvas` HP バー直上 | Party HUD と同じ **20×20px** スロット（`statusBadgeIconSize`）。累積数・`+N` も Party HUD 同等（20px 枠・2px アウトライン）。固定 **1 行・4 スロット幅**（最大 3 バッジ + 第 4 枠 `+N`）。**左端は HP バー左端と揃える**（`enemyHpBarLeft`）。HP バー top を anchor に `STATUS_BADGE_GAP` 分だけ上へ配置。**重なり時も位置調整しない**。`overflowCount = max(0, badges.length − 3)`。**敵バッジはクリック説明なし**（ホバー等も v1 なし） |
-| **詳細** | 戦闘詳細（`PartyHudPanel` 詳細モード） | **全件**表示。debuff / buff でラベル付き行を分け、パネル幅内で flex-wrap 折り返し。**全バッジはホバーで表示名 tooltip**。**`description` ありは加えてクリックで用語パネル**（簡易と同じ） |
+| **詳細** | 戦闘詳細（`PartyHudPanel` 詳細モード） | **全件**表示。debuff / buff でラベル付き行を分け、パネル幅内で flex-wrap 折り返し。**`description` なしはホバーで表示名 tooltip**。**`description` ありはホバー tooltip なし・クリックで用語パネル**（簡易と同じ） |
 
 いずれの簡易表示も折り返しなし。`+N` 枠が不要（overflow 0）のときは最終枠を空（透明スロットで幅固定）。
 

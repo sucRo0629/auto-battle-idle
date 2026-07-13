@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9b 完了**（Stage enemyGroups CombatModule 編集 UI）、**R9c 完了**（複数 Wave・enemyGroups 構造 authoring）、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**（R5〜R8 縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**。**公式次タスク: R9d**（作戦内パッシブ候補 authoring）。詳細は [current-task.md §88](../ai-handoff/current-task.md)。
+**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9b 完了**（Stage enemyGroups CombatModule 編集 UI）、**R9c 完了**（複数 Wave・enemyGroups 構造 authoring）、**R9d 完了**（作戦内パッシブ候補・付与条件 authoring）、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**（R5〜R8 縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**。**公式次タスク: R9e**（preview・validation 統合）→ **R9g**（効果範囲 authoring）→ **R9h**（class 方式 pool）。詳細は [current-task.md §89](../ai-handoff/current-task.md)。
 
 ---
 
@@ -36,11 +36,11 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R8** | 作戦内パッシブ — 取得・保持・効果縦切り、戦闘中表示、範囲プレースホルダ | **完了** | Wave 間準備の正式パッシブ選択 UI は **R9.6-B**。R10 で判断差を確認 | **Backend 完了** |
 | **R9a** | authoring 骨格 — エディタ現状調査・タスク分割 | 完了 | 開発者向け確認済み | **完了** |
 | **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、統合確認 | **R9.5a〜c Backend 完了** | R9.5a〜b 完了。R9.5c は暫定 UI 縦切りのみ（正式 作戦準備 UI は **R9.6**） | **Backend 完了** |
-| **R9b〜f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / closure | **R9b〜c 完了**（§87〜88） / R9d〜f 未着手 | R10 用作戦反映は未確認 | R9c Tooling 完了 |
+| **R9b〜h** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / **効果範囲** / **class 方式 pool** / closure | **R9b〜d 完了**（§87〜89） / R9e〜h 未着手 | R10 用作戦反映は未確認 | R9d Tooling 完了 |
 | **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の正式選択 | 未着手 | 未着手 | R9.5c Backend |
-| **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | R9f・**R9.6 Player** 待ち |
+| **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | R9f・**R9g**・**R9h**・**R9.6 Player** 待ち |
 
-**試作成立後（R10 以降・順序未固定）:** 兵科拡張、診断基盤再構築、**戦場移動 legacy cleanup**（[battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)）、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブの演出制作含む — R8 ではプレースホルダ図形のみ）、効果音、i18n、packaging、公開準備。
+**試作成立後（R10 以降・順序未固定）:** 兵科拡張、診断基盤再構築、**Stage 削除**（エディタ UI — legacy stage・テスト・進行 fallback 整理後）、**戦場移動 legacy cleanup**（[battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)）、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブの演出制作・**遠隔弾道 projectiles** 含む — R8 ではプレースホルダ図形のみ）、効果音、i18n、packaging、公開準備。
 
 ---
 
@@ -425,6 +425,112 @@ R5 実装時点では未達であり、**R9.5a〜c** で解消する。
 - 範囲パッシブの **正式演出素材**（粒子・テクスチャ・アニメーション等）
 - プレースホルダ区間表示の **ビジュアル仕上げ**（色・線種・識別の polish）
 - 範囲内外切り替え時の **リッチなフィードバック**（最低限の範囲輪郭は R8 完了後も維持する方針）
+- **遠隔弾道（projectile）** — 下記「遠隔弾道」節。着弾 VFX・scatter 各 hit の複数弾道・演出ラボ統合は本節の後続
+
+### 遠隔弾道（projectile）— 試作成立後
+
+現行 VFX（`VfxPlaybackManager`）は **固定アンカー + strip コマ送り** のみ。矢を actor→target へ飛ばすには **別 Manager** が必要（既存固定 VFX 経路に相乗りしない）。
+
+| 項目 | 方針 |
+| ---- | ---- |
+| 画像 | **32×32 静止 1 コマ**。`src/assets/sprites/sheets/projectiles/{skillId}_projectile.png`（多 effect 時は `{skillId}_{effectIndex}_projectile.png`）。`sheets/vfx/`（64×64 strip）とは **フォルダ分離** |
+| 再生 | 新規 **`ProjectilePlaybackManager`** — 毎 tick で世界座標を放物線補間し、接線方向へ `rotate` 描画 |
+| データ | `SkillVfxDef.projectile`（`from` / `to` アンカー、`arcPeakPx`、`durationSec`、`spinFollowsArc`、`layer`）。通常攻撃は `traits.basicAttackVfx.projectile` |
+| タイミング | `applyFrame` あり → `skillWindup` で発射、`durationSec` ≈ `resolveEffectApplyDelaySec`。なし → `skill` 命中イベントと同時に短い飛翔 |
+| 着弾 | **後回し** — `_vfx_hit` / `hitVfx` は別フェーズ。試作 v1 は弾道のみ |
+| 編集 | 演出ラボ + validate + `SkillEditorStep` / `classes.json` traits 同期（[classes-and-skills.md](../spec/classes-and-skills.md)・[sheets/README.md](../../src/assets/sprites/sheets/README.md) も同作業内） |
+
+#### 実装方針
+
+**採用しない案:** `VfxPlaybackManager` に軌道補間を足す（固定 VFX の責務と混ざり、64×64 strip 前提と衝突する）。旧 JSON `arc: true` の復活（validate 拒否済み）。
+
+**レイヤ構成（単一経路）:**
+
+```text
+BattleEvent (skillWindup / skill)
+  → resolveSkillPresentation / resolveEffectPresentation
+  → playSkillProjectile（新規）
+  → BattleCanvas.playSkillProjectile
+  → ProjectilePlaybackManager.spawn / tick / draw
+```
+
+固定 VFX（`playSkillHitFeedback`）・body strip（`playSkillBody`）・戦闘ルール（`BattleEngine`）は **触らない**。弾道だけ `render/` に閉じる。
+
+**追加・変更ファイル（目安）:**
+
+| 区分 | パス | 内容 |
+| ---- | ---- | ---- |
+| 定数 | `src/render/spriteLayout.ts` | `PROJECTILE_CELL_SIZE = 32` |
+| 型 | `src/battle/types.ts` | `ProjectileVfxDef` + `SkillVfxDef.projectile` |
+| 読込 | `src/render/projectileAnimRegistry.ts` | `import.meta.glob('../assets/sprites/sheets/projectiles/*.png')`、`resolveProjectileAnimKey`（`vfxAnimRegistry` と同型） |
+| 軌道 | `src/render/projectileTrajectory.ts` | 純関数: `t∈[0,1]` の位置 + 接線角 |
+| 解決 | `src/render/projectilePlayback.ts` | 端点（`resolveVfxWorldPosition` 再利用）、duration 既定、`resolveProjectilePlayback` |
+| 再生 | `src/render/ProjectilePlaybackManager.ts` | `spawn` / `tick` / `draw`（`ctx.rotate` + 32px 中央描画） |
+| 接続 | `src/render/BattleCanvas.ts` | Manager 登録、`tick`/`draw`（behind → entities → front の front 層） |
+| 接続 | `src/render/SpriteRegistry.ts` | `preloadProjectileAnims()` |
+| 解決 | `src/render/skillVfx/resolveEffectPresentation.ts` | `EffectPresentation.projectile` |
+| ヘルパ | `src/render/skillPresentation.ts` | `playSkillProjectile` |
+| イベント | `src/ui/BattleView.ts` | `skillWindup` で発射；`applyDelaySec===0` の damage/dot のみ `skill` で発射（二重 spawn 禁止） |
+| ラボ | `src/presentation/PresentationPreviewRunner.ts` | windup 相当の遅延後に弾道 spawn |
+| validate | `src/battle/data/validateGameData.ts` | `parseProjectileVfx` を `parseSkillVfx` から呼ぶ |
+| 編集 | `PresentationLabApp.ts` | `projectile.*` フィールド（arcPeakPx / durationSec / from / to） |
+| テスト | `projectileTrajectory.test.ts` 等 | 放物線頂点・端点・角度；resolve の PNG フォールバック |
+| docs | `sheets/README.md`、`classes-and-skills.md` | 配置規約・JSON フィールド（本 roadmap は計画のみ） |
+
+**JSON 形状（`ProjectileVfxDef`）:**
+
+| フィールド | 既定 | 説明 |
+| ---------- | ---- | ---- |
+| `enabled` | 有効 | `false` で抑制 |
+| `from` | `footActor` | 発射アンカー（既存 `VfxAnchor`） |
+| `to` | `footTarget` | 着弾アンカー |
+| `arcPeakPx` | `32` | 放物線の上げ量（canvas Y 下向き。`y -= arcPeakPx * 4t(1-t)`） |
+| `durationSec` | 省略可 | 飛翔秒。省略時は `resolveEffectApplyDelaySec`、それも 0 なら `0.25` |
+| `spinFollowsArc` | `true` | 接線方向回転。`false` は発射→着弾の固定角 |
+| `layer` | `front` | `behind` / `front` |
+
+PNG 解決: `resolveProjectileAnimKey(skillId, effectIndex)` — index 付き → 無 index（`hitVfx` と同順）。`projectile` JSON 省略でも PNG があれば `{}` で再生可。
+
+**放物線・回転（`projectileTrajectory.ts`）:**
+
+- 位置: `x = lerp(fromX, toX, t)`、`y = lerp(fromY, toY, t) - arcPeakPx * 4 * t * (1 - t)`
+- 接線角（`spinFollowsArc`）: `atan2(dy/dt, dx/dt)`  where `dy/dt = (toY-fromY) - arcPeakPx * 4 * (1 - 2t)`
+- 描画: 画像は **右向き（+X）** を正とし、32×32 中心を軌道上の点に合わせて `rotate`
+
+**発火タイミング:**
+
+| 条件 | 発射イベント | 飛翔時間 |
+| ---- | ------------ | -------- |
+| `effect.applyFrame` あり | `skillWindup`（既存。body strip 先出し） | `durationSec` 未指定なら `resolveEffectApplyDelaySec` |
+| `applyFrame` なし + damage/dot | `skill` イベント | 既定 `0.25s` または JSON `durationSec` |
+| `hitIndex > 0` | 各 hit ごとに独立 instance（instanceId に hitIndex 含む） | 同上 |
+
+`skillWindup` 経路で既に spawn した場合、`skill` 側では **再 spawn しない**（`applyDelaySec > 0` をゲート）。
+
+**初回データ（弓術士試作）:**
+
+- `sheets/projectiles/at_ranger_basic_attack_projectile.png`（32×32 静止）
+- `classes.json` `at_ranger.traits.basicAttackVfx.projectile`（`arcPeakPx` / `durationSec`）
+- 任意: `at_ranger_basic_attack` に `applyFrame`（弓引き body は `sheets/skills/`、別アセット）
+
+**実装順（推奨 PR 分割）:**
+
+1. 型 + validate + registry + trajectory 単体テスト（描画なし）
+2. `ProjectilePlaybackManager` + `BattleCanvas` + preload
+3. `resolveEffectPresentation` + `playSkillProjectile` + `BattleView` 配線
+4. 弓術士 PNG + class traits + 目視
+5. 演出ラボ + editor フィールド + docs 同期
+
+**完了条件（v1）:**
+
+- 戦闘で矢 PNG が放物線に沿って移動・回転する（着弾 VFX なしでも可）
+- `applyFrame` ありスキルで「引く → 飛ぶ → 着弾ダメ」のリズムがずれない
+- 演出ラボと戦闘で同一 `resolveEffectPresentation` 経路
+- validate が `projectile` を受理し、廃止 `arc` は引き続き拒否
+
+**参照例（弓術士）:** `at_ranger_basic_attack_projectile.png` + `traits.basicAttackVfx.projectile` + 任意で basic `applyFrame`（弓引き body strip は `sheets/skills/`、弾とは別）。
+
+**スコープ外（初回）:** 着弾 VFX、フィールド端貫通の弾道延長、`scatter` ヒットごとの独立弾道、旧 `arc: true`（廃止済み）の復活。
 
 ---
 
@@ -511,28 +617,100 @@ R9 は新仕様の Stage、Wave、敵方式、作戦内パッシブをエディ�
 | **R9a** | エディタ骨格・現状調査 | **完了（§80）** |
 | **R9b** | Stage / Wave `enemyGroups[].selectedCombatModuleId` authoring | **完了（§87）** — `StageEnemyEditorStep` + `stageEnemyCombatModuleEditor` + save round-trip |
 | **R9c** | 複数 Wave・`enemyGroups` 構造 authoring | **完了（§88）** — Wave 追加削除 UI + 2 Wave save round-trip |
-| **R9d** | 作戦内パッシブ候補・付与条件 authoring | 作成データが WavePrep に出る |
+| **R9d** | 作戦内パッシブ候補・付与条件 authoring | **完了（§89）** — `operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
 | **R9e** | preview・validation・参照整合の統合 | 不正 ID・重複・未設定警告 |
-| **R9f** | authoring closure — 回帰テスト・spec 一致・R10 用作戦作成可能判定 | 新規 2 Wave 作戦をエディタだけで起動 |
+| **R9g** | **効果範囲 authoring（試作前提）** — CombatModule editor + passive 範囲フィールド | module JSON / passive 範囲の save round-trip・preview と runtime 一致 |
+| **R9h** | **Class 方式 pool** — `combatModuleIds` 編集（R5 4 兵科） | class bundle 保存で 2 件必須・registry 参照 validate pass |
+| **R9f** | authoring closure — **Stage 新規作成**、回帰テスト・spec 一致・R10 用作戦作成可能判定 | 新規 2 Wave 作戦をエディタだけで起動（stage 新規作成 → 保存 → 再読込 → ゲーム起動） |
 
-**次タスク（R9 系列）:** **R9d** — 作戦内パッシブ候補・付与条件 authoring。
+**次タスク（R9 系列）:** **R9e** — preview・validation・参照整合の統合。
 
-**当面のフェーズ順:** R9d〜f → **R9.6（A→B）** → R10。R9.6 は R9b とは別 Phase（Player UI）。R9b（Stage editor 敵設定 UI）・R9c（Wave 構造 authoring）は **完了**（§87〜88）。R9.6（Player 準備 UI）は未着手。
+### R9g — 効果範囲 authoring（試作前提）
+
+**目的:** R10 試作用の戦闘方式・パッシブ範囲を **手編集 JSON なし** で設定できるようにする。設計上の新効果範囲用語（[combat-data-schema-refactor.md §5.7](combat-data-schema-refactor.md#57-効果範囲1次元戦闘--r8-doc-反映--2026-07-12)）を editor で編集可能にするが、**legacy `targetShape` 全面移行・JSON schema 改名は含めない**（R9f migration / R10 後）。
+
+**背景:** R9a §80.1 で CombatModule 専用 UI が未接続のまま残置されていた。R10 は「方式の挙動差が認識できるか」を評価するため、試作ステージ制作前に module の効果範囲を editor から触れる必要がある。
+
+**スコープ:**
+
+| 領域 | 内容 |
+| ---- | ---- |
+| **CombatModule editor** | `GET/PUT /__editor/combat-modules` + 編集 UI。`attackIntervalSec`・`action`・**効果範囲**（§5.7 最小 — 単体 / 地点 N / 範囲 N / 周囲 N / 前方 N、対象数・Hit・適用方式の試作に必要な欄のみ）。R5 4 兵科 × 2 方式を対象 |
+| **passive 範囲** | `SkillEditorStep`（クラス / 敵 bundle 内）に R8 範囲 passive フィールド（`buffAoeRadiusPx` 等）を追加。schema 変更と同一タスク |
+| **横断** | `sanitize` / validate / `formatSkillText` preview の round-trip。表示用語は §5.7 に合わせる |
+
+**スコープ外:** `ClassEditorStep` の Lv 成長・legacy スキル枠改修、legacy active 枠・Lv 習得 UI 削除、M1 外 class、legacy `targetShape` 一括削除、正式 VFX。**`combatModuleIds` 編集は R9h。**
+
+**責務メモ（R4 §13）:** 範囲形状は `ClassEditorStep` ではなく **CombatModule editor**（方式）と **SkillEditorStep**（passive 定義）が担う。ユーザー向け「クラスエディタ」= クラスタブ全体を指す場合、本タスクはその **スキル / 方式側** に相当する。
+
+**完了条件:**
+
+- `data/combat-modules/*.json` を editor から読込・保存・再読込できる
+- R5 4 兵科の既存 8 module を壊さず、効果範囲フィールドを 1 件以上編集して validate pass
+- 作戦内パッシブ候補の範囲 passive（例: `buffAoeRadiusPx`）を `SkillEditorStep` から編集し save round-trip できる
+- preview（R9e）と runtime の範囲解決が一致する
+
+**触るファイル候補:** `vite-plugin-editor-api.ts`、`src/editor/editorApi.ts`、新規 `CombatModuleEditorStep.ts`（または `SkillEditorStep` 派生改修）、`skillEditorCombatFields.ts` / `effectTargetingFields.ts`、`src/battle/data/validateGameData.ts`、`editorApi.test.ts`。
+
+**依存:** R9e の preview / validate 基盤と並行または直後。**R9h・R9f（Stage 新規作成）・R10 試作ステージ制作の前提。**
+
+### R9h — Class 方式 pool（`combatModuleIds`）
+
+**目的:** 兵科（class）がプレイヤー / Stage に提供する **2 方式の参照**（`ClassPreset.combatModuleIds`）を、手編集 `classes.json` なしで設定できるようにする。
+
+**背景:** R9g で module 本体を編集できるようになっても、class → module の紐付けが editor 未対応のままだと、新規 module 追加や試作用の差し替えが class bundle 保存経路で閉じない。R9a §80.6 で当初 R9 前提とされていたが、R9g（効果範囲）と責務が異なるため独立タスクとする。
+
+**スコープ:**
+
+| 領域 | 内容 |
+| ---- | ---- |
+| **ClassEditorStep**（または class bundle 保存 UI） | R5 4 兵科のみ `combatModuleIds` を **2 件必須**で編集。候補は `combatModuleRegistry` から同一 `classId` の module に限定 |
+| **validate** | 未知 ID・件数不足・classId 不一致を editor save 時に拒否（既存 `validateGameData` `mode: 'editor'` を利用・拡張） |
+| **read-only** | M1 外 class、`combatModuleIds` 未定義の legacy class は編集不可表示 |
+
+**スコープ外:** module 本体の効果範囲編集（**R9g**）、legacy active / passive 枠、Lv 成長、M1 外 class の一括対応、Stage / enemyGroups 側の `selectedCombatModuleId`（**R9b 完了**）。
+
+**完了条件:**
+
+- R5 4 兵科の `combatModuleIds` を editor から変更し、`PUT /__editor/class-bundle` で `classes.json` に残る
+- 保存後 `parseAndValidateGameDataJson({ mode: 'editor' })` が pass
+- R9g で編集した module ID を pool に追加した場合、Stage `enemyGroups` / Player 候補生成（`stageEnemyCombatModuleEditor` 等）に反映される
+
+**触るファイル候補:** `src/editor/ClassEditorStep.ts`、`src/editor/editorApi.ts`（`buildClassPresetFromDraft` / `validateClassDraftForSave`）、`src/editor/editorClassList.test.ts`、`editorApi.test.ts`。
+
+**依存:** **R9g 完了後**（module 本体の editor 経路が先）。**R9f・R10 試作の前提**（class → module 参照の authoring 閉ループ）。
+
+### Stage 一覧 — 追加・削除（現状ギャップ）
+
+R9b〜c で **既存 stage の選択・Wave / enemyGroups 編集・保存** は成立。一方 **stage 自体の新規作成・削除** は未実装（R9a §80.1「Stage / Wave」不足欄）。
+
+| 操作 | 現状 | 予定 Phase | 備考 |
+| ---- | ---- | ---------- | ---- |
+| 既存 stage の選択・編集・保存 | **完了**（R9b〜c） | — | `StageEnemyEditorStep` + `PUT /__editor/stages` |
+| Wave 追加・削除 | **完了**（R9c） | — | stage **内**の wave。stage 自体の追加ではない |
+| **Stage 新規作成** | **未実装** | **R9f（必須）** | R9 Backend 完了条件「新仕様の 2 Wave 以上の作戦をエディタで**作成**」の前提。新規 id・displayName・既定 wave / enemyGroups・validate 通過・save round-trip まで |
+| **Stage 削除** | **未実装** | **R10 以降（試作成立後）** | legacy stage（`1` / `2` / `test` 等）・テスト依存・`resolveKnownStageId` の `stages[0]` fallback との兼ね合い。**R9〜R10 では対象外**
+
+**触るファイル候補（Stage 新規作成）:** `src/editor/editorApi.ts`（`createDefaultStageDraft` / `addStageToBundle` 等）、`src/editor/StageEnemyEditorStep.ts`（一覧 + 新規ボタン）、`src/editor/editorApi.test.ts` / `StageEnemyEditorStep.test.ts`。
+
+**当面のフェーズ順:** R9e → **R9g** → **R9h** → R9f → **R9.6（A→B）** → R10。R9.6 は R9b とは別 Phase（Player UI）。R9b（Stage editor 敵設定 UI）・R9c（Wave 構造 authoring）・**R9d（作戦内パッシブ catalog）** は **完了**（§87〜89）。R9.6（Player 準備 UI）は未着手。
 
 ### R9a §80.6 技術前提（R9 Backend 完了に必要・R9.5 と並行可）
 
-R9a 調査で分割した以下は、上表 R9b〜f の authoring 前提として **R9 Backend 完了前に成立させる**。詳細・テスト条件は [current-task.md §80.6](../ai-handoff/current-task.md#806-r9-小タスク一覧最大-6) を参照。
+R9a 調査で分割した以下は、上表 R9b〜h の authoring 前提として **R9 Backend 完了前に成立させる**。詳細・テスト条件は [current-task.md §80.6](../ai-handoff/current-task.md#806-r9-小タスク一覧) を参照。
 
 | 項目 | 内容 |
 | ---- | ---- |
-| CombatModule editor | `GET/PUT /__editor/combat-modules` + 編集 UI（`attackIntervalSec` + `action`） |
-| Class `combatModuleIds` | R5 4 兵科のみ、2 件必須 |
-| `operationPassiveCatalog` JSON 化 | R8 暫定 TS 定数 → JSON + editor（R9d と統合可） |
+| CombatModule editor + 効果範囲 | **R9g** — `GET/PUT /__editor/combat-modules` + 編集 UI（`attackIntervalSec` + `action` + §5.7 効果範囲） |
+| Class `combatModuleIds` | **R9h** — R5 4 兵科のみ、2 件必須。`ClassEditorStep` + class bundle save |
+| `operationPassiveCatalog` JSON 化 | **R9d 完了** — `data/operation-passive-catalog.json` + editor GET/PUT |
 
 ### Backend 完了
 
-- 新仕様の 2 Wave 以上の作戦をエディタで作成・保存・再読込できる
+- 新仕様の 2 Wave 以上の作戦をエディタで**新規作成**・保存・再読込できる（**Stage 新規作成 UI は R9f 必須**。既存 stage の編集のみでは不十分）
 - 敵方式と作戦内パッシブ候補を設定できる
+- **戦闘方式の効果範囲と passive 範囲を editor から設定できる**（**R9g 必須**）
+- **class の方式 pool（`combatModuleIds`）を editor から設定できる**（**R9h 必須**）
 - 不正参照を validate できる
 - preview と runtime の解決結果が一致する
 
@@ -542,7 +720,7 @@ R9a 調査で分割した以下は、上表 R9b〜f の authoring 前提とし�
 - 設定した Wave、敵方式、パッシブ候補がプレイ画面へ反映される
 - 新仕様プレイ全体の完了判定は **R9.6 および R10** で行う
 
-**R9 スコープ外:** M1 外 class の一括 editor 対応、`stages-demo.json` 編集切替、正式 VFX、legacy フィールド一括削除（R9f 後・別 PR 可）、**作戦準備の正式 Player UI**（→ R9.6）。
+**R9 スコープ外:** M1 外 class の一括 editor 対応、`stages-demo.json` 編集切替、正式 VFX、legacy フィールド一括削除（R9f 後・別 PR 可）、**Stage 削除**（**R10 以降・試作成立後**）、**作戦準備の正式 Player UI**（→ R9.6）。
 
 `stages-demo.json` は legacy reference として維持し、R9 の移行対象にしない。
 
@@ -724,7 +902,7 @@ R9.5c で Backend 縦切りは成立済み。R9.6 の Backend 作業は、正式
 **Backend 前提:**
 
 - R5〜R8 の Backend 縦切りが維持されている
-- R9b〜f により、新作戦を authoring・validate・preview できる
+- R9b〜h により、新作戦を authoring・validate・preview できる（**効果範囲は R9g・class 方式 pool は R9h 完了が前提**）
 - `stages.json` に R10 専用の新作戦を追加できる状態である
 - 2 Wave 以上の OperationState・WavePrep・作戦内パッシブ経路が接続済みである
 
@@ -790,7 +968,7 @@ Backend 完了だけでは R10 完了としない。
 
 未確定事項は一般 RPG の慣例で補完しない。
 
-**試作成立後:** 兵科拡張 → 診断基盤再構築 → **戦場移動 legacy cleanup** → 正式コンテンツ → UI 仕上げ → 画像 / VFX / 効果音 → i18n → packaging → 公開準備（順序は再計画）。
+**試作成立後:** 兵科拡張 → 診断基盤再構築 → **戦場移動 legacy cleanup** → 正式コンテンツ → UI 仕上げ → 画像 / VFX（**遠隔弾道 projectiles** 含む）/ 効果音 → i18n → packaging → 公開準備（順序は再計画）。
 
 ---
 
@@ -832,7 +1010,7 @@ R6 Backend
 R7 Backend
   ↓
 R8 Backend
-  ├─ R9a ── R9b ── R9c ── R9d ── R9e ── R9f ──┐
+  ├─ R9a ── R9b ── R9c ── R9d ── R9e ── R9g ── R9h ── R9f ──┐
   └─ R9.5a ── R9.5b ── R9.5c ───────────────────┤
                                                  ├─ R9.6（A→B）── R10
                                                  └────────────────┘
@@ -848,8 +1026,8 @@ R8 Backend
 - R9.5c は R6 の OperationState にも依存する（暫定 module 配線。正式 Player UI は R9.6）
 - R9d は R7〜R8 のパッシブ基盤に依存する
 - **R9.6 は R9.5c Backend 完了後に着手**（R9b〜f と並行可だが、R10 Player 前に A+B 必須）
-- R10 Backend 開始は R9f 完了を条件とする。**R10 Player 完了は R9.6（A+B）Player 完了を必須依存**とする
-- R9b〜c は完了（§87〜88）。公式次は **R9d**
+- R10 Backend 開始は **R9g + R9h + R9f** 完了を条件とする（module 効果範囲・class 方式 pool の authoring なしでは試作コンテンツを閉じられない）。**R10 Player 完了は R9.6（A+B）Player 完了を必須依存**とする
+- R9b〜d は完了（§87〜89）。公式次は **R9e** → **R9g** → **R9h**
 - **戦場移動 legacy cleanup** は R10 完了後（新仕様最小実装安定後）。R9.5 / R9 とは並行しない — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 
 R5 は R4 の設計（[combat-data-schema-refactor.md](combat-data-schema-refactor.md) §16 最小 schema）を前提に着手する。

@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
-- **次の再開タスク:** **R9d** — 作戦内パッシブ候補・付与条件 authoring（phase-roadmap §R9）。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
+- **新ロードマップ現在地:** **R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
+- **次の再開タスク:** **R9e** — preview・validation・参照整合の統合。**R9g** — 効果範囲 authoring（CombatModule editor + passive 範囲）。**R9h** — class 方式 pool（`combatModuleIds`）。R10 試作前提。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6204,19 +6204,23 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 | ---- | ---- |
 | **R8（完了）** | `src/game/operationPassiveCatalog.ts` 定数。`df_guardian` のみ候補 2 件 |
 | **R9b〜d** | **触らない** — Stage module 参照・CombatModule 本体を先に editor 化 |
-| **R9e** | **`data/operation-passive-catalog.json`（仮）** へ移行。editor GET/PUT + 最小 UI（classId → passiveId[]、cost 定数）。ゲーム loadGameData または専用 import に接続。**SkillEditorStep に R8 範囲 passive フィールド（`buffAoeRadiusPx` 等）追加** — schema 変更と同一タスク、UI polish 単独タスクにしない |
-| **R9f 前** | catalog JSON と passive 定義の参照整合を validate に追加（editor save 時） |
+| **R9d（完了）** | `data/operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
+| **R9e** | preview・validation・参照整合。catalog 参照整合を validate に追加 |
+| **R9g** | CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） |
+| **R9h** | Class `combatModuleIds` 編集（R5 4 兵科のみ、2 件必須） |
 | **R9f** | legacy stage / skill / tier **一括 migration**。catalog の全面拡張（M1 外 class）は R10 以降 |
 
-### 80.6 R9 小タスク一覧（最大 6）
+### 80.6 R9 小タスク一覧
 
 | ID | 内容 | テスト可能な完了条件 |
 | ---- | ---- | -------------------- |
 | **R9a** | 現状調査・分割 doc | 本 §80 + phase-roadmap R9 表 |
 | **R9b** | Stage `enemyGroups[].selectedCombatModuleId` 編集 UI + draft validate 拡張 | `StageEnemyEditorStep.test.ts` / `editorApi.test.ts` — groups 保存で module ID が JSON に残り validate pass |
-| **R9c** | CombatModule editor — `GET/PUT /__editor/combat-modules` + 編集 UI（`attackIntervalSec` + `action`）。legacy SkillEditorStep 通常攻撃は**触らない** | module JSON 1 件 CRUD + validate + R5 統合テスト非 regression |
-| **R9d** | Class `combatModuleIds` 編集（**R5 4 兵科のみ**、2 件必須）。M1 外 class は read-only | `editorClassList.test.ts` 拡張 — 保存後 validate pass |
-| **R9e** | operationPassiveCatalog JSON 化 + editor + SkillEditorStep 範囲 passive フィールド | catalog 保存・ゲーム候補読込・passive JSON 編集 round-trip |
+| **R9c** | 複数 Wave・`enemyGroups` 構造 authoring | Wave 追加削除 UI + 2 Wave save round-trip |
+| **R9d** | 作戦内パッシブ候補・付与条件 authoring | `operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
+| **R9e** | preview・validation・参照整合の統合 | 不正 ID・重複・未設定警告 |
+| **R9g** | **効果範囲 authoring（試作前提）** — CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） | module / passive 範囲の save round-trip・preview と runtime 一致 |
+| **R9h** | **Class 方式 pool** — `combatModuleIds` 編集（**R5 4 兵科のみ**、2 件必須）。M1 外 class は read-only | `editorClassList.test.ts` 拡張 — 保存後 validate pass |
 | **R9f** | Legacy migration **独立** — script / 一括 normalize（`attackSpeedTier`→module、`waves.enemies`→groups **optional**、旧 active 整理）。**legacy フィールド削除は別 PR 可** | migration テスト + 旧新共存 read |
 
 **不採用（場当たり）:** クラス・Stage・module を 1 PR にまとめる案 — 保存経路・validate 競合リスク大（R4 §13 / bug-fix-project 単一経路原則）。
@@ -7229,4 +7233,99 @@ Stage editor で複数 Wave の `waves[].enemyGroups` 構造を **作成・追�
 
 ### 88.8 次タスク
 
-**R9d** — 作戦内パッシブ候補・付与条件 authoring（phase-roadmap §R9）。その後 R9e〜f → **R9.6（A→B）** → R10。
+**R9d** — 作戦内パッシブ候補・付与条件 authoring（phase-roadmap §R9）。§89 で完了。
+
+---
+
+## 89. R9d — 作戦内パッシブ候補・付与条件 authoring（完了 2026-07-13）
+
+### 89.1 目的
+
+R8c の TS 定数 `operationPassiveCatalog` を JSON 化し、editor で候補・付与条件を authoring できる経路を完成させる。保存データが `loadGameData` → `GameSession` → `WavePrepScreenHost` へ反映される。
+
+### 89.2 データ正本
+
+| 項目 | 内容 |
+| ---- | ---- |
+| ファイル | `data/operation-passive-catalog.json` |
+| フィールド | `passiveAcquireCost` / `waveClearResourceGrant` / `candidatesByClass` |
+| runtime | `GameData.operationPassiveCatalog` |
+| 初期データ | R8c 暫定定数と同一（`df_guardian` 候補 2 件、cost / grant = 1） |
+
+### 89.3 validate / normalize
+
+- `parseOperationPassiveCatalog` — 正の整数 cost、非負整数 grant、class ごと候補の重複禁止
+- `validateOperationPassiveCatalogRefs` — 未知 classId / passiveId を editor save 時に拒否
+- `normalizeOperationPassiveCatalogForSave` — class キー sort、空候補 class 削除
+
+### 89.4 editor API / UI
+
+| 操作 | 経路 |
+| ---- | ---- |
+| GET | `/__editor/operation-passive-catalog` |
+| PUT | `/__editor/operation-passive-catalog`（`parseAndValidateGameDataJson` 経由） |
+| UI | エディタタブ「作戦内パッシブ」— `OperationPassiveCatalogEditorStep` |
+| 編集対象兵科 | R5 4 兵科（`combatModuleIds` 対象）。M1 外 class は catalog に既存エントリがあれば read-only 表示 |
+
+### 89.5 runtime 接続
+
+- `GameSession` — catalog から cost / grant / 候補を解決
+- `WavePrepScreenHost` — `getPassiveAcquireCost` callback で表示コストを同期
+- `mergeOperationPassivesIntoBuild` / `allyRangePassiveBands` / `entities` — catalog 引数で候補検証
+- `operationPassiveCatalog.ts` — JSON 既定値の薄い re-export（後方互換）
+
+### 89.6 変更ファイル（主要）
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `data/operation-passive-catalog.json` | 新規正本 |
+| `src/battle/types.ts` | `OperationPassiveCatalogDef` / `GameData` 拡張 |
+| `src/battle/data/validateGameData.ts` | parse / validate / normalize |
+| `src/battle/data/loadGameData.ts` | catalog 読込 |
+| `src/game/operationPassiveCatalogCore.ts` | catalog 引数付き helper |
+| `src/editor/OperationPassiveCatalogEditorStep.ts` | 編集 UI |
+| `src/editor/editorApi.ts` | fetch / save / draft helper |
+| `vite-plugin-editor-api.ts` | GET/PUT + validate 配線 |
+| `src/editor/EditorApp.ts` | タブ追加 |
+
+### 89.7 テスト
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `operationPassiveCatalogEditor.test.ts` | parse / normalize / load / runtime helper |
+| `operationPassiveInjection.test.ts` | merge 回帰（catalog 引数） |
+| `operationRangePassive.test.ts` | range band 回帰 |
+| `wavePrepScreen.test.ts` | R8c 取得フロー回帰 |
+
+**結果:** 上記 6 ファイル計 79 テスト pass（R9d 関連 6 件含む）
+
+### 89.8 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R9d Backend** | **Yes** — JSON 読込・validate・WavePrep / battle 注入経路が catalog 正本 |
+| **R9d Tooling** | **Yes** — editor GET/PUT + UI + 自動テスト |
+| **R9d 全体** | **Yes** |
+| R9.6 Player UI | **No** — スコープ外 |
+
+### 89.9 同日修正（editor save 経路）
+
+| 症状 | 根本原因 | 修正 |
+| ---- | -------- | ---- |
+| PUT 保存で `Unknown combatModuleId "df_guardian_mod_nearest_strike"` | `vite-plugin-editor-api` の `loadValidationPayload` が `data/combat-modules/*.json` を読んでおらず、server validate が空 module registry で実行されていた（R5 以来の潜在バグ。R9d の catalog PUT で顕在化） | `readAllCombatModuleFiles` を追加し validation payload に `combatModules` を含めた |
+| catalog 参照 passive が class bundle 保存で消える | class editor は stem ファイルを draft（**初期パッシブ pool**）で丸ごと置換する。作戦内パッシブ候補用の passive 定義が pool 外にあると削除される | `collectCatalogPassivesToPreserveOnEntityReplace` で catalog 参照 passive を保存時に保持 |
+
+**仕様訂正（ユーザー確認 2026-07-13）:**
+
+- `df_guardian_passive_5` は **仕様上存在しない**（R8f 検証用に一時追加されたデータ。本番 JSON から削除）
+- 新仕様では **パッシブは Lv 習得しない。初期パッシブのみ**（作戦内パッシブは別経路で Wave 間取得）
+- `operation-passive-catalog.json` の `df_guardian` 候補は **`df_guardian_passive_2` のみ**
+- R8f 範囲オーラの統合テストは **テスト fixture passive**（`df_guardian_passive_range_fixture`）を `GameData` clone に注入して検証（本番データ非搭載）
+
+legacy の `classes.json` unlockLevel / Lv10・Lv20 構造は R9f migration まで残置。editor UI も同様。
+
+### 89.10 次タスク
+
+**R9e** — preview・validation・参照整合の統合。**R9g** — 効果範囲 authoring。**R9h** — class 方式 pool（`combatModuleIds`）。その後 R9f（**Stage 新規作成**含む authoring closure）→ **R9.6（A→B）** → R10。
+
+**未実装ギャップ（roadmap 追記）:** stage 自体の新規作成は **R9f 必須**。削除は **R10 以降（試作成立後）**。詳細は [phase-roadmap.md §R9](../plans/phase-roadmap.md#r9--新仕様-authoring)。

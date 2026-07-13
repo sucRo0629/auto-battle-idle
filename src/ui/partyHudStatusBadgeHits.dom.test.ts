@@ -120,11 +120,11 @@ describe('partyHudStatusBadgeHits DOM', () => {
     );
     expect(mount.querySelector('.game-term-panel')?.hidden).toBe(false);
     expect(mount.querySelector('.game-term-panel-title')?.textContent).toBe(
-      'スタン',
+      'スタン N',
     );
   });
 
-  it('shows hover tooltip for glossary entries with description', () => {
+  it('skips text-only hover tooltip when game term panel is available', () => {
     setup();
     const theme = readBattleHudTheme(themeHost);
 
@@ -142,12 +142,11 @@ describe('partyHudStatusBadgeHits DOM', () => {
     const hit = host.querySelector(
       '.party-hud-status-badge-hit--interactive',
     ) as HTMLButtonElement;
-    const inlineTooltip = hit.querySelector('.party-hud-status-badge-tooltip');
     expect(hit.tagName).toBe('BUTTON');
-    expect(inlineTooltip?.textContent).toBe('スタン');
+    expect(hit.querySelector('.party-hud-status-badge-tooltip')).toBeNull();
   });
 
-  it('binds floating tooltip for interactive badges', () => {
+  it('does not bind floating tooltip for interactive badges', () => {
     setup();
     const theme = readBattleHudTheme(themeHost);
 
@@ -179,12 +178,10 @@ describe('partyHudStatusBadgeHits DOM', () => {
       }) as DOMRect;
 
     hit.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    expect(mount.querySelector('.party-hud-floating-tooltip')?.hidden).toBe(
-      false,
-    );
-    expect(mount.querySelector('.party-hud-floating-tooltip')?.textContent).toBe(
-      'スタン',
-    );
+    const floatingTooltip = mount.querySelector(
+      '.party-hud-floating-tooltip',
+    ) as HTMLElement | null;
+    expect(floatingTooltip?.hidden).not.toBe(false);
   });
 
   it('shows hover tooltip for title-only glossary entries', () => {

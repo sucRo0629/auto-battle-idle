@@ -41,3 +41,7 @@
   white-space: nowrap;
   text-align: left;
 }
+
+.party-hud-floating-tooltip--pointer {
+  transform: none;
+}

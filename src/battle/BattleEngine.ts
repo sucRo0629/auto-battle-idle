@@ -1845,6 +1845,7 @@ export class BattleEngine {
         member.classId,
         this.getAcquiredOperationPassiveIds?.(slotIndex) ?? [],
         this.gameData.skillRegistry.passives,
+        this.gameData.operationPassiveCatalog,
       );
       const basicSkillId = resolveBasicAttackSkillIdFromGameData(
         preset,
@@ -1903,6 +1904,7 @@ export class BattleEngine {
         this.players,
         this.gameData.skillRegistry.passives,
         (slotIndex) => this.getAcquiredOperationPassiveIds?.(slotIndex) ?? [],
+        this.gameData.operationPassiveCatalog,
       ),
       players: this.players.map((c) => this.toSnapshot(c)),
       allies: this.players.map((c) => this.toSnapshot(c)),

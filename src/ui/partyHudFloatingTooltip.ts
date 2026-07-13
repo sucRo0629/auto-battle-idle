@@ -3,6 +3,11 @@ import { clampElementToMountBounds } from './clampElementToMountBounds.ts';
 /** Gap between anchor and tooltip so the label clears the cursor on small HUD hits. */
 const TOOLTIP_ANCHOR_GAP_PX = 12;
 
+export interface PartyHudFloatingTooltipPointer {
+  clientX: number;
+  clientY: number;
+}
+
 export interface PartyHudFloatingTooltipOptions {
   wide?: boolean;
   alignEnd?: boolean;
@@ -29,6 +34,7 @@ export class PartyHudFloatingTooltip {
   private readonly mount: HTMLElement;
   private readonly root: HTMLElement;
   private anchor: HTMLElement | null = null;
+  private pointerAnchor: PartyHudFloatingTooltipPointer | null = null;
   private options: PartyHudFloatingTooltipOptions = {};
 
   constructor(mount: HTMLElement) {
@@ -67,6 +73,7 @@ export class PartyHudFloatingTooltip {
 
   hide(): void {
     this.anchor = null;
+    this.pointerAnchor = null;
     this.root.hidden = true;
   }
 
@@ -90,25 +97,33 @@ export class PartyHudFloatingTooltip {
     this.hideIfAnchorDetached();
     if (!this.anchor || this.root.hidden) return;
 
+    if (this.pointerAnchor) {
+      this.repositionNearPointer();
+      return;
+    }
+
+    this.root.classList.remove('party-hud-floating-tooltip--pointer');
+
     const frame = this.mount.getBoundingClientRect();
     const rect = this.anchor.getBoundingClientRect();
+    const scale = this.readMountCoordinateScale();
     const placement = this.options.placement ?? 'above';
     const alignEnd = this.options.alignEnd ?? false;
     const wide = this.options.wide ?? false;
 
     if (placement === 'below') {
-      this.root.style.top = `${rect.bottom - frame.top + TOOLTIP_ANCHOR_GAP_PX}px`;
+      this.root.style.top = `${(rect.bottom - frame.top) / scale + TOOLTIP_ANCHOR_GAP_PX}px`;
       this.root.style.left = alignEnd
-        ? `${rect.right - frame.left}px`
-        : `${rect.left - frame.left}px`;
+        ? `${(rect.right - frame.left) / scale}px`
+        : `${(rect.left - frame.left) / scale}px`;
     } else {
-      this.root.style.top = `${rect.top - frame.top - TOOLTIP_ANCHOR_GAP_PX}px`;
+      this.root.style.top = `${(rect.top - frame.top) / scale - TOOLTIP_ANCHOR_GAP_PX}px`;
       if (wide && alignEnd) {
-        this.root.style.left = `${rect.right - frame.left}px`;
+        this.root.style.left = `${(rect.right - frame.left) / scale}px`;
       } else if (alignEnd) {
-        this.root.style.left = `${rect.right - frame.left}px`;
+        this.root.style.left = `${(rect.right - frame.left) / scale}px`;
       } else {
-        this.root.style.left = `${rect.left - frame.left + rect.width / 2}px`;
+        this.root.style.left = `${(rect.left - frame.left + rect.width / 2) / scale}px`;
       }
     }
 
@@ -120,12 +135,58 @@ export class PartyHudFloatingTooltip {
     text: string,
     options: PartyHudFloatingTooltipOptions = {},
   ): void {
-    hit.addEventListener('mouseenter', () => {
+    hit.addEventListener('mouseenter', (event) => {
+      if (!(event instanceof MouseEvent)) return;
+      this.pointerAnchor = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
       this.show(hit, text, options);
+    });
+    hit.addEventListener('mousemove', (event) => {
+      if (!(event instanceof MouseEvent)) return;
+      if (!this.isVisible() || this.anchor !== hit) return;
+      this.pointerAnchor = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+      this.reposition();
     });
     hit.addEventListener('mouseleave', () => {
       this.hide();
     });
+  }
+
+  private readMountCoordinateScale(): number {
+    const frame = this.mount.getBoundingClientRect();
+    const localWidth = this.mount.clientWidth || this.mount.offsetWidth;
+    if (localWidth <= 0) return 1;
+    return frame.width / localWidth;
+  }
+
+  private repositionNearPointer(): void {
+    if (!this.pointerAnchor) return;
+
+    const frame = this.mount.getBoundingClientRect();
+    const scale = this.readMountCoordinateScale();
+    const localX = (this.pointerAnchor.clientX - frame.left) / scale;
+    const localY = (this.pointerAnchor.clientY - frame.top) / scale;
+    const alignEnd = this.options.alignEnd ?? false;
+
+    this.root.classList.add('party-hud-floating-tooltip--pointer');
+
+    let left = localX + TOOLTIP_ANCHOR_GAP_PX;
+    const top = localY + TOOLTIP_ANCHOR_GAP_PX;
+    this.root.style.left = `${left}px`;
+    this.root.style.top = `${top}px`;
+
+    if (alignEnd) {
+      const width = this.root.offsetWidth;
+      left = localX - width - TOOLTIP_ANCHOR_GAP_PX;
+      this.root.style.left = `${left}px`;
+    }
+
+    clampElementToMountBounds(this.root, this.mount);
   }
 
   destroy(): void {

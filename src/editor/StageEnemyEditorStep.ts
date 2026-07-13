@@ -5,6 +5,8 @@ import {
 } from "../ui/stageEnemyCompositionPreview.ts";
 import {
   addStageDraftWave,
+  beginStageEnemyGroupsAuthoring,
+  beginWaveEnemyGroupsAuthoring,
   canRemoveStageDraftWave,
   createDefaultStageEnemyGroup,
   ensureStageDraftWaves,
@@ -459,20 +461,14 @@ export class StageEnemyEditorStep {
       startActions.appendChild(
         createActionButton("stage 直下 enemyGroups 編集を開始", "editor-btn", () => {
           commitDraft((next) => {
-            next.enemyGroups = [];
+            beginStageEnemyGroupsAuthoring(next);
           }, true);
         })
       );
       startActions.appendChild(
         createActionButton("Wave ごと enemyGroups 編集を開始", "editor-btn", () => {
           commitDraft((next) => {
-            ensureStageDraftWaves(next);
-            const wave = next.waves![0]!;
-            if (wave.enemyGroups === undefined) {
-              wave.enemyGroups = [
-                createDefaultStageEnemyGroup(defaultClassId),
-              ];
-            }
+            beginWaveEnemyGroupsAuthoring(next, { defaultClassId });
           }, true);
         })
       );
@@ -521,6 +517,22 @@ export class StageEnemyEditorStep {
           );
         }
       }
+
+      const waveStructureActions = createEl("div", "editor-actions");
+      const addWaveBtn = createButton(
+        "+ Wave を追加",
+        "editor-btn editor-btn-small",
+        () => {
+          commitDraft((next) => {
+            addStageDraftWave(next, {
+              defaultClassId: groupsEditorContext.defaultClassId,
+            });
+          }, true);
+        }
+      );
+      addWaveBtn.dataset.editorAction = "addWave";
+      waveStructureActions.appendChild(addWaveBtn);
+      editSection.appendChild(waveStructureActions);
     } else {
       const editSection = createSection("Wave ごと enemyGroups 編集");
       this.container.appendChild(editSection);

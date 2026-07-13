@@ -2,6 +2,7 @@ import { normalizeEntityTraits } from '../battle/data/entityTraits.ts';
 import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasicAttack.ts';
 import {
   normalizeActiveSkillEffectForEditor,
+  normalizeOperationPassiveCatalogForSave,
   sanitizeBasicAttackSkillForJson,
   sanitizePassiveSkillForJson,
   stripDeprecatedThreatFieldsFromEffect,
@@ -13,6 +14,7 @@ import type {
   EnemyTemplate,
   EntityTraits,
   GrowthTierSet,
+  OperationPassiveCatalogDef,
   PassiveSkillDef,
   Role,
   SkillRegistry,
@@ -22,6 +24,7 @@ import type {
   StageWave,
 } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+import { R5_COMBAT_MODULE_CLASS_IDS } from '../battle/types.ts';
 
 export function defaultGrowthTierForRole(role: Role): GrowthTierSet {
   switch (role) {
@@ -200,6 +203,113 @@ export async function fetchStages(): Promise<StageDef[]> {
   return fetchJson<StageDef[]>('/__editor/stages');
 }
 
+export async function fetchOperationPassiveCatalog(): Promise<OperationPassiveCatalogDef> {
+  return fetchJson<OperationPassiveCatalogDef>('/__editor/operation-passive-catalog');
+}
+
+export function operationPassiveCatalogDraftFromCatalog(
+  catalog: OperationPassiveCatalogDef,
+): OperationPassiveCatalogDef {
+  return structuredClone(catalog);
+}
+
+export function validateOperationPassiveCatalogDraftForSave(
+  catalog: OperationPassiveCatalogDef,
+): string | null {
+  if (
+    !Number.isInteger(catalog.passiveAcquireCost) ||
+    catalog.passiveAcquireCost < 1
+  ) {
+    return '取得コスト（passiveAcquireCost）は 1 以上の整数にしてください';
+  }
+  if (
+    !Number.isInteger(catalog.waveClearResourceGrant) ||
+    catalog.waveClearResourceGrant < 0
+  ) {
+    return 'Wave クリア付与（waveClearResourceGrant）は 0 以上の整数にしてください';
+  }
+  return null;
+}
+
+export function normalizeOperationPassiveCatalogDraftForSave(
+  catalog: OperationPassiveCatalogDef,
+): OperationPassiveCatalogDef {
+  return normalizeOperationPassiveCatalogForSave(catalog);
+}
+
+export async function saveOperationPassiveCatalog(
+  catalog: OperationPassiveCatalogDef,
+): Promise<void> {
+  const normalized = normalizeOperationPassiveCatalogDraftForSave(catalog);
+  await fetchJson('/__editor/operation-passive-catalog', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ catalog: normalized }),
+  });
+}
+
+export function listOperationPassiveAuthoringClassIds(
+  catalog: OperationPassiveCatalogDef,
+): string[] {
+  const ids = new Set<string>(R5_COMBAT_MODULE_CLASS_IDS);
+  for (const classId of Object.keys(catalog.candidatesByClass)) {
+    ids.add(classId);
+  }
+  return [...ids].sort();
+}
+
+export function listPassiveIdsForClassStem(
+  passives: PassiveSkillDef[],
+  classId: string,
+): string[] {
+  const prefix = `${classId}_passive_`;
+  return passives
+    .filter((passive) => passive.id.startsWith(prefix))
+    .map((passive) => passive.id)
+    .sort();
+}
+
+export function getOperationPassiveCandidatesForClassDraft(
+  catalog: OperationPassiveCatalogDef,
+  classId: string,
+): string[] {
+  return [...(catalog.candidatesByClass[classId] ?? [])];
+}
+
+export function setOperationPassiveCandidatesForClassDraft(
+  catalog: OperationPassiveCatalogDef,
+  classId: string,
+  passiveIds: readonly string[],
+): OperationPassiveCatalogDef {
+  const next = structuredClone(catalog);
+  const normalized = [...new Set(passiveIds.map((id) => id.trim()).filter(Boolean))];
+  if (normalized.length === 0) {
+    delete next.candidatesByClass[classId];
+  } else {
+    next.candidatesByClass[classId] = normalized;
+  }
+  return next;
+}
+
+/**
+ * R9d: class bundle 保存は stem ファイルを draft のスキルで丸ごと置換するため、
+ * class の skills pool 外だが作戦内パッシブ catalog が参照する passive
+ * （例: 作戦内パッシブ専用の passive 定義）が消えないよう、既存定義を保持対象として返す。
+ */
+export function collectCatalogPassivesToPreserveOnEntityReplace(
+  existingStemPassives: readonly PassiveSkillDef[],
+  draftPassives: readonly PassiveSkillDef[],
+  catalog: OperationPassiveCatalogDef,
+): PassiveSkillDef[] {
+  const referencedIds = new Set(
+    Object.values(catalog.candidatesByClass).flat(),
+  );
+  const draftIds = new Set(draftPassives.map((passive) => passive.id));
+  return existingStemPassives.filter(
+    (passive) => referencedIds.has(passive.id) && !draftIds.has(passive.id),
+  );
+}
+
 export function createEmptyStageDraft(): StageDraft {
   return {
     id: '',
@@ -310,6 +420,48 @@ export function createDefaultStageEnemyGroup(classId: string): StageEnemyGroup {
   return { classId, count: 1 };
 }
 
+/** legacy: stage 直下 enemyGroups 編集を開始する。 */
+export function beginStageEnemyGroupsAuthoring(draft: StageDraft): void {
+  draft.enemyGroups = [];
+  for (const wave of draft.waves ?? []) {
+    delete wave.enemyGroups;
+  }
+}
+
+/** legacy: Wave ごと enemyGroups 編集を開始する。 */
+export function beginWaveEnemyGroupsAuthoring(
+  draft: StageDraft,
+  options?: { defaultClassId?: string },
+): void {
+  ensureStageDraftWaves(draft);
+  delete draft.enemyGroups;
+  const wave = draft.waves![0]!;
+  if (wave.enemyGroups === undefined) {
+    wave.enemyGroups = [
+      createDefaultStageEnemyGroup(options?.defaultClassId ?? 'df_paladin'),
+    ];
+  }
+}
+
+/** stage 直下 enemyGroups を wave 0 へ移し、Wave ごと編集モードへ移行する。 */
+export function promoteStageDraftToWaveEnemyGroups(
+  draft: StageDraft,
+  options?: { defaultClassId?: string },
+): void {
+  if (draft.enemyGroups === undefined) return;
+
+  ensureStageDraftWaves(draft);
+  const stageGroups = draft.enemyGroups;
+  delete draft.enemyGroups;
+  const wave = draft.waves![0]!;
+  wave.enemyGroups = structuredClone(stageGroups);
+  if (wave.enemyGroups.length === 0) {
+    wave.enemyGroups = [
+      createDefaultStageEnemyGroup(options?.defaultClassId ?? 'df_paladin'),
+    ];
+  }
+}
+
 export function createDefaultStageWave(options?: {
   withEnemyGroups?: boolean;
   defaultClassId?: string;
@@ -347,6 +499,10 @@ export function addStageDraftWave(
   draft: StageDraft,
   options?: { defaultClassId?: string },
 ): void {
+  if (draft.enemyGroups !== undefined) {
+    promoteStageDraftToWaveEnemyGroups(draft, options);
+  }
+
   const waves = ensureStageDraftWaves(draft);
   const inWaveAuthoring = waves.some((wave) => wave.enemyGroups !== undefined);
   waves.push(

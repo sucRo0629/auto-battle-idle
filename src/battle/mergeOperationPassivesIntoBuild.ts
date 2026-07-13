@@ -1,5 +1,9 @@
-import type { CharacterBuild, PassiveSkillDef } from './types.ts';
-import { isOperationPassiveCandidateForClass } from '../game/operationPassiveCatalog.ts';
+import type {
+  CharacterBuild,
+  OperationPassiveCatalogDef,
+  PassiveSkillDef,
+} from './types.ts';
+import { isOperationPassiveCandidateForClass } from '../game/operationPassiveCatalogCore.ts';
 
 function isNonEmptyPassiveId(passiveId: string): boolean {
   return typeof passiveId === 'string' && passiveId.trim().length > 0;
@@ -14,6 +18,7 @@ export function mergeOperationPassivesIntoBuild(
   classId: string,
   acquiredOperationPassiveIds: readonly string[],
   passives: Record<string, PassiveSkillDef>,
+  operationPassiveCatalog: OperationPassiveCatalogDef,
 ): void {
   if (acquiredOperationPassiveIds.length === 0) return;
 
@@ -23,7 +28,15 @@ export function mergeOperationPassivesIntoBuild(
   for (const passiveId of acquiredOperationPassiveIds) {
     if (!isNonEmptyPassiveId(passiveId)) continue;
     if (!passives[passiveId]) continue;
-    if (!isOperationPassiveCandidateForClass(classId, passiveId)) continue;
+    if (
+      !isOperationPassiveCandidateForClass(
+        operationPassiveCatalog,
+        classId,
+        passiveId,
+      )
+    ) {
+      continue;
+    }
     if (existing.has(passiveId)) continue;
     merged.push(passiveId);
     existing.add(passiveId);

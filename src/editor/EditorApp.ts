@@ -1,4 +1,4 @@
-import type { AttackSpeedTier, ClassId, ClassPreset, CombatModuleDef, EnemyTemplate, StageDef } from '../battle/types.ts';
+import type { AttackSpeedTier, ClassId, ClassPreset, CombatModuleDef, EnemyTemplate, OperationPassiveCatalogDef, StageDef } from '../battle/types.ts';
 import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasicAttack.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
@@ -9,6 +9,7 @@ import { BalanceEditorStep } from './BalanceEditorStep.ts';
 import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
 import { EnemyEditorStep, loadEnemyDraftById } from './EnemyEditorStep.ts';
 import { StageEnemyEditorStep } from './StageEnemyEditorStep.ts';
+import { OperationPassiveCatalogEditorStep } from './OperationPassiveCatalogEditorStep.ts';
 import { StatusIconsEditorStep } from './StatusIconsEditorStep.ts';
 import {
   applyEnemyAttackSpeedTier,
@@ -30,6 +31,10 @@ import {
   fetchEnemies,
   fetchSkills,
   fetchStages,
+  fetchOperationPassiveCatalog,
+  operationPassiveCatalogDraftFromCatalog,
+  saveOperationPassiveCatalog,
+  validateOperationPassiveCatalogDraftForSave,
   initClassSkillEntriesFromPreset,
   initEnemySkillEntriesFromPreset,
   isBalanceRowDirty,
@@ -64,7 +69,13 @@ import {
 } from './SkillEditorStep.ts';
 import { createActionButton, createButton, createEl, preserveScrollDuring } from './formUtils.ts';
 
-type EditorTab = 'class' | 'enemy' | 'stage' | 'balance' | 'statusIcons';
+type EditorTab =
+  | 'class'
+  | 'enemy'
+  | 'stage'
+  | 'operationPassive'
+  | 'balance'
+  | 'statusIcons';
 
 const EDITOR_SESSION_KEY = projectStorageKey('editor-session');
 
@@ -92,6 +103,11 @@ export class EditorApp {
 
   private stageDraft: StageDraft = createEmptyStageDraft();
   private selectedStageId = '';
+  private operationPassiveCatalogDraft: OperationPassiveCatalogDef = {
+    passiveAcquireCost: 1,
+    waveClearResourceGrant: 1,
+    candidatesByClass: {},
+  };
   private classRegistry: Record<ClassId, ClassPreset> = {};
   private combatModuleRegistry: Record<string, CombatModuleDef> = {};
 
@@ -106,6 +122,7 @@ export class EditorApp {
   private classStep: ClassEditorStep | null = null;
   private enemyStep: EnemyEditorStep | null = null;
   private stageStep: StageEnemyEditorStep | null = null;
+  private operationPassiveStep: OperationPassiveCatalogEditorStep | null = null;
   private skillStep: SkillEditorStep | null = null;
   private balanceStep: BalanceEditorStep | null = null;
   private statusIconsStep: StatusIconsEditorStep | null = null;
@@ -129,6 +146,7 @@ export class EditorApp {
         state.tab === 'class' ||
         state.tab === 'enemy' ||
         state.tab === 'stage' ||
+        state.tab === 'operationPassive' ||
         state.tab === 'balance' ||
         state.tab === 'statusIcons'
       ) {
@@ -222,6 +240,7 @@ export class EditorApp {
     const items: { id: EditorTab; label: string }[] = [
       { id: 'class', label: 'クラス' },
       { id: 'stage', label: 'ステージ' },
+      { id: 'operationPassive', label: '作戦内パッシブ' },
       { id: 'enemy', label: '敵テンプレ' },
       { id: 'balance', label: 'バランス' },
       { id: 'statusIcons', label: '状態アイコン' },
@@ -243,11 +262,13 @@ export class EditorApp {
 
   private async loadData(): Promise<void> {
     try {
-      const [classes, enemies, stages, skills] = await Promise.all([
+      const [classes, enemies, stages, skills, operationPassiveCatalog] =
+        await Promise.all([
         fetchClasses(),
         fetchEnemies(),
         fetchStages(),
         fetchSkills(),
+        fetchOperationPassiveCatalog(),
       ]);
       this.classes = classes;
       this.enemies = enemies;
@@ -256,6 +277,8 @@ export class EditorApp {
         ...skills,
         passives: skills.passives.map(normalizePassiveSkillForEditor),
       };
+      this.operationPassiveCatalogDraft =
+        operationPassiveCatalogDraftFromCatalog(operationPassiveCatalog);
       const gameDataResult = tryLoadGameData();
       if (gameDataResult.ok) {
         this.classRegistry = gameDataResult.data.classRegistry;
@@ -306,12 +329,14 @@ export class EditorApp {
     this.classStep?.destroy();
     this.enemyStep?.destroy();
     this.stageStep?.destroy();
+    this.operationPassiveStep?.destroy();
     this.skillStep?.destroy();
     this.balanceStep?.destroy();
     this.statusIconsStep?.destroy();
     this.classStep = null;
     this.enemyStep = null;
     this.stageStep = null;
+    this.operationPassiveStep = null;
     this.skillStep = null;
     this.balanceStep = null;
     this.statusIconsStep = null;
@@ -336,6 +361,11 @@ export class EditorApp {
 
       if (this.tab === 'stage') {
         this.renderStageEditor();
+        return;
+      }
+
+      if (this.tab === 'operationPassive') {
+        this.renderOperationPassiveEditor();
         return;
       }
 
@@ -763,6 +793,50 @@ export class EditorApp {
       this.stageDraft = loadStageDraftById(this.stages, this.selectedStageId);
       this.setStatus(`保存しました: ${this.stageDraft.displayName}`, false);
       this.persistSession();
+    } catch (error) {
+      this.setStatus(
+        error instanceof Error ? error.message : '保存に失敗しました',
+        true,
+      );
+    } finally {
+      this.saving = false;
+      this.render();
+    }
+  }
+
+  private renderOperationPassiveEditor(): void {
+    const host = createEl('div', 'editor-panel editor-panel-operation-passive');
+    this.contentEl.appendChild(host);
+
+    this.operationPassiveStep = new OperationPassiveCatalogEditorStep(host, {
+      getDraft: () => this.operationPassiveCatalogDraft,
+      classRegistry: this.classRegistry,
+      passives: this.skills.passives,
+      onDraftChange: (draft) => {
+        this.operationPassiveCatalogDraft = draft;
+      },
+      onSave: () => void this.saveOperationPassiveCatalog(),
+      saving: this.saving,
+    });
+  }
+
+  private async saveOperationPassiveCatalog(): Promise<void> {
+    const validationError = validateOperationPassiveCatalogDraftForSave(
+      this.operationPassiveCatalogDraft,
+    );
+    if (validationError) {
+      this.setStatus(validationError, true);
+      return;
+    }
+
+    this.saving = true;
+    this.render();
+    try {
+      await saveOperationPassiveCatalog(this.operationPassiveCatalogDraft);
+      const reloaded = await fetchOperationPassiveCatalog();
+      this.operationPassiveCatalogDraft =
+        operationPassiveCatalogDraftFromCatalog(reloaded);
+      this.setStatus('作戦内パッシブ catalog を保存しました', false);
     } catch (error) {
       this.setStatus(
         error instanceof Error ? error.message : '保存に失敗しました',

@@ -8,7 +8,6 @@ import {
   type PartyClassAssignmentResult,
 } from '../progression/partyCompose.ts';
 import type { OperationStateReadonlyView } from './OperationState.ts';
-import { OPERATION_PASSIVE_ACQUIRE_COST } from './operationPassiveCatalog.ts';
 import '../styles/wave-prep-screen.css';
 
 export interface WavePrepScreenHostCallbacks {
@@ -23,6 +22,7 @@ export interface WavePrepScreenHostCallbacks {
   getUnspentOperationResource: () => number;
   getAcquiredOperationPassiveIds: (slotIndex: number) => readonly string[];
   getOperationPassiveCandidates: (slotIndex: number) => readonly string[];
+  getPassiveAcquireCost: () => number;
   getPassiveDisplayName: (passiveId: string) => string;
   getPassiveDescription: (passiveId: string) => string;
   onAcquireOperationPassive: (slotIndex: number, passiveId: string) => boolean;
@@ -233,7 +233,8 @@ export class WavePrepScreenHost {
       this.updatePassiveDetail(passiveSection, passiveSelect.value || null);
       acquireButton.disabled =
         passiveId === '' ||
-        this.callbacks.getUnspentOperationResource() < OPERATION_PASSIVE_ACQUIRE_COST;
+        this.callbacks.getUnspentOperationResource() <
+        this.callbacks.getPassiveAcquireCost();
     });
 
     const passiveDetail = document.createElement('p');
@@ -357,11 +358,13 @@ export class WavePrepScreenHost {
       selectableCandidates.length > 0 ? '候補を選択' : '候補なし';
     passiveSelect.appendChild(placeholder);
 
+    const acquireCost = this.callbacks.getPassiveAcquireCost();
+
     for (const passiveId of selectableCandidates) {
       const option = document.createElement('option');
       option.value = passiveId;
       const name = this.callbacks.getPassiveDisplayName(passiveId);
-      option.textContent = `${name}（消費 ${OPERATION_PASSIVE_ACQUIRE_COST}）`;
+      option.textContent = `${name}（消費 ${acquireCost}）`;
       passiveSelect.appendChild(option);
     }
 
@@ -387,7 +390,7 @@ export class WavePrepScreenHost {
     const canAcquire =
       selectableCandidates.length > 0 &&
       passiveSelect.value !== '' &&
-      this.callbacks.getUnspentOperationResource() >= OPERATION_PASSIVE_ACQUIRE_COST;
+      this.callbacks.getUnspentOperationResource() >= acquireCost;
     passiveSelect.disabled = selectableCandidates.length === 0;
     acquireButton.disabled = !canAcquire;
   }
@@ -453,11 +456,12 @@ export class WavePrepScreenHost {
     if (!detailEl) return;
 
     if (passiveId) {
+      const acquireCost = this.callbacks.getPassiveAcquireCost();
       const name = this.callbacks.getPassiveDisplayName(passiveId);
       const desc = this.callbacks.getPassiveDescription(passiveId);
       detailEl.textContent = desc
-        ? `${name} — ${desc}（消費 ${OPERATION_PASSIVE_ACQUIRE_COST}）`
-        : `${name}（消費 ${OPERATION_PASSIVE_ACQUIRE_COST}）`;
+        ? `${name} — ${desc}（消費 ${acquireCost}）`
+        : `${name}（消費 ${acquireCost}）`;
       return;
     }
 
@@ -467,8 +471,9 @@ export class WavePrepScreenHost {
     }
 
     const resource = this.callbacks.getUnspentOperationResource();
-    if (resource < OPERATION_PASSIVE_ACQUIRE_COST) {
-      detailEl.textContent = `リソース不足（必要 ${OPERATION_PASSIVE_ACQUIRE_COST} / 残 ${resource}）`;
+    const acquireCost = this.callbacks.getPassiveAcquireCost();
+    if (resource < acquireCost) {
+      detailEl.textContent = `リソース不足（必要 ${acquireCost} / 残 ${resource}）`;
       return;
     }
 

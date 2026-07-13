@@ -195,6 +195,7 @@ export function createAlliesFromPartyState(
       member.classId,
       getAcquiredOperationPassiveIds?.(slotIndex) ?? [],
       gameData.skillRegistry.passives,
+      gameData.operationPassiveCatalog,
     );
     allies.push(ally);
   });

@@ -1,0 +1,9 @@
+{
+  "passiveAcquireCost": 1,
+  "waveClearResourceGrant": 1,
+  "candidatesByClass": {
+    "df_guardian": [
+      "df_guardian_passive_2"
+    ]
+  }
+}

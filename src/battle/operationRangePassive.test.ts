@@ -10,7 +10,7 @@ import {
   drawAllyRangePassiveBands,
 } from '../render/battleRangePassiveBandDraw.ts';
 import type { BattleEngine } from './BattleEngine.ts';
-import type { CombatantState, GameData, PartyMemberState, PartySlotState } from './types.ts';
+import type { CombatantState, GameData, PassiveSkillDef, PartyMemberState, PartySlotState } from './types.ts';
 import {
   asBattleEngineInternals,
   reachAwaitingNextWave,
@@ -30,12 +30,55 @@ import { createMemberFromClass } from '../progression/partyCompose.ts';
 import { GameSession } from '../game/GameSession.ts';
 import { readBattleHudTheme } from '../render/battleHudTheme.ts';
 
-const R8F_PASSIVE_ID = 'df_guardian_passive_5';
+/** R8f 範囲オーラ検証用 fixture（本番データには載せない） */
+const R8F_RANGE_FIXTURE_PASSIVE_ID = 'df_guardian_passive_range_fixture';
 const R8F_SELF_PASSIVE_ID = 'df_guardian_passive_2';
 const R8F_GUARDIAN_SLOT = 0;
 const R8F_RADIUS = 40;
 const R8F_DEF_MULTIPLIER = 1.03;
 const PASSIVE_BUFF_AURA_PREFIX = 'passive_buff_aura_';
+
+function buildRangeAuraFixturePassive(): PassiveSkillDef {
+  return {
+    id: R8F_RANGE_FIXTURE_PASSIVE_ID,
+    name: '守りの輪（テスト fixture）',
+    effect: 'buff',
+    buffSubKind: 'stat',
+    buffStat: ['def'],
+    buffMultiplier: R8F_DEF_MULTIPLIER,
+    buffTargetShape: 'aoe',
+    buffAoeRadiusPx: R8F_RADIUS,
+    buffTargetRule: {
+      kind: 'distance',
+      side: 'ally',
+      order: 'selfOrigin',
+    },
+  };
+}
+
+function withRangeAuraFixture(base: GameData): GameData {
+  const fixture = buildRangeAuraFixturePassive();
+  return {
+    ...base,
+    skillRegistry: {
+      ...base.skillRegistry,
+      passives: {
+        ...base.skillRegistry.passives,
+        [fixture.id]: fixture,
+      },
+    },
+    operationPassiveCatalog: {
+      ...base.operationPassiveCatalog,
+      candidatesByClass: {
+        ...base.operationPassiveCatalog.candidatesByClass,
+        df_guardian: [
+          ...(base.operationPassiveCatalog.candidatesByClass.df_guardian ?? []),
+          fixture.id,
+        ],
+      },
+    },
+  };
+}
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -130,12 +173,13 @@ function countDefAurasFromSource(
   ).length;
 }
 
-function createSession(): GameSession {
+function createSession(gameData?: GameData): GameSession {
   const loaded = tryLoadGameData();
   if (!loaded.ok) throw new Error(loaded.error);
+  const data = gameData ?? withRangeAuraFixture(loaded.data);
   const container = document.createElement('div');
   document.body.appendChild(container);
-  return new GameSession(loaded.data, container);
+  return new GameSession(data, container);
 }
 
 function getEngine(session: GameSession): BattleEngine {
@@ -154,7 +198,7 @@ function bootVerifySession(): GameSession {
 function guardianMemberWithoutRangePassive(gameData: GameData): PartyMemberState {
   const member = createMemberFromClass('df_guardian', gameData);
   member.build.learnedPassiveIds = member.build.learnedPassiveIds.filter(
-    (id) => id !== R8F_PASSIVE_ID,
+    (id) => id !== R8F_RANGE_FIXTURE_PASSIVE_ID,
   );
   return member;
 }
@@ -192,7 +236,7 @@ function stripGuardianRangePassiveInOperation(
 
 function acquireRangePassiveAndStartNextWave(session: GameSession): void {
   reachAwaitingNextWave(getEngine(session));
-  expect(session.tryAcquireOperationPassive(R8F_GUARDIAN_SLOT, R8F_PASSIVE_ID)).toBe(
+  expect(session.tryAcquireOperationPassive(R8F_GUARDIAN_SLOT, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(
     true,
   );
   expect(session.confirmWavePrepAndStartNextWave()).toBe(true);
@@ -211,8 +255,8 @@ function getGuardianAlly(engine: BattleEngine): CombatantState {
 describe('allyRangePassiveBands (R8f unit)', () => {
   const loaded = tryLoadGameData();
   if (!loaded.ok) throw new Error(loaded.error);
-  const gameData = loaded.data;
-  const passive = gameData.skillRegistry.passives[R8F_PASSIVE_ID];
+  const gameData = withRangeAuraFixture(loaded.data);
+  const passive = gameData.skillRegistry.passives[R8F_RANGE_FIXTURE_PASSIVE_ID];
 
   it('detects ally range buff aura passive definition', () => {
     expect(passive).toBeDefined();
@@ -230,6 +274,7 @@ describe('allyRangePassiveBands (R8f unit)', () => {
       [source],
       gameData.skillRegistry.passives,
       () => [],
+      gameData.operationPassiveCatalog,
     );
     expect(bands).toEqual([]);
   });
@@ -240,7 +285,7 @@ describe('allyRangePassiveBands (R8f unit)', () => {
       battleX: 200,
       partySlotIndex: 0,
       build: {
-        learnedPassiveIds: [R8F_PASSIVE_ID],
+        learnedPassiveIds: [R8F_RANGE_FIXTURE_PASSIVE_ID],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -261,10 +306,10 @@ describe('allyRangePassiveBands (R8f unit)', () => {
       gameData,
     );
 
-    expect(hasDefAuraFromSource(source, source.id, R8F_PASSIVE_ID)).toBe(true);
-    expect(hasDefAuraFromSource(nearAlly, source.id, R8F_PASSIVE_ID)).toBe(true);
-    expect(hasDefAuraFromSource(farAlly, source.id, R8F_PASSIVE_ID)).toBe(false);
-    expect(hasDefAuraFromSource(enemy, source.id, R8F_PASSIVE_ID)).toBe(false);
+    expect(hasDefAuraFromSource(source, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(true);
+    expect(hasDefAuraFromSource(nearAlly, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(true);
+    expect(hasDefAuraFromSource(farAlly, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(false);
+    expect(hasDefAuraFromSource(enemy, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(false);
 
     source.battleX = 280;
     syncBuffAuras(
@@ -273,8 +318,8 @@ describe('allyRangePassiveBands (R8f unit)', () => {
       gameData.skillRegistry.passives,
       gameData,
     );
-    expect(hasDefAuraFromSource(nearAlly, source.id, R8F_PASSIVE_ID)).toBe(false);
-    expect(hasDefAuraFromSource(farAlly, source.id, R8F_PASSIVE_ID)).toBe(true);
+    expect(hasDefAuraFromSource(nearAlly, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(false);
+    expect(hasDefAuraFromSource(farAlly, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(true);
 
     farAlly.battleX = 250;
     syncBuffAuras(
@@ -283,7 +328,7 @@ describe('allyRangePassiveBands (R8f unit)', () => {
       gameData.skillRegistry.passives,
       gameData,
     );
-    expect(hasDefAuraFromSource(farAlly, source.id, R8F_PASSIVE_ID)).toBe(true);
+    expect(hasDefAuraFromSource(farAlly, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(true);
   });
 
   it('6. includes owner (selfOrigin)', () => {
@@ -292,13 +337,13 @@ describe('allyRangePassiveBands (R8f unit)', () => {
       battleX: 200,
       partySlotIndex: 0,
       build: {
-        learnedPassiveIds: [R8F_PASSIVE_ID],
+        learnedPassiveIds: [R8F_RANGE_FIXTURE_PASSIVE_ID],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
     });
     syncBuffAuras([source], [], gameData.skillRegistry.passives, gameData);
-    expect(hasDefAuraFromSource(source, source.id, R8F_PASSIVE_ID)).toBe(true);
+    expect(hasDefAuraFromSource(source, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(true);
   });
 
   it('7. does not duplicate stacks on resync', () => {
@@ -307,7 +352,7 @@ describe('allyRangePassiveBands (R8f unit)', () => {
       battleX: 200,
       partySlotIndex: 0,
       build: {
-        learnedPassiveIds: [R8F_PASSIVE_ID],
+        learnedPassiveIds: [R8F_RANGE_FIXTURE_PASSIVE_ID],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -315,8 +360,8 @@ describe('allyRangePassiveBands (R8f unit)', () => {
     const nearAlly = mockUnit({ id: 'near', battleX: 220, partySlotIndex: 1 });
     syncBuffAuras([source, nearAlly], [], gameData.skillRegistry.passives, gameData);
     syncBuffAuras([source, nearAlly], [], gameData.skillRegistry.passives, gameData);
-    expect(countDefAurasFromSource(source, source.id, R8F_PASSIVE_ID)).toBe(1);
-    expect(countDefAurasFromSource(nearAlly, source.id, R8F_PASSIVE_ID)).toBe(1);
+    expect(countDefAurasFromSource(source, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(1);
+    expect(countDefAurasFromSource(nearAlly, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(1);
   });
 
   it('8. clears aura and band when owner is defeated', () => {
@@ -325,7 +370,7 @@ describe('allyRangePassiveBands (R8f unit)', () => {
       battleX: 200,
       partySlotIndex: 0,
       build: {
-        learnedPassiveIds: [R8F_PASSIVE_ID],
+        learnedPassiveIds: [R8F_RANGE_FIXTURE_PASSIVE_ID],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -337,11 +382,12 @@ describe('allyRangePassiveBands (R8f unit)', () => {
     source.hp = 0;
     syncBuffAuras([source, nearAlly], [], gameData.skillRegistry.passives, gameData);
 
-    expect(hasDefAuraFromSource(nearAlly, source.id, R8F_PASSIVE_ID)).toBe(false);
+    expect(hasDefAuraFromSource(nearAlly, source.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(false);
     const bands = resolveAllyRangePassiveBands(
       [source, nearAlly],
       gameData.skillRegistry.passives,
-      (slotIndex) => (slotIndex === 0 ? [R8F_PASSIVE_ID] : []),
+      (slotIndex) => (slotIndex === 0 ? [R8F_RANGE_FIXTURE_PASSIVE_ID] : []),
+      gameData.operationPassiveCatalog,
     );
     expect(bands).toEqual([]);
   });
@@ -360,7 +406,7 @@ describe('operation range passive integration (R8f)', () => {
   let session: GameSession | null = null;
   const loaded = tryLoadGameData();
   if (!loaded.ok) throw new Error(loaded.error);
-  const gameData = loaded.data;
+  const gameData = withRangeAuraFixture(loaded.data);
 
   beforeEach(() => {
     localStorage.clear();
@@ -386,7 +432,7 @@ describe('operation range passive integration (R8f)', () => {
     expect(session.getOperationAcquiredPassiveIds(R8F_GUARDIAN_SLOT)).toEqual([]);
     expect(
       guardian.statusEffects.some((effect) =>
-        effect.id.includes(R8F_PASSIVE_ID),
+        effect.id.includes(R8F_RANGE_FIXTURE_PASSIVE_ID),
       ),
     ).toBe(false);
   });
@@ -409,12 +455,12 @@ describe('operation range passive integration (R8f)', () => {
     expect(snap.allyRangePassiveBands).toEqual([
       expect.objectContaining({
         sourceId: guardian.id,
-        passiveId: R8F_PASSIVE_ID,
+        passiveId: R8F_RANGE_FIXTURE_PASSIVE_ID,
         centerBattleX: guardian.battleX,
         radiusPx: R8F_RADIUS,
       }),
     ]);
-    expect(hasDefAuraFromSource(otherAlly, guardian.id, R8F_PASSIVE_ID)).toBe(true);
+    expect(hasDefAuraFromSource(otherAlly, guardian.id, R8F_RANGE_FIXTURE_PASSIVE_ID)).toBe(true);
   });
 
   it('10. operation restart clears bands and range aura', () => {
@@ -485,9 +531,9 @@ describe('operation range passive integration (R8f)', () => {
 describe('mergeOperationPassivesIntoBuild range passive (R8f)', () => {
   const loaded = tryLoadGameData();
   if (!loaded.ok) throw new Error(loaded.error);
-  const gameData = loaded.data;
+  const gameData = withRangeAuraFixture(loaded.data);
 
-  it('merges df_guardian_passive_5 for guardian slot', () => {
+  it('merges catalog range fixture passive for guardian slot', () => {
     const build = {
       learnedPassiveIds: [],
       learnedActiveIds: [],
@@ -496,10 +542,11 @@ describe('mergeOperationPassivesIntoBuild range passive (R8f)', () => {
     mergeOperationPassivesIntoBuild(
       build,
       'df_guardian',
-      [R8F_PASSIVE_ID],
+      [R8F_RANGE_FIXTURE_PASSIVE_ID],
       gameData.skillRegistry.passives,
+      gameData.operationPassiveCatalog,
     );
-    expect(build.learnedPassiveIds).toEqual([R8F_PASSIVE_ID]);
+    expect(build.learnedPassiveIds).toEqual([R8F_RANGE_FIXTURE_PASSIVE_ID]);
   });
 });
 
@@ -523,7 +570,7 @@ describe('battleRangePassiveBandDraw (R8f)', () => {
       [
         {
           sourceId: 'guardian',
-          passiveId: R8F_PASSIVE_ID,
+          passiveId: R8F_RANGE_FIXTURE_PASSIVE_ID,
           centerBattleX: 200,
           radiusPx: R8F_RADIUS,
         },

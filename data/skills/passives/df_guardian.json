@@ -35,22 +35,5 @@
     "id": "df_guardian_passive_4",
     "name": "不撓の誓い",
     "effect": "lastStandInvulnerable"
-  },
-  {
-    "id": "df_guardian_passive_5",
-    "name": "守りの輪",
-    "effect": "buff",
-    "buffSubKind": "stat",
-    "buffStat": [
-      "def"
-    ],
-    "buffMultiplier": 1.03,
-    "buffTargetShape": "aoe",
-    "buffAoeRadiusPx": 40,
-    "buffTargetRule": {
-      "kind": "distance",
-      "side": "ally",
-      "order": "selfOrigin"
-    }
   }
 ]

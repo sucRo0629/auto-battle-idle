@@ -572,7 +572,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | 起動 | Party HUD（コンパクト / 詳細）の **状態バッジ**（`.party-hud-status-badge-hit--interactive`）を **クリック**。辞書 `statusCategory` 対応エントリに **`description` があるときのみ** |
 | パネル | 編成 UI と同じ **`GameTermPanel`**（`BattleView` が `canvasFrame` に 1 インスタンス）。見出し・本文・パネル内用語リンク・戻るは [party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) に準拠 |
 | クリック不可 | `description` 省略の HUD 表示名のみ（例: stat 系 `hp` / `atk`）は **ホバーで表示名 tooltip のみ**（クリックで用語パネルは開かない） |
-| ホバー | **全バッジ** — 表示名 tooltip（`resolveStatusBadgeTooltipLabel`）。`description` ありのバッジも同様 |
+| ホバー | **`description` なし**（表示名のみ）— 表示名 tooltip（`resolveStatusBadgeTooltipLabel`）。**`description` あり** はホバー tooltip を出さず **クリックで用語パネル** のみ |
 | tooltip 配置 | `PartyHudFloatingTooltip` / `PartyMemberEffectiveStatsPanel` は `battle-canvas-host` 内 **最前面レイヤー**（`.battle-layer--tooltip`、z-index 6）にマウント。表示時はレイヤー末尾へ移動。**1280×720 Canvas 外へはみ出さない**（`clampElementToMountBounds`） |
 | `+N` 省略枠 | **ホバーのみ** — 省略分の表示名を `、` 連結（従来どおり）。個別の用語パネルは開かない |
 | 演出 | クリック可能バッジは `cursor: pointer` + ホバー / 展開時のアウトライン（`battle-view.css`） |
@@ -918,7 +918,7 @@ panelHeight:
 | 体系 | 状態アイコンの意味、buff / debuff の背景表現は味方 / 敵で可能な限り共通 |
 | 役割 | プレイヤーの編成意図や状態付与が成功しているかを確認する情報 |
 | 一覧表示 | 常時表示は 6〜8 個程度。収まらない場合は `+N` |
-| 詳細 | 個別バッジ hover tooltip + `+N` hover tooltip。**辞書に `description` があるバッジは §7.1.2 と同様にクリックで用語パネル** |
+| 詳細 | **`description` なし** — 個別バッジ hover tooltip + `+N` hover tooltip。**`description` あり** — §7.1.2 と同様にクリックで用語パネルのみ |
 
 敵状態アイコンは単なる敵情報ではなく、こちらの編成結果を観測するための情報。一覧性のために敵側の表示数は絞ってよいが、詳細確認の逃げ道を持たせる。
 
