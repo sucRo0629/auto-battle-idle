@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
-- **次の再開タスク:** **R9b** — Stage `enemyGroups[].selectedCombatModuleId` 編集 UI（§85.18）。R9.5c の暫定 UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
+- **新ロードマップ現在地:** **R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
+- **次の再開タスク:** **R9c** — 複数 Wave・`enemyGroups` 構造 authoring（§80.6 / phase-roadmap §R9）。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7056,3 +7056,116 @@ R10 の評価軸は、新仕様で 2 Wave 以上遊び、「繰り返し遊び�
 `src/ui/SkillMenuPanel.ts`、`src/game/WavePrepScreenHost.ts`、`src/game/GameSession.ts`、`src/game/OperationState.ts`、`src/platform/menuHost.ts`、`docs/spec/party-formation-ui.md`
 
 正本: [phase-roadmap.md §R9.6](../plans/phase-roadmap.md#r96--作戦準備-player-ui)
+
+---
+
+## 87. R9b — Stage enemyGroups `selectedCombatModuleId` 編集 UI（完了 2026-07-13）
+
+### 87.1 調査結果（Backend 既存経路）
+
+| 項目 | 正本 / 経路 |
+| ---- | ----------- |
+| 型 | `StageEnemyGroup.selectedCombatModuleId?: string`（`src/battle/types.ts`） |
+| Stage 直下 | `stage.enemyGroups[]` |
+| Wave 内 | `stage.waves[].enemyGroups[]` |
+| runtime 解決 | `resolveSelectedCombatModuleId` / `resolveCombatModuleDef`（`src/battle/data/resolveCombatModuleBasic.ts`）— 未指定時は `class.combatModuleIds[0]` |
+| validate | `parseAndValidateGameDataJson` — module 存在・class 適合（`validateGameData.enemyGroupCombatModule.test.ts`） |
+| editor draft | `StageDraft` = `StageDef` の clone（`editorApi.ts` `stageDraftFromStage` / `loadStageDraftById`） |
+| 保存 | `saveStageBundle` → `normalizeStageDraftForSave` → `PUT /__editor/stages` |
+| legacy active 分離 | 候補は `class.combatModuleIds` + `combatModuleRegistry` のみ。active skill slot / legacy UI とは無関係 |
+
+**再実装なし。** editor UI と既存 save 経路の配線のみ。
+
+### 87.2 editor state の所有者
+
+- **所有者:** `EditorApp.stageDraft`（`StageDraft`）
+- **更新:** `StageEnemyEditorStep` → `onDraftChange` → `EditorApp` が `stageDraft` を replace
+- **CombatModule 候補コンテキスト:** `EditorApp` が `tryLoadGameData()` で `classRegistry` / `combatModuleRegistry` を保持し `StageEnemyEditorStep` へ渡す
+
+### 87.3 CombatModule 候補取得経路
+
+- **helper:** `src/editor/stageEnemyCombatModuleEditor.ts`
+- **候補列挙:** `listStageEnemyCombatModuleOptions(classId, { classRegistry, combatModuleRegistry })` — `class.combatModuleIds` を registry で表示名・description 付きに展開
+- **妥当性:** `isValidSelectedCombatModuleId`（`resolveCombatModuleBasic.ts` を export 再利用）
+- **禁止事項遵守:** 全 module 無条件表示なし / 別兵科 module なし / legacy active 混在なし / UI 内所属判定の重複実装なし
+
+### 87.4 UI 追加場所
+
+- `StageEnemyEditorStep.appendEnemyGroupsEditor` — 各グループの `classId` と `count` の間に `CombatModule` 行（select + description）
+- Stage 直下 `enemyGroups` と `waves[].enemyGroups` は同一 `appendEnemyGroupsEditor` 経由
+- `combatModuleIds` を持たない legacy class（例: `df_paladin`, `at_hunter`）は欄非表示
+
+### 87.5 未指定時の扱い
+
+- select に **「既定値を使用（未指定）」**（value = 空文字）を表示
+- 選択時は `delete group.selectedCombatModuleId` — JSON に optional property を書かない
+- description は runtime と同様、表示用に `combatModuleIds[0]` の registry description を参照（推測生成なし）
+- 既存 Stage を開いただけで全 JSON が書き換わる設計にはしていない
+
+### 87.6 classId 変更時の正規化
+
+- `classId` 変更直後に `normalizeStageEnemyGroupCombatModuleForClass` を editor state へ適用
+- 新 class で無効な `selectedCombatModuleId` は **削除（未指定へ）** — runtime 既定解決に合わせた
+- `rerender: true` で UI と state の一致を維持
+
+### 87.7 Stage 直下 / Wave 内
+
+| 経路 | 対応 |
+| ---- | ---- |
+| `stage.enemyGroups[]` | Yes — `compositionMode === 'stageEnemyGroups'` |
+| `waves[].enemyGroups[]` | Yes — `compositionMode === 'waveEnemyGroups'` |
+
+### 87.8 serialize / save / reload
+
+- `normalizeStageDraftForSave` / `saveStageBundle` が `selectedCombatModuleId` をそのまま保持
+- `loadStageDraftById` で明示指定・未指定とも復元確認済み
+- 空文字・`null` は保存しない（`setStageEnemyGroupCombatModuleId` で delete）
+
+### 87.9 validation との整合
+
+- 既存 `parseAndValidateGameDataJson` の enemyGroup module 検査を変更なし
+- editor 側 `validateStageDraftForSave` は module ID を個別検査しない（server validate に委譲）— 編集時正規化で不正 ID を残さない
+
+### 87.10 legacy active との分離
+
+- 編集対象は `selectedCombatModuleId` のみ
+- R9.5c 暫定 Player UI（`SkillMenuPanel` / `WavePrepScreenHost`）は未変更
+- active skill slot / party slot 選択 state とは無関係
+
+### 87.11 テスト
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `stageEnemyCombatModuleEditor.test.ts` | 候補絞り込み・表示名/description・正規化・未指定 |
+| `StageEnemyEditorStep.test.ts` | DOM 操作・複数 group・wave・classId 変更・save round-trip |
+| `editorApi.test.ts` | `normalizeStageDraftForSave` / `validateStageDraftForSave` で module 保持 |
+
+**結果:** 上記 3 ファイル計 62 テスト pass（R9b 関連）
+
+### 87.12 手動確認（editor.html @ `npm run dev`）
+
+1. `eg_smoke` を開く — グループ 1（`df_guardian`）に CombatModule 欄・表示名候補・description 表示
+2. グループ 2（`at_hunter`）に CombatModule 欄なし（legacy class）
+3. module 切替で description 更新（例: 近接打撃 ↔ 防御姿勢）
+4. 保存・再読込は自動テストで確認。手動は UI 表示・候補絞り込み・切替を確認
+
+### 87.13 変更ファイル
+
+- `src/battle/data/resolveCombatModuleBasic.ts` — `isValidSelectedCombatModuleId` export
+- `src/editor/stageEnemyCombatModuleEditor.ts`（新規）
+- `src/editor/StageEnemyEditorStep.ts`
+- `src/editor/EditorApp.ts`
+- 上記 3 test ファイル
+
+### 87.14 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R9b Backend** | **Yes** — 既存 Backend 経路を再利用。editor から保存・reload 可能 |
+| **R9b Tooling** | **Yes** — Stage editor UI + 自動テスト + 手動 editor 確認 |
+| **R9b 全体** | **Yes** |
+| R9.6 Player UI | **No** — スコープ外。誤って完了扱いしない |
+
+### 87.15 次タスク
+
+**R9c** — 複数 Wave・`enemyGroups` 構造 authoring（phase-roadmap §R9）。その後 R9d〜f → **R9.6（A→B）** → R10。

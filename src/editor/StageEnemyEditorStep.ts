@@ -1,4 +1,4 @@
-import type { StageDef, StageEnemyGroup } from "../battle/types.ts";
+import type { ClassId, ClassPreset, CombatModuleDef, StageDef, StageEnemyGroup } from "../battle/types.ts";
 import {
   formatEnemyGroupScaleSummary,
   resolveStageEnemyCompositionPreview,
@@ -20,6 +20,14 @@ import {
   createSelect,
   preserveScrollDuring,
 } from "./formUtils.ts";
+import {
+  listStageEnemyCombatModuleOptions,
+  normalizeStageEnemyGroupCombatModuleForClass,
+  resolveStageEnemyCombatModuleDescription,
+  setStageEnemyGroupCombatModuleId,
+  STAGE_ENEMY_COMBAT_MODULE_UNSPECIFIED,
+  type StageEnemyCombatModuleEditorContext,
+} from "./stageEnemyCombatModuleEditor.ts";
 
 const SCALE_MIN = 0.01;
 const DEFAULT_SCALE = 1;
@@ -72,6 +80,72 @@ function summarizeLegacyWaveEnemies(
 interface EnemyGroupsEditorContext {
   classOptions: { id: string; label: string }[];
   defaultClassId: string;
+  combatModuleContext: StageEnemyCombatModuleEditorContext;
+}
+
+function appendCombatModuleField(
+  groupGrid: HTMLElement,
+  group: StageEnemyGroup,
+  combatModuleContext: StageEnemyCombatModuleEditorContext,
+  applyGroupMutation: (
+    mutate: (groups: StageEnemyGroup[]) => void,
+    rerender?: boolean
+  ) => void,
+  groupIndex: number
+): void {
+  const moduleOptions = listStageEnemyCombatModuleOptions(
+    group.classId,
+    combatModuleContext
+  );
+  if (moduleOptions.length === 0) return;
+
+  const control = createEl("div", "editor-combat-module-control");
+  const selectOptions = [
+    {
+      value: STAGE_ENEMY_COMBAT_MODULE_UNSPECIFIED,
+      label: "既定値を使用（未指定）",
+    },
+    ...moduleOptions.map((option) => ({
+      value: option.moduleId,
+      label: option.displayName,
+    })),
+  ];
+  const moduleSelect = createSelect(
+    group.selectedCombatModuleId ?? STAGE_ENEMY_COMBAT_MODULE_UNSPECIFIED,
+    selectOptions,
+    (moduleId) => {
+      applyGroupMutation((targetGroups) => {
+        const target = targetGroups[groupIndex];
+        if (!target) return;
+        setStageEnemyGroupCombatModuleId(target, moduleId);
+      });
+    }
+  );
+  moduleSelect.dataset.editorField = "combatModule";
+
+  const description = createEl("p", "editor-hint");
+  description.dataset.editorField = "combatModuleDescription";
+  description.textContent = resolveStageEnemyCombatModuleDescription(
+    group,
+    combatModuleContext
+  );
+
+  moduleSelect.addEventListener("change", () => {
+    const nextGroup: StageEnemyGroup = {
+      ...group,
+      selectedCombatModuleId:
+        moduleSelect.value === STAGE_ENEMY_COMBAT_MODULE_UNSPECIFIED
+          ? undefined
+          : moduleSelect.value,
+    };
+    description.textContent = resolveStageEnemyCombatModuleDescription(
+      nextGroup,
+      combatModuleContext
+    );
+  });
+
+  control.append(moduleSelect, description);
+  groupGrid.appendChild(createFieldRow("CombatModule", control));
 }
 
 function appendEnemyGroupsEditor(
@@ -83,7 +157,7 @@ function appendEnemyGroupsEditor(
     rerender?: boolean
   ) => void
 ): void {
-  const { classOptions, defaultClassId } = context;
+  const { classOptions, defaultClassId, combatModuleContext } = context;
   const editGrid = appendGrid(parent);
 
   if (groups.length === 0) {
@@ -121,10 +195,23 @@ function appendEnemyGroupsEditor(
         createSelect(group.classId, classSelectOptions, (classId) => {
           applyGroupMutation((targetGroups) => {
             const target = targetGroups[groupIndex];
-            if (target) target.classId = classId;
-          });
+            if (!target) return;
+            target.classId = classId;
+            normalizeStageEnemyGroupCombatModuleForClass(
+              target,
+              combatModuleContext
+            );
+          }, true);
         })
       )
+    );
+
+    appendCombatModuleField(
+      groupGrid,
+      group,
+      combatModuleContext,
+      applyGroupMutation,
+      groupIndex
     );
 
     groupGrid.appendChild(
@@ -221,6 +308,8 @@ export interface StageEnemyEditorStepOptions {
   stages: StageDef[];
   selectedStageId: string;
   classOptions: { id: string; label: string }[];
+  classRegistry: Record<ClassId, ClassPreset>;
+  combatModuleRegistry: Record<string, CombatModuleDef>;
   onSelectStage: (stageId: string) => void;
   onDraftChange: (draft: StageDraft) => void;
   onSave: () => void;
@@ -255,6 +344,8 @@ export class StageEnemyEditorStep {
       stages,
       selectedStageId,
       classOptions,
+      classRegistry,
+      combatModuleRegistry,
       onSelectStage,
       onDraftChange,
       onSave,
@@ -278,6 +369,10 @@ export class StageEnemyEditorStep {
     const groupsEditorContext: EnemyGroupsEditorContext = {
       classOptions,
       defaultClassId,
+      combatModuleContext: {
+        classRegistry,
+        combatModuleRegistry,
+      },
     };
 
     const header = createEl("div", "editor-step-header");

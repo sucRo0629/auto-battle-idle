@@ -1090,4 +1090,64 @@ describe('wave enemyGroups draft helpers (R6g-4)', () => {
       }),
     ).toBeNull();
   });
+
+  it('validateStageDraftForSave accepts enemyGroups with selectedCombatModuleId', () => {
+    expect(
+      validateStageDraftForSave({
+        id: 'module_stage',
+        displayName: 'Module Stage',
+        recommendedLevel: 10,
+        enemyGroups: [
+          {
+            classId: 'df_guardian',
+            count: 1,
+            selectedCombatModuleId: 'df_guardian_mod_nearest_strike',
+          },
+        ],
+        waves: [{ enemies: [] }],
+      }),
+    ).toBeNull();
+  });
+
+  it('normalizeStageDraftForSave preserves selectedCombatModuleId on stage and wave groups', () => {
+    const stageDraft: StageDraft = {
+      id: 'module_save_stage',
+      displayName: 'Module Save Stage',
+      recommendedLevel: 10,
+      enemyGroups: [
+        {
+          classId: 'df_guardian',
+          count: 1,
+          selectedCombatModuleId: 'df_guardian_mod_guard_focus',
+        },
+      ],
+      waves: [{ enemies: [] }],
+    };
+    const waveDraft: StageDraft = {
+      id: 'module_save_wave',
+      displayName: 'Module Save Wave',
+      recommendedLevel: 10,
+      waves: [
+        {
+          enemies: [],
+          enemyGroups: [
+            {
+              classId: 'at_swordsman',
+              count: 1,
+              selectedCombatModuleId: 'at_swordsman_mod_pierce_slash',
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeStageDraftForSave(stageDraft).enemyGroups?.[0]).toMatchObject({
+      selectedCombatModuleId: 'df_guardian_mod_guard_focus',
+    });
+    expect(
+      normalizeStageDraftForSave(waveDraft).waves?.[0]?.enemyGroups?.[0],
+    ).toMatchObject({
+      selectedCombatModuleId: 'at_swordsman_mod_pierce_slash',
+    });
+  });
 });

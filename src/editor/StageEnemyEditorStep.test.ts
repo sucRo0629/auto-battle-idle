@@ -5,7 +5,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadGameData } from '../battle/data/loadGameData.ts';
 import { StageEnemyEditorStep } from './StageEnemyEditorStep.ts';
 import type { StageDef } from '../battle/types.ts';
-import { loadStageDraftById, type StageDraft } from './editorApi.ts';
+import {
+  loadStageDraftById,
+  normalizeStageDraftForSave,
+  type StageDraft,
+} from './editorApi.ts';
 
 function makeStage(overrides: Partial<StageDef> = {}): StageDef {
   return {
@@ -16,21 +20,49 @@ function makeStage(overrides: Partial<StageDef> = {}): StageDef {
   };
 }
 
+function editorRegistries() {
+  const gameData = loadGameData();
+  return {
+    classRegistry: gameData.classRegistry,
+    combatModuleRegistry: gameData.combatModuleRegistry,
+    classOptions: gameData.classOrder.map((id) => ({
+      id,
+      label: gameData.classRegistry[id]?.displayName ?? id,
+    })),
+  };
+}
+
 function makeOptions(
   draft: StageDraft,
   stages: StageDef[] = [draft as StageDef],
   overrides: Partial<ConstructorParameters<typeof StageEnemyEditorStep>[1]> = {},
 ) {
+  const registries = editorRegistries();
   return {
     getDraft: () => draft,
     stages,
     selectedStageId: draft.id,
-    classOptions: [{ id: 'df_paladin', label: 'Paladin' }],
+    classOptions: registries.classOptions,
+    classRegistry: registries.classRegistry,
+    combatModuleRegistry: registries.combatModuleRegistry,
     onSelectStage: vi.fn(),
     onDraftChange: vi.fn(),
     onSave: vi.fn(),
     ...overrides,
   };
+}
+
+function findCombatModuleSelects(host: HTMLElement): HTMLSelectElement[] {
+  return Array.from(
+    host.querySelectorAll<HTMLSelectElement>('select[data-editor-field="combatModule"]'),
+  );
+}
+
+function findCombatModuleDescription(host: HTMLElement, index = 0): HTMLElement | null {
+  const descriptions = host.querySelectorAll<HTMLElement>(
+    '[data-editor-field="combatModuleDescription"]',
+  );
+  return descriptions[index] ?? null;
 }
 
 describe('StageEnemyEditorStep', () => {
@@ -173,5 +205,240 @@ describe('StageEnemyEditorStep', () => {
     expect(host.textContent).toContain('legacy enemies');
     expect(host.textContent).toContain('enemy_b');
     expect(host.textContent).toContain('この Wave の enemyGroups を編集');
+  });
+
+  describe('CombatModule selection (R9b)', () => {
+    const registries = editorRegistries();
+    const guardianModuleA = 'df_guardian_mod_nearest_strike';
+    const guardianModuleB = 'df_guardian_mod_guard_focus';
+    const swordsmanModule = 'at_swordsman_mod_pierce_slash';
+
+    it('shows class-specific combat module options with display names and description', () => {
+      const draft: StageDraft = {
+        id: 'module_stage',
+        displayName: 'Module Stage',
+        recommendedLevel: 10,
+        enemyGroups: [{ classId: 'df_guardian', count: 1, selectedCombatModuleId: guardianModuleA }],
+        waves: [{ enemies: [] }],
+      };
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft));
+
+      const [moduleSelect] = findCombatModuleSelects(host);
+      expect(moduleSelect).toBeTruthy();
+      expect(moduleSelect!.value).toBe(guardianModuleA);
+
+      const optionLabels = Array.from(moduleSelect!.options).map((option) => option.textContent);
+      expect(optionLabels).toContain('既定値を使用（未指定）');
+      expect(optionLabels).toContain(
+        registries.combatModuleRegistry[guardianModuleA]!.displayName,
+      );
+      expect(optionLabels).toContain(
+        registries.combatModuleRegistry[guardianModuleB]!.displayName,
+      );
+      expect(optionLabels).not.toContain(swordsmanModule);
+
+      const description = findCombatModuleDescription(host);
+      expect(description?.textContent).toBe(
+        registries.combatModuleRegistry[guardianModuleA]!.description,
+      );
+    });
+
+    it('does not show combat module field for legacy classes without modules', () => {
+      const draft: StageDraft = {
+        id: 'legacy_class_stage',
+        displayName: 'Legacy Class Stage',
+        recommendedLevel: 10,
+        enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+        waves: [{ enemies: [] }],
+      };
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft));
+
+      expect(findCombatModuleSelects(host)).toHaveLength(0);
+    });
+
+    it('updates only the targeted enemyGroup selectedCombatModuleId', () => {
+      const draft: StageDraft = {
+        id: 'two_groups',
+        displayName: 'Two Groups',
+        recommendedLevel: 10,
+        enemyGroups: [
+          { classId: 'df_guardian', count: 1 },
+          { classId: 'df_guardian', count: 2, selectedCombatModuleId: guardianModuleA },
+        ],
+        waves: [{ enemies: [] }],
+      };
+      const onDraftChange = vi.fn();
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft, [draft as StageDef], { onDraftChange }));
+
+      const moduleSelects = findCombatModuleSelects(host);
+      expect(moduleSelects).toHaveLength(2);
+
+      moduleSelects[0]!.value = guardianModuleB;
+      moduleSelects[0]!.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const nextDraft = onDraftChange.mock.calls.at(-1)?.[0] as StageDraft;
+      expect(nextDraft.enemyGroups?.[0]?.selectedCombatModuleId).toBe(guardianModuleB);
+      expect(nextDraft.enemyGroups?.[1]?.selectedCombatModuleId).toBe(guardianModuleA);
+    });
+
+    it('updates wave enemyGroups selectedCombatModuleId independently', () => {
+      const draft: StageDraft = {
+        id: 'wave_module_stage',
+        displayName: 'Wave Module Stage',
+        recommendedLevel: 10,
+        waves: [
+          {
+            enemies: [],
+            enemyGroups: [{ classId: 'df_guardian', count: 1 }],
+          },
+          {
+            enemies: [],
+            enemyGroups: [{ classId: 'at_swordsman', count: 1 }],
+          },
+        ],
+      };
+      const onDraftChange = vi.fn();
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft, [draft as StageDef], { onDraftChange }));
+
+      const moduleSelects = findCombatModuleSelects(host);
+      expect(moduleSelects).toHaveLength(2);
+
+      moduleSelects[1]!.value = swordsmanModule;
+      moduleSelects[1]!.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const nextDraft = onDraftChange.mock.calls.at(-1)?.[0] as StageDraft;
+      expect(nextDraft.waves?.[0]?.enemyGroups?.[0]?.selectedCombatModuleId).toBeUndefined();
+      expect(nextDraft.waves?.[1]?.enemyGroups?.[0]?.selectedCombatModuleId).toBe(
+        swordsmanModule,
+      );
+    });
+
+    it('clears invalid module when classId changes to another branch', () => {
+      const draft: StageDraft = {
+        id: 'class_change',
+        displayName: 'Class Change',
+        recommendedLevel: 10,
+        enemyGroups: [
+          {
+            classId: 'df_guardian',
+            count: 1,
+            selectedCombatModuleId: guardianModuleA,
+          },
+        ],
+        waves: [{ enemies: [] }],
+      };
+      const onDraftChange = vi.fn();
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft, [draft as StageDef], { onDraftChange }));
+
+      const groupSection = Array.from(host.querySelectorAll('section.editor-section')).find(
+        (section) => section.textContent?.includes('グループ 1'),
+      );
+      const classSelect = groupSection?.querySelector(
+        'select.editor-select',
+      ) as HTMLSelectElement;
+      expect(classSelect).toBeTruthy();
+      classSelect.value = 'at_swordsman';
+      classSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const nextDraft = onDraftChange.mock.calls.at(-1)?.[0] as StageDraft;
+      expect(nextDraft.enemyGroups?.[0]?.classId).toBe('at_swordsman');
+      expect(nextDraft.enemyGroups?.[0]?.selectedCombatModuleId).toBeUndefined();
+    });
+
+    it('keeps unspecified state and round-trips through normalizeStageDraftForSave', () => {
+      const draft: StageDraft = {
+        id: 'unspecified_module',
+        displayName: 'Unspecified Module',
+        recommendedLevel: 10,
+        enemyGroups: [{ classId: 'df_guardian', count: 1 }],
+        waves: [{ enemies: [] }],
+      };
+      const onDraftChange = vi.fn();
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft, [draft as StageDef], { onDraftChange }));
+
+      const [moduleSelect] = findCombatModuleSelects(host);
+      moduleSelect!.value = '';
+      moduleSelect!.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const editedDraft = onDraftChange.mock.calls.at(-1)?.[0] as StageDraft;
+      expect(editedDraft.enemyGroups?.[0]?.selectedCombatModuleId).toBeUndefined();
+
+      const normalized = normalizeStageDraftForSave(editedDraft);
+      expect(normalized.enemyGroups?.[0]?.selectedCombatModuleId).toBeUndefined();
+    });
+
+    it('persists explicit module through normalizeStageDraftForSave for stage and wave groups', () => {
+      const stageDraft: StageDraft = {
+        id: 'persist_module',
+        displayName: 'Persist Module',
+        recommendedLevel: 10,
+        enemyGroups: [
+          {
+            classId: 'df_guardian',
+            count: 1,
+            selectedCombatModuleId: guardianModuleB,
+          },
+        ],
+        waves: [{ enemies: [] }],
+      };
+      const waveDraft: StageDraft = {
+        id: 'persist_wave_module',
+        displayName: 'Persist Wave Module',
+        recommendedLevel: 10,
+        waves: [
+          {
+            enemies: [],
+            enemyGroups: [
+              {
+                classId: 'at_swordsman',
+                count: 1,
+                selectedCombatModuleId: swordsmanModule,
+              },
+            ],
+          },
+        ],
+      };
+
+      expect(normalizeStageDraftForSave(stageDraft).enemyGroups?.[0]).toMatchObject({
+        selectedCombatModuleId: guardianModuleB,
+      });
+      expect(
+        normalizeStageDraftForSave(waveDraft).waves?.[0]?.enemyGroups?.[0],
+      ).toMatchObject({
+        selectedCombatModuleId: swordsmanModule,
+      });
+    });
+
+    it('reloads explicit and unspecified module selections from stage draft', () => {
+      const draft: StageDraft = {
+        id: 'reload_module',
+        displayName: 'Reload Module',
+        recommendedLevel: 10,
+        enemyGroups: [
+          { classId: 'df_guardian', count: 1, selectedCombatModuleId: guardianModuleA },
+          { classId: 'df_guardian', count: 1 },
+        ],
+        waves: [{ enemies: [] }],
+      };
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft));
+
+      const moduleSelects = findCombatModuleSelects(host);
+      expect(moduleSelects[0]!.value).toBe(guardianModuleA);
+      expect(moduleSelects[1]!.value).toBe('');
+    });
   });
 });

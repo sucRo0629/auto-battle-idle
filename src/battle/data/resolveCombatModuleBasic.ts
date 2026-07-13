@@ -22,7 +22,7 @@ function resolveDefaultCombatModuleId(
   return defaultId;
 }
 
-function isValidSelectedCombatModuleId(
+export function isValidSelectedCombatModuleId(
   classPreset: ClassPreset,
   combatModuleRegistry: Record<string, CombatModuleDef>,
   selectedId: string,

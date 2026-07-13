@@ -1,5 +1,6 @@
-import type { AttackSpeedTier, EnemyTemplate, StageDef } from '../battle/types.ts';
+import type { AttackSpeedTier, ClassId, ClassPreset, CombatModuleDef, EnemyTemplate, StageDef } from '../battle/types.ts';
 import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasicAttack.ts';
+import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import { projectStorageKey } from '../projectIdentity.ts';
@@ -91,6 +92,8 @@ export class EditorApp {
 
   private stageDraft: StageDraft = createEmptyStageDraft();
   private selectedStageId = '';
+  private classRegistry: Record<ClassId, ClassPreset> = {};
+  private combatModuleRegistry: Record<string, CombatModuleDef> = {};
 
   private balanceRows: BalanceClassRow[] = [];
   private balanceJobTier = 1;
@@ -253,6 +256,14 @@ export class EditorApp {
         ...skills,
         passives: skills.passives.map(normalizePassiveSkillForEditor),
       };
+      const gameDataResult = tryLoadGameData();
+      if (gameDataResult.ok) {
+        this.classRegistry = gameDataResult.data.classRegistry;
+        this.combatModuleRegistry = gameDataResult.data.combatModuleRegistry;
+      } else {
+        this.classRegistry = {};
+        this.combatModuleRegistry = {};
+      }
       this.syncBalanceRowsFromClasses();
       this.restoreDraftsAfterLoad();
       this.render();
@@ -455,6 +466,8 @@ export class EditorApp {
       stages: this.stages,
       selectedStageId: this.selectedStageId,
       classOptions: this.buildClassPickerItems(),
+      classRegistry: this.classRegistry,
+      combatModuleRegistry: this.combatModuleRegistry,
       onSelectStage: (stageId) => this.selectStage(stageId),
       onDraftChange: (draft) => {
         this.stageDraft = draft;
