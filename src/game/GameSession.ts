@@ -275,6 +275,7 @@ export class GameSession {
         getOperationResultForDisplay: () => this.getOperationResultForDisplay(),
         onRematchSameStage: () => this.rematchSameStageFromResult(),
         onReturnToStageSelect: () => this.returnToStageSelectAfterVictory(),
+        canUsePauseOperationRetry: () => this.canUsePauseOperationRetry(),
         canReturnToStageSelectFromPause: () =>
           this.canReturnToStageSelectFromPause(),
         onReturnToStageSelectFromPause: () =>
@@ -604,6 +605,14 @@ export class GameSession {
     if (this.shouldShowDefeatRetry()) return false;
     if (this.shouldShowVictoryResult()) return false;
     return true;
+  }
+
+  /** 戦闘ポーズ中にリトライ 3 種を出せるか（敗北 overlay 非表示・作戦進行中） */
+  canUsePauseOperationRetry(): boolean {
+    if (this.currentScreen !== 'battle') return false;
+    if (this.shouldShowDefeatRetry()) return false;
+    if (this.shouldShowVictoryResult()) return false;
+    return this.canUseOperationRetry();
   }
 
   /** 戦闘ポーズ中に作戦を中断してステージ選択へ戻る。 */
@@ -1328,7 +1337,7 @@ export class GameSession {
     this.view?.refreshVictoryResultOverlay();
   }
 
-  /** R6i: 敗北後・Wave 準備中の retry API が利用可能か */
+  /** 作戦進行中（未完了）なら retry API が利用可能（敗北・Wave 準備・ポーズ） */
   private canUseOperationRetry(): boolean {
     return (
       this.operationState !== null &&

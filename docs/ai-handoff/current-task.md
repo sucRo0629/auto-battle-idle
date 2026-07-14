@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R11a〜d 完了**（§97）。R10 構造（§95）+ Stage 想定 Lv 廃止（§96）の上にプレイアビリティ縦切り。
-- **次の再開タスク:** R11 完了後バックログ（兵科拡張・診断・戦場移動 cleanup・Stage 削除・presentation 等）。
+- **新ロードマップ現在地:** **R11a〜d システム縦切り完了**。R10/R11 の「遊べる試作／プレイアビリティ」Player 完了は **2026-07-15 取り消し**（§98）。
+- **次の再開タスク:** **R12a** — 反復可能な作戦の Stage 要件を spec 正本化し、`r10_prototype` ギャップを明示。その後 R12b（module/passive データ）→ R12c（作戦データ）→ R12d（手元成立）→ R13（反復評価）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7718,6 +7718,39 @@ R10 で新ループ構造は成立。手元評価では敵が弱すぎ、作戦�
 | **R11c** | `cost = base(unlockLevel) + n×stackStep`、grant **12**、WavePrep に実コスト表示 |
 | **R11d** | R5 4 兵科基礎ステ極端化、`r10_prototype` scale 引き上げ |
 
-### 97.4 次タスク
+### 97.4 次タスク（2026-07-15 更新）
 
-R11 完了後バックログ（順序再計画可）: 兵科拡張、診断基盤、戦場移動 legacy cleanup、Stage 削除、正式コンテンツ、presentation。
+~~R11 完了後バックログへ~~ → **Player プレイアビリティ未達を再判定**。次は **R12**（§98）。
+
+---
+
+## 98. R12 以降ロードマップ再設計（2026-07-15）
+
+### 98.1 背景
+
+R10 時点で機能は存在しても、**ゲームとして楽しめる水準に達していなかった**。「試作として遊べる」目標は未達のまま構造完了と記録されていた。R11 はシステム縦切り（範囲・専用パッシブ枠・資源式・基礎ステ）までで、**データ設定がゲームになっていない**。
+
+「繰り返し遊びたいか」を評価する段階より前である。さらに試作 Stage は敵・内容が再挑戦を生む問題設計になっておらず、旧仕様の **1 度クリアしたら二度と遊ぶ意義がないステージ** と同型になりうる。
+
+### 98.2 再判定
+
+| Phase | 旧記録 | 再判定 |
+| ----- | ------ | ------ |
+| R10 | 構造完了 + 条件付き前向き評価 | **構造のみ**。遊べる試作・反復評価は未達 |
+| R11 | プレイアビリティ完了 | **システム縦切り完了**。ゲーム成立は未達 |
+
+### 98.3 新順（正本: phase-roadmap R12 / R13）
+
+| ID | 内容 | 完了の意味 |
+| -- | ---- | ---------- |
+| **R12a** | 反復可能な作戦の Stage 要件を spec 正本化 + 現行ギャップ明示 | 「まず」仕様どおりにする |
+| **R12b** | CombatModule・作戦内パッシブの **データ再設計** | 判断差・挙動差 |
+| **R12c** | 試作作戦 Stage / Wave データの再設計 | 要件どおりの問題提示 |
+| **R12d** | 手元で「ゲームとして遊べる」ゲート | 反復欲求評価はしない |
+| **R13** | 「繰り返し遊びたいか」評価 | 本来の R10 評価 |
+
+**含めない:** 毎ラン敵ランダム（ローグ凍結）、presentation、公開準備、兵科拡張を R12 より前にやる。
+
+### 98.4 次の着手
+
+**R12a** — [operation-loop.md](../spec/operation-loop.md) / [enemy-design-concept.md](../enemy-design-concept.md) 等へ Stage authoring 要件を書き、`r10_prototype` ギャップ表を本節または §99 に残す。

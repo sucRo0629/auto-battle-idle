@@ -111,6 +111,8 @@ export interface VerifyModeControls {
   } | null;
   onRematchSameStage?: () => boolean;
   onReturnToStageSelect?: () => boolean;
+  /** Wave 戦闘中ポーズからリトライ 3 種を出せるか */
+  canUsePauseOperationRetry?: () => boolean;
   canReturnToStageSelectFromPause?: () => boolean;
   onReturnToStageSelectFromPause?: () => boolean;
   onReturnToStageSelectFromDefeatRetry?: () => boolean;
@@ -149,7 +151,6 @@ export class BattleView {
   private readonly pausePlateEl: HTMLElement;
   private readonly pausePlateTitleEl: HTMLElement;
   private readonly pauseActionsEl: HTMLElement;
-  private readonly pauseReturnToStageSelectButton: HTMLButtonElement;
   private readonly defeatRetryOverlayEl: HTMLElement;
   private readonly victoryResultOverlayEl: HTMLElement;
   private readonly victoryResultSummaryEl: HTMLElement;
@@ -308,14 +309,51 @@ export class BattleView {
     this.pauseActionsEl.className = "battle-pause-actions";
     this.pauseActionsEl.hidden = true;
 
-    this.pauseReturnToStageSelectButton = document.createElement("button");
-    this.pauseReturnToStageSelectButton.type = "button";
-    this.pauseReturnToStageSelectButton.className =
-      "battle-pause-action-button game-ui-button";
-    this.pauseReturnToStageSelectButton.addEventListener("click", () => {
-      this.verifyModeControls?.onReturnToStageSelectFromPause?.();
-    });
-    this.pauseActionsEl.appendChild(this.pauseReturnToStageSelectButton);
+    const pauseRetryButtons: Array<{
+      textKey: UiMessageKey;
+      kind: "retry" | "abort";
+      run: () => boolean;
+    }> = [
+      {
+        textKey: "battle.defeatRetryCurrentWave",
+        kind: "retry",
+        run: () => verifyModeControls?.onRetryCurrentWave?.() ?? false,
+      },
+      {
+        textKey: "battle.defeatRetryFormationPrep",
+        kind: "retry",
+        run: () => verifyModeControls?.onReturnToFormationPrep?.() ?? false,
+      },
+      {
+        textKey: "battle.defeatRetryFromWaveZero",
+        kind: "retry",
+        run: () =>
+          verifyModeControls?.onRestartOperationFromWaveZero?.() ?? false,
+      },
+      {
+        textKey: "battle.returnToStageSelect",
+        kind: "abort",
+        run: () =>
+          verifyModeControls?.onReturnToStageSelectFromPause?.() ?? false,
+      },
+    ];
+
+    for (const action of pauseRetryButtons) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "battle-pause-action-button game-ui-button";
+      button.dataset.uiMessageKey = action.textKey;
+      button.dataset.pauseActionKind = action.kind;
+      button.textContent = t(action.textKey);
+      button.addEventListener("click", () => {
+        if (action.run()) {
+          this.syncDefeatRetryOverlay();
+          this.syncPauseChrome();
+          this.syncPauseOverlayVisibility();
+        }
+      });
+      this.pauseActionsEl.appendChild(button);
+    }
     this.pausePlateEl.appendChild(this.pauseActionsEl);
 
     battlePauseOverlay.appendChild(this.pausePlateEl);
@@ -778,15 +816,24 @@ export class BattleView {
     );
     this.pauseButton.setAttribute("aria-pressed", paused ? "true" : "false");
     this.pausePlateTitleEl.textContent = t("battle.pausePlate");
-    const showReturnToStageSelect = this.canShowPauseReturnToStageSelect();
-    this.pauseReturnToStageSelectButton.textContent = t(
-      "battle.returnToStageSelect",
+    const showRetry = this.canShowPauseOperationRetry();
+    const showAbort = this.canShowPauseReturnToStageSelect();
+    const showActions = showRetry || showAbort;
+    const buttons = this.pauseActionsEl.querySelectorAll<HTMLButtonElement>(
+      ".battle-pause-action-button[data-ui-message-key]",
     );
-    this.pauseReturnToStageSelectButton.hidden = !showReturnToStageSelect;
-    this.pauseActionsEl.hidden = !showReturnToStageSelect;
+    for (const button of buttons) {
+      const key = button.dataset.uiMessageKey as UiMessageKey | undefined;
+      if (key) {
+        button.textContent = t(key);
+      }
+      const kind = button.dataset.pauseActionKind;
+      button.hidden = kind === "retry" ? !showRetry : !showAbort;
+    }
+    this.pauseActionsEl.hidden = !showActions;
     this.pausePlateEl.classList.toggle(
       "battle-pause-plate--with-actions",
-      showReturnToStageSelect,
+      showActions,
     );
     this.pauseButton.disabled =
       this.isDefeatRetryVisible() || this.isVictoryResultVisible();
@@ -810,6 +857,10 @@ export class BattleView {
     this.speedButton.dataset.speed = String(speed);
     this.speedButton.disabled =
       this.isDefeatRetryVisible() || this.isVictoryResultVisible();
+  }
+
+  private canShowPauseOperationRetry(): boolean {
+    return this.verifyModeControls?.canUsePauseOperationRetry?.() === true;
   }
 
   private canShowPauseReturnToStageSelect(): boolean {

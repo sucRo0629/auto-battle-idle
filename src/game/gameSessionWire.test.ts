@@ -312,7 +312,7 @@ describe('GameSession stageSelect → party → battle wire', () => {
     expect(session.canReturnToStageSelectFromPause()).toBe(true);
 
     const returnButton = container.querySelector<HTMLButtonElement>(
-      '.battle-pause-action-button',
+      '.battle-pause-action-button[data-ui-message-key="battle.returnToStageSelect"]',
     );
     expect(returnButton?.hidden).toBe(false);
     returnButton?.click();
@@ -332,7 +332,7 @@ describe('GameSession stageSelect → party → battle wire', () => {
     expect(session.canReturnToStageSelectFromPause()).toBe(true);
 
     const returnButton = container.querySelector<HTMLButtonElement>(
-      '.battle-pause-action-button',
+      '.battle-pause-action-button[data-ui-message-key="battle.returnToStageSelect"]',
     );
     expect(returnButton?.hidden).toBe(false);
     returnButton?.click();

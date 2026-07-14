@@ -1014,9 +1014,9 @@ topInfo:
 | 停止対象 | `BattleEngine.tick`、`BattleCanvas.tick`（スプライト / VFX / ポップアップ等）、`battleElapsedMs` と `targetIndicator` TTL の進行 |
 | 継続 | hover / selection / HUD 操作（`hoverHighlight`、`targetIndicator` 表示状態の維持、味方 HUD ホバー詳細、用語パネル等） |
 | 非対象 | Pause ボタンでは敵 group を展開しない（束表示のまま）。click 展開は §8.11.2 |
-| 表示 | `.battle-pause-overlay`（薄い暗幕、`pointer-events: none`）+ 中央の控えめな `PAUSE` 銘板。作戦中（verify ON/OFF）は銘板内に **ステージ選択へ**（作戦中断・確認なし）。操作ボタンのみ `pointer-events: auto`。戦場は読める明度を維持。Debug overlay（Layer 5）とは混ぜない |
-| 作戦中断 | 敗北 / 作戦結果 overlay 非表示時のみ。**ステージ選択へ**（ポーズ銘板）で未完了 Operation を破棄し `stageSelect` へ。§9 リトライ導線と同様、確認ダイアログは挟まない |
-| 敗北 retry | 敗北 overlay（`.battle-defeat-retry-overlay`）に retry 3 種 + **ステージ選択へ**（verify ON/OFF）。§9 参照 |
+| 表示 | `.battle-pause-overlay`（薄い暗幕、`pointer-events: none`）+ 中央の控えめな `PAUSE` 銘板。作戦進行中は銘板内に **リトライ 3 種 + ステージ選択へ**（確認なし）。操作ボタンのみ `pointer-events: auto`。戦場は読める明度を維持。Debug overlay（Layer 5）とは混ぜない |
+| 作戦中断・リトライ | 敗北 / 作戦結果 overlay 非表示時のみ。ポーズ銘板から [operation-loop.md §9](operation-loop.md#9-リトライ導線r7-接続) と同じ 4 操作（同設定再戦 / 準備へ戻る / 作戦最初から / ステージ選択へ）。確認ダイアログは挟まない |
+| 敗北 retry | 敗北 overlay（`.battle-defeat-retry-overlay`）に同じ 4 操作（verify ON/OFF）。§9 参照 |
 | debug replay pause | 確認モードの battle-x replay pause（§1）とは独立。どちらかが ON なら `BattleEngine.tick` を止める |
 
 実装：`BattleView.ts`（状態・UI・`tick` ゲート）、`GameSession.ts`（`engine.tick` ゲート）、`battle-view.css`。

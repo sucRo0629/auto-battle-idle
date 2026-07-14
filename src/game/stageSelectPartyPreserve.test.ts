@@ -211,7 +211,11 @@ describe('stage select preserves party', () => {
     expect(session.getCurrentScreen()).toBe('battle');
 
     session.view.setBattlePaused(true);
-    container.querySelector<HTMLButtonElement>('.battle-pause-action-button')?.click();
+    container
+      .querySelector<HTMLButtonElement>(
+        '.battle-pause-action-button[data-ui-message-key="battle.returnToStageSelect"]',
+      )
+      ?.click();
     expect(session.getCurrentScreen()).toBe('stageSelect');
 
     container.querySelector<HTMLButtonElement>('.stage-selection-sortie')?.click();
