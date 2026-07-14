@@ -1,6 +1,7 @@
 import {
   defaultTargetForEffectType,
   formatTargetLabel,
+  isDefaultHostileChaseSpec,
 } from "../battle/skills/targetSpec.ts";
 import { resolveSkillTrigger } from "../battle/skillTrigger.ts";
 import { KNOCKBACK_MOVE_LOCK_SEC } from "../battle/ccEffects.ts";
@@ -86,6 +87,7 @@ import {
   phraseAtkBasedBarrier,
   phraseAtkBasedDamage,
   phraseAtkBasedDamageNoun,
+  phraseAtkBasedDamageToTargetNoun,
   phraseAtkBasedHeal,
   phraseAtkBasedHealAmount,
   phraseBarrierAmountBonusOnLowHpAlly,
@@ -129,8 +131,12 @@ import {
   phraseSurroundingDamageReduction,
   phraseSurroundingPrefix,
   phraseTargetHighestStatEnemy,
+  phraseTargetHighestStatEnemyNoun,
+  phraseTargetLowestHpEnemyNoun,
   phraseTargetLowestHpRatioEnemy,
+  phraseTargetLowestHpRatioEnemyNoun,
   phraseTargetRangedEnemy,
+  phraseTargetRangedEnemyNoun,
   phraseTimedEvasionBuff,
   phraseWardBarrierBuff,
   skillStat,
@@ -536,6 +542,43 @@ function formatCompactAtkBasedDamageSentence(
     return `${dmgPrefix}${formatResourceAmount(amount)} damage`.trim();
   }
   return `${dmgPrefix.trim()}${formatResourceAmount(amount)}のダメージ`;
+}
+
+/** 優先ターゲットの短縮名詞（デフォルト敵対は null）。 */
+function formatPriorityHostileTargetNoun(spec: TargetSpec): string | null {
+  if (isDefaultHostileChaseSpec(spec) || isOmittableDefaultEnemyTarget(spec)) {
+    return null;
+  }
+  if (spec.kind === "attackType" && spec.ranged && !spec.melee) {
+    return phraseTargetRangedEnemyNoun();
+  }
+  if (spec.kind === "stat" && spec.side === "enemy") {
+    if (spec.stat === "hp" && spec.order === "ratio") {
+      return phraseTargetLowestHpRatioEnemyNoun();
+    }
+    if (spec.stat === "hp" && spec.order === "lowest") {
+      return phraseTargetLowestHpEnemyNoun();
+    }
+    if (spec.order === "highest") {
+      return phraseTargetHighestStatEnemyNoun(
+        resolveTargetStatDisplayName(spec.stat),
+      );
+    }
+  }
+  return null;
+}
+
+function formatCompactAtkBasedDamageSentenceForTarget(
+  amount: ResourceAmountSpec | undefined,
+  damageType: DamageType | undefined,
+  targetSpec: TargetSpec,
+): string {
+  const core = formatCompactAtkBasedDamageSentence(amount, damageType);
+  if (amount?.kind !== "atkBased") return core;
+  const priorityNoun = formatPriorityHostileTargetNoun(targetSpec);
+  if (!priorityNoun) return core;
+  const pct = formatPercent(amount.atkScale ?? 1);
+  return phraseAtkBasedDamageToTargetNoun(priorityNoun, pct, damageType);
 }
 
 function formatCompactSingleTargetDamageSentence(
@@ -1749,7 +1792,11 @@ function formatActiveEffectDetail(
         ];
         if (targetFrame && effect.amount?.kind === "atkBased") {
           segments.push(
-            formatCompactAtkBasedDamageSentence(effect.amount, effect.damageType)
+            formatCompactAtkBasedDamageSentenceForTarget(
+              effect.amount,
+              effect.damageType,
+              targetSpec,
+            ),
           );
         } else if (
           effect.amount?.kind === "atkBased" &&
@@ -1765,6 +1812,18 @@ function formatActiveEffectDetail(
                 effect.amount,
                 effect.damageType
               )
+          );
+        } else if (effect.amount?.kind === "atkBased") {
+          const prioritySentence = formatCompactAtkBasedDamageSentenceForTarget(
+            effect.amount,
+            effect.damageType,
+            targetSpec,
+          );
+          const hitCount = effect.hitCount ?? 1;
+          segments.push(
+            hitCount > 1 && !formatPriorityHostileTargetNoun(targetSpec)
+              ? phraseMultiHitDamage(hitCount, prioritySentence)
+              : prioritySentence,
           );
         } else {
           const hint = formatCompactTargetHint(targetSpec);

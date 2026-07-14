@@ -244,6 +244,7 @@ export class WavePrepScreenHost {
       preset,
       this.gameData.combatModuleRegistry,
       this.callbacks.getSelectedModuleId(slotIndex),
+      { passives: this.gameData.skillRegistry.passives },
     );
     moduleHost.appendChild(
       createCombatModulePrepSection({

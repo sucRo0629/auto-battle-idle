@@ -98,12 +98,17 @@ describe('SkillMenuPanel combat module selection (R9.6-A)', () => {
     for (const candidate of candidates) {
       expect(candidate.querySelector('.combat-module-prep__name')?.textContent)
         .toBeTruthy();
+      expect(candidate.querySelector('.combat-module-prep__description'))
+        .toBeNull();
       expect(
-        candidate.querySelector('.combat-module-prep__description')?.textContent,
-      ).toBeTruthy();
-      expect(
-        candidate.querySelector('.combat-module-prep__behavior')?.textContent,
+        candidate.querySelector('.combat-module-prep__attack-interval')
+          ?.textContent,
       ).toContain('攻撃間隔');
+      expect(
+        candidate.querySelector('.combat-module-prep__effect-summary')
+          ?.textContent,
+      ).toBeTruthy();
+      expect(candidate.querySelector('.combat-module-prep__behavior')).toBeNull();
     }
 
     const selected = candidates.find(

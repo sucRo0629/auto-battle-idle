@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import {
-  buildCombatModuleBehaviorLines,
+  buildCombatModuleDiffSummary,
   buildCombatModulePrepViews,
 } from './combatModulePrepDisplay.ts';
 import {
@@ -12,7 +12,7 @@ import {
 } from './operationPassivePrepDisplay.ts';
 
 describe('combatModulePrepDisplay (R9.6-A)', () => {
-  it('lists only class combatModuleIds with display name and behavior lines', () => {
+  it('lists only class combatModuleIds with interval and effect summary', () => {
     const loaded = tryLoadGameData();
     if (!loaded.ok) throw new Error(loaded.error);
     const preset = loaded.data.classRegistry.df_guardian;
@@ -20,6 +20,7 @@ describe('combatModulePrepDisplay (R9.6-A)', () => {
       preset,
       loaded.data.combatModuleRegistry,
       undefined,
+      { passives: loaded.data.skillRegistry.passives },
     );
 
     expect(views.candidates.map((c) => c.moduleId)).toEqual(
@@ -27,11 +28,15 @@ describe('combatModulePrepDisplay (R9.6-A)', () => {
     );
     for (const candidate of views.candidates) {
       expect(candidate.displayName).not.toBe(candidate.moduleId);
-      expect(candidate.description.length).toBeGreaterThan(0);
-      expect(candidate.behaviorLines.some((line) => line.startsWith('攻撃間隔')))
-        .toBe(true);
-      expect(candidate.behaviorLines.some((line) => line.startsWith('挙動')))
-        .toBe(true);
+      expect(candidate.attackIntervalText).toMatch(/^攻撃間隔 /);
+      expect(candidate.effectSummary.length).toBeGreaterThan(0);
+      expect(candidate.effectSummary.startsWith('効果')).toBe(false);
+      expect(candidate.effectSummary).not.toContain('再使用');
+      expect(candidate.effectSummary).not.toContain('攻撃手段');
+      expect(candidate.effectSummary).not.toContain('効果範囲');
+      expect(candidate.effectSummary).not.toContain('プレースホルダー');
+      expect(candidate.effectSummary).not.toContain('最近傍');
+      expect(candidate.effectSummary).not.toContain('単体物理攻撃');
     }
     expect(views.candidates.filter((c) => c.selected)).toHaveLength(1);
     expect(views.candidates.find((c) => c.selected)?.statusLabel).toBe(
@@ -39,14 +44,60 @@ describe('combatModulePrepDisplay (R9.6-A)', () => {
     );
   });
 
-  it('builds behavior lines from module data without inventing fields', () => {
+  it('omits default hostile target and keeps mechanical effect text', () => {
     const loaded = tryLoadGameData();
     if (!loaded.ok) throw new Error(loaded.error);
     const module =
       loaded.data.combatModuleRegistry.df_guardian_mod_nearest_strike;
-    const lines = buildCombatModuleBehaviorLines(module);
-    expect(lines[0]).toContain(String(module.attackIntervalSec));
-    expect(lines.join('\n')).toContain('効果範囲');
+    const summary = buildCombatModuleDiffSummary(module);
+    expect(summary.attackIntervalText).toContain(
+      String(module.attackIntervalSec),
+    );
+    expect(summary.effectSummary).toContain('近接');
+    expect(summary.effectSummary).toContain('単体');
+    expect(summary.effectSummary).toContain('攻撃力の100%のダメージ');
+    expect(summary.effectSummary).not.toContain('最近傍');
+    expect(summary.effectSummary).not.toContain('再使用');
+  });
+
+  it('weaves class priority target into the atk-based damage sentence', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) throw new Error(loaded.error);
+    const preset = loaded.data.classRegistry.at_swordsman;
+    const views = buildCombatModulePrepViews(
+      preset,
+      loaded.data.combatModuleRegistry,
+      undefined,
+      { passives: loaded.data.skillRegistry.passives },
+    );
+    const single = views.candidates.find(
+      (c) => c.moduleId === 'at_swordsman_mod_single_slash',
+    );
+    expect(single?.effectSummary).toContain(
+      '最も防御力が高い敵に攻撃力の100%の物理ダメージ',
+    );
+    expect(single?.effectSummary).not.toContain('最近傍');
+
+    const pierce = views.candidates.find(
+      (c) => c.moduleId === 'at_swordsman_mod_pierce_slash',
+    );
+    expect(pierce?.effectSummary).toContain(
+      '最も防御力が高い敵に攻撃力の85%の物理ダメージ',
+    );
+    expect(pierce?.effectSummary.match(/貫通/g)?.length).toBe(1);
+  });
+
+  it('merges range and attack method without duplicating shape already in effect text', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) throw new Error(loaded.error);
+    const twin = loaded.data.combatModuleRegistry.at_sorcerer_mod_twin_bolt;
+    const twinSummary = buildCombatModuleDiffSummary(twin);
+    expect(twinSummary.effectSummary).toContain('遠隔');
+    expect(twinSummary.effectSummary).toContain('マルチロック 2');
+    expect(twinSummary.effectSummary).not.toContain(
+      'マルチロック（複数対象・同一可）',
+    );
+    expect(twinSummary.effectSummary).not.toMatch(/Hit 2/);
   });
 });
 

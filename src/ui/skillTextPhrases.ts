@@ -216,16 +216,51 @@ export function phraseTargetLowestHpRatioEnemy(): string {
     : "最もHP割合が低い敵を優先して攻撃する";
 }
 
+/** Compact noun for weaving into effect sentences（〜に攻撃力の…）. */
+export function phraseTargetLowestHpRatioEnemyNoun(): string {
+  return L() === "en"
+    ? "the enemy with the lowest HP ratio"
+    : "最もHP割合が低い敵";
+}
+
+export function phraseTargetLowestHpEnemyNoun(): string {
+  return L() === "en"
+    ? "the enemy with the lowest HP"
+    : "最もHPが低い敵";
+}
+
 export function phraseTargetHighestStatEnemy(statLabel: string): string {
   return L() === "en"
     ? `Prioritizes the enemy with the highest ${statLabel}`
     : `最も${statLabel}が高い敵を優先して攻撃する`;
 }
 
+export function phraseTargetHighestStatEnemyNoun(statLabel: string): string {
+  return L() === "en"
+    ? `the enemy with the highest ${statLabel}`
+    : `最も${statLabel}が高い敵`;
+}
+
 export function phraseTargetRangedEnemy(): string {
   return L() === "en"
     ? "Prioritizes ranged attackers"
     : "遠隔攻撃の敵を優先して攻撃する";
+}
+
+export function phraseTargetRangedEnemyNoun(): string {
+  return L() === "en" ? "ranged attackers" : "遠隔攻撃の敵";
+}
+
+export function phraseAtkBasedDamageToTargetNoun(
+  targetNoun: string,
+  pct: string,
+  damageType?: DamageType,
+): string {
+  const core = phraseAtkBasedDamageNoun(pct, damageType);
+  if (L() === "en") {
+    return `${core} to ${targetNoun}`;
+  }
+  return `${targetNoun}に${core}`;
 }
 
 export function phraseDefenseIgnorePercent(pct: string): string {

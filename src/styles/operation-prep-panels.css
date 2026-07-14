@@ -82,8 +82,9 @@
   padding: 0.1rem 0.35rem;
 }
 
-.combat-module-prep__description,
 .combat-module-prep__reason,
+.combat-module-prep__attack-interval,
+.combat-module-prep__effect-summary,
 .operation-passive-prep__effect,
 .operation-passive-prep__cost,
 .operation-passive-prep__reason,
@@ -96,11 +97,8 @@
   line-height: 1.45;
 }
 
-.combat-module-prep__behavior {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: var(--font-body-min-size);
-  line-height: 1.4;
+.combat-module-prep__attack-interval,
+.combat-module-prep__effect-summary {
   color: var(--party-text-soft, #c8b8a0);
 }
 

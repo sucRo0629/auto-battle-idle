@@ -836,6 +836,7 @@ export class SkillMenuPanel {
       preset,
       this.gameData.combatModuleRegistry,
       this.callbacks.getSelectedCombatModuleId(slotIndex),
+      { passives: this.gameData.skillRegistry.passives },
     );
     if (views.candidates.length === 0) return null;
 
