@@ -113,7 +113,7 @@ describe('resolveStageEnemyCompositionPreview', () => {
     const preview = resolveStageEnemyCompositionPreview(stage!);
 
     expect(preview).toMatchObject({
-      recommendedLevel: 10,
+      recommendedLevel: null,
       usesEnemyGroups: true,
       usesWaveEnemyGroups: false,
       totalEnemyCount: 2,
@@ -191,7 +191,7 @@ describe('resolveStageEnemyCompositionPreview', () => {
 
     const preview = resolveStageEnemyCompositionPreview(stage!);
     expect(preview).toMatchObject({
-      recommendedLevel: 10,
+      recommendedLevel: null,
       usesEnemyGroups: true,
       usesWaveEnemyGroups: true,
       totalEnemyCount: 6,
@@ -208,7 +208,7 @@ describe('resolveStageEnemyCompositionPreview', () => {
     const preview = resolveStageEnemyCompositionPreview(stage!);
 
     expect(preview).toMatchObject({
-      recommendedLevel: 10,
+      recommendedLevel: null,
       usesEnemyGroups: true,
       usesWaveEnemyGroups: false,
       totalEnemyCount: 3,

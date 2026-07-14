@@ -347,26 +347,26 @@ describe('stage enemyGroups validation', () => {
     });
   });
 
-  it('rejects enemyGroups without recommendedLevel', () => {
-    expect(() =>
-      parseAndValidateGameDataJson(
-        {
-          classes: [minimalStageClass],
-          enemies: [minimalStageEnemy],
-          skills: minimalStageSkills,
-          stages: [
-            {
-              id: 'bad',
-              displayName: 'Bad',
-              enemyGroups: [{ classId: 'df_paladin', count: 1 }],
-              waves: [{ enemies: [] }],
-            },
-          ],
-          parties: emptyGameDataShell.parties,
-        },
-        { mode: 'editor' },
-      ),
-    ).toThrow(/recommendedLevel.*required when enemyGroups is set/i);
+  it('accepts enemyGroups without recommendedLevel', () => {
+    const result = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [minimalStageEnemy],
+        skills: minimalStageSkills,
+        stages: [
+          {
+            id: 'ok',
+            displayName: 'Ok',
+            enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+            waves: [{ enemies: [] }],
+          },
+        ],
+        parties: emptyGameDataShell.parties,
+      },
+      { mode: 'editor' },
+    );
+    expect(result.stages[0]?.recommendedLevel).toBeUndefined();
+    expect(result.stages[0]?.enemyGroups).toHaveLength(1);
   });
 
   it('keeps legacy wave templateId validation', () => {
@@ -514,13 +514,13 @@ describe('stage enemyGroups validation', () => {
     const stage = result.data.stages.find((entry) => entry.id === 'eg_smoke');
     expect(stage).toMatchObject({
       id: 'eg_smoke',
-      recommendedLevel: 10,
       enemyGroups: [
         { classId: 'df_guardian', count: 1 },
         { classId: 'at_hunter', count: 1 },
       ],
       waves: [{ enemies: [] }],
     });
+    expect(stage?.recommendedLevel).toBeUndefined();
   });
 
   it('loads ranged_test stage in real game data bundle', () => {
@@ -531,13 +531,13 @@ describe('stage enemyGroups validation', () => {
     const stage = result.data.stages.find((entry) => entry.id === 'ranged_test');
     expect(stage).toMatchObject({
       id: 'ranged_test',
-      recommendedLevel: 10,
       enemyGroups: [
         { classId: 'df_guardian', count: 1 },
         { classId: 'at_hunter', count: 2 },
       ],
       waves: [{ enemies: [] }],
     });
+    expect(stage?.recommendedLevel).toBeUndefined();
   });
 });
 
@@ -646,30 +646,30 @@ describe('wave enemyGroups validation (R6g-1)', () => {
     ).toThrow(/Unknown selectedCombatModuleId "missing_module_id"/);
   });
 
-  it('rejects waves[].enemyGroups without recommendedLevel', () => {
-    expect(() =>
-      parseAndValidateGameDataJson(
-        {
-          classes: [minimalStageClass],
-          enemies: [minimalStageEnemy],
-          skills: minimalStageSkills,
-          stages: [
-            {
-              id: 'bad_wave_level',
-              displayName: 'Bad Wave Level',
-              waves: [
-                {
-                  enemies: [],
-                  enemyGroups: [{ classId: 'df_paladin', count: 1 }],
-                },
-              ],
-            },
-          ],
-          parties: emptyGameDataShell.parties,
-        },
-        { mode: 'editor' },
-      ),
-    ).toThrow(/recommendedLevel.*required when enemyGroups is set/i);
+  it('accepts waves[].enemyGroups without recommendedLevel', () => {
+    const result = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [minimalStageEnemy],
+        skills: minimalStageSkills,
+        stages: [
+          {
+            id: 'ok_wave_level',
+            displayName: 'Ok Wave Level',
+            waves: [
+              {
+                enemies: [],
+                enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+              },
+            ],
+          },
+        ],
+        parties: emptyGameDataShell.parties,
+      },
+      { mode: 'editor' },
+    );
+    expect(result.stages[0]?.recommendedLevel).toBeUndefined();
+    expect(result.stages[0]?.waves[0]?.enemyGroups).toHaveLength(1);
   });
 
   it('keeps stage-level enemyGroups and legacy waves[].enemies working', () => {

@@ -28,7 +28,7 @@ describe('expandEnemyGroups', () => {
     expect(specs).toHaveLength(1);
     expect(specs[0]).toMatchObject({
       classId: 'df_paladin',
-      level: 10,
+      level: 1,
       groupIndex: 0,
       indexInGroup: 0,
       groupCount: 1,
@@ -72,12 +72,24 @@ describe('expandEnemyGroups', () => {
     expect(specs[2]?.groupCount).toBe(1);
   });
 
-  it('uses stage.recommendedLevel as level', () => {
+  it('uses ENEMY_GROUP_BASE_LEVEL (ignores recommendedLevel)', () => {
     const specs = expandEnemyGroups(
       stageWithEnemyGroups([{ classId: 'df_paladin', count: 1 }], 25),
     );
 
-    expect(specs[0]?.level).toBe(25);
+    expect(specs[0]?.level).toBe(1);
+  });
+
+  it('expands without recommendedLevel', () => {
+    const stage: StageDef = {
+      id: 'no_level',
+      displayName: 'No Level',
+      enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+      waves: [{ enemies: [] }],
+    };
+    const specs = expandEnemyGroups(stage);
+    expect(specs).toHaveLength(1);
+    expect(specs[0]?.level).toBe(1);
   });
 
   it('preserves scales from the group', () => {

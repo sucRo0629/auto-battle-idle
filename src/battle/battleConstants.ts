@@ -20,8 +20,8 @@ export {
 export const COMBAT_CAMERA_CENTER_X = COMBAT_SAFE_CENTER_X;
 
 /**
- * 敵 spawnX=0 の battleX — 安全領域の右寄り。
- * 味方左アンカー（COMBAT_SAFE_LEFT）と対称に戦場幅を使う。
+ * 敵 spawnX=0 の battleX — 敵 deploy 帯の左端（clamp 下限）。
+ * 隊形そのものの右端アンカーは `COMBAT_SAFE_RIGHT`（味方左アンカーの鏡像。`enemyFormation.ts`）。
  */
 export const ENEMY_SPAWN_ORIGIN_X = Math.round(
   COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH * (2 / 3),

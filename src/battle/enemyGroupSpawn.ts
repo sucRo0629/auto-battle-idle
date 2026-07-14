@@ -4,6 +4,13 @@ import type {
   StageDef,
 } from './types.ts';
 
+/**
+ * enemyGroups 敵の内部 Lv 固定値。
+ * 強さは recommendedLevel / ランクでは表現しない（兵科基礎ステ + scale のみ）。
+ * computeStatsAtLevel / resolveLearnedSkills への互換入力として使う。
+ */
+export const ENEMY_GROUP_BASE_LEVEL = 1;
+
 /** scale 未指定時は 1（乗算なし） */
 export function resolveEnemyStatScale(scale: number | undefined): number {
   return scale ?? 1;
@@ -45,20 +52,13 @@ export function expandEnemyGroups(stage: StageDef): ResolvedEnemySpawnSpec[] {
     return [];
   }
 
-  const level = stage.recommendedLevel;
-  if (level === undefined) {
-    throw new Error(
-      `recommendedLevel is required when enemyGroups is set (stage: ${stage.id})`,
-    );
-  }
-
   const specs: ResolvedEnemySpawnSpec[] = [];
   for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
     const group = groups[groupIndex]!;
     for (let indexInGroup = 0; indexInGroup < group.count; indexInGroup++) {
       specs.push({
         classId: group.classId,
-        level,
+        level: ENEMY_GROUP_BASE_LEVEL,
         hpScale: group.hpScale,
         atkScale: group.atkScale,
         defScale: group.defScale,

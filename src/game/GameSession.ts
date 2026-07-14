@@ -199,6 +199,7 @@ export class GameSession {
         onRetryCurrentWave: () => this.retryCurrentWaveFromCheckpoint(),
         onReturnToFormationPrep: () => this.returnToFormationPrep(),
         onRestartOperationFromWaveZero: () => this.restartOperationFromWaveZero(),
+        onReturnToStageSelect: () => this.returnToStageSelectFromWavePrep(),
       },
     );
 
@@ -613,6 +614,21 @@ export class GameSession {
   /** 敗北 retry UI からステージ選択へ戻る。 */
   returnToStageSelectFromDefeatRetry(): boolean {
     if (!this.shouldShowDefeatRetry()) return false;
+    return this.abortIncompleteOperationToStageSelect();
+  }
+
+  /** Wave 間準備から未完了作戦を破棄してステージ選択へ戻れるか */
+  canReturnToStageSelectFromWavePrep(): boolean {
+    return (
+      this.currentScreen === 'wavePrep' &&
+      this.operationState !== null &&
+      !this.operationState.isCompleted
+    );
+  }
+
+  /** Wave 間準備から現ステージを諦めてステージ選択へ戻る。確認ダイアログなし。 */
+  returnToStageSelectFromWavePrep(): boolean {
+    if (!this.canReturnToStageSelectFromWavePrep()) return false;
     return this.abortIncompleteOperationToStageSelect();
   }
 

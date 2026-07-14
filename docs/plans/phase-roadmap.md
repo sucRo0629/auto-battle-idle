@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R10 Backend + 構造 Player 完了**（`r10_prototype`・評価記録 §95）。**R9.6（A+B）Player 完了**。**R5〜R9.5 Backend / R9 authoring 完了**。次は試作成立後バックログ。詳細は [current-task.md §95](../ai-handoff/current-task.md)。
+**現在地:** **R10 Backend + 構造 Player 完了**（`r10_prototype`・§95）。**Stage 想定 Lv 廃止追従**（handoff §96 — 新敵は基礎ステ + scale）。**R9.6（A+B）Player 完了**。次は試作成立後バックログ / 手元評価。詳細は [current-task.md §95–96](../ai-handoff/current-task.md)。
 
 ---
 

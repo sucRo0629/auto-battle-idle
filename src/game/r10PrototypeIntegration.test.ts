@@ -127,13 +127,20 @@ function selectWavePrepModule(moduleId: string, slotIndex = GUARDIAN_SLOT): void
   candidate.click();
 }
 
-function clickWavePrepAcquire(slotIndex = GUARDIAN_SLOT): void {
+function clickWavePrepAcquire(
+  passiveId: string = WAVE_PREP_PASSIVE_ID,
+  slotIndex = GUARDIAN_SLOT,
+): void {
   const rows = document.querySelectorAll<HTMLElement>('.wave-prep-screen__slot');
   const row = rows[slotIndex];
   if (!row) throw new Error(`Wave prep slot row not found: ${slotIndex}`);
+  const card = row.querySelector<HTMLElement>(
+    `.operation-passive-prep__candidate[data-passive-id="${passiveId}"]`,
+  );
+  if (!card) throw new Error(`Wave prep passive card not found: ${passiveId}`);
   const button =
-    row.querySelector<HTMLButtonElement>('.operation-passive-prep__acquire:not(:disabled)') ??
-    row.querySelector<HTMLButtonElement>('.operation-passive-prep__acquire');
+    card.querySelector<HTMLButtonElement>('.operation-passive-prep__acquire:not(:disabled)') ??
+    card.querySelector<HTMLButtonElement>('.operation-passive-prep__acquire');
   if (!button) throw new Error('Wave prep passive acquire button not found');
   button.click();
 }
@@ -209,6 +216,8 @@ describe('R10 prototype stage', () => {
 
     expect(counts(wave0)).toEqual({ at_swordsman: 2, df_guardian: 1 });
     expect(counts(wave1)).toEqual({ at_sorcerer: 2, at_swordsman: 1 });
+    // 新仕様: recommendedLevel なし。敵ステは基礎 + scale
+    expect(gameData.stages.find((entry) => entry.id === STAGE_ID)?.recommendedLevel).toBeUndefined();
     expect(
       wave0
         .filter((unit) => unit.classId === 'at_swordsman')
@@ -231,10 +240,10 @@ describe('R10 prototype stage', () => {
 
   it('exposes R5 operation-passive candidates for wave prep judgments', () => {
     expect(gameData.operationPassiveCatalog.candidatesByClass).toMatchObject({
-      df_guardian: [WAVE_PREP_PASSIVE_ID],
-      at_swordsman: [SWORDSMAN_PASSIVE_ID],
-      at_sorcerer: ['at_sorcerer_passive_1'],
-      sp_cleric: ['sp_cleric_passive_1'],
+      df_guardian: expect.arrayContaining([WAVE_PREP_PASSIVE_ID]),
+      at_swordsman: expect.arrayContaining([SWORDSMAN_PASSIVE_ID]),
+      at_sorcerer: expect.arrayContaining(['at_sorcerer_passive_1']),
+      sp_cleric: expect.arrayContaining(['sp_cleric_passive_1']),
     });
     expect(gameData.operationPassiveCatalog.passiveAcquireCost).toBe(1);
     expect(gameData.operationPassiveCatalog.waveClearResourceGrant).toBe(1);

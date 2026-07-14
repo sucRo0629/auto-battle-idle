@@ -29,6 +29,34 @@
 
 - 作戦内では **Wave 順** に進む
 - 作戦敗北で **別作戦の選択状態を巻き戻さない**
+- **ステージに想定レベル / ランクは置かない**（敵の強さは兵科基礎ステ + `enemyGroups` scale）
+- **クラス側に恒久 Lv / ランク成長は置かない**（強化は作戦内リソース → パッシブ取得。[operation-loop.md](operation-loop.md)）
+
+### Stage / Wave データ（現行方針）
+
+正本の詳細責務は [combat-data-schema-refactor.md §6–7](../plans/combat-data-schema-refactor.md#6-敵グループenemygroups)。実装追随メモ:
+
+| 項目 | 現行方針 |
+| ---- | -------- |
+| Wave 編成 | `waves[].enemyGroups`（stage 直下 `enemyGroups` は単一 Wave 省略 / 移行期） |
+| 敵の強さ | **`level` / `recommendedLevel` で表現しない**。`classId` 基礎ステ × `hpScale` / `atkScale` / `defScale` / `resScale` |
+| `recommendedLevel` | **legacy 任意フィールド**（旧 Level Sync・☆・UI）。新 Stage では未設定。validate でも `enemyGroups` 必須条件にしない |
+| 味方強化 | Wave 勝利後の **作戦内リソース** でパッシブ取得（恒久 EXP / Lv ではない） |
+| 敵内部 spawn | 互換のため `ENEMY_GROUP_BASE_LEVEL`（=1）を `computeStatsAtLevel` 等へ渡すが、強さ差の正本ではない |
+
+```typescript
+/** 新仕様 Stage（概念）。実装型は types.ts StageDef */
+interface StageDefCurrent {
+  id: string;
+  displayName: string;
+  waves: Array<{
+    enemies: []; // 移行期 placeholder 可
+    enemyGroups: StageEnemyGroup[];
+  }>;
+  formationHintJa?: string;
+  // recommendedLevel?: number; // legacy — 新規に書かない
+}
+```
 
 ### Legacy — 旧線形ステージ進行（新作戦ループの正本から外す）
 
@@ -347,12 +375,13 @@ Victory 確定時に、当該 sortie のオプションを入力として **`res
 #### データ形状
 
 ```typescript
-/** ステージ JSON（6b / 8b 以降）— 正本形状 */
+/** ステージ JSON — legacy Phase 12 / 体験版記録用の形状メモ（新正本ではない） */
 interface StageDef {
   id: string;
   displayName: string;
-  recommendedLevel?: number; // 想定レベル。☆ 判定・Level Sync 上限
-  /** v0.3.2 — クラスベース敵編成。設定時は recommendedLevel 必須。 */
+  /** legacy — 想定レベル。新仕様 Stage では未使用・未設定可 */
+  recommendedLevel?: number;
+  /** クラスベース敵編成。新仕様では `waves[].enemyGroups` が正本 */
   enemyGroups?: StageEnemyGroup[];
   /** legacy 敵編成。新正本では enemyGroups あり時は **不要**（省略可）。 */
   waves?: StageWave[];
@@ -369,20 +398,15 @@ interface StageEnemyGroup {
 }
 ```
 
-**敵編成の二系統（v0.3.2）**
+**敵編成の二系統（v0.3.2 → 現行）**
 
-| 経路 | データ | 戦闘生成（実装フェーズ） |
-| ---- | ------ | ------------------------ |
-| **新** | `enemyGroups` + `recommendedLevel` | **Phase B1** — `expandEnemyGroups` で中間スペック展開。**Phase B2** — `createEnemyFromClassGroup` / `createEnemiesForStage` 分岐で `CombatantState` 生成・stats × scale。**Phase C** — `enemyFormation.ts` で射程昇順 spawnX 自動配置（legacy `spawnX` 経路は不変）。**Phase D/E** — デバッグ表示・エディタ |
-| **legacy** | `waves[].enemies[]` の `templateId` + `spawnX` | 現行どおり `enemies.json` テンプレから生成 |
+| 経路 | データ | 戦闘生成 |
+| ---- | ------ | -------- |
+| **新（現行方針）** | `waves[].enemyGroups`（または stage 直下）+ scale。**`recommendedLevel` 不要** | `expandEnemyGroups` → 基礎ステ（内部 `ENEMY_GROUP_BASE_LEVEL`）× scale。配置は `enemyFormation.ts` |
+| **legacy** | `waves[].enemies[]` の `templateId` + `spawnX` | `enemies.json` テンプレから生成 |
 
-- **Phase A（現状）:** 型・validate のみ。戦闘生成・射程配置・UI は未接続。
-- **Phase B1:** `expandEnemyGroups`（`src/battle/enemyGroupSpawn.ts`）が `StageDef.enemyGroups` を `ResolvedEnemySpawnSpec[]` へ展開。`recommendedLevel` を `level` に使用。`enemyGroups` 未設定時は空配列（legacy フォールバックなし）。
-- **Phase B2:** `createEnemiesForStage` が `enemyGroups` あり & `waveIndex === 0` のとき `expandEnemyGroups` → `createEnemyFromClassGroup` で敵を生成。`computeStatsAtLevel` 後に各 scale を乗算（未指定 scale = 1、`Math.round`）。スキルは `resolveLearnedSkills` + `getUnlockedSkillSlotCount(level)`。`waveIndex > 0` は空配列。legacy 経路は不変。
-- **Phase C（現状）:** `enemyFormation.ts` が `traits.rangePx` 昇順（同射程は group 順）で `PARTY_FORMATION_SLOT_SPACING` 間隔の spawnX を割当。`SPAWN_X_MAX` で clamp。`createEnemiesFromEnemyGroups` から接続。legacy `waves[].spawnX` は不変。
-- **未確定（Phase B2）:** `enemyGroups` ステージの撃破 EXP（`computeStageExpReward` は現状 legacy `waves` / `templateId` のみ集計）。
-
-- `enemyGroups` ありのステージは `recommendedLevel` **必須**（validate）。
+- **Phase B1/B2（旧記述の訂正）:** かつては `recommendedLevel` を敵 Lv に使っていた。**現行方針では敵ステに使わない**（[上記 §Stage / Wave データ](#stage--wave-データ現行方針)）。
+- `enemyGroups` ありでも `recommendedLevel` は **任意**（validate 必須にしない）。
 - **正本:** `enemyGroups` があれば **`waves` は不要**（省略可）。体験版は 1 stage = 1 `enemyGroups` 配列。
 - **移行期（Phase A validate / loader）:** 現行 `parseStages` が `waves` 非空配列を要求するため、データ上は `waves: [{ enemies: [] }]` プレースホルダを置く。空 wave では legacy `templateId` 検証をスキップ。将来 validate を正本に合わせて `waves` 省略可にする。
 - legacy ステージ（`enemyGroups` なし）は従来どおり `waves[].enemies` 非空必須。
@@ -392,7 +416,7 @@ interface StageEnemyGroup {
 /** enemyGroups 展開後の 1 体分（CombatantState 生成前） */
 interface ResolvedEnemySpawnSpec {
   classId: ClassId;
-  level: number; // stage.recommendedLevel
+  level: number; // 内部互換 ENEMY_GROUP_BASE_LEVEL。強さの正本ではない
   hpScale?: number;
   atkScale?: number;
   defScale?: number;
@@ -405,7 +429,7 @@ interface ResolvedEnemySpawnSpec {
 ```
 
 ```typescript
-/** 1 回の勝利ごとに 1 件追加 */
+/** 1 回の勝利ごとに 1 件追加（legacy Stage Records） */
 interface StageClearEntry {
   clearLevel: number; // 勝利時の実効 Lv（上記 §記録するレベル）
   clearTimeMs: number; // 戦闘開始〜全 Wave クリア

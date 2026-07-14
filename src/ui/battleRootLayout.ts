@@ -16,6 +16,16 @@ import {
 
 /** 草タイル描画帯の高さ — `formationLayout.GRASS_BAND_H` と同値（import 循環回避） */
 const GRASS_BAND_H = 24;
+/**
+ * フィールド描画スケール — `formationLayout.BATTLE_FIELD_SPRITE_SCALE` と同値。
+ * 空／地面境界の DOM 勾配に Mirror する。
+ */
+const BATTLE_FIELD_SPRITE_SCALE = 2;
+/**
+ * scale 1 の草上昇 = ずらし最大 30 + モデル占有 32。
+ * `spriteVisualDepth.MAX_VISUAL_DEPTH_RISE` と同値（import 循環回避）。
+ */
+const MAX_VISUAL_DEPTH_RISE_SCALE1 = 62;
 
 export {
   BATTLE_HUD_OVERLAY_CARD_PAD_X,
@@ -47,12 +57,18 @@ export const BATTLE_TOP_INFO_RECT: BattleRootRect = {
   x: 24,
   y: 30,
   w: 1232,
-  h: 40,
+  /** Fits stage plate (Stage + Wave lines); was 40 and overflowed into enemyHud. */
+  h: 52,
 };
 
-/** Top edge of enemyHud band — directly below topInfo (battle-field.md §8 Phase 2). */
+/** Vertical gap between topInfo bottom and enemyHud top (stage plate breathing room). */
+export const ENEMY_HUD_GAP_BELOW_TOP_INFO = 10;
+
+/** Top edge of enemyHud band — below topInfo + gap (battle-field.md §8 Phase 2). */
 export const ENEMY_HUD_TOP_Y =
-  BATTLE_TOP_INFO_RECT.y + BATTLE_TOP_INFO_RECT.h;
+  BATTLE_TOP_INFO_RECT.y +
+  BATTLE_TOP_INFO_RECT.h +
+  ENEMY_HUD_GAP_BELOW_TOP_INFO;
 
 import {
   computeEnemyHudCardStackFootprint,
@@ -253,13 +269,21 @@ export function computeEnemyHudPanelHeight(aliveCount: number): number {
 /** battle-x-debug panel top — left column, below top enemyHud. */
 export const BATTLE_X_DEBUG_PANEL_TOP = BATTLE_LANE_TOP;
 
-/** Ground line Y on battle-root screen coordinates (above bottom partyHud). */
+/** Ground line Y on battle-root screen coordinates (feet / logical ground). */
 export const BATTLE_GROUND_LINE_SCREEN_Y =
   BATTLE_LANE_TOP + BATTLE_CANVAS_HEIGHT - GRASS_BAND_H;
 
-/** Ratio for DOM background sky/ground gradient (0–100). */
+/**
+ * 空／地面の見た目境界（battle-root Y）。
+ * Canvas `grassTop` と同じく、群れ最大 Y ずらし + モデル占有だけ足元ラインより上。
+ */
+export const BATTLE_SKY_GROUND_SEAM_SCREEN_Y =
+  BATTLE_GROUND_LINE_SCREEN_Y -
+  MAX_VISUAL_DEPTH_RISE_SCALE1 * BATTLE_FIELD_SPRITE_SCALE;
+
+/** Ratio for DOM background sky/ground gradient (0–100). Uses visual seam. */
 export const BATTLE_GROUND_LINE_SCREEN_RATIO =
-  (BATTLE_GROUND_LINE_SCREEN_Y / BATTLE_ROOT_HEIGHT) * 100;
+  (BATTLE_SKY_GROUND_SEAM_SCREEN_Y / BATTLE_ROOT_HEIGHT) * 100;
 
 /** battle lane 下端（キャンバス下端）の battle-root Y */
 export function battleHudToolbarTopY(): number {

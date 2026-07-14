@@ -8,7 +8,7 @@ import {
   SPRITE_LAYOUT_SIZE,
   spriteSheetMaxOverflowTop,
 } from './spriteLayout.ts';
-import { VISUAL_DEPTH_TOP_PAD_PX } from './spriteVisualDepth.ts';
+import { visualDepthTopPadPx } from './spriteVisualDepth.ts';
 
 export { CANVAS_W, SPRITE_GAP, SPRITE_WIDTH } from '../battle/battleConstants.ts';
 export { PARTY_FORMATION_SLOT_SPACING } from '../battle/battleConstants.ts';
@@ -26,7 +26,7 @@ export const BATTLE_FIELD_SPRITE_SCALE = 2;
 export function battleFieldTopPad(spriteScale: number): number {
   const spriteFootprint = SPRITE_LAYOUT_SIZE * spriteScale;
   const minSkyPad =
-    spriteSheetMaxOverflowTop() + VISUAL_DEPTH_TOP_PAD_PX + 48;
+    spriteSheetMaxOverflowTop() + visualDepthTopPadPx(spriteScale) + 48;
   const fromGround =
     BATTLE_CANVAS_HEIGHT - GRASS_BAND_H - spriteFootprint;
   return Math.max(minSkyPad, fromGround);

@@ -32,7 +32,6 @@
   {
     "id": "ranged_test",
     "displayName": "ranged_test",
-    "recommendedLevel": 10,
     "enemyGroups": [
       {
         "classId": "df_guardian",
@@ -144,7 +143,6 @@
   {
     "id": "eg_smoke",
     "displayName": "EG Smoke",
-    "recommendedLevel": 10,
     "enemyGroups": [
       {
         "classId": "df_guardian",
@@ -172,7 +170,6 @@
   {
     "id": "r10_prototype",
     "displayName": "R10試作・二連波",
-    "recommendedLevel": 10,
     "formationHintJa": "Wave1は近接の単体圧、Wave2は貫通・双弾の線上圧。出撃前方式と Wave 間の方式／作戦内パッシブで解法を変える試作。",
     "waves": [
       {

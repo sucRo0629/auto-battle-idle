@@ -89,7 +89,7 @@ describe('enemyFormation', () => {
     expect(sorted.map((u) => u.key)).toEqual(['g0_i0', 'g0_i1', 'g1_i1']);
   });
 
-  it('assigns spawnX with PARTY_FORMATION_SLOT_SPACING between sorted slots', () => {
+  it('assigns spawnX right-anchored (mirror of party left anchor)', () => {
     const positions = computeEnemyFormationSpawnX([
       {
         key: 'rear',
@@ -105,8 +105,13 @@ describe('enemyFormation', () => {
       },
     ]);
 
-    expect(positions.get('front')).toBe(0);
-    expect(positions.get('rear')).toBe(PARTY_FORMATION_SLOT_SPACING);
+    expect(positions.get('rear')).toBe(SPAWN_X_MAX);
+    expect(positions.get('front')).toBe(
+      SPAWN_X_MAX - PARTY_FORMATION_SLOT_SPACING,
+    );
+    expect(resolveEnemySpawnBattleX(positions.get('rear')!)).toBe(
+      ENEMY_SPAWN_ORIGIN_X + SPAWN_X_MAX,
+    );
   });
 
   it('resolveEnemyGroupSpawnX maps specs by spawnUnitKey', () => {
@@ -119,8 +124,31 @@ describe('enemyFormation', () => {
       rangePx(classId),
     );
 
-    expect(positions.get('g0_i0')).toBe(PARTY_FORMATION_SLOT_SPACING);
-    expect(positions.get('g1_i0')).toBe(0);
+    expect(positions.get('g0_i0')).toBe(SPAWN_X_MAX);
+    expect(positions.get('g1_i0')).toBe(
+      SPAWN_X_MAX - PARTY_FORMATION_SLOT_SPACING,
+    );
+  });
+
+  it('mirrors party left-anchor depth onto combat safe right', () => {
+    const unitCount = 4;
+    const units = Array.from({ length: unitCount }, (_, i) => ({
+      key: `u${i}`,
+      rangePx: i * 10,
+      groupIndex: 0,
+      indexInGroup: i,
+    }));
+    const positions = computeEnemyFormationSpawnX(units);
+    const frontSpawnX = positions.get('u0')!;
+    const rearSpawnX = positions.get(`u${unitCount - 1}`)!;
+
+    expect(rearSpawnX).toBe(SPAWN_X_MAX);
+    expect(frontSpawnX).toBe(
+      SPAWN_X_MAX - (unitCount - 1) * PARTY_FORMATION_SLOT_SPACING,
+    );
+    expect(resolveEnemySpawnBattleX(rearSpawnX)).toBe(
+      ENEMY_SPAWN_ORIGIN_X + SPAWN_X_MAX,
+    );
   });
 
   it('clamps spawnX to SPAWN_X_MAX', () => {
@@ -182,6 +210,7 @@ describe('createEnemiesForStage enemyGroups spawn placement', () => {
     const assassin = enemies.find((e) => e.classId === 'at_assassin')!;
     expect(assassin.spawnX).toBeLessThan(hunter.spawnX);
     expect(hunter.spawnX - assassin.spawnX).toBe(PARTY_FORMATION_SLOT_SPACING);
+    expect(hunter.spawnX).toBe(SPAWN_X_MAX);
   });
 
   it('keeps legacy stage spawnX from waves data', () => {

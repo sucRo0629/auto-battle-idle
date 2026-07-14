@@ -76,7 +76,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
     expect(enemies.filter((e) => e.classId === 'at_hunter')).toHaveLength(1);
   });
 
-  it('uses recommendedLevel for stats via computeStatsAtLevel', () => {
+  it('ignores recommendedLevel for stats; always uses base level', () => {
     const preset = loadGameData().classRegistry.df_paladin!;
     const stageLv5 = stageWithEnemyGroups(
       [{ classId: 'df_paladin', count: 1 }],
@@ -87,8 +87,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
       15,
       'enemy_groups_lv15',
     );
-    const expectedLv5 = computeStatsAtLevel(preset, preset, 5, levelCurves);
-    const expectedLv15 = computeStatsAtLevel(preset, preset, 15, levelCurves);
+    const expectedBase = computeStatsAtLevel(preset, preset, 1, levelCurves);
 
     const [enemyLv5] = createEnemiesForStage(
       gameDataWithStage(stageLv5),
@@ -104,17 +103,16 @@ describe('createEnemiesForStage enemyGroups path', () => {
     )!;
 
     expect(enemyLv5).toMatchObject({
-      maxHp: expectedLv5.maxHp,
-      atk: expectedLv5.atk,
-      def: expectedLv5.def,
-      res: expectedLv5.res,
-      hp: expectedLv5.maxHp,
+      maxHp: expectedBase.maxHp,
+      atk: expectedBase.atk,
+      def: expectedBase.def,
+      res: expectedBase.res,
+      hp: expectedBase.maxHp,
     });
-    expect(enemyLv15!.maxHp).toBeGreaterThan(enemyLv5!.maxHp);
     expect(enemyLv15).toMatchObject({
-      maxHp: expectedLv15.maxHp,
-      atk: expectedLv15.atk,
-      def: expectedLv15.def,
+      maxHp: expectedBase.maxHp,
+      atk: expectedBase.atk,
+      def: expectedBase.def,
     });
   });
 
@@ -130,7 +128,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
         resScale: 1.2,
       },
     ]);
-    const base = computeStatsAtLevel(preset, preset, 10, levelCurves);
+    const base = computeStatsAtLevel(preset, preset, 1, levelCurves);
     const [enemy] = createEnemiesForStage(
       gameDataWithStage(stage),
       stage.id,
@@ -150,7 +148,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
   it('treats undefined scales as 1', () => {
     const preset = loadGameData().classRegistry.df_paladin!;
     const stage = stageWithEnemyGroups([{ classId: 'df_paladin', count: 1 }]);
-    const base = computeStatsAtLevel(preset, preset, 10, levelCurves);
+    const base = computeStatsAtLevel(preset, preset, 1, levelCurves);
     const [enemy] = createEnemiesForStage(
       gameDataWithStage(stage),
       stage.id,
@@ -230,15 +228,14 @@ describe('createEnemiesForStage enemyGroups path', () => {
     expect(enemy.hp).toBe(enemy.maxHp);
   });
 
-  it('limits battle actives by Lv0 / Lv10 / Lv20 unlock tiers', () => {
+  it('does not vary legacy active unlocks by recommendedLevel', () => {
     const gameData = loadGameData();
-    const preset = gameData.classRegistry.df_paladin!;
 
-    const activeIdsAt = (level: number) => {
+    const activeIdsAtRecommended = (recommendedLevel: number) => {
       const stage = stageWithEnemyGroups(
         [{ classId: 'df_paladin', count: 1 }],
-        level,
-        `tier_lv${level}`,
+        recommendedLevel,
+        `tier_lv${recommendedLevel}`,
       );
       const [enemy] = createEnemiesForStage(
         gameDataWithStage(stage),
@@ -251,18 +248,11 @@ describe('createEnemiesForStage enemyGroups path', () => {
         .map((cd) => cd.skillId);
     };
 
-    // Lv0: active_1 only (2nd active unlocks at Lv1 — efbbab2)
-    expect(activeIdsAt(0)).toHaveLength(1);
-    expect(activeIdsAt(9)).toHaveLength(2);
-    expect(activeIdsAt(10)).toHaveLength(3);
-    expect(activeIdsAt(19)).toHaveLength(3);
-    expect(activeIdsAt(20)).toHaveLength(4);
-
-    const allLearned = preset.skills
-      .filter((entry) => entry.level <= 20)
-      .flatMap((entry) => entry.skillIds)
-      .filter((id) => gameData.skillRegistry.actives[id]);
-    expect(activeIdsAt(20).every((id) => allLearned.includes(id))).toBe(true);
+    const at1 = activeIdsAtRecommended(1);
+    const at10 = activeIdsAtRecommended(10);
+    const at20 = activeIdsAtRecommended(20);
+    expect(at10).toEqual(at1);
+    expect(at20).toEqual(at1);
   });
 });
 
@@ -384,13 +374,13 @@ describe('eg_smoke pilot stage (stages.json)', () => {
 
     expect(stage).toMatchObject({
       id: 'eg_smoke',
-      recommendedLevel: 10,
       enemyGroups: [
         { classId: 'df_guardian', count: 1 },
         { classId: 'at_hunter', count: 1 },
       ],
       waves: [{ enemies: [] }],
     });
+    expect(stage!.recommendedLevel).toBeUndefined();
     expect(stage!.waves[0]?.enemies).toHaveLength(0);
 
     const enemies = createEnemiesForStage(
@@ -408,7 +398,7 @@ describe('eg_smoke pilot stage (stages.json)', () => {
     ]);
     const specs = expandEnemyGroups(stage!);
     expect(specs).toHaveLength(2);
-    expect(specs.every((s) => s.level === 10)).toBe(true);
+    expect(specs.every((s) => s.level === 1)).toBe(true);
   });
 });
 
@@ -423,13 +413,13 @@ describe('ranged_test stage (stages.json)', () => {
 
     expect(stage).toMatchObject({
       id: 'ranged_test',
-      recommendedLevel: 10,
       enemyGroups: [
         { classId: 'df_guardian', count: 1 },
         { classId: 'at_hunter', count: 2 },
       ],
       waves: [{ enemies: [] }],
     });
+    expect(stage!.recommendedLevel).toBeUndefined();
     expect(stage!.waves[0]?.enemies).toHaveLength(0);
 
     const enemies = createEnemiesForStage(
@@ -445,6 +435,6 @@ describe('ranged_test stage (stages.json)', () => {
     expect(enemies.filter((e) => e.classId === 'at_hunter')).toHaveLength(2);
     const specs = expandEnemyGroups(stage!);
     expect(specs).toHaveLength(3);
-    expect(specs.every((s) => s.level === 10)).toBe(true);
+    expect(specs.every((s) => s.level === 1)).toBe(true);
   });
 });

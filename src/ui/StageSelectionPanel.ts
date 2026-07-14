@@ -165,9 +165,10 @@ export class StageSelectionPanel {
     }
 
     this.detailTitleEl.textContent = stage.displayName;
+    // 新仕様では想定 Lv なし。legacy フィールドが残る stage のみ表示。
     this.detailLevelEl.textContent =
       stage.recommendedLevel === undefined
-        ? '想定 Lv: —'
+        ? ''
         : `想定 Lv: ${stage.recommendedLevel}`;
     fillStageDetailEnemySection(
       this.detailEnemySectionEl,

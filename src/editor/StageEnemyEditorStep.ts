@@ -399,7 +399,7 @@ export class StageEnemyEditorStep {
       createEl(
         "p",
         "editor-step-desc",
-        "ステージの recommendedLevel と enemyGroups（直下または Wave ごと）を編集します。新規ステージは Wave ごと enemyGroups で開始します。legacy waves.enemies は参照のみです。templateId の本体は「敵テンプレ」タブで確認・編集します。ステージ削除は R10 以降です。"
+        "ステージの enemyGroups（直下または Wave ごと）と任意 scale を編集します。強さは兵科基礎ステ + scale（recommendedLevel / ランクは新仕様では使いません。legacy フィールドは任意）。新規ステージは Wave ごと enemyGroups で開始します。legacy waves.enemies は参照のみです。templateId の本体は「敵テンプレ」タブで確認・編集します。ステージ削除は R10 以降です。"
       )
     );
     this.container.appendChild(header);

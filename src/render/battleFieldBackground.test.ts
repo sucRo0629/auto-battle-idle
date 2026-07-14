@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { staticGrassBandLayout, wrapScrollOffset } from './battleFieldBackground.ts';
-import { GRASS_BAND_H } from './formationLayout.ts';
-import { MAX_VISUAL_DEPTH_RISE } from './spriteVisualDepth.ts';
+import {
+  FIELD_VISUAL_DEPTH_RISE_PX,
+  GRASS_TILE_BOTTOM_SHADE_ROWS,
+  GRASS_TILE_HORIZON_ROWS,
+  grassTileRepeatSource,
+  staticGrassBandLayout,
+  wrapScrollOffset,
+} from './battleFieldBackground.ts';
+import { BATTLE_FIELD_SPRITE_SCALE, GRASS_BAND_H } from './formationLayout.ts';
+import {
+  MAX_VISUAL_DEPTH_RISE,
+  maxVisualDepthOffsetPx,
+  maxVisualDepthRisePx,
+} from './spriteVisualDepth.ts';
 
 describe('wrapScrollOffset', () => {
   it('wraps negative offsets into tile width range', () => {
@@ -22,11 +33,39 @@ describe('wrapScrollOffset', () => {
 });
 
 describe('staticGrassBandLayout', () => {
-  it('extends grass above max sprite depth offset with one-step margin', () => {
+  it('aligns grass/sky seam with max swarm visual-depth rise at field scale', () => {
     const groundLineY = 100;
     const layout = staticGrassBandLayout(groundLineY);
-    expect(layout.grassTop).toBe(groundLineY - MAX_VISUAL_DEPTH_RISE);
-    expect(layout.grassHeight).toBe(GRASS_BAND_H + MAX_VISUAL_DEPTH_RISE);
-    expect(MAX_VISUAL_DEPTH_RISE).toBeGreaterThan(30);
+    expect(FIELD_VISUAL_DEPTH_RISE_PX).toBe(
+      maxVisualDepthRisePx(BATTLE_FIELD_SPRITE_SCALE),
+    );
+    expect(FIELD_VISUAL_DEPTH_RISE_PX).toBe(
+      MAX_VISUAL_DEPTH_RISE * BATTLE_FIELD_SPRITE_SCALE,
+    );
+    expect(layout.grassTop).toBe(groundLineY - FIELD_VISUAL_DEPTH_RISE_PX);
+    expect(layout.grassHeight).toBe(GRASS_BAND_H + FIELD_VISUAL_DEPTH_RISE_PX);
+    expect(FIELD_VISUAL_DEPTH_RISE_PX).toBeGreaterThan(
+      maxVisualDepthOffsetPx(BATTLE_FIELD_SPRITE_SCALE),
+    );
+  });
+});
+
+describe('grassTileRepeatSource', () => {
+  it('excludes horizon and bottom shade rows so vertical seams stay grass-only', () => {
+    const tileW = 64;
+    const tileH = 54;
+    const src = grassTileRepeatSource(tileW, tileH);
+    expect(src).toEqual({
+      srcX: 0,
+      srcY: GRASS_TILE_HORIZON_ROWS,
+      srcW: tileW,
+      srcH: tileH - GRASS_TILE_HORIZON_ROWS - GRASS_TILE_BOTTOM_SHADE_ROWS,
+    });
+    expect(src!.srcY).toBe(4);
+    expect(src!.srcH).toBe(43);
+  });
+
+  it('returns null when crop would be empty', () => {
+    expect(grassTileRepeatSource(64, 10)).toBeNull();
   });
 });

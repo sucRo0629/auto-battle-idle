@@ -176,10 +176,10 @@ effectiveRangePx =
 | `COMBAT_SAFE_LEFT` / `COMBAT_SAFE_RIGHT` | ユニット配置帯（`combatSafeArea.ts`）。左・右とも画面マージン + 48px gap（左右 HUD 列なし） |
 | `COMBAT_SAFE_SCREEN_TOP_Y` / `COMBAT_SAFE_SCREEN_GROUND_Y` | 縦方向の安全領域（battle-root 座標）。上部 enemyHud 下端 / 草ライン（partyHud 直上） |
 | `COMBAT_CAMERA_CENTER_X`             | 安全領域中央（レガシー名称。spawn 基準ではない） |
-| `ENEMY_SPAWN_ORIGIN_X`               | 敵 `spawnX=0` の battleX（`COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH × 2/3`）。味方左アンカーと対称に右寄り |
+| `ENEMY_SPAWN_ORIGIN_X`               | 敵 `spawnX=0` の battleX（`COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH × 2/3`）。敵 deploy 帯の左端（clamp 下限） |
 | `PARTY_FORMATION_LEFT_ANCHOR`       | `COMBAT_SAFE_LEFT`（味方隊列左端） |
-| `PARTY_FORMATION_SLOT_SPACING`（48） | 味方隊列スロット間隔（広い戦場で奥行きを見せる） |
-| `SPAWN_X_MAX`                        | 敵 `spawnX` 上限（`COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X`） |
+| `PARTY_FORMATION_SLOT_SPACING`（48） | 味方／敵隊列スロット間隔（広い戦場で奥行きを見せる） |
+| `SPAWN_X_MAX`                        | 敵 `spawnX` 上限（`COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X`）。敵隊形の右端アンカーは `COMBAT_SAFE_RIGHT`（味方左アンカーの鏡像） |
 | `BATTLE_FIELD_SPRITE_SCALE`（2）     | 戦闘フィールド描画スケール（32px スプライトを 2 倍表示。`battleX` は 1:1 のまま）                               |
 | `PLAYER_VISUAL_MIN_GAP`              | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`）。射程への加算はしない。敵対 `effectiveRangePx` 下限は `engagedMinBodyGap()`（§2.5） |
 | `CONFIGURABLE_RANGE_PX_MAX`          | `traits.rangePx` / `effect.range` の設定上限（`COMBAT_SAFE_RIGHT - PARTY_FORMATION_LEFT_ANCHOR`）                        |
@@ -218,10 +218,13 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | 敵の正本     | Wave 内の全敵（倒れた敵含む `snapshot.enemies`）。生存敵の Y は撃破後も変わらない |
 | 描画 Y       | `spriteDrawY = layout.y - depthOffsetY`                                           |
 | 段幅         | `VISUAL_DEPTH_STEP_PX`（10px × スプライト scale）                                 |
+| 上限         | `VISUAL_DEPTH_MAX_STEPS`（編成 4 → 3 段）。敵群れも同上限（空／草境界と一致）   |
 
 実装：`src/render/spriteVisualDepth.ts`（`assignVisualDepthOffsets`）→ `BattleCanvas.ts`、VFX・ポップアップは `spriteDrawY` を参照。§2.7 のタイブレークキーと同一。
 
-**背景（§2.8 続き）：** 地面は水平のまま固定。草タイル帯は `MAX_VISUAL_DEPTH_RISE`（最大オフセット 30px + 余白 10px = 40px）だけ上へ延長し、最大奥行きユニットの足元が草の上端に乗らないよう余白を確保。パララックス（`worldOffsetX`）のみ動的。キャンバス上端は `VISUAL_DEPTH_TOP_PAD_PX`（30px）を追加。
+**背景（§2.8 続き）：** 地面の論理ライン（足元アンカー）は水平のまま固定。空／地面の**見た目境界**は **ずらし幅最大 + モデル占有** より上へ置く — 草タイル上端 = 空下端 = `groundLineY - maxVisualDepthRisePx(BATTLE_FIELD_SPRITE_SCALE)`（`MAX_VISUAL_DEPTH_OFFSET` + `SPRITE_LAYOUT_SIZE`。scale 1 で 30 + 32 = 62px、フィールド scale 2 では 124px）。ずらし幅最大だけより必ず大きく、奥のユニット足元とスプライト layout 箱が草の上端に乗らないよう余白を確保する。ホライゾンブレンドと DOM 背景勾配（`--battle-ground-line-ratio`）も同 Y。敵群れの `depthOffsetY` は `VISUAL_DEPTH_MAX_STEPS` で上限する。パララックス（`worldOffsetX`）のみ動的。キャンバス上端は `visualDepthTopPadPx(scale)` を追加。
+
+**草タイル縦継ぎ目:** `grass_tile.png` は上部に空〜地平グラデ・下部に濃色帯を含むため、帯全体を無加工で縦タイルすると境界線が現れる。描画は地面色で下塗りしたうえで、繰り返しソースから上空／下濃色を除外し（`grassTileRepeatSource`）、縦方向にも 1px overlap する。
 
 ### 2.9 entity body アニメ（idle / move）
 
@@ -260,7 +263,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 3. **`formationRow`** — Y 描画・編成分類のみ。**X 初期配置・接敵・ターゲットには使わない**
 4. **overlap 解消** — §4.2（接敵時プレイヤー必須）
 
-敵の初期 `spawnX` は **射程 ASC・左＝前（Top）**（味方の鏡像）。`enemyFormation.ts` の `compareEnemyFormationSlot` を正とする。
+敵の初期配置は **味方隊形の鏡像**（右端 `COMBAT_SAFE_RIGHT` アンカー・左＝前）。射程 ASC で並べ、最後列を `SPAWN_X_MAX`（=`COMBAT_SAFE_RIGHT`）、前列を左（中央寄り）へ `PARTY_FORMATION_SLOT_SPACING` 間隔で割当てる。`enemyFormation.ts` の `compareEnemyFormationSlot` / `computeEnemyFormationSpawnX` を正とする。
 
 ### 3.4 Wave ライフサイクル（Legacy — 現行実装）
 
@@ -445,7 +448,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | `BattleCanvas.ts`                          | snapshot → 描画                                                                         |
 | `spriteDrawOrder.ts`                       | スプライト重なり順（§2.7）                                                              |
 | `spriteVisualDepth.ts`                     | 擬似奥行き Y オフセット（§2.8）                                                         |
-| `battleFieldBackground.ts`                 | 空・草タイル描画（水平地面＋草帯の固定延長）                                            |
+| `battleFieldBackground.ts`                 | 空・草タイル描画（空／地面境界 = ずらし最大 + モデル占有）                              |
 
 **依存方向：** `battleLayout` → `combatPosition` / `battleConstants`（一方向）。`combatPosition` → `formationLayout` **禁止**。
 
@@ -663,7 +666,7 @@ CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering:
 
 1280×720 `battle-root` に **全幅・高さ一杯** の `BattleCanvas` を敷き、上部敵 HUD / 下部味方 HUD はその上に浮かせる。内部基準 `CANVAS_W`（1280px）× `BATTLE_CANVAS_HEIGHT`（`battleRootLayout.ts` 導出）・描画スケール `BATTLE_FIELD_SPRITE_SCALE`（2）で 32px スプライトを観察しやすいサイズにする。
 
-**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左・右とも画面マージン + 48px gap。右 HUD 列は Phase 2 以降なし）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`ENEMY_SPAWN_ORIGIN_X` は安全領域右寄り（`COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH × 2/3`）。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
+**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左・右とも画面マージン + 48px gap。右 HUD 列は Phase 2 以降なし）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。敵 `enemyGroups` 隊形は右端 `COMBAT_SAFE_RIGHT` アンカー（味方の鏡像）。`ENEMY_SPAWN_ORIGIN_X` は spawn 帯の左端（`COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH × 2/3`）。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
 
 **距離・分類:** 停止位置・移動量は連続 `rangePx` / `effectiveRangePx` のみ。近接/遠隔の分類は `attackMethod`（[classes-and-skills.md](classes-and-skills.md) §射程）。
 
@@ -708,11 +711,11 @@ topInfo:
   x: 24
   y: 30
   w: 1232
-  h: 40
+  h: 52   # stage plate（Stage + Wave）を収める（40 だと enemyHud に溢れ）
 
 enemyHud:
   x: 24
-  y: 70   # topInfo 直下（ENEMY_HUD_TOP_Y）
+  y: 92   # topInfo 直下 + ENEMY_HUD_GAP_BELOW_TOP_INFO（10px）
   w: 1232
   h: 72   # ENEMY_HUD_SLOT_BAND_HEIGHT（固定帯）
 
@@ -725,9 +728,9 @@ partyHud:
 
 battleLane:
   x: 0
-  y: 142  # BATTLE_LANE_TOP（enemyHud 下端）
+  y: 164  # BATTLE_LANE_TOP（enemyHud 下端）
   w: 1280 # CANVAS_W（全幅フィールド）
-  h: 412  # BATTLE_CANVAS_HEIGHT（下部 partyHud 直上まで）
+  h: 390  # BATTLE_CANVAS_HEIGHT（下部 partyHud 直上まで）
 
 groundLine:
   screenY: 530 # BATTLE_GROUND_LINE_SCREEN_Y（partyHud 直上の草ライン）
@@ -854,7 +857,7 @@ active_3  active_4
 ```yaml
 enemyHud:
   x: 24
-  y: 70
+  y: 92          # topInfo 下端 + ENEMY_HUD_GAP_BELOW_TOP_INFO（10px）
   w: 1232
   h: 72          # 固定帯（ENEMY_HUD_SLOT_BAND_HEIGHT）
 
@@ -984,9 +987,9 @@ HUD スロットと戦闘フィールド上スプライトの対応を示す UI 
 ```yaml
 topInfo:
   x: 24
-  y: 16
+  y: 30
   w: 1232
-  h: 40
+  h: 52   # stage plate（Stage + Wave）を収める
 ```
 
 上部情報は戦闘画面上部中央の **stage plate**（1 枚の銘板）として扱う。

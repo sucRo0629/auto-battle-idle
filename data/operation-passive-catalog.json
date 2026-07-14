@@ -2,17 +2,29 @@
   "passiveAcquireCost": 1,
   "waveClearResourceGrant": 1,
   "candidatesByClass": {
-    "df_guardian": [
-      "df_guardian_passive_2"
+    "at_sorcerer": [
+      "at_sorcerer_passive_1",
+      "at_sorcerer_passive_2",
+      "at_sorcerer_passive_3",
+      "at_sorcerer_passive_4"
     ],
     "at_swordsman": [
-      "at_swordsman_passive_2"
+      "at_swordsman_passive_1",
+      "at_swordsman_passive_2",
+      "at_swordsman_passive_3",
+      "at_swordsman_passive_4"
     ],
-    "at_sorcerer": [
-      "at_sorcerer_passive_1"
+    "df_guardian": [
+      "df_guardian_passive_1",
+      "df_guardian_passive_2",
+      "df_guardian_passive_3",
+      "df_guardian_passive_4"
     ],
     "sp_cleric": [
-      "sp_cleric_passive_1"
+      "sp_cleric_passive_1",
+      "sp_cleric_passive_2",
+      "sp_cleric_passive_3",
+      "sp_cleric_passive_4"
     ]
   }
 }

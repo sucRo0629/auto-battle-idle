@@ -402,6 +402,29 @@ describe('Wave prep retry (R7d)', () => {
       '準備へ戻る',
       '作戦をWave 0からやり直す',
     ]);
+    expect(
+      document.body.querySelector('.wave-prep-screen__return-stage-select')
+        ?.textContent,
+    ).toBe('ステージ選択に戻る');
+  });
+
+  it('1b. return to stage select aborts incomplete operation', () => {
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+    const stageId = session.getSaveState().stageProgress.currentStageId;
+    session.trySetOperationSlotCombatModule(0, 'df_guardian_mod_guard_focus');
+
+    expect(session.canReturnToStageSelectFromWavePrep()).toBe(true);
+    document.body
+      .querySelector<HTMLButtonElement>('.wave-prep-screen__return-stage-select')
+      ?.click();
+
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.shouldShowWavePrepRetry()).toBe(false);
+    expect(session.canReturnToStageSelectFromWavePrep()).toBe(false);
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(stageId);
   });
 
   it('2. retry current wave restores checkpoint wave and discards uncommitted module edit', () => {

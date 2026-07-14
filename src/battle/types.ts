@@ -1745,7 +1745,10 @@ export interface StageEnemyGroup {
  */
 export interface ResolvedEnemySpawnSpec {
   classId: ClassId;
-  /** stage.recommendedLevel をそのまま使用 */
+  /**
+   * 内部互換用（`ENEMY_GROUP_BASE_LEVEL`）。強さは level ではなく scale + 基礎ステ。
+   * `stage.recommendedLevel` は参照しない（廃止方向 / legacy UI 用フィールド）。
+   */
   level: number;
   hpScale?: number;
   atkScale?: number;
@@ -1767,7 +1770,10 @@ export interface StageDef {
   id: string;
   displayName: string;
   waves: StageWave[];
-  /** 想定レベル。enemyGroups 使用時は必須。☆ 判定・Level Sync 上限にも使う。 */
+  /**
+   * legacy — 想定レベル / Level Sync / ☆ 用。
+   * 新仕様 Stage では不要・未設定可。敵ステ算出には使わない（scale + 基礎ステ）。
+   */
   recommendedLevel?: number;
   /** クラスベース敵編成。体験版は 1 stage = 1 配列 = wave 0 相当。 */
   enemyGroups?: StageEnemyGroup[];

@@ -39,6 +39,7 @@ export interface WavePrepScreenHostCallbacks {
   onRetryCurrentWave: () => boolean;
   onReturnToFormationPrep: () => boolean;
   onRestartOperationFromWaveZero: () => boolean;
+  onReturnToStageSelect: () => boolean;
 }
 
 /** R9.6: Wave 間準備の Player 完了用試作 UI（CombatModule + 作戦内パッシブ。製品 polish ではない）。 */
@@ -141,8 +142,23 @@ export class WavePrepScreenHost {
       }
     });
 
+    const returnToStageSelectButton = document.createElement('button');
+    returnToStageSelectButton.type = 'button';
+    returnToStageSelectButton.className =
+      'wave-prep-screen__return-stage-select game-ui-button';
+    returnToStageSelectButton.textContent = 'ステージ選択に戻る';
+    returnToStageSelectButton.addEventListener('click', () => {
+      if (!this.callbacks.onReturnToStageSelect()) {
+        this.statusEl!.textContent = '操作を実行できませんでした';
+      }
+    });
+
     this.retrySection = this.createRetrySection();
-    this.stickyFooter.append(confirmButton, this.retrySection);
+    this.stickyFooter.append(
+      confirmButton,
+      returnToStageSelectButton,
+      this.retrySection,
+    );
 
     this.root.append(stickyHeader, this.slotsHost, this.stickyFooter);
     this.host.replaceChildren(this.root);

@@ -24,7 +24,7 @@ export const COMBAT_SAFE_RIGHT =
 
 export const COMBAT_SAFE_WIDTH = COMBAT_SAFE_RIGHT - COMBAT_SAFE_LEFT;
 
-/** 安全領域の中央（敵 spawn オフセット基準） */
+/** 安全領域の中央（カメラ・表示 clamp 用。敵隊形の右端アンカーではない） */
 export const COMBAT_SAFE_CENTER_X =
   (COMBAT_SAFE_LEFT + COMBAT_SAFE_RIGHT) / 2;
 

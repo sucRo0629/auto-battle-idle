@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BATTLE_GROUND_LINE_SCREEN_Y,
+  BATTLE_SKY_GROUND_SEAM_SCREEN_Y,
   BATTLE_LANE_RECT,
   BATTLE_LANE_TOP,
   BATTLE_TOP_INFO_RECT,
@@ -8,6 +9,7 @@ import {
   BATTLE_PARTY_HUD_BOTTOM_MARGIN,
   BATTLE_SIDE_HUD_WIDTH,
   ENEMY_HUD_MAX_SLOTS,
+  ENEMY_HUD_GAP_BELOW_TOP_INFO,
   ENEMY_HUD_PANEL_FRAME_PADDING,
   ENEMY_HUD_SLOT_BAND_HEIGHT,
   ENEMY_HUD_SLOT_GAP,
@@ -65,7 +67,7 @@ describe("battleRootLayout", () => {
     });
     expect(BATTLE_LANE_RECT.w).toBe(CANVAS_W);
     expect(BATTLE_LANE_RECT.y + BATTLE_LANE_RECT.h).toBe(PARTY_HUD_SLOT_RECT.y);
-    expect(BATTLE_LANE_RECT.h).toBeGreaterThanOrEqual(400);
+    expect(BATTLE_LANE_RECT.h).toBeGreaterThanOrEqual(380);
     expect(BATTLE_LANE_RECT.h).toBeLessThanOrEqual(500);
   });
 
@@ -81,8 +83,12 @@ describe("battleRootLayout", () => {
   });
 
   it("reserves topInfo, top enemyHud, bottom partyHud, and battleLane rects", () => {
-    expect(BATTLE_TOP_INFO_RECT).toEqual({ x: 24, y: 30, w: 1232, h: 40 });
-    expect(ENEMY_HUD_TOP_Y).toBe(BATTLE_TOP_INFO_RECT.y + BATTLE_TOP_INFO_RECT.h);
+    expect(BATTLE_TOP_INFO_RECT).toEqual({ x: 24, y: 30, w: 1232, h: 52 });
+    expect(ENEMY_HUD_TOP_Y).toBe(
+      BATTLE_TOP_INFO_RECT.y +
+        BATTLE_TOP_INFO_RECT.h +
+        ENEMY_HUD_GAP_BELOW_TOP_INFO,
+    );
     expect(ENEMY_HUD_SLOT_RECT).toEqual({
       x: BATTLE_HUD_SIDE_MARGIN,
       y: ENEMY_HUD_TOP_Y,
@@ -131,6 +137,12 @@ describe("battleRootLayout", () => {
   it("places ground line above bottom partyHud", () => {
     expect(BATTLE_GROUND_LINE_SCREEN_Y).toBe(
       BATTLE_LANE_TOP + BATTLE_CANVAS_HEIGHT - GRASS_BAND_H,
+    );
+    expect(BATTLE_SKY_GROUND_SEAM_SCREEN_Y).toBe(
+      BATTLE_GROUND_LINE_SCREEN_Y - 62 * 2,
+    );
+    expect(BATTLE_SKY_GROUND_SEAM_SCREEN_Y).toBeLessThan(
+      BATTLE_GROUND_LINE_SCREEN_Y,
     );
     expect(BATTLE_GROUND_LINE_SCREEN_Y).toBeGreaterThanOrEqual(470);
     expect(BATTLE_GROUND_LINE_SCREEN_Y).toBeLessThanOrEqual(535);

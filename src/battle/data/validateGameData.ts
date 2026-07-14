@@ -6168,18 +6168,6 @@ function parseStages(raw: unknown): StageDef[] {
       };
     });
 
-    const anyWaveHasEnemyGroups = waves.some((wave) => wave.enemyGroups !== undefined);
-    if (
-      (enemyGroups !== undefined || anyWaveHasEnemyGroups) &&
-      recommendedLevel === undefined
-    ) {
-      invalidField(
-        context,
-        'recommendedLevel',
-        'is required when enemyGroups is set',
-      );
-    }
-
     return {
       id,
       displayName,

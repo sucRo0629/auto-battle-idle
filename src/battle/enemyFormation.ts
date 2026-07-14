@@ -5,6 +5,7 @@ import {
   SPAWN_X_MAX,
   SPRITE_GAP,
 } from './battleConstants.ts';
+import { COMBAT_SAFE_RIGHT } from './combatSafeArea.ts';
 import { separateByGap } from './combatPosition.ts';
 
 export interface EnemyFormationUnit {
@@ -26,23 +27,35 @@ export function compareEnemyFormationSlot(
 }
 
 /**
- * 射程順に slot 間隔を付けた理想 spawnX を割当し、SPRITE_GAP で右へ広げた後 spawnX に戻す。
- * 各 spawnX は [0, SPAWN_X_MAX] に clamp（5 体以上で cap 超過時は奥側が圧縮され得る）。
+ * 味方隊形（左端アンカー・右＝前）の鏡像: 右端 `COMBAT_SAFE_RIGHT` アンカー・左＝前。
+ * 射程順に slot 間隔を付けた理想 battleX を割当し、SPRITE_GAP で右へ広げた後、
+ * 右端超過分を左へ戻してから spawnX に変換する。
+ * 各 spawnX は [0, SPAWN_X_MAX] に clamp（奥行きが帯を超えると前側が ORIGIN へ圧縮され得る）。
  */
 export function computeEnemyFormationSpawnX(
   units: EnemyFormationUnit[],
 ): Map<string, number> {
   const sorted = [...units].sort(compareEnemyFormationSlot);
+  const count = sorted.length;
   const battleUnits = sorted.map((unit, slot) => ({
     id: unit.key,
-    battleX: ENEMY_SPAWN_ORIGIN_X + slot * PARTY_FORMATION_SLOT_SPACING,
+    // slot 0（短射程＝前）= 右端から (count-1) スロット左、最後列 = COMBAT_SAFE_RIGHT
+    battleX:
+      COMBAT_SAFE_RIGHT - (count - 1 - slot) * PARTY_FORMATION_SLOT_SPACING,
     isAlive: true,
   }));
   const separated = separateByGap(battleUnits, SPRITE_GAP);
-  const positions = new Map<string, number>();
 
+  let maxBattleX = COMBAT_SAFE_RIGHT;
+  for (const battleX of separated.values()) {
+    if (battleX > maxBattleX) maxBattleX = battleX;
+  }
+  const overflowRight = maxBattleX - COMBAT_SAFE_RIGHT;
+
+  const positions = new Map<string, number>();
   for (const unit of sorted) {
-    const battleX = separated.get(unit.key) ?? ENEMY_SPAWN_ORIGIN_X;
+    const battleX =
+      (separated.get(unit.key) ?? COMBAT_SAFE_RIGHT) - overflowRight;
     const spawnX = Math.max(
       0,
       Math.min(Math.round(battleX - ENEMY_SPAWN_ORIGIN_X), SPAWN_X_MAX),

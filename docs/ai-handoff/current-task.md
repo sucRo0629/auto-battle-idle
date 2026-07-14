@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R10 Backend 完了** — `r10_prototype`（2 Wave `waves[].enemyGroups`）+ catalog 4 兵科候補 + Wave 別編成プレビュー + 統合テスト（§95）。**R9.6（A+B）完了** — 作戦準備の **Player 完了用試作 UI**（§94）。**R9f〜h / R9a〜e / R8 / R5〜R7 Backend 完了**（詳細は各 §）。
-- **次の再開タスク:** R10 Player 手元評価の最終確認（反復意欲）のあと、試作成立後バックログ（兵科拡張・戦場移動 cleanup・Stage 削除 等）。**公式進捗上 R10 は Backend+構造 Player 完了。** 主観「繰り返し遊びたいか」は §95.5 に記録。
+- **新ロードマップ現在地:** **R10 Backend 完了**（§95）。**Stage 想定 Lv 廃止追従**（§96 — `recommendedLevel` を新敵生成から切り離し、spec 更新）。**R9.6（A+B）完了**。
+- **次の再開タスク:** R10 Player 手元評価のあと、試作成立後バックログ。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7627,7 +7627,7 @@ R9.5c の暫定 `<select>` 配線を、プレイヤーが候補を比較・理�
 
 - Wave1: `at_swordsman`×2（単体斬）+ `df_guardian`×1 — 単体焦点が有利寄り
 - Wave2: `at_sorcerer`×2（双弾）+ `at_swordsman`×1（貫通斬）— 線上・複数圧。全体癒し / 貫通斬 / DEF パッシブなどが Wave 間判断の軸
-- `formationHintJa` で要約。難易度は scale 0.85〜1.0・想定 Lv10（試用値）
+- `formationHintJa` で要約。難易度は scale 0.85〜1.0。**`recommendedLevel` なし**（新仕様: 敵は基礎ステ + scale。当初の試用 Lv10 は廃止）
 
 ### 95.4 テスト
 
@@ -7661,3 +7661,31 @@ R9.5c の暫定 `<select>` 配線を、プレイヤーが候補を比較・理�
 ### 95.7 次タスク
 
 試作成立後バックログ（順序未固定）: 兵科拡張、診断基盤再構築、**戦場移動 legacy cleanup**、Stage 削除、正式コンテンツ、UI 仕上げ、画像 / VFX / 効果音、i18n、packaging。
+
+---
+
+## 96. Stage 想定 Lv / ランク廃止の spec・実装追従（2026-07-14）
+
+### 96.1 背景
+
+R10 試作全滅。原因は `recommendedLevel: 10` が敵だけ Lv 成長していたこと。正本方針は既に [combat-data-schema-refactor.md §6–7](../plans/combat-data-schema-refactor.md) / [stats.md](../spec/stats.md) にあったが、`progression.md` / `stage-selection-ui.md` と validate / spawn が旧「想定 Lv 必須」のままだった。
+
+### 96.2 確定
+
+| 項目 | 内容 |
+| ---- | ---- |
+| Stage | **想定レベル / ランクなし**（`recommendedLevel` は legacy 任意） |
+| 敵強さ | 兵科基礎ステ × scale。`expandEnemyGroups` は内部 `ENEMY_GROUP_BASE_LEVEL` のみ |
+| 味方強化 | Wave 勝利後の作戦内リソース → パッシブ（[operation-loop.md](../spec/operation-loop.md)） |
+| UI | 想定 Lv 行はフィールドがある旧 stage のみ。新 Stage は非表示 |
+
+### 96.3 変更ファイル
+
+- specs: `progression.md`（§Stage / Wave 現行方針）、`stage-selection-ui.md`、`spec/README.md`
+- runtime: `enemyGroupSpawn.ts`、`validateGameData.ts`、`types.ts`、`StageSelectionPanel.ts`
+- editor: `editorApi.ts`、`StageEnemyEditorStep.ts`
+- data: `stages.json`（`r10_prototype` / `ranged_test` / `eg_smoke` から `recommendedLevel` 削除）
+
+### 96.4 次
+
+手元で `r10_prototype` Wave1 が基礎帯で遊べるか確認。editor の recommendedLevel 入力は legacy 任意のまま残存（UI 削除は任意後続）。

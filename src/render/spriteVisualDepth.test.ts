@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   assignVisualDepthOffsets,
+  GRASS_MODEL_FOOTPRINT_PX,
+  MAX_VISUAL_DEPTH_OFFSET,
   MAX_VISUAL_DEPTH_RISE,
+  maxVisualDepthOffsetPx,
+  maxVisualDepthRisePx,
   spriteDrawY,
   VISUAL_DEPTH_STEP_PX,
 } from './spriteVisualDepth.ts';
+import { SPRITE_LAYOUT_SIZE } from './spriteLayout.ts';
 
 describe('spriteVisualDepth', () => {
   it('offsets back units upward without changing foot anchor math', () => {
@@ -88,7 +93,32 @@ describe('spriteVisualDepth', () => {
     ];
     const offsets = assignVisualDepthOffsets(layouts, 1);
     const maxOffset = Math.max(...offsets.values());
+    expect(maxOffset).toBe(MAX_VISUAL_DEPTH_OFFSET);
+    expect(MAX_VISUAL_DEPTH_RISE).toBe(
+      MAX_VISUAL_DEPTH_OFFSET + GRASS_MODEL_FOOTPRINT_PX,
+    );
+    expect(GRASS_MODEL_FOOTPRINT_PX).toBe(SPRITE_LAYOUT_SIZE);
     expect(maxOffset).toBeLessThan(MAX_VISUAL_DEPTH_RISE);
+  });
+
+  it('makes grass/sky rise larger than max depth offset by model footprint', () => {
+    expect(maxVisualDepthRisePx(2)).toBeGreaterThan(maxVisualDepthOffsetPx(2));
+    expect(maxVisualDepthRisePx(2) - maxVisualDepthOffsetPx(2)).toBe(
+      SPRITE_LAYOUT_SIZE * 2,
+    );
+  });
+
+  it('caps enemy swarm depth at VISUAL_DEPTH_MAX_STEPS so rise stays the max height', () => {
+    const layouts = Array.from({ length: 8 }, (_, i) => ({
+      id: `e${i}`,
+      x: 300 - i,
+      isEnemy: true as const,
+      rangePx: 20 + i,
+    }));
+    const offsets = assignVisualDepthOffsets(layouts, 2);
+    const maxOffset = Math.max(...offsets.values());
+    expect(maxOffset).toBe(maxVisualDepthOffsetPx(2));
+    expect(maxOffset).toBeLessThan(maxVisualDepthRisePx(2));
   });
 
   it('keeps alive enemy depth when fallen enemies stay in the reference pool', () => {

@@ -442,11 +442,11 @@ export function createEmptyStageDraft(): StageDraft {
  */
 export function createDefaultStageDraft(options?: {
   defaultClassId?: string;
+  /** legacy 用。新仕様既定では設定しない。 */
   recommendedLevel?: number;
   waveCount?: number;
 }): StageDraft {
   const defaultClassId = options?.defaultClassId ?? 'df_paladin';
-  const recommendedLevel = options?.recommendedLevel ?? 1;
   const waveCount = Math.max(1, options?.waveCount ?? 1);
   const waves: StageWave[] = [];
   for (let index = 0; index < waveCount; index += 1) {
@@ -460,7 +460,9 @@ export function createDefaultStageDraft(options?: {
   return {
     id: '',
     displayName: '',
-    recommendedLevel,
+    ...(options?.recommendedLevel !== undefined
+      ? { recommendedLevel: options.recommendedLevel }
+      : {}),
     waves,
   };
 }
@@ -536,11 +538,12 @@ function validateStageEnemyGroupsForSave(
 function validateRecommendedLevelForSave(
   recommendedLevel: number | undefined,
 ): string | null {
+  // 新仕様では不要。値がある場合のみ形式検査（legacy / Stage Records 用）。
   if (recommendedLevel === undefined) {
-    return 'recommendedLevel を入力してください';
+    return null;
   }
   if (!Number.isInteger(recommendedLevel) || recommendedLevel < 1) {
-    return 'recommendedLevel は 1 以上の整数です';
+    return 'recommendedLevel は 1 以上の整数です（省略可）';
   }
   return null;
 }

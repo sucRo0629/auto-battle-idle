@@ -55,7 +55,7 @@ describe('combatSafeArea', () => {
     expect(PARTY_FORMATION_LEFT_ANCHOR).toBe(COMBAT_SAFE_LEFT);
   });
 
-  it('anchors enemy spawn origin at right portion of combat safe area', () => {
+  it('anchors enemy spawn band left edge at right portion of combat safe area', () => {
     expect(ENEMY_SPAWN_ORIGIN_X).toBe(
       Math.round(COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH * (2 / 3)),
     );
@@ -75,7 +75,7 @@ describe('combatSafeArea', () => {
       ENEMY_HUD_SLOT_RECT.y + ENEMY_HUD_SLOT_RECT.h,
     );
     expect(COMBAT_SAFE_CANVAS_HEIGHT).toBe(BATTLE_CANVAS_HEIGHT);
-    expect(COMBAT_SAFE_CANVAS_HEIGHT).toBe(412);
+    expect(COMBAT_SAFE_CANVAS_HEIGHT).toBe(390);
     expect(COMBAT_SAFE_SCREEN_GROUND_Y).toBe(BATTLE_GROUND_LINE_SCREEN_Y);
     expect(COMBAT_SAFE_CANVAS_GROUND_LINE_Y).toBe(BATTLE_CANVAS_HEIGHT - 24);
     expect(COMBAT_SAFE_SCREEN_GROUND_Y).toBeLessThan(PARTY_HUD_SLOT_RECT.y);

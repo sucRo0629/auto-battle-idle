@@ -93,7 +93,8 @@
   background: rgba(8, 10, 16, 0.96);
 }
 
-.wave-prep-screen__confirm {
+.wave-prep-screen__confirm,
+.wave-prep-screen__return-stage-select {
   align-self: flex-start;
 }
 

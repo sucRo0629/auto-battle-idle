@@ -24,5 +24,5 @@
 | [party-formation-ui.md](party-formation-ui.md) | パーティ編成メニュー（`SkillMenuPanel`）の画面設計 — Phase 4d |
 | [ui-fonts.md](ui-fonts.md) | **UI フォント方針**（M PLUS 1p、`--font-body`） |
 | [ui-visual-rules.md](ui-visual-rules.md) | **全 UI 共通ビジュアル**（Web アプリ風禁止・HUD プレート推奨） |
-| [stage-selection-ui.md](stage-selection-ui.md) | マップ選択・ステージ詳細・Level Sync・リザルト履歴 — Phase 6d |
+| [stage-selection-ui.md](stage-selection-ui.md) | ステージ選択・詳細・出撃。Legacy: Level Sync / 想定 Lv / ☆ |
 | [roguelike-mode.md](roguelike-mode.md) | ローグライクモード（仮称）— ランダム問題・ラン進行・報酬設計（Phase 10） |

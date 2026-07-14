@@ -803,7 +803,7 @@ describe('normalizeStageDraftForSave', () => {
       classSkillIds: [],
     };
 
-    expect(() =>
+    expect(
       parseAndValidateGameDataJson(
         {
           classes: [minimalStageClass],
@@ -818,8 +818,8 @@ describe('normalizeStageDraftForSave', () => {
           },
         },
         { mode: 'editor' },
-      ),
-    ).toThrow(/recommendedLevel.*required when enemyGroups is set/i);
+      ).stages[0]?.recommendedLevel,
+    ).toBeUndefined();
   });
 });
 
@@ -867,14 +867,14 @@ describe('validateStageDraftForSave', () => {
     ).toBeNull();
   });
 
-  it('rejects enemyGroups draft without recommendedLevel', () => {
+  it('accepts enemyGroups draft without recommendedLevel', () => {
     expect(
       validateStageDraftForSave({
         id: 'demo_1',
         displayName: 'Demo 1',
         enemyGroups: [{ classId: 'df_paladin', count: 1 }],
       }),
-    ).toMatch(/recommendedLevel/);
+    ).toBeNull();
   });
 
   it('rejects empty enemyGroups array', () => {
@@ -928,13 +928,13 @@ describe('validateStageDraftForSave', () => {
 
     expect(normalized).toMatchObject({
       id: 'eg_smoke',
-      recommendedLevel: 10,
       enemyGroups: [
         { classId: 'df_guardian', count: 1 },
         { classId: 'at_hunter', count: 1 },
       ],
       waves: [{ enemies: [] }],
     });
+    expect(normalized.recommendedLevel).toBeUndefined();
   });
 
   it('round-trips ranged_test draft through normalize without losing fields', () => {
@@ -946,13 +946,13 @@ describe('validateStageDraftForSave', () => {
 
     expect(normalized).toMatchObject({
       id: 'ranged_test',
-      recommendedLevel: 10,
       enemyGroups: [
         { classId: 'df_guardian', count: 1 },
         { classId: 'at_hunter', count: 2 },
       ],
       waves: [{ enemies: [] }],
     });
+    expect(normalized.recommendedLevel).toBeUndefined();
   });
 });
 
@@ -1190,7 +1190,7 @@ describe('wave enemyGroups draft helpers (R6g-4)', () => {
           { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 1 }] },
         ],
       }),
-    ).toMatch(/recommendedLevel/);
+    ).toBeNull();
 
     expect(
       validateStageDraftForSave({
@@ -1408,6 +1408,7 @@ describe('stage create authoring (R9f)', () => {
       waveCount: 2,
     });
 
+    expect(draft.recommendedLevel).toBeUndefined();
     expect(draft.waves).toHaveLength(2);
     expect(resolveStageDraftCompositionMode(draft)).toBe('waveEnemyGroups');
     expect(validateStageDraftForSave({

@@ -24,8 +24,7 @@ describe('formationLayout', () => {
   it('keeps unit sprites inside the shorter battle lane canvas', () => {
     const scale = BATTLE_FIELD_SPRITE_SCALE;
     const feetY = groundY(BATTLE_CANVAS_HEIGHT, scale);
-    const spriteH = SPRITE_LAYOUT_SIZE * scale;
-    const headTopAtMaxDepth = feetY - MAX_VISUAL_DEPTH_OFFSET - spriteH;
+    const headTopAtMaxDepth = feetY - MAX_VISUAL_DEPTH_OFFSET * scale;
     expect(feetY).toBeLessThanOrEqual(BATTLE_CANVAS_HEIGHT - GRASS_BAND_H);
     expect(headTopAtMaxDepth).toBeGreaterThanOrEqual(0);
     expect(battleFieldTopPad(scale)).toBeGreaterThan(0);
