@@ -24,12 +24,14 @@ alwaysApply: true
 - 英語 i18n 文案: `.cursor/rules/i18n-en.mdc`、`docs/spec/i18n-en.md`
 - UI ビジュアル: `.cursor/rules/ui-visual-rules.mdc`、`docs/spec/ui-visual-rules.md`
 - UI 開閉（hidden 禁止）: `.cursor/rules/game-ui-overlay-visibility.mdc`、`src/ui/gameUiOverlay.ts`
+- テスト通過≠完了: `.cursor/rules/tests-not-proof.mdc`
 
 ## 実装プロンプトの追加チェック
 
 - 変更対象が battle / combat / progression / classes / skills のどれに属するかを明示する。
 - 更新すべき spec は `docs/spec/README.md` と `docs/README.md` の対応表で確認させる。
-- acceptance criteria には、テストだけでなく仕様書との一致確認も含める。
+- acceptance criteria には、テストだけでなく仕様書との一致確認も含める。テスト緑だけでは完了にしない（`tests-not-proof.mdc`）。
+
 
 ## バグ修正
 
