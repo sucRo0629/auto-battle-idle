@@ -11,9 +11,9 @@
         "enabled": true
       }
     },
-    "maxHp": 300,
-    "atk": 10,
-    "def": 28,
+    "maxHp": 420,
+    "atk": 8,
+    "def": 42,
     "res": 0,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
@@ -215,12 +215,12 @@
         "enabled": true
       }
     },
-    "maxHp": 170,
-    "atk": 30,
-    "def": 18,
+    "maxHp": 155,
+    "atk": 48,
+    "def": 12,
     "res": 0,
     "jobTier": 1,
-    "attackSpeedTier": "somewhatSlow",
+    "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_swordsman_basic_attack",
     "skills": [
       {
@@ -614,10 +614,10 @@
       "rangePx": 200,
       "damageType": "magic"
     },
-    "maxHp": 72,
-    "atk": 26,
-    "def": 3,
-    "res": 10,
+    "maxHp": 55,
+    "atk": 42,
+    "def": 2,
+    "res": 20,
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_sorcerer_basic_attack",
@@ -762,10 +762,10 @@
       },
       "damageType": "magic"
     },
-    "maxHp": 100,
-    "atk": 15,
-    "def": 11,
-    "res": 15,
+    "maxHp": 125,
+    "atk": 10,
+    "def": 14,
+    "res": 20,
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "sp_cleric_basic_attack",

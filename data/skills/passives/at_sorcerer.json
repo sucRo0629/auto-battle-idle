@@ -32,5 +32,38 @@
     "blazingFlameDetonatePerSeedScale": 0.5,
     "blazingFlameDetonateMultiplier": 1.3,
     "blazingFlameUncap": true
+  },
+  {
+    "id": "at_sorcerer_op_arc_bolt",
+    "name": "作戦・弧火の術",
+    "effect": "defenseIgnore",
+    "defenseIgnore": {
+      "res": {
+        "percent": 0.12
+      }
+    }
+  },
+  {
+    "id": "at_sorcerer_op_ember_dot",
+    "name": "作戦・余燼の火力",
+    "effect": "buff",
+    "buffSubKind": "stat",
+    "buffStat": [
+      "atk"
+    ],
+    "buffMultiplier": 1.08,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "at_sorcerer_op_resonant_hit",
+    "name": "作戦・共鳴打撃",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "damage",
+    "specialEffect": {
+      "scale": 1.15,
+      "conditions": []
+    }
   }
 ]

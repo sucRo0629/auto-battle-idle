@@ -26,9 +26,11 @@ const TICK_MS = 1000 / 60;
 const STAGE_ID = 'r10_prototype';
 const FORMATION_MODULE_ID = 'df_guardian_mod_guard_focus';
 const WAVE_PREP_MODULE_ID = 'df_guardian_mod_nearest_strike';
-const WAVE_PREP_PASSIVE_ID = 'df_guardian_passive_2';
+const WAVE_PREP_PASSIVE_ID = 'df_guardian_op_wall_aura';
 const GUARDIAN_SLOT = 0;
-const SWORDSMAN_PASSIVE_ID = 'at_swordsman_passive_2';
+const SWORDSMAN_PASSIVE_ID = 'at_swordsman_op_high_def_focus';
+const WAVE_CLEAR_RESOURCE_GRANT = 12;
+const WAVE_PREP_PASSIVE_COST = 2;
 const levelCurves = loadLevelCurves(levelCurvesJson);
 
 function mockCanvas2d(): void {
@@ -242,11 +244,14 @@ describe('R10 prototype stage', () => {
     expect(gameData.operationPassiveCatalog.candidatesByClass).toMatchObject({
       df_guardian: expect.arrayContaining([WAVE_PREP_PASSIVE_ID]),
       at_swordsman: expect.arrayContaining([SWORDSMAN_PASSIVE_ID]),
-      at_sorcerer: expect.arrayContaining(['at_sorcerer_passive_1']),
-      sp_cleric: expect.arrayContaining(['sp_cleric_passive_1']),
+      at_sorcerer: expect.arrayContaining(['at_sorcerer_op_arc_bolt']),
+      sp_cleric: expect.arrayContaining(['sp_cleric_op_triage']),
     });
     expect(gameData.operationPassiveCatalog.passiveAcquireCost).toBe(1);
-    expect(gameData.operationPassiveCatalog.waveClearResourceGrant).toBe(1);
+    expect(gameData.operationPassiveCatalog.waveClearResourceGrant).toBe(
+      WAVE_CLEAR_RESOURCE_GRANT,
+    );
+    expect(gameData.operationPassiveCatalog.sameClassStackStep).toBe(1);
   });
 
   it('runs r10_prototype from formation through rematch with module and passive', () => {
@@ -275,15 +280,19 @@ describe('R10 prototype stage', () => {
 
     reachAwaitingNextWave(engine);
     expect(session.getCurrentScreen()).toBe('wavePrep');
-    expect(document.body.textContent).toContain('作戦内リソース: 1');
-    expect(document.body.textContent).toContain('立ちはだかる壁');
+    expect(document.body.textContent).toContain(
+      `作戦内リソース: ${WAVE_CLEAR_RESOURCE_GRANT}`,
+    );
+    expect(document.body.textContent).toContain('作戦・城壁の護り');
 
     selectWavePrepModule(WAVE_PREP_MODULE_ID);
     clickWavePrepAcquire();
     expect(session.getOperationAcquiredPassiveIds(GUARDIAN_SLOT)).toEqual([
       WAVE_PREP_PASSIVE_ID,
     ]);
-    expect(session.getOperationUnspentResource()).toBe(0);
+    expect(session.getOperationUnspentResource()).toBe(
+      WAVE_CLEAR_RESOURCE_GRANT - WAVE_PREP_PASSIVE_COST,
+    );
 
     clickWavePrepConfirm();
     expect(session.getCurrentScreen()).toBe('battle');

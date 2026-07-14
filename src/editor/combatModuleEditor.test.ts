@@ -15,7 +15,6 @@ import type { CombatModuleDef, PassiveSkillDef } from '../battle/types.ts';
 import { formatActiveDescription } from '../ui/formatSkillText.ts';
 import { CombatModuleEditorStep } from './CombatModuleEditorStep.ts';
 import {
-  EFFECT_RANGE_FORM_LABELS,
   findCombatModuleDraft,
   listCombatModulesForClass,
   summarizeCombatModuleEffectRange,
@@ -89,6 +88,11 @@ describe('combat module authoring helpers (R9g)', () => {
         ...structuredClone(source!.action),
         targetShape: 'aoe',
         aoeRadiusPx: 120,
+        effectRange: {
+          form: 'area',
+          applyMode: 'instant',
+          distancePx: 120,
+        },
         hitCount: undefined,
         hitDurationSec: undefined,
       },
@@ -115,7 +119,7 @@ describe('combat module authoring helpers (R9g)', () => {
     ).not.toThrow();
 
     const summary = summarizeCombatModuleEffectRange(edited);
-    expect(summary).toContain(EFFECT_RANGE_FORM_LABELS.aoe);
+    expect(summary).toContain('範囲');
     expect(summary).toContain('N=120');
 
     const synthesized = synthesizeCombatModuleSkill(edited);

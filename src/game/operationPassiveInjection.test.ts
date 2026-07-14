@@ -24,9 +24,9 @@ import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
 import { GameSession } from './GameSession.ts';
 
-const R8D_PASSIVE_ID = 'df_guardian_passive_2';
+const R8D_PASSIVE_ID = 'df_guardian_op_wall_aura';
 const R8D_GUARDIAN_SLOT = 0;
-const R8D_DEF_MULTIPLIER = 1.05;
+const R8D_DEF_MULTIPLIER = 1.08;
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -91,8 +91,9 @@ function triggerDefeat(session: GameSession, survivingIndices: number[] = []): v
 
 function guardianMemberWithoutPassive2(gameData: GameData): PartyMemberState {
   const member = createMemberFromClass('df_guardian', gameData);
+  // Isolate R11b wall_aura DEF from legacy passive_2 (same effect family).
   member.build.learnedPassiveIds = member.build.learnedPassiveIds.filter(
-    (id) => id !== R8D_PASSIVE_ID,
+    (id) => id !== 'df_guardian_passive_2' && id !== R8D_PASSIVE_ID,
   );
   return member;
 }

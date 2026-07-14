@@ -339,13 +339,20 @@ Hensei-Only の戦場は **1 次元軸**（`battleX`）である。円・扇形�
 | **`area` / target-centered area** | **範囲 N（ターゲット中心範囲）** — 選択ターゲット位置から左右 N |
 | **self area / aura** | **周囲 N** — 使用者自身から左右 N |
 | **ground area** | **地点 N** — effect 決定地点起点・左右 N |
-| **`pierce`** | 独立した範囲形状ではない。**前方 N + 対象数（全対象 or 最大 N 体）+ 進行 + 各対象位置への到達時命中** へ移行する方向。例: `前方 200・全対象・進行`。legacy `targetShape: pierce` は **今回削除せず**、新 schema 移行時の変換対象として残す |
-| **`multiLock`** | 独立した範囲形式ではない。**範囲形式 + 対象数 or Hit 数 + 対象不足時の再命中規則** の組み合わせ。例: `単体・2 Hit・不足分は同一対象へ再命中`、`範囲 80・2 対象・不足分は同一対象へ再命中`。legacy `multiLock` は **今回削除せず**、変換対象として残す |
+| **`pierce`** | 独立した範囲形状ではない。**前方 N + 対象数（全対象 or 最大 N 体）+ 進行 + 各対象位置への到達時命中**。例: `前方 200・全対象・進行`。legacy `targetShape: pierce` は runtime ブリッジ用に残す |
+| **`multiLock`** | 独立した範囲形式ではない。**範囲形式 + 対象数 or Hit 数 + 対象不足時の再命中規則** の組み合わせ。例: `単体・2 Hit・不足分は同一対象へ再命中`。legacy `multiLock` は runtime ブリッジ用に残す |
 | **`barrage` / 乱打** | 独立 targetShape や範囲形式ではなく、**効果範囲カテゴリ内の適用方式「乱打」** |
 
 旧 `pierce` の意味（移行参考）: 使用者起点、facing 方向へ射程まで進む、軸上の複数対象へ到達順に命中。
 
-**migration schema（`pierce` / `multiLock` の変換ルール）は今回確定しない。**
+**R11a 確定 — `pierce` / `multiLock` migration（normalize ブリッジ）:**
+
+| 方向 | 規則 |
+| ---- | ---- |
+| legacy → `effectRange` | `single` → `{ form:'single', applyMode:'instant', hitCount? }`；`aoe` → `{ form:'area', distancePx: aoeRadiusPx, applyMode:'instant', hitCount? }`；`pierce` → `{ form:'forward', applyMode:'progress', maxTargets:'all', distancePx: range? }`；`multiLock` → `{ form:'single', applyMode:'instant', hitCount, refillSameTargetOnShortfall:true }`；`chain` / `scatter` / `poolEach` → effectRange 未設定（targetShape のみ） |
+| `effectRange` → legacy | `forward`+`progress` → `pierce`；`area`+`instant` → `aoe`；`single`+`instant`+`hitCount>=2` → `multiLock`；その他 `single` → `single`；`around` → best-effort `aoe`（self target は呼び出し側） |
+
+実装: `src/battle/skills/effectRangeNormalize.ts`。authoring 正本は `effectRange`、runtime は当面 legacy `targetShape`。
 
 #### 5.7.7 将来エディタでの想定
 
@@ -387,8 +394,8 @@ CombatModuleEditor 等では、別々の「ターゲット形式」「範囲形�
 | 進行速度 | 進行方式 |
 | 持続時間・判定間隔 | 持続方式 |
 | 乱打の子範囲・回数・間隔・配置規則 | 地点列 schema |
-| `pierce` / `multiLock` の migration ルール | legacy 変換 |
-| runtime の具体的 TypeScript 型名 | — |
+| `pierce` / `multiLock` の migration ルール | **R11a 確定**（§5.7.6）。runtime は当面 bridge |
+| runtime の具体的 TypeScript 型名 | `EffectRangeSpec` 等は R11a で追加。executor は当面 `targetShape` |
 
 ---
 

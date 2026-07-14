@@ -1,10 +1,10 @@
 # フェーズロードマップ
 
-Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本書の正本は R0〜R10** とする。ゲームルールの現行 spec は [spec](../spec/README.md) を参照するが、**旧仕様と新方針の差分は R1 以降の設計 Phase で順次 spec へ反映する**（本書では方針のみ記載）。
+Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本書の正本は R0〜R11** とする。ゲームルールの現行 spec は [spec](../spec/README.md) を参照するが、**旧仕様と新方針の差分は R1 以降の設計 Phase で順次 spec へ反映する**（本書では方針のみ記載）。
 
-**直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
+**直近目標:** R10 で成立した新ループを、**プレイアビリティ（効果範囲新仕様・作戦内パッシブ・資源/コスト・基礎ステ）**まで成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R11 完了後**に再開する。
 
-**現在地:** **R10 Backend + 構造 Player 完了**（`r10_prototype`・§95）。**Stage 想定 Lv 廃止追従**（handoff §96 — 新敵は基礎ステ + scale）。**R9.6（A+B）Player 完了**。次は試作成立後バックログ / 手元評価。詳細は [current-task.md §95–96](../ai-handoff/current-task.md)。
+**現在地:** **R11a〜d 完了**（効果範囲 bridge・作戦専用パッシブ・資源/積み上げコスト・基礎ステ極端化 + `r10_prototype` 強度）。次は R11 完了後バックログ。詳細は [current-task.md §97](../ai-handoff/current-task.md)。
 
 ---
 
@@ -21,7 +21,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 
 ---
 
-## 概要（R0〜R10）
+## 概要（R0〜R11）
 
 | Phase | ゴール | Backend | Player | 状態 |
 | ----- | ------ | ------- | ------ | ---- |
@@ -38,9 +38,17 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、統合確認 | **R9.5a〜c Backend 完了** | R9.5a〜b 完了。R9.5c は暫定 UI 縦切りのみ（正式 作戦準備 UI は **R9.6**） | **Backend 完了** |
 | **R9b〜h / R9f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / **効果範囲** / **class 方式 pool** / **Stage 新規作成** | **R9b〜h・R9f 完了**（§87〜93） | R10 用作戦反映は未確認 | R9 Tooling 完了 |
 | **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の選択（**試作・Player 完了用**。製品 polish ではない） | 完了（表示 metadata + 回帰） | **完了** | R9.5c Backend |
-| **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | **完了**（`r10_prototype` + 統合） | **構造完了**（§95.5。主観手元確認は推奨） | R9.6 Player |
+| **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | **完了**（`r10_prototype` + 統合） | **構造完了**（§95.5） | R9.6 Player |
+| **R11** | 試作プレイアビリティ — 効果範囲新仕様・作戦内パッシブ・資源/積み上げコスト・基礎ステ極端化 | **完了** | **完了**（製品 polish ではない） | **完了** |
 
-**試作成立後（R10 以降・順序未固定）:** 兵科拡張、診断基盤再構築、**Stage 削除**（エディタ UI — legacy stage・テスト・進行 fallback 整理後）、**戦場移動 legacy cleanup**（[battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)）、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブの演出制作・**遠隔弾道 projectiles** 含む — R8 ではプレースホルダ図形のみ）、効果音、i18n、packaging、公開準備。
+| R11 分割 | ゴール | 状態 |
+| -------- | ------ | ---- |
+| **R11a** | 効果範囲カテゴリ新仕様化（`pierce` / `multiLock` → §5.7。R5 modules 優先） | **完了**（effectRange + bridge） |
+| **R11b** | R5 4 兵科の新仕様作戦内パッシブ候補 | **完了**（各 3・専用 ID） |
+| **R11c** | 取得レベル基準コスト + 同一クラス積み上げ加重 + Wave 資源（約 6 人分×1〜2） | **完了**（grant 12） |
+| **R11d** | R5 基礎ステ極端化 + `r10_prototype` 強度再調整 | **完了** |
+
+**R11 完了後（順序再計画可）:** 兵科拡張、診断基盤再構築、**Stage 削除**、**戦場移動 legacy cleanup**（[battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)）、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブ・**遠隔弾道 projectiles** 含む）、効果音、i18n、packaging、公開準備。
 
 ---
 
@@ -974,11 +982,61 @@ Backend 完了だけでは R10 完了としない → **評価記録は §95.5**
 
 未確定事項は一般 RPG の慣例で補完しない。
 
-**試作成立後:** 兵科拡張 → 診断基盤再構築 → **戦場移動 legacy cleanup** → 正式コンテンツ → UI 仕上げ → 画像 / VFX（**遠隔弾道 projectiles** 含む）/ 効果音 → i18n → packaging → 公開準備（順序は再計画）。
+**次:** [R11](#r11--試作プレイアビリティ範囲パッシブ資源基礎ステ)（R11 完了後に正式コンテンツ・presentation・公開準備へ）。
 
 ---
 
-## 戦場移動 legacy cleanup（R10 以降・未着手）
+## R11 — 試作プレイアビリティ（範囲・パッシブ・資源・基礎ステ）
+
+**状態:** **完了**（2026-07-14）。handoff: [current-task.md §97](../ai-handoff/current-task.md)。
+
+**全体ゴール:** 無強化でも惨敗すぎず、Wave 間で「広く薄く」と「1 クラス深掘り」の両方が資源上意味を持ち、兵科差がステと方式の両方で読める。
+
+### 確定方針
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 取得上限 | **なし** |
+| 基本コスト | 取得レベル（`unlockLevel`）帯。Lv ゲートではなくコスト帯 |
+| 同一クラス加重 | `cost = base(unlockLevel) + n × stackStep`（固定加算。初回） |
+| Wave 資源 | クリアごと **約 6 人分×1〜2 回**強化できる量 |
+| 基礎ステ | **現状より極端化** |
+| 効果範囲 | R11a で `pierce` / `multiLock` 等を §5.7 へ |
+
+### R11a — 効果範囲の新仕様化
+
+**ゴール:** R5 CombatModule が独立 `targetShape: pierce|multiLock` ではなく §5.7 効果範囲（範囲形式 + 対象数/Hit + 適用方式）として定義・実行される。
+
+**Backend:** migration ルール doc 確定、型・validate、runtime ブリッジまたは本実装、R5 8 module データ、回帰テスト。  
+**Player:** 方式比較 UI / 戦闘で貫通・複数対象差が新用語で確認できる。  
+**スコープ外:** 全 legacy active 一括、乱打地点列本格、正式 VFX、M1 外兵科。
+
+### R11b — 作戦内パッシブ（新仕様候補）
+
+**ゴール:** R5 4 兵科それぞれ最低 3〜上限 4 の作戦専用候補（挙動変化優先、専用 ID、コスト帯用 unlockLevel）。
+
+**Backend:** catalog / JSON / 注入テスト。 **Player:** Wave 敵形に対する「誰に何を買うか」比較。  
+**スコープ外:** M1 外兵科、レアリティ、ランダム 3 択。
+
+### R11c — Wave 資源と積み上げコスト
+
+**ゴール:** 広く強化 vs 1 クラス特化が資源判断になる。一律 `passiveAcquireCost` から候補 base + runtime 積み上げへ。
+
+**Backend:** cost 計算・grant・checkpoint 整合。 **Player:** 配り方で残高の減り方が違う。  
+**スコープ外:** メタ経済、Save 永続リソース。
+
+### R11d — 基礎ステ極端化 + `r10_prototype` 強度
+
+**ゴール:** R5 4 兵科の個性をステで際立たせ、R11a〜c 後の成長に合う敵強度。  
+**スコープ外:** demo 7、全 M1 一括、診断本格再建。
+
+### R11 完了後バックログ
+
+兵科拡張 → 診断基盤再構築 → 戦場移動 legacy cleanup → Stage 削除 → 正式コンテンツ → UI / 画像 / VFX / 効果音 → i18n → packaging → 公開準備。
+
+---
+
+## 戦場移動 legacy cleanup（R11 完了後・未着手）
 
 **目的:** Phase 3d で完了した接近・接敵 Intent 一本化の**残り** — X 方向デプロイ / 隊形 sort に残る `formationRow` 依存と、[battle-field.md](../spec/battle-field.md) §2.6 / §3.3 の spec 矛盾を解消する。
 
@@ -996,34 +1054,26 @@ Backend 完了だけでは R10 完了としない → **評価記録は §95.5**
 
 ---
 
-## 依存関係（R0〜R10）
+## 依存関係（R0〜R11）
 
 ```
 R0（完了）
   ↓
-R1 上位戦闘設計（doc）
+R1〜R4（設計・完了）
   ↓
-R2 詳細戦闘・兵科 spec
+R5〜R8 Backend → R9 系列 → R9.6 → R10（構造完了）
   ↓
-R3 Wave 作戦ループ spec
+R11a 効果範囲新仕様
   ↓
-R4 データスキーマ・エディタ設計
+R11b 作戦内パッシブ
   ↓
-R5 Backend
+R11c 資源・積み上げコスト
   ↓
-R6 Backend
+R11d 基礎ステ極端化 + r10 強度
   ↓
-R7 Backend
+戦場移動 legacy cleanup（任意）
   ↓
-R8 Backend
-  ├─ R9a ── R9b ── R9c ── R9d ── R9e ── R9g ── R9h ── R9f ──┐
-  └─ R9.5a ── R9.5b ── R9.5c ───────────────────┤
-                                                 ├─ R9.6（A→B）── R10
-                                                 └────────────────┘
-                                                      ↓
-                                    戦場移動 legacy cleanup（R10 以降・任意タイミング）
-                                                      ↓
-                                    （試作成立後）コンテンツ・診断・presentation・公開
+（R11 完了後）コンテンツ・診断・presentation・公開
 ```
 
 補足:
@@ -1032,9 +1082,10 @@ R8 Backend
 - R9.5c は R6 の OperationState にも依存する（暫定 module 配線。正式 Player UI は R9.6）
 - R9d は R7〜R8 のパッシブ基盤に依存する
 - **R9.6 は R9.5c Backend 完了後に着手**（R9b〜f と並行可だが、R10 Player 前に A+B 必須）
-- R9b〜**R9h**・**R9f** は完了（§87〜93）。公式次は **R9.6（A→B）**
+- R9b〜**R9h**・**R9f** は完了（§87〜93）
 - R10 Backend 開始は **R9g + R9h + R9f** 完了を条件とする（成立済み）。**R10 Player 完了は R9.6（A+B）Player 完了を必須依存**とする
-- **戦場移動 legacy cleanup** は R10 完了後（新仕様最小実装安定後）。R9.5 / R9 とは並行しない — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
+- **R11** は R10 構造完了後。公式次は **R11a**
+- **戦場移動 legacy cleanup** は R11 完了後を推奨 — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 
 R5 は R4 の設計（[combat-data-schema-refactor.md](combat-data-schema-refactor.md) §16 最小 schema）を前提に着手する。
 

@@ -20,6 +20,11 @@
           }
         }
       ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single",
       "attackMethod": "melee"
     }
   },
@@ -41,7 +46,12 @@
           "buffMultiplier": 1.2,
           "buffDurationSec": 4
         }
-      ]
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single"
     }
   }
 ]

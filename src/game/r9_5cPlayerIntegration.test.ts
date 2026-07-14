@@ -21,7 +21,7 @@ import {
 const TICK_MS = 1000 / 60;
 const FORMATION_MODULE_ID = 'df_guardian_mod_guard_focus';
 const WAVE_PREP_MODULE_ID = 'df_guardian_mod_nearest_strike';
-const R8C_PASSIVE_ID = 'df_guardian_passive_2';
+const R8C_PASSIVE_ID = 'df_guardian_op_brace';
 const R8C_GUARDIAN_SLOT = 0;
 
 function mockCanvas2d(): void {
@@ -203,7 +203,7 @@ describe('R9.5c player integration', () => {
     reachAwaitingNextWave(engine);
     expect(session.getCurrentScreen()).toBe('wavePrep');
     expect(document.body.textContent).toContain('Wave 間準備');
-    expect(document.body.textContent).toContain('作戦内リソース: 1');
+    expect(document.body.textContent).toContain('作戦内リソース: 12');
 
     // 3. Wave prep — module change + passive acquire with cost/description UI
     selectWavePrepModule(WAVE_PREP_MODULE_ID);
@@ -214,7 +214,7 @@ describe('R9.5c player integration', () => {
     expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([
       R8C_PASSIVE_ID,
     ]);
-    expect(document.body.textContent).toContain('作戦内リソース: 0');
+    expect(document.body.textContent).toContain('作戦内リソース: 11');
 
     // 4. Confirm next wave — HP reset + module/passive retained
     clickWavePrepConfirm();

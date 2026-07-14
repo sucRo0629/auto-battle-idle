@@ -209,6 +209,22 @@ export type TargetShape =
   | "scatter"
   | "poolEach";
 
+/** §5.7 効果範囲の形式（authoring / 表示の正本。runtime は legacy targetShape 経由） */
+export type EffectRangeForm = "single" | "point" | "area" | "around" | "forward";
+export type EffectApplyMode = "instant" | "progress" | "persist" | "barrage";
+export type EffectMaxTargets = number | "all";
+export interface EffectRangeSpec {
+  form: EffectRangeForm;
+  /** Distance N in px when form needs N. Optional if using skill range instead for forward. */
+  distancePx?: number;
+  applyMode: EffectApplyMode;
+  maxTargets?: EffectMaxTargets;
+  /** For multi-hit / multiLock migration */
+  hitCount?: number;
+  /** undershoot refill same target — multiLock default true */
+  refillSameTargetOnShortfall?: boolean;
+}
+
 export type PowerStepMode = "multiply" | "divide";
 
 /** percentMaxHp — 参照する maxHp の主体 */
@@ -1188,11 +1204,16 @@ export type SkillEffectAnimId =
   /** @deprecated 読み込み互換。none として正規化 */
   | "hurt";
 
-interface SkillEffectCommon extends AnimPhaseFields {
+export interface SkillEffectCommon extends AnimPhaseFields {
   /** 省略時は ActiveSkillDef の共通ターゲットを継承（未設定なら読み込み既定） */
   target?: TargetSpec;
   /** @deprecated 読み込み専用。正規化後は target のみ使用 */
   targetRule?: TargetRule;
+  /**
+   * §5.7 効果範囲（authoring 正本）。
+   * runtime は normalize で同期した legacy `targetShape` を使用する。
+   */
+  effectRange?: EffectRangeSpec;
   /** 未指定は single（単体） */
   targetShape?: TargetShape;
   /** aoe 時必須: anchor から ±px */
@@ -1250,9 +1271,10 @@ interface SkillEffectCommon extends AnimPhaseFields {
 /** アクティブスキル直下の共通ターゲット（effect が省略時に継承） */
 export type SkillSharedTargetingFields = Partial<
   Pick<
-    SkillEffectDef,
+    SkillEffectCommon,
     | "target"
     | "targetRule"
+    | "effectRange"
     | "targetShape"
     | "range"
     | "aoeRadiusPx"
@@ -1800,8 +1822,15 @@ export interface SkillRegistry {
 
 /** 作戦内パッシブ候補 catalog（`data/operation-passive-catalog.json`） */
 export interface OperationPassiveCatalogDef {
+  /** Fallback base cost when passive missing from costUnlockLevelByPassiveId */
   passiveAcquireCost: number;
   waveClearResourceGrant: number;
+  /** Added cost per already-acquired operation passive on the same class/slot */
+  sameClassStackStep: number;
+  /** unlockLevel band → base cost. Keys "0","10","20" */
+  unlockLevelCostTable: Record<string, number>;
+  /** Cost-tier unlockLevel per passive id (NOT a party Lv gate) */
+  costUnlockLevelByPassiveId: Record<string, number>;
   candidatesByClass: Record<string, string[]>;
 }
 

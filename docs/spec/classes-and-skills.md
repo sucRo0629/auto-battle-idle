@@ -114,18 +114,25 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | `sp_cleric` | 療養師 | 回復・欠損復元 | **PHT**（負傷者 HP 割合最小） | 回復（行動属性） | **単体回復** — PHT へ concentrated heal / 短 HoT | **複数回復** — 半径内複数負傷者 or 全体小 heal | 低 HP heal 特化、excessHealToBarrier、smart heal withhold | Lv10/20 回復精度段階、healReservation gauge | 方式名、対象数、HoT 要否 |
 | `sp_wardweaver` | 結界師 | 事前 barrier・猶予 | **PHT**（barrier 付与時 stat ratio） | 回復 / 防護 | **厚い Barrier** — 単体 PHT へ大 barrier | **広い Barrier** — 半径内複数 or 全体 thin barrier | 低 HP 特効 barrier、barrierDepletionHeal 思想 | Wave 開始全体 barrier の Lv 前提 | 方式名、barrier 量、対象数 |
 
-### 作戦内パッシブ候補（設計アイデア — 各 2〜3 件例）
+### 作戦内パッシブ候補（R11b 確定 — R5 4 兵科）
+
+| classId | R11b 作戦向け候補（短名） |
+| ------- | ---------------------------- |
+| `df_guardian` | 堅盾の構え / 城壁の護り / 最後の誓い（`df_guardian_op_brace` / `_wall_aura` / `_last_stand`） |
+| `at_swordsman` | 鎧砕き / 重装狙い / 剛剣の切先（`at_swordsman_op_armor_break` / `_high_def_focus` / `_finish_cut`） |
+| `at_sorcerer` | 弧火の術 / 余燼の火力 / 共鳴打撃（`at_sorcerer_op_arc_bolt` / `_ember_dot` / `_resonant_hit`） |
+| `sp_cleric` | 応急の加護 / 余剰の盾 / 治癒の備蓄（`sp_cleric_op_triage` / `_excess_ward` / `_heal_reserve`） |
+
+> 候補 ID とコスト帯は `data/operation-passive-catalog.json` が正本。legacy `passive_1〜4` 定義は残すが、作戦候補一覧からは外す。
+
+### 作戦内パッシブ候補（設計アイデア — M1 外・未確定）
 
 | classId | 候補アイデア（確定ではない） |
 | ------- | ---------------------------- |
-| `df_guardian` | block 成功時軽減 stack、致死時短時間 invulnerable、構え中周囲 DEF ダメージ |
 | `df_paladin` | 魔法 block 付与、護法半径拡大、余剰被ダメを barrier へ |
-| `at_swordsman` | 高 DEF 対象 DEF 無視、被 DEF ボーナスダメ、低 HP 特効 |
 | `at_assassin` | 低 HP 特効、出血付与、追加 Hit 確率 |
 | `at_ranger` | 遠隔優先強化、連射時 Hit 増、DoT 付与 |
 | `at_ballista` | 溜め ATK 加速、マーク splash 強化、高 HP 特効 |
-| `at_sorcerer` | 魔法 DoT 付与、方式切替時 AoE 拡大（種火 **代替** 候補） |
-| `sp_cleric` | 低 HP heal 増、overheal → barrier、heal 後保険 |
 | `sp_wardweaver` | barrier 枯渇 heal、低 HP barrier 増、ward 軽減 |
 
 ---

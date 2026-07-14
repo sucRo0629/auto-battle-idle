@@ -42,7 +42,6 @@ export type OperationPassiveCandidateView = {
 
 export type OperationPassivePrepViews = {
   currentResource: number;
-  acquireCost: number;
   acquired: OperationPassiveCandidateView[];
   candidates: OperationPassiveCandidateView[];
   emptyStateLabel: string | null;
@@ -210,7 +209,7 @@ export function buildOperationPassiveCandidateView(
 export function buildOperationPassivePrepViews(options: {
   candidateIds: readonly string[];
   acquiredIds: readonly string[];
-  acquireCost: number;
+  getAcquireCost: (passiveId: string) => number;
   currentResource: number;
   getPassiveDef: (passiveId: string) => PassiveSkillDef | undefined;
 }): OperationPassivePrepViews {
@@ -223,7 +222,7 @@ export function buildOperationPassivePrepViews(options: {
     if (!def) continue;
     acquired.push(
       buildOperationPassiveCandidateView(def, {
-        acquireCost: options.acquireCost,
+        acquireCost: options.getAcquireCost(passiveId),
         currentResource: options.currentResource,
         acquired: true,
         isCandidate: candidateSet.has(passiveId),
@@ -238,7 +237,7 @@ export function buildOperationPassivePrepViews(options: {
     if (!def) continue;
     candidates.push(
       buildOperationPassiveCandidateView(def, {
-        acquireCost: options.acquireCost,
+        acquireCost: options.getAcquireCost(passiveId),
         currentResource: options.currentResource,
         acquired: false,
         isCandidate: true,
@@ -255,7 +254,6 @@ export function buildOperationPassivePrepViews(options: {
 
   return {
     currentResource: options.currentResource,
-    acquireCost: options.acquireCost,
     acquired,
     candidates,
     emptyStateLabel,

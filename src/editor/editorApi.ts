@@ -252,6 +252,33 @@ export function validateOperationPassiveCatalogDraftForSave(
   ) {
     return 'Wave クリア付与（waveClearResourceGrant）は 0 以上の整数にしてください';
   }
+  if (
+    !Number.isInteger(catalog.sameClassStackStep) ||
+    catalog.sameClassStackStep < 0
+  ) {
+    return '同一クラス積み上げ（sameClassStackStep）は 0 以上の整数にしてください';
+  }
+  if (
+    !catalog.unlockLevelCostTable ||
+    typeof catalog.unlockLevelCostTable !== 'object'
+  ) {
+    return 'unlockLevelCostTable が必要です';
+  }
+  for (const [key, value] of Object.entries(catalog.unlockLevelCostTable)) {
+    if (!Number.isInteger(value) || value < 1) {
+      return `unlockLevelCostTable["${key}"] は 1 以上の整数にしてください`;
+    }
+  }
+  for (const passiveId of Object.values(catalog.candidatesByClass).flat()) {
+    const level = catalog.costUnlockLevelByPassiveId[passiveId];
+    if (typeof level !== 'number' || !Number.isInteger(level) || level < 0) {
+      return `costUnlockLevelByPassiveId に候補 "${passiveId}" のコスト帯（unlockLevel）を設定してください`;
+    }
+    const bandCost = catalog.unlockLevelCostTable[String(level)];
+    if (typeof bandCost !== 'number') {
+      return `unlockLevelCostTable に unlockLevel ${level}（${passiveId}）のコストがありません`;
+    }
+  }
   if (context) {
     return firstAuthoringErrorMessage(
       collectOperationPassiveCatalogAuthoringIssues(catalog, {
@@ -381,9 +408,14 @@ export function listPassiveIdsForClassStem(
   passives: PassiveSkillDef[],
   classId: string,
 ): string[] {
-  const prefix = `${classId}_passive_`;
+  const legacyPrefix = `${classId}_passive_`;
+  const operationPrefix = `${classId}_op_`;
   return passives
-    .filter((passive) => passive.id.startsWith(prefix))
+    .filter(
+      (passive) =>
+        passive.id.startsWith(legacyPrefix) ||
+        passive.id.startsWith(operationPrefix),
+    )
     .map((passive) => passive.id)
     .sort();
 }
@@ -406,7 +438,29 @@ export function setOperationPassiveCandidatesForClassDraft(
     delete next.candidatesByClass[classId];
   } else {
     next.candidatesByClass[classId] = normalized;
+    const bandKeys = Object.keys(next.unlockLevelCostTable)
+      .map((key) => Number(key))
+      .filter((n) => Number.isInteger(n) && n >= 0)
+      .sort((a, b) => a - b);
+    const defaultBands = bandKeys.length > 0 ? bandKeys : [0, 10, 20];
+    for (let i = 0; i < normalized.length; i++) {
+      const passiveId = normalized[i]!;
+      if (next.costUnlockLevelByPassiveId[passiveId] === undefined) {
+        next.costUnlockLevelByPassiveId[passiveId] =
+          defaultBands[Math.min(i, defaultBands.length - 1)]!;
+      }
+    }
   }
+  return next;
+}
+
+export function setOperationPassiveCostUnlockLevelDraft(
+  catalog: OperationPassiveCatalogDef,
+  passiveId: string,
+  unlockLevel: number,
+): OperationPassiveCatalogDef {
+  const next = structuredClone(catalog);
+  next.costUnlockLevelByPassiveId[passiveId] = unlockLevel;
   return next;
 }
 

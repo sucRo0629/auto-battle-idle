@@ -30,7 +30,7 @@ export interface WavePrepScreenHostCallbacks {
   getUnspentOperationResource: () => number;
   getAcquiredOperationPassiveIds: (slotIndex: number) => readonly string[];
   getOperationPassiveCandidates: (slotIndex: number) => readonly string[];
-  getPassiveAcquireCost: () => number;
+  getPassiveAcquireCost: (slotIndex: number, passiveId: string) => number;
   getPassiveDisplayName: (passiveId: string) => string;
   getPassiveDescription: (passiveId: string) => string;
   onAcquireOperationPassive: (slotIndex: number, passiveId: string) => boolean;
@@ -273,10 +273,13 @@ export class WavePrepScreenHost {
     );
     row.appendChild(moduleHost);
 
+    const acquiredIds =
+      this.callbacks.getAcquiredOperationPassiveIds(slotIndex);
     const passiveViews = buildOperationPassivePrepViews({
       candidateIds: this.callbacks.getOperationPassiveCandidates(slotIndex),
-      acquiredIds: this.callbacks.getAcquiredOperationPassiveIds(slotIndex),
-      acquireCost: this.callbacks.getPassiveAcquireCost(),
+      acquiredIds,
+      getAcquireCost: (passiveId) =>
+        this.callbacks.getPassiveAcquireCost(slotIndex, passiveId),
       currentResource: this.callbacks.getUnspentOperationResource(),
       getPassiveDef: (passiveId) =>
         this.gameData.skillRegistry.passives[passiveId],

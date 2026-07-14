@@ -22,6 +22,10 @@
           }
         }
       ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
       "targetShape": "single"
     }
   },
@@ -46,6 +50,10 @@
           }
         }
       ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
       "targetShape": "single"
     }
   }

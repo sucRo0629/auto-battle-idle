@@ -44,5 +44,42 @@
       "atkScale": 0.75
     },
     "buffDisplayName": "治癒の残響"
+  },
+  {
+    "id": "sp_cleric_op_triage",
+    "name": "作戦・応急の加護",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "heal",
+    "specialEffect": {
+      "scale": 1.3,
+      "conditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.5
+        }
+      ]
+    }
+  },
+  {
+    "id": "sp_cleric_op_excess_ward",
+    "name": "作戦・余剰の盾",
+    "effect": "excessHealToBarrier",
+    "barrierScale": 0.85,
+    "excessHealSources": [
+      "outgoing"
+    ]
+  },
+  {
+    "id": "sp_cleric_op_heal_reserve",
+    "name": "作戦・治癒の備蓄",
+    "effect": "healReservation",
+    "grantOnHealMaxHpRatio": 0.55,
+    "stackDurationSec": 8,
+    "triggerHpRatio": 0.35,
+    "healAmount": {
+      "kind": "atkBased",
+      "atkScale": 0.8
+    },
+    "buffDisplayName": "作戦・治癒の残響"
   }
 ]

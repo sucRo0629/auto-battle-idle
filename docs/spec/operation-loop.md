@@ -59,7 +59,7 @@
 | クリア済み Wave | 作戦内で勝利確定した Wave の記録 |
 | 現在の編成 | 味方 4 兵科（同一兵科禁止） |
 | 各兵科の選択中戦闘方式 | Wave 間で保持。毎 Wave 未選択へ戻さない |
-| 取得済み作戦内パッシブ | 作戦終了まで維持（取得 UI・コストは R8） |
+| 取得済み作戦内パッシブ | 作戦終了まで維持（取得 UI・コストは R8 / R11c） |
 | 未使用作戦内リソース | 入手量・タイミングは未確定 |
 | Wave 開始チェックポイント | [§7](#7-wave-開始チェックポイント) |
 | 作戦固有ルール | ステージ / 作戦定義由来の modifier |
@@ -167,7 +167,7 @@ Wave 2 以降の各 Wave 開始前に入る **上位状態**。BattlePhase の 1
 | 次 Wave の敵情報確認 | 開示範囲は未確定 |
 | 編成変更 | |
 | 戦闘方式変更 | 前 Wave から **そのまま保持**。ここで変更可能 |
-| 作戦内パッシブ取得 | **R8**。直接指定 |
+| 作戦内パッシブ取得 | **R8 / R11b**。直接指定。候補は作戦専用 ID |
 | 未使用リソース確認 | |
 | 出撃確定 | Wave 開始チェックポイント更新の境界 |
 | 現在 Wave の再試行 | [§8](#8-リトライ導線r7-接続) |
@@ -181,6 +181,20 @@ Wave 2 以降の各 Wave 開始前に入る **上位状態**。BattlePhase の 1
 | **ランダム 3 択報酬を表示しない** | 旧 roguelike 報酬を採用しない |
 | 作戦内パッシブ実装本体は **R8** | |
 | **R6 最小 Wave 間準備** | 編成変更 + 戦闘方式変更だけで成立可能にする |
+
+### 6.3 作戦内リソースとパッシブ取得コスト（R11c）
+
+`data/operation-passive-catalog.json` が正本。
+
+| 原則 | 内容 |
+| ---- | ---- |
+| 取得上限なし | 同じスロットへ候補を重複なく追加できる限り、取得回数に hard cap は無い |
+| コスト式 | `cost = base(unlockLevel) + n × sameClassStackStep`（`n` = 取得前の同一スロット取得数） |
+| unlockLevel | **コスト帯のみ**（パーティ Lv ゲートではない）。`costUnlockLevelByPassiveId` → `unlockLevelCostTable` |
+| Wave クリア付与 | `waveClearResourceGrant`（≈ 6 人分 × 1〜2 回の初回帯購入）。中間 Wave クリア時に一度付与 |
+| フォールバック | 候補の unlockLevel 欠損時は `passiveAcquireCost` |
+
+実装: `src/game/operationPassiveAcquireCost.ts` / `GameSession.tryAcquireOperationPassive`。
 
 ---
 

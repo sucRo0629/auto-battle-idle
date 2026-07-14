@@ -116,6 +116,9 @@ export class EditorApp {
   private operationPassiveCatalogDraft: OperationPassiveCatalogDef = {
     passiveAcquireCost: 1,
     waveClearResourceGrant: 1,
+    sameClassStackStep: 0,
+    unlockLevelCostTable: { '0': 1, '10': 2, '20': 3 },
+    costUnlockLevelByPassiveId: {},
     candidatesByClass: {},
   };
   private combatModulesDraft: CombatModuleDef[] = [];

@@ -5,8 +5,13 @@ import type {
   TargetShape,
 } from '../battle/types.ts';
 import { R5_COMBAT_MODULE_CLASS_IDS } from '../battle/types.ts';
+import {
+  EFFECT_APPLY_MODE_LABELS,
+  EFFECT_RANGE_FORM_LABELS as EFFECT_RANGE_FORM_LABELS_NEW,
+  summarizeEffectRangeSpec,
+} from '../battle/skills/effectRangeNormalize.ts';
 
-/** エディタ用 §5.7 効果範囲の形式ラベル（legacy targetShape を保持したまま表示だけ寄せる） */
+/** @deprecated legacy targetShape 表示フォールバック。prefer action.effectRange */
 export const EFFECT_RANGE_FORM_LABELS: Record<TargetShape, string> = {
   single: '単体',
   aoe: '範囲（ターゲット中心）',
@@ -94,6 +99,26 @@ export function groupCombatModulesByClassId(
 export function summarizeCombatModuleEffectRange(
   module: CombatModuleDef,
 ): string {
+  const effectRange = module.action.effectRange;
+  if (effectRange !== undefined) {
+    const bits = [summarizeEffectRangeSpec(effectRange)];
+    const range = module.action.range;
+    if (
+      typeof range === 'number' &&
+      effectRange.distancePx === undefined &&
+      effectRange.form !== 'forward'
+    ) {
+      bits.push(`射程=${range}`);
+    } else if (
+      typeof range === 'number' &&
+      effectRange.form === 'forward' &&
+      effectRange.distancePx === undefined
+    ) {
+      bits.push(`前方射程=${range}`);
+    }
+    return bits.join(' · ');
+  }
+
   const shape = (module.action.targetShape ?? 'single') as TargetShape;
   const formLabel = EFFECT_RANGE_FORM_LABELS[shape];
   const bits = [formLabel];
@@ -122,3 +147,9 @@ export function summarizeCombatModuleEffectRange(
   }
   return bits.join(' · ');
 }
+
+/** §5.7 新ラベル（テスト・将来エディタ UI 用） */
+export {
+  EFFECT_RANGE_FORM_LABELS_NEW,
+  EFFECT_APPLY_MODE_LABELS,
+};

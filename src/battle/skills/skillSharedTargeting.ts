@@ -2,12 +2,14 @@ import type {
   ActiveSkillDef,
   SkillEffectDef,
   SkillEffectResolution,
+  SkillSharedTargetingFields as TypesSkillSharedTargetingFields,
 } from '../types.ts';
 
 /** ActiveSkillDef と effect で共有するターゲット形状フィールド */
 export const SKILL_SHARED_TARGETING_KEYS = [
   'target',
   'targetRule',
+  'effectRange',
   'targetShape',
   'range',
   'aoeRadiusPx',
@@ -26,21 +28,22 @@ export const SKILL_SHARED_TARGETING_KEYS = [
   'scatterHitCount',
   'scatterDurationSec',
   'scatterSpreadRate',
-] as const satisfies readonly (keyof SkillEffectDef)[];
+] as const satisfies readonly (keyof TypesSkillSharedTargetingFields)[];
 
 export type SkillSharedTargetingFieldKey =
   (typeof SKILL_SHARED_TARGETING_KEYS)[number];
 
 export type SkillSharedTargetingFields = Partial<
-  Pick<SkillEffectDef, SkillSharedTargetingFieldKey>
+  Pick<TypesSkillSharedTargetingFields, SkillSharedTargetingFieldKey>
 >;
 
 export function hasSkillSharedTargeting(skill: ActiveSkillDef): boolean {
-  return SKILL_SHARED_TARGETING_KEYS.some((key) => skill[key] !== undefined);
+  const fields = skill as SkillSharedTargetingFields;
+  return SKILL_SHARED_TARGETING_KEYS.some((key) => fields[key] !== undefined);
 }
 
 export function effectOverridesSkillTarget(effect: SkillEffectDef): boolean {
-  return effect.target !== undefined;
+  return (effect as SkillSharedTargetingFields).target !== undefined;
 }
 
 export function effectInheritsSkillSharedTargeting(
@@ -56,9 +59,11 @@ export function mergeEffectWithSkillTargeting(
 ): SkillEffectDef {
   if (!skill || !hasSkillSharedTargeting(skill)) return effect;
   const merged = { ...effect } as SkillEffectDef;
+  const mergedFields = merged as SkillSharedTargetingFields;
+  const skillFields = skill as SkillSharedTargetingFields;
   for (const key of SKILL_SHARED_TARGETING_KEYS) {
-    if (merged[key] === undefined && skill[key] !== undefined) {
-      (merged as SkillSharedTargetingFields)[key] = skill[key] as never;
+    if (mergedFields[key] === undefined && skillFields[key] !== undefined) {
+      (mergedFields as Record<string, unknown>)[key] = skillFields[key];
     }
   }
   return merged;
@@ -68,8 +73,9 @@ function pickTargetingLockFields(
   effect: SkillEffectDef,
 ): SkillSharedTargetingFields {
   const picked: SkillSharedTargetingFields = {};
+  const effectFields = effect as SkillSharedTargetingFields;
   for (const key of SKILL_SHARED_TARGETING_KEYS) {
-    const value = effect[key];
+    const value = effectFields[key];
     if (value !== undefined) {
       (picked as Record<string, unknown>)[key] = value;
     }

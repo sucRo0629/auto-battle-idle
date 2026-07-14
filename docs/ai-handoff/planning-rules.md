@@ -123,21 +123,30 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-13）
+## 8. 現在地メモ（更新: 2026-07-14）
 
 | 項目 | 状態 |
 | ---- | ---- |
 | R5〜R8 | Backend 完了 |
-| R9a | 完了 |
-| 公式次タスク | 試作成立後バックログ（兵科拡張・cleanup・Stage 削除等） |
 | R9 系列 | R9b〜h / R9f / R9.6 完了 |
-| **R10** | **Backend + 構造 Player 完了**（§95）。主観「繰り返し遊びたいか」は手元確認推奨 |
+| **R10** | **Backend + 構造 Player 完了**（§95） |
+| **公式次タスク** | R11 完了後バックログ（兵科拡張・cleanup・Stage 削除・presentation 等） |
+| **R11** | **a〜d 完了** |
 
-`phase-roadmap.md` の R9.5 / R10 節にも本書へのリンクを置く。
+---
 
-**推奨順序:** R9.5a → R9.5b → R9.5c → R9b〜f → R10。R9b だけ先に進めても「エディタでは作れるがプレイは legacy 混在」のまま。
+## 8b. R11 プレイアビリティ（2026-07-14）
 
-R9.5 を **R10-prep** という無番号節にしない（戻し先 ID が曖昧になる）。R9b〜f を R9.5 より先に完了させても R10 開始条件は満たさない。
+R10 後の正本 Phase。順序固定: **範囲 → パッシブ → 資源/積み上げコスト → 極端基礎ステ**。
+
+| 確定 | 内容 |
+| ---- | ---- |
+| 取得上限 | なし |
+| コスト | `base(unlockLevel) + sameClassCount × stackStep`（固定加算） |
+| Wave 資源 | 約 6 人分×1〜2 回強化できる量 |
+| 効果範囲 | R11a で `pierce` / `multiLock` を §5.7 へ |
+
+詳細は [phase-roadmap.md §R11](../plans/phase-roadmap.md#r11--試作プレイアビリティ範囲パッシブ資源基礎ステ)。
 
 ---
 
@@ -159,7 +168,7 @@ R9.5 を **R10-prep** という無番号節にしない（戻し先 ID が曖昧
 
 ## 10. 参照
 
-- [phase-roadmap.md](../plans/phase-roadmap.md) — R0〜R10 開発順の正本
+- [phase-roadmap.md](../plans/phase-roadmap.md) — R0〜R11 開発順の正本
 - [current-task.md](current-task.md) — 作業中 handoff
 - [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) — データ責務
 - [operation-loop.md](../spec/operation-loop.md) — 作戦ループ・初期準備 / Wave 間準備

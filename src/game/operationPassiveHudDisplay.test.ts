@@ -17,8 +17,8 @@ import { createMemberFromClass } from '../progression/partyCompose.ts';
 import type { BattleView } from './BattleView.ts';
 import { GameSession } from '../game/GameSession.ts';
 
-const R8E_PASSIVE_ID = 'df_guardian_passive_2';
-const R8E_PASSIVE_DISPLAY_NAME = '立ちはだかる壁';
+const R8E_PASSIVE_ID = 'df_guardian_op_wall_aura';
+const R8E_PASSIVE_DISPLAY_NAME = '作戦・城壁の護り';
 const R8E_GUARDIAN_SLOT = 0;
 const TICK_DT = 1 / 60;
 const TICK_MS = 1000 / 60;

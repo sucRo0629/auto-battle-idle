@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R10 Backend 完了**（§95）。**Stage 想定 Lv 廃止追従**（§96 — `recommendedLevel` を新敵生成から切り離し、spec 更新）。**R9.6（A+B）完了**。
-- **次の再開タスク:** R10 Player 手元評価のあと、試作成立後バックログ。
+- **新ロードマップ現在地:** **R11a〜d 完了**（§97）。R10 構造（§95）+ Stage 想定 Lv 廃止（§96）の上にプレイアビリティ縦切り。
+- **次の再開タスク:** R11 完了後バックログ（兵科拡張・診断・戦場移動 cleanup・Stage 削除・presentation 等）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7688,4 +7688,36 @@ R10 試作全滅。原因は `recommendedLevel: 10` が敵だけ Lv 成長して
 
 ### 96.4 次
 
-手元で `r10_prototype` Wave1 が基礎帯で遊べるか確認。editor の recommendedLevel 入力は legacy 任意のまま残存（UI 削除は任意後続）。
+手元で `r10_prototype` が基礎帯で弱すぎることを確認。次は **R11**（§97）で効果範囲・パッシブ・資源・基礎ステを詰める。editor の recommendedLevel 入力は legacy 任意のまま残存（UI 削除は任意後続）。
+
+---
+
+## 97. R11 — 試作プレイアビリティ方針（2026-07-14）
+
+### 97.1 背景
+
+R10 で新ループ構造は成立。手元評価では敵が弱すぎ、作戦内パッシブは legacy 流用で新仕様の判断軸として薄い。資源は `cost1/grant1` 仮定数。`pierce` / `multiLock` は runtime も旧 `targetShape` のまま。
+
+### 97.2 分割と確定方針
+
+正本: [phase-roadmap.md §R11](../plans/phase-roadmap.md#r11--試作プレイアビリティ範囲パッシブ資源基礎ステ)。
+
+| ID | 内容 |
+| -- | ---- |
+| **R11a** | 効果範囲新仕様（`pierce` → 前方 N + 進行、`multiLock` → 範囲形式 + Hit/対象 + 再命中）。R5 modules 優先 |
+| **R11b** | R5 4 兵科の作戦専用パッシブ（各 3〜4、挙動変化優先、専用 ID、コスト帯 unlockLevel） |
+| **R11c** | `cost = base(unlockLevel) + n×stackStep`、取得上限なし、Wave クリアで **約 6 人分×1〜2 回** |
+| **R11d** | 基礎ステ極端化 + `r10_prototype` 強度 |
+
+### 97.3 実装結果（2026-07-14）
+
+| ID | 結果 |
+| -- | ---- |
+| **R11a** | `effectRange` authoring + legacy `targetShape` bridge。R5 8 modules 変換。§5.7.6 migration 確定 |
+| **R11b** | 各兵科 3 の作戦専用 ID（`*_op_*`）。catalog は legacy `passive_1..4` から切替 |
+| **R11c** | `cost = base(unlockLevel) + n×stackStep`、grant **12**、WavePrep に実コスト表示 |
+| **R11d** | R5 4 兵科基礎ステ極端化、`r10_prototype` scale 引き上げ |
+
+### 97.4 次タスク
+
+R11 完了後バックログ（順序再計画可）: 兵科拡張、診断基盤、戦場移動 legacy cleanup、Stage 削除、正式コンテンツ、presentation。

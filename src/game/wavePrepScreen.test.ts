@@ -552,8 +552,10 @@ describe('Wave prep retry (R7d)', () => {
   });
 });
 
-const R8C_PASSIVE_ID = 'df_guardian_passive_2';
+const R8C_PASSIVE_ID = 'df_guardian_op_brace';
 const R8C_GUARDIAN_SLOT = 0;
+const WAVE_CLEAR_RESOURCE_GRANT = 12;
+const R8C_PASSIVE_ACQUIRE_COST = 1;
 
 function selectWavePrepPassive(
   container: ParentNode,
@@ -610,19 +612,19 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     session = bootVerifySession();
     expect(session.getOperationUnspentResource()).toBe(0);
     reachAwaitingNextWave(getEngine(session));
-    expect(session.getOperationUnspentResource()).toBe(1);
+    expect(session.getOperationUnspentResource()).toBe(WAVE_CLEAR_RESOURCE_GRANT);
   });
 
   it('2. does not re-grant resource when returning to the same wave prep', () => {
     session = bootVerifySession();
     reachAwaitingNextWave(getEngine(session));
-    expect(session.getOperationUnspentResource()).toBe(1);
+    expect(session.getOperationUnspentResource()).toBe(WAVE_CLEAR_RESOURCE_GRANT);
     session.tryAcquireOperationPassive(R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID);
-    expect(session.getOperationUnspentResource()).toBe(0);
+    expect(session.getOperationUnspentResource()).toBe(WAVE_CLEAR_RESOURCE_GRANT - R8C_PASSIVE_ACQUIRE_COST);
 
     expect(session.returnToFormationPrep()).toBe(true);
     expect(session.returnToWavePrepFromFormation()).toBe(true);
-    expect(session.getOperationUnspentResource()).toBe(0);
+    expect(session.getOperationUnspentResource()).toBe(WAVE_CLEAR_RESOURCE_GRANT - R8C_PASSIVE_ACQUIRE_COST);
   });
 
   it('3. acquires candidate passive for matching slot and spends resource', () => {
@@ -634,7 +636,7 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([
       R8C_PASSIVE_ID,
     ]);
-    expect(session.getOperationUnspentResource()).toBe(0);
+    expect(session.getOperationUnspentResource()).toBe(WAVE_CLEAR_RESOURCE_GRANT - R8C_PASSIVE_ACQUIRE_COST);
   });
 
   it('4. module selection and passive acquisition coexist', () => {
@@ -689,7 +691,7 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([
       R8C_PASSIVE_ID,
     ]);
-    expect(session.getOperationUnspentResource()).toBe(0);
+    expect(session.getOperationUnspentResource()).toBe(WAVE_CLEAR_RESOURCE_GRANT - R8C_PASSIVE_ACQUIRE_COST);
   });
 
   it('7. retry current wave restores checkpoint without uncommitted passive edits', () => {
@@ -702,6 +704,7 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     expect(session.retryCurrentWaveFromCheckpoint()).toBe(true);
 
     expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([]);
+    // Checkpoint is Wave 開始時点（付与前）。未確定取得を巻き戻すとリソースも 0。
     expect(session.getOperationUnspentResource()).toBe(0);
   });
 
@@ -733,7 +736,9 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     expect(checkpoint?.acquiredOperationPassives).toEqual([
       { slotIndex: R8C_GUARDIAN_SLOT, passiveIds: [R8C_PASSIVE_ID] },
     ]);
-    expect(checkpoint?.unspentResource).toBe(0);
+    expect(checkpoint?.unspentResource).toBe(
+      WAVE_CLEAR_RESOURCE_GRANT - R8C_PASSIVE_ACQUIRE_COST,
+    );
     expect(checkpoint?.lastResourceGrantClearedWaveCount).toBe(1);
   });
 
@@ -754,7 +759,7 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     session = bootVerifySession();
     reachAwaitingNextWave(getEngine(session));
 
-    expect(document.body.textContent).toContain('作戦内リソース: 1');
+    expect(document.body.textContent).toContain(`作戦内リソース: ${WAVE_CLEAR_RESOURCE_GRANT}`);
     expect(document.querySelector('[data-prep-kind="combat-module"]')).not.toBeNull();
     expect(document.querySelector('[data-prep-kind="operation-passive"]')).not
       .toBeNull();
@@ -767,8 +772,8 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     expect(session.getOperationAcquiredPassiveIds(R8C_GUARDIAN_SLOT)).toEqual([
       R8C_PASSIVE_ID,
     ]);
-    expect(document.body.textContent).toContain('作戦内リソース: 0');
+    expect(document.body.textContent).toContain(`作戦内リソース: ${WAVE_CLEAR_RESOURCE_GRANT - R8C_PASSIVE_ACQUIRE_COST}`);
     expect(document.body.textContent).toContain('取得済み');
-    expect(document.body.textContent).toContain('立ちはだかる壁');
+    expect(document.body.textContent).toContain('作戦・堅盾の構え');
   });
 });

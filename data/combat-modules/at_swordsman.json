@@ -21,6 +21,10 @@
           }
         }
       ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
       "targetShape": "single",
       "attackMethod": "melee"
     }
@@ -29,7 +33,7 @@
     "id": "at_swordsman_mod_pierce_slash",
     "classId": "at_swordsman",
     "displayName": "貫通斬（仮）",
-    "description": "pierce 形状で複数対応の物理攻撃。R5b プレースホルダー。",
+    "description": "前方進行・全対象の物理攻撃。R5b プレースホルダー。",
     "attackIntervalSec": 3,
     "action": {
       "effect": [
@@ -47,6 +51,11 @@
           }
         }
       ],
+      "effectRange": {
+        "form": "forward",
+        "applyMode": "progress",
+        "maxTargets": "all"
+      },
       "targetShape": "pierce",
       "pierceDurationSec": 0.15,
       "attackMethod": "melee"

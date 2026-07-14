@@ -10,6 +10,10 @@ import type {
 import { synthesizeCombatModuleSkill } from '../battle/data/synthesizeCombatModuleSkill.ts';
 import { TARGET_SHAPE_LABELS } from '../battle/data/gameDataSchema.ts';
 import { resolveSelectedCombatModuleId } from '../battle/data/resolveCombatModuleBasic.ts';
+import {
+  EFFECT_APPLY_MODE_LABELS,
+  EFFECT_RANGE_FORM_LABELS,
+} from '../battle/skills/effectRangeNormalize.ts';
 import { isDefaultHostileChaseSpec } from '../battle/skills/targetSpec.ts';
 import { formatSkillCardLines } from './formatSkillText.ts';
 import { getSkillTextLocale, skillText } from './skillTextLocale.ts';
@@ -51,6 +55,40 @@ function attackMethodLabel(
 }
 
 function effectRangeBits(module: CombatModuleDef): string[] {
+  const effectRange = module.action.effectRange;
+  if (effectRange !== undefined) {
+    const bits = [
+      EFFECT_RANGE_FORM_LABELS[effectRange.form],
+      EFFECT_APPLY_MODE_LABELS[effectRange.applyMode],
+    ];
+    if (typeof effectRange.distancePx === 'number') {
+      bits.push(`N ${effectRange.distancePx}`);
+    } else if (
+      effectRange.form === 'area' &&
+      typeof module.action.aoeRadiusPx === 'number'
+    ) {
+      bits.push(`半径 ${module.action.aoeRadiusPx}`);
+    }
+    if (typeof module.action.range === 'number') {
+      bits.push(`射程 ${module.action.range}`);
+    }
+    if (
+      typeof effectRange.hitCount === 'number' &&
+      effectRange.hitCount > 1
+    ) {
+      bits.push(`Hit ${effectRange.hitCount}`);
+    } else if (
+      typeof module.action.hitCount === 'number' &&
+      module.action.hitCount > 1
+    ) {
+      bits.push(`Hit ${module.action.hitCount}`);
+    }
+    if (effectRange.maxTargets === 'all') {
+      bits.push('全対象');
+    }
+    return bits;
+  }
+
   const shape = (module.action.targetShape ?? 'single') as TargetShape;
   const bits = [TARGET_SHAPE_LABELS[shape]];
   if (shape === 'aoe' && typeof module.action.aoeRadiusPx === 'number') {

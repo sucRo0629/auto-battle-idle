@@ -72,6 +72,7 @@ import {
   getOperationPassiveCandidatesForClass,
   isOperationPassiveCandidateForClass,
 } from './operationPassiveCatalogCore.ts';
+import { resolveOperationPassiveAcquireCost } from './operationPassiveAcquireCost.ts';
 import '../styles/game-shell.css';
 import levelCurvesJson from '../../data/levelCurves.json';
 
@@ -184,8 +185,8 @@ export class GameSession {
           this.getOperationAcquiredPassiveIds(slotIndex),
         getOperationPassiveCandidates: (slotIndex) =>
           this.getOperationPassiveCandidates(slotIndex),
-        getPassiveAcquireCost: () =>
-          this.gameData.operationPassiveCatalog.passiveAcquireCost,
+        getPassiveAcquireCost: (slotIndex, passiveId) =>
+          this.resolveOperationPassiveAcquireCostForSlot(slotIndex, passiveId),
         getPassiveDisplayName: (passiveId) =>
           this.gameData.skillRegistry.passives[passiveId]?.name ?? passiveId,
         getPassiveDescription: (passiveId) => {
@@ -1020,6 +1021,20 @@ export class GameSession {
     );
   }
 
+  /** R11c: slot の現在取得数を加味した取得コスト。 */
+  resolveOperationPassiveAcquireCostForSlot(
+    slotIndex: number,
+    passiveId: string,
+  ): number {
+    const acquiredCount =
+      this.operationState?.getAcquiredOperationPassiveIds(slotIndex).length ?? 0;
+    return resolveOperationPassiveAcquireCost(
+      this.gameData.operationPassiveCatalog,
+      passiveId,
+      acquiredCount,
+    );
+  }
+
   /**
    * R8c: Wave 間準備中に作戦内リソースを消費してパッシブを取得する。
    * 残高不足・重複・不正 slot / passive ID は false（状態不変）。
@@ -1054,7 +1069,10 @@ export class GameSession {
     const acquired = this.operationState.getAcquiredOperationPassiveIds(slotIndex);
     if (acquired.includes(passiveId)) return false;
 
-    const acquireCost = this.gameData.operationPassiveCatalog.passiveAcquireCost;
+    const acquireCost = this.resolveOperationPassiveAcquireCostForSlot(
+      slotIndex,
+      passiveId,
+    );
     if (this.operationState.getUnspentResource() < acquireCost) {
       return false;
     }

@@ -14,6 +14,7 @@ import {
   listOperationPassiveAuthoringClassIds,
   listPassiveIdsForClassStem,
   setOperationPassiveCandidatesForClassDraft,
+  setOperationPassiveCostUnlockLevelDraft,
 } from './editorApi.ts';
 import {
   appendGrid,
@@ -112,6 +113,49 @@ export class OperationPassiveCatalogEditorStep {
         ),
       ),
     );
+    grantGrid.appendChild(
+      createFieldRow(
+        '同一クラス積み上げ（sameClassStackStep）',
+        createNumberInput(
+          draft.sameClassStackStep,
+          (sameClassStackStep) => {
+            if (
+              !Number.isInteger(sameClassStackStep) ||
+              sameClassStackStep < 0
+            ) {
+              return;
+            }
+            this.options.onDraftChange({
+              ...this.options.getDraft(),
+              sameClassStackStep,
+            });
+          },
+          { min: 0, step: 1, readonly: this.options.saving },
+        ),
+      ),
+    );
+    for (const band of ['0', '10', '20'] as const) {
+      grantGrid.appendChild(
+        createFieldRow(
+          `コスト帯 unlockLevel ${band}`,
+          createNumberInput(
+            draft.unlockLevelCostTable[band] ?? 1,
+            (value) => {
+              if (!Number.isInteger(value) || value < 1) return;
+              const current = this.options.getDraft();
+              this.options.onDraftChange({
+                ...current,
+                unlockLevelCostTable: {
+                  ...current.unlockLevelCostTable,
+                  [band]: value,
+                },
+              });
+            },
+            { min: 1, step: 1, readonly: this.options.saving },
+          ),
+        ),
+      );
+    }
     root.appendChild(grantSection);
 
     const candidatesSection = createSection('兵科ごとの取得候補');
@@ -212,6 +256,7 @@ export class OperationPassiveCatalogEditorStep {
     const list = createEl('div', 'editor-operation-passive-checklist');
     for (const passiveId of availableIds) {
       const passive = this.options.passives.find((entry) => entry.id === passiveId);
+      const row = createEl('div', 'editor-operation-passive-check-row');
       const label = document.createElement('label');
       label.className = 'editor-operation-passive-check';
       const checkbox = document.createElement('input');
@@ -244,7 +289,28 @@ export class OperationPassiveCatalogEditorStep {
         ? `${passive.name} (${passiveId})`
         : passiveId;
       label.append(checkbox, document.createTextNode(` ${text}`));
-      list.appendChild(label);
+      row.appendChild(label);
+
+      if (selected.has(passiveId)) {
+        const unlockInput = createNumberInput(
+          draft.costUnlockLevelByPassiveId[passiveId] ?? 0,
+          (unlockLevel) => {
+            if (!Number.isInteger(unlockLevel) || unlockLevel < 0) return;
+            this.options.onDraftChange(
+              setOperationPassiveCostUnlockLevelDraft(
+                this.options.getDraft(),
+                passiveId,
+                unlockLevel,
+              ),
+            );
+          },
+          { min: 0, step: 10, readonly: this.options.saving || !isR5Class },
+        );
+        row.appendChild(
+          createFieldRow('コスト帯 unlockLevel', unlockInput),
+        );
+      }
+      list.appendChild(row);
     }
     block.appendChild(list);
     return block;

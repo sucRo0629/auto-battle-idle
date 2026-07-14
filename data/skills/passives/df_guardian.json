@@ -35,5 +35,33 @@
     "id": "df_guardian_passive_4",
     "name": "不撓の誓い",
     "effect": "lastStandInvulnerable"
+  },
+  {
+    "id": "df_guardian_op_brace",
+    "name": "作戦・堅盾の構え",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.25,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "df_guardian_op_wall_aura",
+    "name": "作戦・城壁の護り",
+    "effect": "buff",
+    "buffSubKind": "stat",
+    "buffStat": [
+      "def"
+    ],
+    "buffMultiplier": 1.08,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "df_guardian_op_last_stand",
+    "name": "作戦・最後の誓い",
+    "effect": "lastStandInvulnerable"
   }
 ]

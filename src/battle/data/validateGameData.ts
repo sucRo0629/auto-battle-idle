@@ -69,6 +69,10 @@ import type {
   DebuffFilterTag,
   DispelPriority,
   DamageIncreaseCondition,
+  EffectApplyMode,
+  EffectMaxTargets,
+  EffectRangeForm,
+  EffectRangeSpec,
   FireCondition,
   FirePolicy,
   CounterResponseDef,
@@ -78,6 +82,13 @@ import type {
   OperationPassiveCatalogDef,
 } from '../types.ts';
 import { R5_COMBAT_MODULE_CLASS_IDS } from '../types.ts';
+import {
+  EFFECT_APPLY_MODES,
+  EFFECT_RANGE_FORMS,
+  legacyTargetShapeFromEffectRange,
+  normalizeSharedTargetingFields,
+  type LegacyTargetingBridgeFields,
+} from '../skills/effectRangeNormalize.ts';
 import {
   enrichClassPreset,
   getClassSkillIds,
@@ -159,6 +170,8 @@ const VFX_LAYERS_SET = new Set<VfxLayer>(VFX_LAYERS);
 const PARTICLE_PRESET_IDS_SET = new Set<string>(PARTICLE_PRESET_IDS);
 const TARGET_RULES_SET = new Set<TargetRule>(TARGET_RULES);
 const TARGET_SHAPES_SET = new Set<TargetShape>(TARGET_SHAPES);
+const EFFECT_RANGE_FORMS_SET = new Set<EffectRangeForm>(EFFECT_RANGE_FORMS);
+const EFFECT_APPLY_MODES_SET = new Set<EffectApplyMode>(EFFECT_APPLY_MODES);
 const MOVE_MODES_SET = new Set<MoveMode>(MOVE_MODES);
 const SKILL_EFFECT_ANIM_IDS_SET = new Set<SkillEffectAnimId>(
   ALL_SKILL_EFFECT_ANIM_IDS,
@@ -775,7 +788,7 @@ function parseEffectAmount(
 function parseOptionalRepeatedHitFields(
   obj: Record<string, unknown>,
   context: string,
-): Partial<Pick<SkillEffectDef, 'hitCount' | 'hitDurationSec'>> {
+): { hitCount?: number; hitDurationSec?: number } {
   const hitCountRaw = obj.hitCount;
   if (hitCountRaw === undefined) {
     if (obj.hitDurationSec !== undefined) {
@@ -794,36 +807,108 @@ function parseOptionalRepeatedHitFields(
   return { hitCount, hitDurationSec };
 }
 
+function parseOptionalEffectRange(
+  obj: Record<string, unknown>,
+  context: string,
+): EffectRangeSpec | undefined {
+  if (obj.effectRange === undefined) {
+    return undefined;
+  }
+  const rangeContext = `${context}.effectRange`;
+  const rangeObj = requireRecord(obj.effectRange, rangeContext);
+  const form = requireEnum(rangeObj, 'form', rangeContext, EFFECT_RANGE_FORMS_SET);
+  const applyMode = requireEnum(
+    rangeObj,
+    'applyMode',
+    rangeContext,
+    EFFECT_APPLY_MODES_SET,
+  );
+  const spec: EffectRangeSpec = { form, applyMode };
+
+  if (rangeObj.distancePx !== undefined) {
+    const distancePx = requireNumber(rangeObj, 'distancePx', rangeContext);
+    if (distancePx <= 0) {
+      invalidField(rangeContext, 'distancePx', 'must be a positive number');
+    }
+    spec.distancePx = distancePx;
+  }
+
+  if (rangeObj.maxTargets !== undefined) {
+    const raw = rangeObj.maxTargets;
+    if (raw === 'all') {
+      spec.maxTargets = 'all';
+    } else if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 1) {
+      spec.maxTargets = raw as EffectMaxTargets;
+    } else {
+      invalidField(
+        rangeContext,
+        'maxTargets',
+        'must be a positive integer or "all"',
+      );
+    }
+  }
+
+  if (rangeObj.hitCount !== undefined) {
+    const hitCount = requireNumber(rangeObj, 'hitCount', rangeContext);
+    if (!Number.isInteger(hitCount) || hitCount < 1) {
+      invalidField(rangeContext, 'hitCount', 'must be an integer >= 1');
+    }
+    spec.hitCount = hitCount;
+  }
+
+  if (rangeObj.refillSameTargetOnShortfall !== undefined) {
+    spec.refillSameTargetOnShortfall = requireBoolean(
+      rangeObj,
+      'refillSameTargetOnShortfall',
+      rangeContext,
+    );
+  }
+
+  return spec;
+}
+
+/**
+ * effectRange のみ書かれた JSON 向け: parse 前に legacy targetShape 関連を補完する。
+ * 既存 targetShape がある場合は触らない（検証は shape 系ルールに従う）。
+ */
+function withLegacyShapeFromEffectRange(
+  obj: Record<string, unknown>,
+  context: string,
+): Record<string, unknown> {
+  const effectRange = parseOptionalEffectRange(obj, context);
+  if (effectRange === undefined || obj.targetShape !== undefined) {
+    return obj;
+  }
+  const legacy = legacyTargetShapeFromEffectRange(effectRange);
+  const working: Record<string, unknown> = { ...obj };
+  if (legacy.targetShape !== undefined) {
+    working.targetShape = legacy.targetShape;
+  }
+  for (const key of [
+    'aoeRadiusPx',
+    'hitCount',
+    'range',
+    'scatterRadiusPx',
+    'scatterHitCount',
+  ] as const) {
+    if (working[key] === undefined && legacy[key] !== undefined) {
+      working[key] = legacy[key];
+    }
+  }
+  return working;
+}
+
 function parseTargetShapeFields(
   obj: Record<string, unknown>,
   context: string,
-): Partial<
-  Pick<
-    SkillEffectDef,
-    | 'targetShape'
-    | 'aoeRadiusPx'
-    | 'hitCount'
-    | 'hitDurationSec'
-    | 'piercePowerStepMultiplier'
-    | 'piercePowerStepMode'
-    | 'pierceDurationSec'
-    | 'chainCount'
-    | 'chainMaxDistancePx'
-    | 'chainPowerStepMultiplier'
-    | 'chainPowerStepMode'
-    | 'chainDurationSec'
-    | 'scatterRadiusPx'
-    | 'scatterSpreadRadiusPx'
-    | 'scatterHitCount'
-    | 'scatterDurationSec'
-    | 'scatterSpreadRate'
-  >
-> {
-  const targetShapeRaw = obj.targetShape;
+): LegacyTargetingBridgeFields {
+  const working = withLegacyShapeFromEffectRange(obj, context);
+  const effectRange = parseOptionalEffectRange(obj, context);
+  const targetShapeRaw = working.targetShape;
   const targetShape =
     targetShapeRaw === undefined
       ? undefined
-      : requireEnum(obj, 'targetShape', context, TARGET_SHAPES_SET);
+      : requireEnum(working, 'targetShape', context, TARGET_SHAPES_SET);
   const effectiveShape = targetShape ?? 'single';
 
   const shapeOnlyFields = [
@@ -850,21 +935,21 @@ function parseTargetShapeFields(
   for (const key of shapeOnlyFields) {
     if (
       effectiveShape === 'single' &&
-      obj[key] !== undefined &&
+      working[key] !== undefined &&
       !singleAllowedFields.has(key)
     ) {
       invalidField(context, key, `only allowed when targetShape is not single`);
     }
   }
 
-  if (effectiveShape !== 'aoe' && obj.aoeRadiusPx !== undefined) {
+  if (effectiveShape !== 'aoe' && working.aoeRadiusPx !== undefined) {
     invalidField(context, 'aoeRadiusPx', 'only allowed when targetShape is aoe');
   }
   if (
     effectiveShape !== 'multiLock' &&
     effectiveShape !== 'single' &&
     effectiveShape !== 'aoe' &&
-    obj.hitCount !== undefined
+    working.hitCount !== undefined
   ) {
     invalidField(
       context,
@@ -875,7 +960,7 @@ function parseTargetShapeFields(
   if (
     effectiveShape !== 'single' &&
     effectiveShape !== 'aoe' &&
-    obj.hitDurationSec !== undefined
+    working.hitDurationSec !== undefined
   ) {
     invalidField(
       context,
@@ -891,7 +976,7 @@ function parseTargetShapeFields(
       'chainPowerStepMode',
       'chainDurationSec',
     ] as const) {
-      if (obj[key] !== undefined) {
+      if (working[key] !== undefined) {
         invalidField(context, key, 'only allowed when targetShape is chain');
       }
     }
@@ -904,7 +989,7 @@ function parseTargetShapeFields(
       'scatterDurationSec',
       'scatterSpreadRate',
     ] as const) {
-      if (obj[key] !== undefined) {
+      if (working[key] !== undefined) {
         invalidField(context, key, 'only allowed when targetShape is scatter');
       }
     }
@@ -915,79 +1000,71 @@ function parseTargetShapeFields(
       'piercePowerStepMode',
       'pierceDurationSec',
     ] as const) {
-      if (obj[key] !== undefined) {
+      if (working[key] !== undefined) {
         invalidField(context, key, 'only allowed when targetShape is pierce');
       }
     }
   }
 
-  if (effectiveShape === 'single') {
-    return {
-      ...(targetShape !== undefined ? { targetShape: 'single' } : {}),
-      ...parseOptionalRepeatedHitFields(obj, context),
-    };
-  }
+  let shapeResult: LegacyTargetingBridgeFields;
 
-  if (effectiveShape === 'aoe') {
-    const aoeRadiusPx = requireNumber(obj, 'aoeRadiusPx', context);
+  if (effectiveShape === 'single') {
+    shapeResult = {
+      ...(targetShape !== undefined ? { targetShape: 'single' } : {}),
+      ...parseOptionalRepeatedHitFields(working, context),
+    };
+  } else if (effectiveShape === 'aoe') {
+    const aoeRadiusPx = requireNumber(working, 'aoeRadiusPx', context);
     if (aoeRadiusPx <= 0) {
       invalidField(context, 'aoeRadiusPx', 'must be a positive number');
     }
-    return {
+    shapeResult = {
       targetShape: 'aoe',
       aoeRadiusPx,
-      ...parseOptionalRepeatedHitFields(obj, context),
+      ...parseOptionalRepeatedHitFields(working, context),
     };
-  }
-
-  if (effectiveShape === 'multiLock') {
-    const hitCount = requireNumber(obj, 'hitCount', context);
+  } else if (effectiveShape === 'multiLock') {
+    const hitCount = requireNumber(working, 'hitCount', context);
     if (!Number.isInteger(hitCount) || hitCount < 2) {
       invalidField(context, 'hitCount', 'must be an integer >= 2');
     }
-    return { targetShape: 'multiLock', hitCount };
-  }
-
-  if (effectiveShape === 'pierce') {
-    return {
+    shapeResult = { targetShape: 'multiLock', hitCount };
+  } else if (effectiveShape === 'pierce') {
+    shapeResult = {
       targetShape: 'pierce',
       ...parseOptionalPowerStep(
-        obj,
+        working,
         context,
         'piercePowerStepMultiplier',
         'piercePowerStepMode',
       ),
-      ...parseOptionalPositiveNumber(obj, context, 'pierceDurationSec'),
+      ...parseOptionalPositiveNumber(working, context, 'pierceDurationSec'),
     };
-  }
-
-  if (effectiveShape === 'chain') {
-    const chainCount = requireNumber(obj, 'chainCount', context);
-    const chainMaxDistancePx = requireNumber(obj, 'chainMaxDistancePx', context);
+  } else if (effectiveShape === 'chain') {
+    const chainCount = requireNumber(working, 'chainCount', context);
+    const chainMaxDistancePx = requireNumber(working, 'chainMaxDistancePx', context);
     if (!Number.isInteger(chainCount) || chainCount < 1) {
       invalidField(context, 'chainCount', 'must be an integer >= 1');
     }
     if (chainMaxDistancePx <= 0) {
       invalidField(context, 'chainMaxDistancePx', 'must be a positive number');
     }
-    return {
+    shapeResult = {
       targetShape: 'chain',
       chainCount,
       chainMaxDistancePx,
       ...parseOptionalPowerStep(
-        obj,
+        working,
         context,
         'chainPowerStepMultiplier',
         'chainPowerStepMode',
       ),
-      ...parseOptionalPositiveNumber(obj, context, 'chainDurationSec'),
+      ...parseOptionalPositiveNumber(working, context, 'chainDurationSec'),
     };
-  }
-
-  if (effectiveShape === 'scatter') {
-    const scatterRadiusPx = requireNumber(obj, 'scatterRadiusPx', context);
-    const scatterHitCount = requireNumber(obj, 'scatterHitCount', context);
-    const scatterDurationSec = requireNumber(obj, 'scatterDurationSec', context);
+  } else if (effectiveShape === 'scatter') {
+    const scatterRadiusPx = requireNumber(working, 'scatterRadiusPx', context);
+    const scatterHitCount = requireNumber(working, 'scatterHitCount', context);
+    const scatterDurationSec = requireNumber(working, 'scatterDurationSec', context);
     if (scatterRadiusPx <= 0) {
       invalidField(context, 'scatterRadiusPx', 'must be a positive number');
     }
@@ -997,7 +1074,7 @@ function parseTargetShapeFields(
     if (scatterDurationSec <= 0) {
       invalidField(context, 'scatterDurationSec', 'must be a positive number');
     }
-    const spreadRaw = obj.scatterSpreadRate;
+    const spreadRaw = working.scatterSpreadRate;
     let scatterSpreadRate: number | undefined;
     if (spreadRaw !== undefined) {
       if (typeof spreadRaw !== 'number' || spreadRaw < 0 || spreadRaw > 1) {
@@ -1005,7 +1082,7 @@ function parseTargetShapeFields(
       }
       scatterSpreadRate = spreadRaw;
     }
-    const spreadRadiusRaw = obj.scatterSpreadRadiusPx;
+    const spreadRadiusRaw = working.scatterSpreadRadiusPx;
     let scatterSpreadRadiusPx: number | undefined;
     if (spreadRadiusRaw !== undefined) {
       if (typeof spreadRadiusRaw !== 'number' || spreadRadiusRaw <= 0) {
@@ -1013,7 +1090,7 @@ function parseTargetShapeFields(
       }
       scatterSpreadRadiusPx = spreadRadiusRaw;
     }
-    return {
+    shapeResult = {
       targetShape: 'scatter',
       scatterRadiusPx,
       scatterHitCount,
@@ -1021,13 +1098,22 @@ function parseTargetShapeFields(
       ...(scatterSpreadRadiusPx !== undefined ? { scatterSpreadRadiusPx } : {}),
       ...(scatterSpreadRate !== undefined ? { scatterSpreadRate } : {}),
     };
+  } else if (effectiveShape === 'poolEach') {
+    shapeResult = { targetShape: 'poolEach' };
+  } else {
+    invalidField(context, 'targetShape', `unsupported shape ${effectiveShape}`);
   }
 
-  if (effectiveShape === 'poolEach') {
-    return { targetShape: 'poolEach' };
-  }
+  const rangeFromObj =
+    typeof working.range === 'number' && !Number.isNaN(working.range)
+      ? { range: working.range as number }
+      : {};
 
-  invalidField(context, 'targetShape', `unsupported shape ${effectiveShape}`);
+  return normalizeSharedTargetingFields({
+    ...shapeResult,
+    ...rangeFromObj,
+    ...(effectRange !== undefined ? { effectRange } : {}),
+  });
 }
 
 function parseOptionalPositiveNumber(
@@ -6598,6 +6684,9 @@ export interface ParsedGameDataJson {
 const DEFAULT_OPERATION_PASSIVE_CATALOG: OperationPassiveCatalogDef = {
   passiveAcquireCost: 1,
   waveClearResourceGrant: 1,
+  sameClassStackStep: 0,
+  unlockLevelCostTable: { '0': 1, '10': 2, '20': 3 },
+  costUnlockLevelByPassiveId: {},
   candidatesByClass: {},
 };
 
@@ -6629,6 +6718,52 @@ function parseNonNegativeIntegerField(
   return value;
 }
 
+function parseUnlockLevelCostTable(
+  raw: unknown,
+  context: string,
+): Record<string, number> {
+  if (raw === undefined) {
+    return { ...DEFAULT_OPERATION_PASSIVE_CATALOG.unlockLevelCostTable };
+  }
+  const record = requireRecord(raw, `${context}.unlockLevelCostTable`);
+  const table: Record<string, number> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (!key.trim()) {
+      throw new Error(`${context}.unlockLevelCostTable: empty key`);
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+      throw new Error(
+        `${context}.unlockLevelCostTable["${key}"] must be a positive integer`,
+      );
+    }
+    table[key] = value;
+  }
+  return table;
+}
+
+function parseCostUnlockLevelByPassiveId(
+  raw: unknown,
+  context: string,
+): Record<string, number> {
+  if (raw === undefined) {
+    return {};
+  }
+  const record = requireRecord(raw, `${context}.costUnlockLevelByPassiveId`);
+  const levels: Record<string, number> = {};
+  for (const [passiveId, value] of Object.entries(record)) {
+    if (!passiveId.trim()) {
+      throw new Error(`${context}.costUnlockLevelByPassiveId: empty passive id`);
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+      throw new Error(
+        `${context}.costUnlockLevelByPassiveId["${passiveId}"] must be a non-negative integer`,
+      );
+    }
+    levels[passiveId] = value;
+  }
+  return levels;
+}
+
 export function parseOperationPassiveCatalog(
   raw: unknown,
 ): OperationPassiveCatalogDef {
@@ -6648,12 +6783,27 @@ export function parseOperationPassiveCatalog(
     'waveClearResourceGrant',
     context,
   );
+  const sameClassStackStep =
+    record.sameClassStackStep === undefined
+      ? DEFAULT_OPERATION_PASSIVE_CATALOG.sameClassStackStep
+      : parseNonNegativeIntegerField(record, 'sameClassStackStep', context);
+  const unlockLevelCostTable = parseUnlockLevelCostTable(
+    record.unlockLevelCostTable,
+    context,
+  );
+  const costUnlockLevelByPassiveId = parseCostUnlockLevelByPassiveId(
+    record.costUnlockLevelByPassiveId,
+    context,
+  );
 
   const candidatesRaw = record.candidatesByClass;
   if (candidatesRaw === undefined) {
     return {
       passiveAcquireCost,
       waveClearResourceGrant,
+      sameClassStackStep,
+      unlockLevelCostTable,
+      costUnlockLevelByPassiveId,
       candidatesByClass: {},
     };
   }
@@ -6696,6 +6846,9 @@ export function parseOperationPassiveCatalog(
   return {
     passiveAcquireCost,
     waveClearResourceGrant,
+    sameClassStackStep,
+    unlockLevelCostTable,
+    costUnlockLevelByPassiveId,
     candidatesByClass,
   };
 }
@@ -6734,9 +6887,26 @@ export function normalizeOperationPassiveCatalogForSave(
       candidatesByClass[classId] = normalized;
     }
   }
+
+  const unlockLevelCostTable: Record<string, number> = {};
+  for (const key of Object.keys(catalog.unlockLevelCostTable).sort()) {
+    unlockLevelCostTable[key] = catalog.unlockLevelCostTable[key]!;
+  }
+
+  const referencedIds = new Set(Object.values(candidatesByClass).flat());
+  const costUnlockLevelByPassiveId: Record<string, number> = {};
+  for (const passiveId of Object.keys(catalog.costUnlockLevelByPassiveId).sort()) {
+    if (!referencedIds.has(passiveId)) continue;
+    costUnlockLevelByPassiveId[passiveId] =
+      catalog.costUnlockLevelByPassiveId[passiveId]!;
+  }
+
   return {
     passiveAcquireCost: catalog.passiveAcquireCost,
     waveClearResourceGrant: catalog.waveClearResourceGrant,
+    sameClassStackStep: catalog.sameClassStackStep,
+    unlockLevelCostTable,
+    costUnlockLevelByPassiveId,
     candidatesByClass,
   };
 }

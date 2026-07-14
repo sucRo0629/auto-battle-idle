@@ -105,7 +105,7 @@ describe('operationPassivePrepDisplay (R9.6-B)', () => {
   it('exposes cost, target, amount, duration, and text status labels', () => {
     const loaded = tryLoadGameData();
     if (!loaded.ok) throw new Error(loaded.error);
-    const def = loaded.data.skillRegistry.passives.df_guardian_passive_2;
+    const def = loaded.data.skillRegistry.passives.df_guardian_op_wall_aura;
     expect(def).toBeTruthy();
 
     const view = buildOperationPassiveCandidateView(def!, {
@@ -140,9 +140,9 @@ describe('operationPassivePrepDisplay (R9.6-B)', () => {
     const loaded = tryLoadGameData();
     if (!loaded.ok) throw new Error(loaded.error);
     const views = buildOperationPassivePrepViews({
-      candidateIds: ['df_guardian_passive_2'],
+      candidateIds: ['df_guardian_op_wall_aura'],
       acquiredIds: [],
-      acquireCost: 1,
+      getAcquireCost: () => 1,
       currentResource: 0,
       getPassiveDef: (id) => loaded.data.skillRegistry.passives[id],
     });
@@ -154,7 +154,7 @@ describe('operationPassivePrepDisplay (R9.6-B)', () => {
     const views = buildOperationPassivePrepViews({
       candidateIds: [],
       acquiredIds: [],
-      acquireCost: 1,
+      getAcquireCost: () => 1,
       currentResource: 0,
       getPassiveDef: () => undefined,
     });

@@ -167,6 +167,9 @@ describe('authoringValidationPreview (R9e)', () => {
       {
         passiveAcquireCost: 1,
         waveClearResourceGrant: 1,
+        sameClassStackStep: 0,
+        unlockLevelCostTable: { '0': 1 },
+        costUnlockLevelByPassiveId: {},
         candidatesByClass: {
           df_guardian: ['missing_passive', 'missing_passive'],
         },
@@ -184,6 +187,9 @@ describe('authoringValidationPreview (R9e)', () => {
       {
         passiveAcquireCost: 1,
         waveClearResourceGrant: 1,
+        sameClassStackStep: 0,
+        unlockLevelCostTable: { '0': 1 },
+        costUnlockLevelByPassiveId: {},
         candidatesByClass: {},
       },
       catalogCtx,
@@ -199,6 +205,9 @@ describe('authoringValidationPreview (R9e)', () => {
         {
           passiveAcquireCost: 1,
           waveClearResourceGrant: 1,
+          sameClassStackStep: 0,
+          unlockLevelCostTable: { '0': 1 },
+          costUnlockLevelByPassiveId: { not_a_real_passive: 0 },
           candidatesByClass: {
             df_guardian: ['not_a_real_passive'],
           },
