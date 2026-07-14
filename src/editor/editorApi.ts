@@ -12,6 +12,7 @@ import { assertConfigurableRangePx } from '../battle/rangeLimits.ts';
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
+  CombatModuleDef,
   EnemyTemplate,
   EntityTraits,
   GrowthTierSet,
@@ -33,6 +34,7 @@ import {
   type AuthoringCombatModuleContext,
   type AuthoringPassiveCatalogContext,
 } from './authoringValidationPreview.ts';
+import { groupCombatModulesByClassId } from './combatModuleEditor.ts';
 
 export type StageDraftValidateContext = AuthoringCombatModuleContext;
 
@@ -271,6 +273,92 @@ export async function saveOperationPassiveCatalog(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ catalog: normalized }),
   });
+}
+
+export async function fetchCombatModules(): Promise<CombatModuleDef[]> {
+  return fetchJson<CombatModuleDef[]>('/__editor/combat-modules');
+}
+
+export function combatModulesDraftFromModules(
+  modules: CombatModuleDef[],
+): CombatModuleDef[] {
+  return structuredClone(modules);
+}
+
+export function normalizeCombatModulesDraftForSave(
+  modules: readonly CombatModuleDef[],
+): CombatModuleDef[] {
+  const cloned = modules.map((module) => structuredClone(module));
+  cloned.sort((a, b) => {
+    const classCmp = a.classId.localeCompare(b.classId);
+    if (classCmp !== 0) return classCmp;
+    return a.id.localeCompare(b.id);
+  });
+  return cloned;
+}
+
+export function validateCombatModulesDraftForSave(
+  modules: readonly CombatModuleDef[],
+): string | null {
+  if (modules.length === 0) {
+    return '戦闘方式が 1 件以上必要です';
+  }
+
+  const seenIds = new Set<string>();
+  for (const module of modules) {
+    const id = module.id.trim();
+    if (!id) {
+      return 'module.id は必須です';
+    }
+    if (seenIds.has(id)) {
+      return `module.id が重複しています: ${id}`;
+    }
+    seenIds.add(id);
+
+    if (!module.classId.trim()) {
+      return `${id}: classId は必須です`;
+    }
+    if (!module.displayName.trim()) {
+      return `${id}: displayName は必須です`;
+    }
+    if (!(module.attackIntervalSec > 0)) {
+      return `${id}: attackIntervalSec は正の数にしてください`;
+    }
+    if (!Array.isArray(module.action?.effect) || module.action.effect.length === 0) {
+      return `${id}: action.effect は 1 件以上必要です`;
+    }
+  }
+
+  for (const classId of R5_COMBAT_MODULE_CLASS_IDS) {
+    const count = modules.filter((module) => module.classId === classId).length;
+    if (count !== 2) {
+      return `R5 兵科 ${classId} は戦闘方式がちょうど 2 件必要です（現在 ${count} 件）`;
+    }
+  }
+
+  return null;
+}
+
+export async function saveCombatModules(
+  modules: readonly CombatModuleDef[],
+): Promise<void> {
+  const normalized = normalizeCombatModulesDraftForSave(modules);
+  await fetchJson('/__editor/combat-modules', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modules: normalized }),
+  });
+}
+
+/** server write 用: classId ごとの配列（ファイル単位） */
+export function combatModuleFilesFromDraft(
+  modules: readonly CombatModuleDef[],
+): Array<{ classId: string; modules: CombatModuleDef[] }> {
+  const groups = groupCombatModulesByClassId(normalizeCombatModulesDraftForSave(modules));
+  return [...groups.entries()].map(([classId, classModules]) => ({
+    classId,
+    modules: classModules,
+  }));
 }
 
 export function listOperationPassiveAuthoringClassIds(

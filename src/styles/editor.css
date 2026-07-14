@@ -503,6 +503,12 @@
   color: #e08a8a;
 }
 
+.editor-preview-line {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+  color: #c8c8d8;
+}
+
 .editor-skill-desc-preview {
   margin: 0.75rem 0 0;
   padding: 0.6rem 0.75rem;

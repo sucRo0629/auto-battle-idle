@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9e 完了** — preview・validation・参照整合の統合（§90）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
-- **次の再開タスク:** **R9g** — 効果範囲 authoring（CombatModule editor + passive 範囲）。**R9h** — class 方式 pool（`combatModuleIds`）。その後 R9f（**Stage 新規作成**含む authoring closure）→ **R9.6（A→B）** → R10。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
+- **新ロードマップ現在地:** **R9g 完了** — 効果範囲 authoring（CombatModule editor + passive 範囲、§91）。**R9e 完了** — preview・validation・参照整合の統合（§90）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
+- **次の再開タスク:** **R9h** — class 方式 pool（`combatModuleIds`）。その後 R9f（**Stage 新規作成**含む authoring closure）→ **R9.6（A→B）** → R10。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6206,7 +6206,7 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 | **R9b〜d** | **触らない** — Stage module 参照・CombatModule 本体を先に editor 化 |
 | **R9d（完了）** | `data/operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
 | **R9e** | preview・validation・参照整合。catalog 参照整合を validate に追加 | **完了（§90）** |
-| **R9g** | CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） |
+| **R9g** | CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） | **完了（§91）** |
 | **R9h** | Class `combatModuleIds` 編集（R5 4 兵科のみ、2 件必須） |
 | **R9f** | legacy stage / skill / tier **一括 migration**。catalog の全面拡張（M1 外 class）は R10 以降 |
 
@@ -6219,7 +6219,7 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 | **R9c** | 複数 Wave・`enemyGroups` 構造 authoring | Wave 追加削除 UI + 2 Wave save round-trip |
 | **R9d** | 作戦内パッシブ候補・付与条件 authoring | `operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
 | **R9e** | preview・validation・参照整合の統合 | **完了（§90）** — 不正 ID・重複・未設定警告 |
-| **R9g** | **効果範囲 authoring（試作前提）** — CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） | module / passive 範囲の save round-trip・preview と runtime 一致 |
+| **R9g** | **効果範囲 authoring（試作前提）** — CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） | **完了（§91）** — module / passive 範囲 save round-trip |
 | **R9h** | **Class 方式 pool** — `combatModuleIds` 編集（**R5 4 兵科のみ**、2 件必須）。M1 外 class は read-only | `editorClassList.test.ts` 拡張 — 保存後 validate pass |
 | **R9f** | Legacy migration **独立** — script / 一括 normalize（`attackSpeedTier`→module、`waves.enemies`→groups **optional**、旧 active 整理）。**legacy フィールド削除は別 PR 可** | migration テスト + 旧新共存 read |
 
@@ -7379,4 +7379,53 @@ R9b〜d で分かれた authoring 経路の **preview / client validate / 参照
 
 ### 90.6 次タスク
 
-**R9g** — 効果範囲 authoring（CombatModule editor + `SkillEditorStep` 範囲フィールド）。**R9h** — class 方式 pool。その後 R9f → **R9.6（A→B）** → R10。
+**R9g** — §91 で完了。**R9h** — class 方式 pool（`combatModuleIds`）。その後 R9f → **R9.6（A→B）** → R10。
+
+---
+
+## 91. R9g — 効果範囲 authoring（完了 2026-07-14）
+
+### 91.1 目的
+
+R10 試作用に、戦闘方式・作戦内パッシブの効果範囲を **手編集 JSON なし** で設定できるようにする。§5.7 用語を editor 表示へ寄せるが、legacy `targetShape` の JSON 改名・全面移行は含めない。
+
+### 91.2 実装
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `vite-plugin-editor-api.ts` | `GET/PUT /__editor/combat-modules`。classId ごと `data/combat-modules/{classId}.json` へ書戻し + validate |
+| `src/editor/editorApi.ts` | `fetch/saveCombatModules`、normalize / client validate（R5 は 2 方式必須） |
+| `src/editor/combatModuleEditor.ts` | §5.7 形式ラベル・draft upsert / 範囲要約 |
+| `src/editor/CombatModuleEditorStep.ts` | 方式タブ UI（間隔・attackMethod・効果範囲・合成 preview） |
+| `src/editor/EditorApp.ts` | 「戦闘方式」タブ + load / save lifecycle |
+| `src/editor/effectTargetingFields.ts` | 効果範囲の形式ラベル（単体 / 範囲 / 前方 / 乱打等）。passive にも共通反映 |
+| `src/editor/combatModuleEditor.test.ts` | helpers + UI + passive `buffAoeRadiusPx` sanitize round-trip |
+
+### 91.3 設計メモ
+
+| 項目 | 内容 |
+| ---- | ---- |
+| schema | 既存 `CombatModuleDef` + `SkillSharedTargetingFields`。新 JSON フィールドなし |
+| passive 範囲 | `SkillEditorStep` / `appendPassiveBuffFields` → `appendSkillEffectTargetingFields` 既存経路。R9g は §5.7 ラベル寄せ + sanitize 確認 |
+| preview | `synthesizeCombatModuleSkill` + `formatActiveDescription`。player 向け「貫通 / AoE」glossary は未改名（editor ラベルのみ §5.7） |
+
+### 91.4 テスト
+
+| ファイル | 結果 |
+| -------- | ---- |
+| `combatModuleEditor.test.ts` | **7** pass（normalize / validate / aoe 編集 + parse、UI、passive radius） |
+| 関連回帰 | `authoringValidationPreview` / `operationPassiveCatalogEditor` pass |
+
+### 91.5 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R9g Backend** | **Yes** — GET/PUT + full `parseAndValidateGameDataJson` |
+| **R9g Tooling** | **Yes** — CombatModule editor + passive 範囲ラベル / round-trip |
+| **R9g 全体** | **Yes** |
+| R9h class `combatModuleIds` | **No** — スコープ外 |
+| legacy `targetShape` 移行 | **No** — スコープ外 |
+
+### 91.6 次タスク
+
+**R9h** — Class 方式 pool（`combatModuleIds`）。その後 R9f → **R9.6（A→B）** → R10。

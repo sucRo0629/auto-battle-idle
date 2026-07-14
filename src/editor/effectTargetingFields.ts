@@ -1,5 +1,4 @@
 import {
-  TARGET_SHAPE_LABELS,
   TARGET_SHAPE_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
 import {
@@ -9,6 +8,7 @@ import {
 } from '../battle/rangeLimits.ts';
 import { getEffectTarget } from '../battle/skills/targetSpec.ts';
 import type { SkillEffectDef, TargetShape, TargetSpec } from '../battle/types.ts';
+import { EFFECT_RANGE_FORM_LABELS } from './combatModuleEditor.ts';
 import { createEl, createFieldRow, createNumberInput, createSelect } from './formUtils.ts';
 
 type TargetingEffect = Pick<
@@ -52,7 +52,7 @@ export function appendSkillEffectTargetingFields(
     effectTargetKind === 'self' ? 'single' : targetShape,
     TARGET_SHAPE_OPTIONS.map((value) => ({
       value,
-      label: TARGET_SHAPE_LABELS[value],
+      label: EFFECT_RANGE_FORM_LABELS[value],
     })),
     (shape) => {
       patchEffect((prev) => {
@@ -94,12 +94,12 @@ export function appendSkillEffectTargetingFields(
   if (effectTargetKind === 'self') {
     shapeSelect.disabled = true;
   }
-  parent.appendChild(createFieldRow('ターゲット形状', shapeSelect));
+  parent.appendChild(createFieldRow('効果範囲の形式', shapeSelect));
 
   if (targetShape === 'single' || targetShape === 'aoe') {
     parent.appendChild(
       createFieldRow(
-        '攻撃回数（2以上・省略=1）',
+        'Hit / 攻撃回数（2以上・省略=1）',
         createNumberInput(
           effect.hitCount ?? 0,
           (hitCount) => {
@@ -145,7 +145,7 @@ export function appendSkillEffectTargetingFields(
   if (targetShape === 'aoe') {
     parent.appendChild(
       createFieldRow(
-        '範囲半径 px',
+        '範囲 N px（ターゲット中心）',
         createNumberInput(
           effect.aoeRadiusPx ?? 70,
           (aoeRadiusPx) =>
@@ -159,7 +159,7 @@ export function appendSkillEffectTargetingFields(
   if (targetShape === 'multiLock') {
     parent.appendChild(
       createFieldRow(
-        'ヒット回数',
+        '対象数 / Hit',
         createNumberInput(
           effect.hitCount ?? 3,
           (hitCount) =>
@@ -206,7 +206,7 @@ export function appendSkillEffectTargetingFields(
   if (targetShape === 'scatter') {
     parent.appendChild(
       createFieldRow(
-        '乱打半径 px',
+        '乱打・子範囲半径 px',
         createNumberInput(
           effect.scatterRadiusPx ?? 70,
           (scatterRadiusPx) =>
@@ -221,7 +221,7 @@ export function appendSkillEffectTargetingFields(
     );
     parent.appendChild(
       createFieldRow(
-        'ヒット回数',
+        '乱打・Hit 回数',
         createNumberInput(
           effect.scatterHitCount ?? 3,
           (scatterHitCount) =>
@@ -236,7 +236,7 @@ export function appendSkillEffectTargetingFields(
     );
     parent.appendChild(
       createFieldRow(
-        '乱打時間（秒）',
+        '乱打・適用時間（秒）',
         createNumberInput(
           effect.scatterDurationSec ?? 1,
           (scatterDurationSec) =>
@@ -254,7 +254,7 @@ export function appendSkillEffectTargetingFields(
   if (targetShape === 'pierce') {
     parent.appendChild(
       createFieldRow(
-        '貫通時間（秒・0=即時）',
+        '前方・進行時間（秒・0=即時）',
         createNumberInput(
           effect.pierceDurationSec ?? 0,
           (pierceDurationSec) =>
@@ -271,7 +271,7 @@ export function appendSkillEffectTargetingFields(
 
   parent.appendChild(
     createFieldRow(
-      '射程 px（省略時=traits.rangePx）',
+      '射程 / 前方距離 px（省略時=traits.rangePx）',
       createNumberInput(
         effect.range ?? 0,
         (range) =>

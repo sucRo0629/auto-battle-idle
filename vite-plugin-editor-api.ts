@@ -8,6 +8,7 @@ import {
 } from './src/battle/data/validateGameData.ts';
 import type {
   ActiveSkillDef,
+  CombatModuleDef,
   EnemyTemplate,
   OperationPassiveCatalogDef,
   PassiveSkillDef,
@@ -16,9 +17,12 @@ import type {
 import type { ClassPresetBeforeEnrich } from './src/progression/skillUnlocks.ts';
 import {
   collectCatalogPassivesToPreserveOnEntityReplace,
+  combatModuleFilesFromDraft,
   ensureClassGrowthFields,
+  normalizeCombatModulesDraftForSave,
   normalizeStageDraftForSave,
   normalizeOperationPassiveCatalogDraftForSave,
+  validateCombatModulesDraftForSave,
   type StageDraft,
 } from './src/editor/editorApi.ts';
 import {
@@ -332,6 +336,55 @@ async function applyOperationPassiveCatalog(
   await reloadGameDataModules(server, [READ_FILES.operationPassiveCatalog]);
 }
 
+type CombatModulesBody = {
+  modules: CombatModuleDef[];
+};
+
+async function applyCombatModules(
+  body: CombatModulesBody,
+  server?: ViteDevServer,
+): Promise<void> {
+  if (!Array.isArray(body.modules)) {
+    throw new Error('modules must be an array');
+  }
+  const draftError = validateCombatModulesDraftForSave(body.modules);
+  if (draftError) {
+    throw new Error(draftError);
+  }
+  const normalized = normalizeCombatModulesDraftForSave(body.modules);
+  const validationBase = loadValidationPayload();
+  validateAll({
+    ...validationBase,
+    combatModules: normalized,
+  });
+
+  if (!fs.existsSync(COMBAT_MODULES_DIR)) {
+    fs.mkdirSync(COMBAT_MODULES_DIR, { recursive: true });
+  }
+
+  const files = combatModuleFilesFromDraft(normalized);
+  const writtenPaths: string[] = [];
+  const writtenClassIds = new Set(files.map((file) => file.classId));
+
+  for (const file of files) {
+    const filePath = path.join(COMBAT_MODULES_DIR, `${file.classId}.json`);
+    writeJsonFile(filePath, file.modules);
+    writtenPaths.push(filePath);
+  }
+
+  // 旧 class ファイルの残留を防ぐ（normalize 後に残った class のみ維持）
+  for (const name of fs.readdirSync(COMBAT_MODULES_DIR)) {
+    if (!name.endsWith('.json')) continue;
+    const classId = name.slice(0, -'.json'.length);
+    if (writtenClassIds.has(classId)) continue;
+    const stalePath = path.join(COMBAT_MODULES_DIR, name);
+    fs.unlinkSync(stalePath);
+    writtenPaths.push(stalePath);
+  }
+
+  await reloadGameDataModules(server, writtenPaths);
+}
+
 async function applyEnemyBundle(
   body: EnemyBundleBody,
   server?: ViteDevServer,
@@ -459,6 +512,10 @@ export function editorApiPlugin(): Plugin {
             sendJson(res, 200, readJsonFile(READ_FILES.operationPassiveCatalog));
             return;
           }
+          if (req.method === 'GET' && url.pathname === '/__editor/combat-modules') {
+            sendJson(res, 200, readAllCombatModuleFiles());
+            return;
+          }
 
           if (req.method === 'PUT' && url.pathname === '/__editor/class-bundle') {
             const body = JSON.parse(await readBody(req)) as ClassBundleBody;
@@ -492,6 +549,12 @@ export function editorApiPlugin(): Plugin {
               await readBody(req),
             ) as OperationPassiveCatalogBody;
             await applyOperationPassiveCatalog(body, server);
+            sendJson(res, 200, { ok: true });
+            return;
+          }
+          if (req.method === 'PUT' && url.pathname === '/__editor/combat-modules') {
+            const body = JSON.parse(await readBody(req)) as CombatModulesBody;
+            await applyCombatModules(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }
