@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9.6（A+B）完了** — 作戦準備の **Player 完了用試作 UI**（CombatModule・作戦内パッシブ。「正式」= 暫定配線の後継で R10 評価に足る比較・選択 UI。**製品仕上げではない**、§94）。**R9f 完了** — Stage 新規作成（authoring closure、§93）。**R9h 完了** — class 方式 pool（`combatModuleIds`、§92）。**R9g 完了** — 効果範囲 authoring（CombatModule editor + passive 範囲、§91）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。
-- **次の再開タスク:** **R10** — 新仕様 2 Wave 以上の試作・「繰り返し遊びたいか」評価。
+- **新ロードマップ現在地:** **R10 Backend 完了** — `r10_prototype`（2 Wave `waves[].enemyGroups`）+ catalog 4 兵科候補 + Wave 別編成プレビュー + 統合テスト（§95）。**R9.6（A+B）完了** — 作戦準備の **Player 完了用試作 UI**（§94）。**R9f〜h / R9a〜e / R8 / R5〜R7 Backend 完了**（詳細は各 §）。
+- **次の再開タスク:** R10 Player 手元評価の最終確認（反復意欲）のあと、試作成立後バックログ（兵科拡張・戦場移動 cleanup・Stage 削除 等）。**公式進捗上 R10 は Backend+構造 Player 完了。** 主観「繰り返し遊びたいか」は §95.5 に記録。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7591,4 +7591,73 @@ R9.5c の暫定 `<select>` 配線を、プレイヤーが候補を比較・理�
 
 ### 94.6 次タスク
 
-**R10** — 新仕様 2 Wave 以上の試作と「繰り返し遊びたいか」の Player 評価。
+~~**R10**~~ → §95 完了。
+
+---
+
+## 95. R10 — 新仕様 2 Wave 試作・反復評価（2026-07-14）
+
+### 95.1 目的
+
+新仕様だけで 2 Wave 以上を遊び、編成・戦闘方式・作戦内パッシブの判断差が「繰り返し遊びたい」につながるか評価できる試作を `stages.json` に置く。
+
+### 95.2 未確定事項の確定（実装・既存仕様から）
+
+| 項目 | 確定内容 | 根拠 |
+| ---- | -------- | ---- |
+| 作戦内パッシブ候補数 | R5 4 兵科 × 各 1 候補（cost 1 / Wave クリア +1） | `operation-passive-catalog.json`。既存 passive ID のみ。新規 effect 創作なし |
+| 次 Wave 敵構成の表示 | **出撃前ステージ詳細で全 Wave**（`Wave N:` 接頭辞）。Wave 間準備の追加プレビューは必須としない | [stage-selection-ui.md §3.1](../spec/stage-selection-ui.md)（R10 追記） |
+| 初期方式デフォルト | class `combatModuleIds[0]`（未選択時）。出撃前 UI で変更可 | R5d / R9.6 既存 |
+| 攻撃間隔表記 | R9.5b 既存（ツールチップ秒表示）を維持。本 Phase で変更なし | [battle-field.md](../spec/battle-field.md) |
+| 手動評価の記録先 | 本 §95.5 | planning-rules / phase-roadmap R10 |
+| authoring 正本 | Stage = `waves[].enemyGroups`。パッシブ pool = catalog JSON（Stage 外） | R9d / R9f |
+
+### 95.3 実装
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `data/stages.json` | **`r10_prototype`** — 2 Wave `waves[].enemyGroups` + `selectedCombatModuleId`。Wave1 近接単体圧 / Wave2 双弾+貫通 |
+| `data/operation-passive-catalog.json` | R5 4 兵科候補を追加（guardian / swordsman / sorcerer / cleric） |
+| `src/ui/stageEnemyCompositionPreview.ts` | `waves[].enemyGroups` 優先要約・`usesWaveEnemyGroups`・Wave 接頭辞 |
+| `src/ui/stageDetailDom.ts` / `DebugMenuPanel.ts` / `StageEnemyEditorStep.ts` | 上記 preview 反映 |
+| `src/game/r10PrototypeIntegration.test.ts` | ロード・Wave 別 spawn・完走・module/passive・再戦 |
+| `docs/spec/stage-selection-ui.md` | §3.1 新仕様 Wave 編成表示 |
+
+**意図（編成）**
+
+- Wave1: `at_swordsman`×2（単体斬）+ `df_guardian`×1 — 単体焦点が有利寄り
+- Wave2: `at_sorcerer`×2（双弾）+ `at_swordsman`×1（貫通斬）— 線上・複数圧。全体癒し / 貫通斬 / DEF パッシブなどが Wave 間判断の軸
+- `formationHintJa` で要約。難易度は scale 0.85〜1.0・想定 Lv10（試用値）
+
+### 95.4 テスト
+
+| ファイル | 結果 |
+| -------- | ---- |
+| `r10PrototypeIntegration.test.ts` | **4** pass |
+| `stageEnemyCompositionPreview.test.ts` | Wave groups + `r10_prototype` 含む pass |
+| `operationPassiveCatalogEditor.test.ts` | catalog 拡張後 pass |
+
+### 95.5 評価記録（評価軸）
+
+| 軸 | 判定 | メモ |
+| -- | ---- | ---- |
+| Wave1→Wave2 準備判断 | **構造 Yes** | 敵 module / 形状が Wave で変わる。詳細に全 Wave 表示 |
+| 方式の挙動差 | **構造 Yes** | 単体 vs 貫通 / 単体 vs 双弾 / 単体癒し vs 全体 — 倍率差のみではない |
+| パッシブが次判断へ | **構造 Yes** | クリア後 resource 1、候補は 4 兵科に分散 → 誰に振るかの選択 |
+| 失敗後に別案を試したくなるか | **条件付き Yes** | 再戦 API・選択 UI は成立。難易度チューニングは試用値のまま — 手元で敗退却・別編成感を確認推奨 |
+| legacy 混在 | **R5 4 兵科 Yes** / **既定 party 注意** | 既定 `parties.demo` に `at_ranger` あり。R10 評価は編成で `at_sorcerer` 等へ差し替え推奨 |
+
+**「繰り返し遊びたいか」（試作レベルの結論）:** **前向き（条件付き）** — 判断材料とループは揃った。数値バランス・演出は試作成立後。主観の最終感触は `r10_prototype` をステージ選択から 1〜2 周した手元確認を推奨。
+
+### 95.6 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R10 Backend** | **Yes** — 新作戦ロード・Wave 別 spawn・完走・状態遷移テスト |
+| **R10 Player（遊べる）** | **Yes** — R9.6 UI + `r10_prototype` 統合テスト。製品 polish ではない |
+| **R10 評価記録** | **Yes** — §95.5 |
+| Stage 削除 / VFX / i18n | **No** — スコープ外（試作成立後） |
+
+### 95.7 次タスク
+
+試作成立後バックログ（順序未固定）: 兵科拡張、診断基盤再構築、**戦場移動 legacy cleanup**、Stage 削除、正式コンテンツ、UI 仕上げ、画像 / VFX / 効果音、i18n、packaging。

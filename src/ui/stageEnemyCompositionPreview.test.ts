@@ -31,12 +31,14 @@ describe('resolveStageEnemyCompositionPreview', () => {
     expect(preview).toMatchObject({
       recommendedLevel: 12,
       usesEnemyGroups: true,
+      usesWaveEnemyGroups: false,
       totalEnemyCount: 3,
       showLargePartyWarning: false,
       legacyWaveLines: [],
     });
     expect(preview.enemyGroupLines).toHaveLength(2);
     expect(preview.enemyGroupLines[1]?.atkScale).toBe(1.5);
+    expect(preview.enemyGroupLines[0]?.waveIndex).toBeNull();
   });
 
   it('flags five or more enemies', () => {
@@ -113,6 +115,7 @@ describe('resolveStageEnemyCompositionPreview', () => {
     expect(preview).toMatchObject({
       recommendedLevel: 10,
       usesEnemyGroups: true,
+      usesWaveEnemyGroups: false,
       totalEnemyCount: 2,
       showLargePartyWarning: false,
       legacyWaveLines: [],
@@ -121,6 +124,81 @@ describe('resolveStageEnemyCompositionPreview', () => {
       'at_hunter',
       'df_guardian',
     ]);
+  });
+
+  it('summarizes waves[].enemyGroups per wave for R10-style stages', () => {
+    const preview = resolveStageEnemyCompositionPreview(
+      makeStage({
+        recommendedLevel: 10,
+        waves: [
+          {
+            enemies: [],
+            enemyGroups: [
+              { classId: 'at_swordsman', count: 2 },
+              { classId: 'df_guardian', count: 1 },
+            ],
+          },
+          {
+            enemies: [],
+            enemyGroups: [{ classId: 'at_sorcerer', count: 2 }],
+          },
+        ],
+      }),
+    );
+
+    expect(preview).toMatchObject({
+      recommendedLevel: 10,
+      usesEnemyGroups: true,
+      usesWaveEnemyGroups: true,
+      totalEnemyCount: 5,
+      showLargePartyWarning: true,
+      legacyWaveLines: [],
+    });
+    expect(preview.enemyGroupLines.map((line) => line.waveIndex)).toEqual([0, 0, 1]);
+  });
+
+  it('filters waves[].enemyGroups to the selected wave', () => {
+    const preview = resolveStageEnemyCompositionPreview(
+      makeStage({
+        recommendedLevel: 10,
+        waves: [
+          {
+            enemies: [],
+            enemyGroups: [{ classId: 'at_swordsman', count: 2 }],
+          },
+          {
+            enemies: [],
+            enemyGroups: [{ classId: 'at_sorcerer', count: 3 }],
+          },
+        ],
+      }),
+      1,
+    );
+
+    expect(preview.totalEnemyCount).toBe(3);
+    expect(preview.enemyGroupLines).toEqual([
+      expect.objectContaining({
+        classId: 'at_sorcerer',
+        count: 3,
+        waveIndex: 1,
+      }),
+    ]);
+  });
+
+  it('resolves r10_prototype stage from loaded game data', () => {
+    const stage = loadGameData().stages.find((entry) => entry.id === 'r10_prototype');
+    expect(stage).toBeDefined();
+
+    const preview = resolveStageEnemyCompositionPreview(stage!);
+    expect(preview).toMatchObject({
+      recommendedLevel: 10,
+      usesEnemyGroups: true,
+      usesWaveEnemyGroups: true,
+      totalEnemyCount: 6,
+      showLargePartyWarning: true,
+      legacyWaveLines: [],
+    });
+    expect(preview.enemyGroupLines.map((line) => line.waveIndex)).toEqual([0, 0, 1, 1]);
   });
 
   it('resolves ranged_test stage from loaded game data', () => {
@@ -132,13 +210,14 @@ describe('resolveStageEnemyCompositionPreview', () => {
     expect(preview).toMatchObject({
       recommendedLevel: 10,
       usesEnemyGroups: true,
+      usesWaveEnemyGroups: false,
       totalEnemyCount: 3,
       showLargePartyWarning: false,
       legacyWaveLines: [],
     });
     expect(preview.enemyGroupLines).toEqual([
-      expect.objectContaining({ classId: 'df_guardian', count: 1 }),
-      expect.objectContaining({ classId: 'at_hunter', count: 2 }),
+      expect.objectContaining({ classId: 'df_guardian', count: 1, waveIndex: null }),
+      expect.objectContaining({ classId: 'at_hunter', count: 2, waveIndex: null }),
     ]);
   });
 });

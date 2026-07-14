@@ -51,7 +51,7 @@ flowchart LR
 | ブロック | 内容 | データ正本 |
 | -------- | ---- | ---------- |
 | **想定レベル** | `StageDef.recommendedLevel`（ラベル例: 「想定 Lv {n}」） | ステージ JSON（6b / 8b で投入。未設定ステージは UI で「—」） |
-| **敵編成** | 全 Wave の敵テンプレート一覧（Wave 区切り・同一テンプレの人数） | `StageDef.waves[]` |
+| **敵編成** | 全 Wave の敵一覧（Wave 区切り）。`waves[].enemyGroups` / stage 直下 `enemyGroups` / legacy `templateId` | `StageDef` + [stageEnemyCompositionPreview](../../src/ui/stageEnemyCompositionPreview.ts) |
 | **編成ヒント**（任意） | `formationHintJa` があるときのみ 1 行表示。experience spotlight 用（必須 counter 表示ではない） | `StageDef.formationHintJa` |
 | **敵情報** | 各テンプレの `displayName`、UI ロール / 前後衛など編成判断に足る概要 | `enemies.json` + [enemy-design-concept.md](../enemy-design-concept.md)。**ステータス数値の一覧転記はしない** |
 | **レベルシンク** | チェックボックス（[§4](#4-レベルシンクチェックボックス)） | 当該出撃のみ有効 |
@@ -60,9 +60,11 @@ flowchart LR
 
 ### 3.1 敵編成・敵情報の粒度
 
-- **編成:** Wave ごとに `templateId` × 出現数。配置座標（`spawnX`）は v1 では省略可。
-- **情報:** テンプレ ID ごとに 1 行。ボス / 雑魚の区別がデータ上あればラベル表示。
+- **編成（新仕様）:** Wave ごとの `enemyGroups`（`classId` × `count`、任意 scale）。複数 Wave があるとき詳細は `Wave N:` 接頭辞付き。stage 直下 `enemyGroups` のみの舞台は 1 編成として扱う（Wave 接頭辞なし）。
+- **編成（legacy）:** Wave ごとに `templateId` × 出現数。配置座標（`spawnX`）は v1 では省略可。
+- **情報:** クラス / テンプレ ID ごとに 1 行。ボス / 雑魚の区別がデータ上あればラベル表示。
 - スキル説明文・effect 全文は出さない（編成画面・用語パネルと役割分担）。
+- **出撃前に全 Wave を見せる**（R10）: Wave 間準備で次 Wave へ判断できるようにするため、ステージ詳細は未開始の全 Wave 編成を要約する。Wave 間準備画面での追加プレビューは必須としない。
 
 ---
 

@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R5〜R8 Backend 完了**、**R9a〜h / R9f 完了**、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**、**R9.6（A+B）Player 完了**（作戦準備の **Player 完了用試作 UI** — 暫定配線の後継。製品仕上げではない）。**公式次タスク: R10**。詳細は [current-task.md §94](../ai-handoff/current-task.md)。
+**現在地:** **R10 Backend + 構造 Player 完了**（`r10_prototype`・評価記録 §95）。**R9.6（A+B）Player 完了**。**R5〜R9.5 Backend / R9 authoring 完了**。次は試作成立後バックログ。詳細は [current-task.md §95](../ai-handoff/current-task.md)。
 
 ---
 
@@ -38,7 +38,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、統合確認 | **R9.5a〜c Backend 完了** | R9.5a〜b 完了。R9.5c は暫定 UI 縦切りのみ（正式 作戦準備 UI は **R9.6**） | **Backend 完了** |
 | **R9b〜h / R9f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / **効果範囲** / **class 方式 pool** / **Stage 新規作成** | **R9b〜h・R9f 完了**（§87〜93） | R10 用作戦反映は未確認 | R9 Tooling 完了 |
 | **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の選択（**試作・Player 完了用**。製品 polish ではない） | 完了（表示 metadata + 回帰） | **完了** | R9.5c Backend |
-| **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | **R9.6 Player** 待ち |
+| **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | **完了**（`r10_prototype` + 統合） | **構造完了**（§95.5。主観手元確認は推奨） | R9.6 Player |
 
 **試作成立後（R10 以降・順序未固定）:** 兵科拡張、診断基盤再構築、**Stage 削除**（エディタ UI — legacy stage・テスト・進行 fallback 整理後）、**戦場移動 legacy cleanup**（[battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)）、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブの演出制作・**遠隔弾道 projectiles** 含む — R8 ではプレースホルダ図形のみ）、効果音、i18n、packaging、公開準備。
 
@@ -901,6 +901,8 @@ R9.5c で Backend 縦切りは成立済み。R9.6 の Backend 作業は、正式
 
 ## R10 — 新仕様 2 Wave 試作・反復評価
 
+**状態:** **Backend + 構造 Player 完了**（2026-07-14）。handoff: [current-task.md §95](../ai-handoff/current-task.md#95-r10--新仕様-2-wave-試作反復評価2026-07-14)。
+
 ### 開始条件
 
 **Backend 前提:**
@@ -941,21 +943,21 @@ R9.5c で Backend 縦切りは成立済み。R9.6 の Backend 作業は、正式
 
 ### Backend 完了
 
-- 新仕様専用の 2 Wave 以上の作戦がロード・完走できる
-- OperationState、WavePrep、方式変更、パッシブ保持、作戦終了リセットが成立する
-- 主要状態遷移の自動テストが pass する
+- **達成（§95）:** 新仕様専用 2 Wave 作戦 `r10_prototype` がロード・完走できる
+- OperationState、WavePrep、方式変更、パッシブ保持、作戦終了リセットが成立する（統合テスト）
+- 主要状態遷移の自動テストが pass する（`r10PrototypeIntegration.test.ts`）
 
-Backend 完了だけでは R10 完了としない。
+Backend 完了だけでは R10 完了としない → **評価記録は §95.5**。
 
 ### Player 完了
 
-- プレイヤーが新仕様だけで 2 Wave 以上を遊べる
+- **達成（構造）:** プレイヤーが新仕様だけで 2 Wave 以上を遊べる（ステージ選択 → `r10_prototype`）
 - 出撃前と Wave 間の判断が戦闘結果へ反映される
-- **CombatModule を正式 UI から理解・比較して選択できる**（R9.6-A 完了）
-- **作戦内パッシブを正式 UI から理解・取得できる**（R9.6-B 完了）
-- legacy active と legacy gauge が新仕様プレイへ混在しない
+- **CombatModule を正式 UI から理解・比較して選択できる**（R9.6-A）
+- **作戦内パッシブを正式 UI から理解・取得できる**（R9.6-B）
+- legacy active と legacy gauge が R5 4 兵科プレイへ混在しない（既定 party の `at_ranger` は差し替え推奨）
 - 異なる編成・方式・パッシブで再挑戦できる
-- 「繰り返し遊びたいか」について評価結果を記録できる
+- 「繰り返し遊びたいか」について評価結果を記録できる（§95.5）
 
 ### スコープ外
 

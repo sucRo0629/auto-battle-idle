@@ -3,7 +3,7 @@ import type { GameData, SaveGameState, StageDef } from '../battle/types.ts';
 import { t } from '../i18n/t.ts';
 import { resolvePlayerDisplayLevel } from '../progression/resolvePlayerDisplayLevel.ts';
 import {
-  formatEnemyGroupScaleSummary,
+  formatEnemyGroupPreviewLabel,
   resolveStageEnemyCompositionPreview,
 } from './stageEnemyCompositionPreview.ts';
 
@@ -206,9 +206,11 @@ export class DebugMenuPanel {
 
     const source = document.createElement('div');
     source.className = 'debug-menu-stage-info-line';
-    source.textContent = preview.usesEnemyGroups
-      ? '編成: enemyGroups'
-      : '編成: legacy waves';
+    source.textContent = preview.usesWaveEnemyGroups
+      ? '編成: waves[].enemyGroups'
+      : preview.usesEnemyGroups
+        ? '編成: enemyGroups'
+        : '編成: legacy waves';
     row.appendChild(source);
 
     const totalCount = document.createElement('div');
@@ -226,9 +228,14 @@ export class DebugMenuPanel {
     if (preview.usesEnemyGroups) {
       const list = document.createElement('ul');
       list.className = 'debug-menu-stage-info-list';
+      const multiWave =
+        preview.usesWaveEnemyGroups &&
+        preview.enemyGroupLines.some((line) => line.waveIndex !== null);
       for (const line of preview.enemyGroupLines) {
         const item = document.createElement('li');
-        item.textContent = `${line.classId} ×${line.count}${formatEnemyGroupScaleSummary(line)}`;
+        item.textContent = formatEnemyGroupPreviewLabel(line, line.classId, {
+          includeWavePrefix: multiWave,
+        });
         list.appendChild(item);
       }
       row.appendChild(list);

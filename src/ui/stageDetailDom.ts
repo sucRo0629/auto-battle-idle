@@ -1,7 +1,7 @@
 import type { GameData, StageDef } from '../battle/types.ts';
 import { readClassDisplayLabel } from './classDisplayName.ts';
 import {
-  formatEnemyGroupScaleSummary,
+  formatEnemyGroupPreviewLabel,
   resolveStageEnemyCompositionPreview,
 } from './stageEnemyCompositionPreview.ts';
 
@@ -46,11 +46,16 @@ export function fillStageDetailEnemySection(
   list.className = 'stage-detail-enemy-list';
 
   if (preview.usesEnemyGroups) {
+    const multiWaveLabels =
+      preview.usesWaveEnemyGroups &&
+      preview.enemyGroupLines.some((line) => line.waveIndex !== null);
     for (const line of preview.enemyGroupLines) {
       const item = document.createElement('li');
       const preset = gameData.classRegistry[line.classId];
       const label = readClassDisplayLabel(preset, line.classId);
-      item.textContent = `${label.displayName} ×${line.count}${formatEnemyGroupScaleSummary(line)}`;
+      item.textContent = formatEnemyGroupPreviewLabel(line, label.displayName, {
+        includeWavePrefix: multiWaveLabels,
+      });
       list.appendChild(item);
     }
   } else {

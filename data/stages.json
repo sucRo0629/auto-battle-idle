@@ -168,5 +168,59 @@
         "enemies": []
       }
     ]
+  },
+  {
+    "id": "r10_prototype",
+    "displayName": "R10試作・二連波",
+    "recommendedLevel": 10,
+    "formationHintJa": "Wave1は近接の単体圧、Wave2は貫通・双弾の線上圧。出撃前方式と Wave 間の方式／作戦内パッシブで解法を変える試作。",
+    "waves": [
+      {
+        "enemies": [],
+        "enemyGroups": [
+          {
+            "classId": "at_swordsman",
+            "count": 2,
+            "selectedCombatModuleId": "at_swordsman_mod_single_slash",
+            "hpScale": 0.85,
+            "atkScale": 0.9,
+            "defScale": 1.0,
+            "resScale": 1.0
+          },
+          {
+            "classId": "df_guardian",
+            "count": 1,
+            "selectedCombatModuleId": "df_guardian_mod_nearest_strike",
+            "hpScale": 1.0,
+            "atkScale": 0.85,
+            "defScale": 1.0,
+            "resScale": 1.0
+          }
+        ]
+      },
+      {
+        "enemies": [],
+        "enemyGroups": [
+          {
+            "classId": "at_sorcerer",
+            "count": 2,
+            "selectedCombatModuleId": "at_sorcerer_mod_twin_bolt",
+            "hpScale": 0.85,
+            "atkScale": 0.95,
+            "defScale": 1.0,
+            "resScale": 1.0
+          },
+          {
+            "classId": "at_swordsman",
+            "count": 1,
+            "selectedCombatModuleId": "at_swordsman_mod_pierce_slash",
+            "hpScale": 1.0,
+            "atkScale": 1.0,
+            "defScale": 1.0,
+            "resScale": 1.0
+          }
+        ]
+      }
+    ]
   }
 ]

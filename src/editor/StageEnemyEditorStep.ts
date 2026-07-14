@@ -709,9 +709,9 @@ export class StageEnemyEditorStep {
       combatModuleRegistry: this.options.combatModuleRegistry,
     };
     const preview = resolveStageEnemyCompositionPreview(draft as StageDef);
-    const usesStageEnemyGroupsPreview =
-      compositionMode === "stageEnemyGroups" || preview.usesEnemyGroups;
-    const usesWaveEnemyGroupsPreview = compositionMode === "waveEnemyGroups";
+    const usesStageEnemyGroupsPreview = compositionMode === "stageEnemyGroups";
+    const usesWaveEnemyGroupsPreview =
+      compositionMode === "waveEnemyGroups" || preview.usesWaveEnemyGroups;
 
     let liveTotalCount = preview.totalEnemyCount;
     if (usesStageEnemyGroupsPreview) {
@@ -752,6 +752,8 @@ export class StageEnemyEditorStep {
       compositionLabel = "stage 直下 enemyGroups（編集中）";
     } else if (compositionMode === "waveEnemyGroups") {
       compositionLabel = "waves[].enemyGroups（編集中）";
+    } else if (preview.usesWaveEnemyGroups) {
+      compositionLabel = "waves[].enemyGroups（新正本）";
     } else if (preview.usesEnemyGroups) {
       compositionLabel = "stage 直下 enemyGroups（新正本）";
     }
