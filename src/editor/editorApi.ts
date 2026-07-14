@@ -26,6 +26,20 @@ import type {
 } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import { R5_COMBAT_MODULE_CLASS_IDS } from '../battle/types.ts';
+import {
+  collectOperationPassiveCatalogAuthoringIssues,
+  collectStageEnemyAuthoringIssues,
+  firstAuthoringErrorMessage,
+  type AuthoringCombatModuleContext,
+  type AuthoringPassiveCatalogContext,
+} from './authoringValidationPreview.ts';
+
+export type StageDraftValidateContext = AuthoringCombatModuleContext;
+
+export type OperationPassiveCatalogValidateContext = Pick<
+  AuthoringPassiveCatalogContext,
+  'classRegistry' | 'passiveIds'
+>;
 
 export function defaultGrowthTierForRole(role: Role): GrowthTierSet {
   switch (role) {
@@ -216,6 +230,7 @@ export function operationPassiveCatalogDraftFromCatalog(
 
 export function validateOperationPassiveCatalogDraftForSave(
   catalog: OperationPassiveCatalogDef,
+  context?: OperationPassiveCatalogValidateContext,
 ): string | null {
   if (
     !Number.isInteger(catalog.passiveAcquireCost) ||
@@ -228,6 +243,15 @@ export function validateOperationPassiveCatalogDraftForSave(
     catalog.waveClearResourceGrant < 0
   ) {
     return 'Wave クリア付与（waveClearResourceGrant）は 0 以上の整数にしてください';
+  }
+  if (context) {
+    return firstAuthoringErrorMessage(
+      collectOperationPassiveCatalogAuthoringIssues(catalog, {
+        classRegistry: context.classRegistry,
+        combatModuleRegistry: {},
+        passiveIds: context.passiveIds,
+      }),
+    );
   }
   return null;
 }
@@ -388,12 +412,25 @@ function validateRecommendedLevelForSave(
   return null;
 }
 
-/** 保存前の軽いクライアント検証。null = OK。 */
-export function validateStageDraftForSave(draft: StageDraft): string | null {
+/** 保存前の軽いクライアント検証。null = OK。context あり時は module / class 参照も検査。 */
+export function validateStageDraftForSave(
+  draft: StageDraft,
+  context?: StageDraftValidateContext,
+): string | null {
   if (draft.enemyGroups !== undefined) {
     const levelError = validateRecommendedLevelForSave(draft.recommendedLevel);
     if (levelError) return levelError;
-    return validateStageEnemyGroupsForSave(draft.enemyGroups, 'enemyGroups');
+    const groupError = validateStageEnemyGroupsForSave(
+      draft.enemyGroups,
+      'enemyGroups',
+    );
+    if (groupError) return groupError;
+    if (context) {
+      return firstAuthoringErrorMessage(
+        collectStageEnemyAuthoringIssues(draft, context),
+      );
+    }
+    return null;
   }
 
   const wavesWithGroups = (draft.waves ?? [])
@@ -414,7 +451,17 @@ export function validateStageDraftForSave(draft: StageDraft): string | null {
     if (groupError) return groupError;
   }
 
+  if (context) {
+    return firstAuthoringErrorMessage(
+      collectStageEnemyAuthoringIssues(draft, context),
+    );
+  }
+
   return null;
+}
+
+export function buildPassiveIdSet(passives: PassiveSkillDef[]): Set<string> {
+  return new Set(passives.map((passive) => passive.id));
 }
 
 export function createDefaultStageEnemyGroup(classId: string): StageEnemyGroup {

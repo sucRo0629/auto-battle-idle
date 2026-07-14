@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9b 完了**（Stage enemyGroups CombatModule 編集 UI）、**R9c 完了**（複数 Wave・enemyGroups 構造 authoring）、**R9d 完了**（作戦内パッシブ候補・付与条件 authoring）、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**（R5〜R8 縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**。**公式次タスク: R9e**（preview・validation 統合）→ **R9g**（効果範囲 authoring）→ **R9h**（class 方式 pool）。詳細は [current-task.md §89](../ai-handoff/current-task.md)。
+**現在地:** **R5〜R8 Backend 完了**、**R9a 完了**、**R9b 完了**（Stage enemyGroups CombatModule 編集 UI）、**R9c 完了**（複数 Wave・enemyGroups 構造 authoring）、**R9d 完了**（作戦内パッシブ候補・付与条件 authoring）、**R9e 完了**（preview・validation・参照整合の統合）、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**（R5〜R8 縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**。**公式次タスク: R9g**（効果範囲 authoring）→ **R9h**（class 方式 pool）。詳細は [current-task.md §90](../ai-handoff/current-task.md)。
 
 ---
 
@@ -36,7 +36,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R8** | 作戦内パッシブ — 取得・保持・効果縦切り、戦闘中表示、範囲プレースホルダ | **完了** | Wave 間準備の正式パッシブ選択 UI は **R9.6-B**。R10 で判断差を確認 | **Backend 完了** |
 | **R9a** | authoring 骨格 — エディタ現状調査・タスク分割 | 完了 | 開発者向け確認済み | **完了** |
 | **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、統合確認 | **R9.5a〜c Backend 完了** | R9.5a〜b 完了。R9.5c は暫定 UI 縦切りのみ（正式 作戦準備 UI は **R9.6**） | **Backend 完了** |
-| **R9b〜h** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / **効果範囲** / **class 方式 pool** / closure | **R9b〜d 完了**（§87〜89） / R9e〜h 未着手 | R10 用作戦反映は未確認 | R9d Tooling 完了 |
+| **R9b〜h** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / **効果範囲** / **class 方式 pool** / closure | **R9b〜e 完了**（§87〜90） / R9g〜h 未着手 | R10 用作戦反映は未確認 | R9e Tooling 完了 |
 | **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の正式選択 | 未着手 | 未着手 | R9.5c Backend |
 | **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | R9f・**R9g**・**R9h**・**R9.6 Player** 待ち |
 
@@ -618,12 +618,12 @@ R9 は新仕様の Stage、Wave、敵方式、作戦内パッシブをエディ�
 | **R9b** | Stage / Wave `enemyGroups[].selectedCombatModuleId` authoring | **完了（§87）** — `StageEnemyEditorStep` + `stageEnemyCombatModuleEditor` + save round-trip |
 | **R9c** | 複数 Wave・`enemyGroups` 構造 authoring | **完了（§88）** — Wave 追加削除 UI + 2 Wave save round-trip |
 | **R9d** | 作戦内パッシブ候補・付与条件 authoring | **完了（§89）** — `operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
-| **R9e** | preview・validation・参照整合の統合 | 不正 ID・重複・未設定警告 |
+| **R9e** | preview・validation・参照整合の統合 | **完了（§90）** — `authoringValidationPreview` + Stage/Catalog 警告 UI + client validate 拡張 |
 | **R9g** | **効果範囲 authoring（試作前提）** — CombatModule editor + passive 範囲フィールド | module JSON / passive 範囲の save round-trip・preview と runtime 一致 |
 | **R9h** | **Class 方式 pool** — `combatModuleIds` 編集（R5 4 兵科） | class bundle 保存で 2 件必須・registry 参照 validate pass |
 | **R9f** | authoring closure — **Stage 新規作成**、回帰テスト・spec 一致・R10 用作戦作成可能判定 | 新規 2 Wave 作戦をエディタだけで起動（stage 新規作成 → 保存 → 再読込 → ゲーム起動） |
 
-**次タスク（R9 系列）:** **R9e** — preview・validation・参照整合の統合。
+**次タスク（R9 系列）:** **R9g** — 効果範囲 authoring（CombatModule editor + passive 範囲）。
 
 ### R9g — 効果範囲 authoring（試作前提）
 
@@ -652,7 +652,7 @@ R9 は新仕様の Stage、Wave、敵方式、作戦内パッシブをエディ�
 
 **触るファイル候補:** `vite-plugin-editor-api.ts`、`src/editor/editorApi.ts`、新規 `CombatModuleEditorStep.ts`（または `SkillEditorStep` 派生改修）、`skillEditorCombatFields.ts` / `effectTargetingFields.ts`、`src/battle/data/validateGameData.ts`、`editorApi.test.ts`。
 
-**依存:** R9e の preview / validate 基盤と並行または直後。**R9h・R9f（Stage 新規作成）・R10 試作ステージ制作の前提。**
+**依存:** R9e の preview / validate 基盤の上（完了 §90）。**R9h・R9f（Stage 新規作成）・R10 試作ステージ制作の前提。**
 
 ### R9h — Class 方式 pool（`combatModuleIds`）
 
@@ -693,7 +693,7 @@ R9b〜c で **既存 stage の選択・Wave / enemyGroups 編集・保存** は�
 
 **触るファイル候補（Stage 新規作成）:** `src/editor/editorApi.ts`（`createDefaultStageDraft` / `addStageToBundle` 等）、`src/editor/StageEnemyEditorStep.ts`（一覧 + 新規ボタン）、`src/editor/editorApi.test.ts` / `StageEnemyEditorStep.test.ts`。
 
-**当面のフェーズ順:** R9e → **R9g** → **R9h** → R9f → **R9.6（A→B）** → R10。R9.6 は R9b とは別 Phase（Player UI）。R9b（Stage editor 敵設定 UI）・R9c（Wave 構造 authoring）・**R9d（作戦内パッシブ catalog）** は **完了**（§87〜89）。R9.6（Player 準備 UI）は未着手。
+**当面のフェーズ順:** **R9g** → **R9h** → R9f → **R9.6（A→B）** → R10。R9.6 は R9b とは別 Phase（Player UI）。R9b〜**R9e** は **完了**（§87〜90）。R9.6（Player 準備 UI）は未着手。
 
 ### R9a §80.6 技術前提（R9 Backend 完了に必要・R9.5 と並行可）
 
@@ -1027,7 +1027,7 @@ R8 Backend
 - R9d は R7〜R8 のパッシブ基盤に依存する
 - **R9.6 は R9.5c Backend 完了後に着手**（R9b〜f と並行可だが、R10 Player 前に A+B 必須）
 - R10 Backend 開始は **R9g + R9h + R9f** 完了を条件とする（module 効果範囲・class 方式 pool の authoring なしでは試作コンテンツを閉じられない）。**R10 Player 完了は R9.6（A+B）Player 完了を必須依存**とする
-- R9b〜d は完了（§87〜89）。公式次は **R9e** → **R9g** → **R9h**
+- R9b〜e は完了（§87〜90）。公式次は **R9g** → **R9h**
 - **戦場移動 legacy cleanup** は R10 完了後（新仕様最小実装安定後）。R9.5 / R9 とは並行しない — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 
 R5 は R4 の設計（[combat-data-schema-refactor.md](combat-data-schema-refactor.md) §16 最小 schema）を前提に着手する。

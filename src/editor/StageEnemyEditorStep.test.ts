@@ -539,4 +539,46 @@ describe('StageEnemyEditorStep', () => {
       expect(host.querySelector('button[data-editor-action="addWave"]')).toBeTruthy();
     });
   });
+
+  describe('R9e preview / authoring issues', () => {
+    it('shows runtime-resolved CombatModule label and unset warning', () => {
+      const draft: StageDraft = {
+        id: 'r9e_module_preview',
+        displayName: 'R9e Preview',
+        recommendedLevel: 10,
+        enemyGroups: [{ classId: 'df_guardian', count: 1 }],
+        waves: [{ enemies: [] }],
+      };
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft));
+
+      expect(host.textContent).toContain('df_guardian ×1');
+      expect(host.textContent).toMatch(/既定/);
+      expect(host.textContent).toContain('参照整合');
+      expect(host.textContent).toContain('CombatModule 未設定');
+    });
+
+    it('shows error for unknown selectedCombatModuleId', () => {
+      const draft: StageDraft = {
+        id: 'r9e_bad_module',
+        displayName: 'R9e Bad Module',
+        recommendedLevel: 10,
+        enemyGroups: [
+          {
+            classId: 'df_guardian',
+            count: 1,
+            selectedCombatModuleId: 'missing_module',
+          },
+        ],
+        waves: [{ enemies: [] }],
+      };
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(host, makeOptions(draft));
+
+      expect(host.textContent).toContain('参照整合');
+      expect(host.textContent).toContain('未知の selectedCombatModuleId');
+    });
+  });
 });

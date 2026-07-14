@@ -4,6 +4,12 @@ import {
   resolveStageEnemyCompositionPreview,
 } from "../ui/stageEnemyCompositionPreview.ts";
 import {
+  collectStageEnemyAuthoringIssues,
+  formatAuthoringIssuesForDisplay,
+  formatStageEnemyGroupModulePreviewLabel,
+  resolveStageEnemyGroupModulePreview,
+} from "./authoringValidationPreview.ts";
+import {
   addStageDraftWave,
   beginStageEnemyGroupsAuthoring,
   beginWaveEnemyGroupsAuthoring,
@@ -647,6 +653,10 @@ export class StageEnemyEditorStep {
     draft: StageDraft,
     compositionMode: ReturnType<typeof resolveStageDraftCompositionMode>
   ): void {
+    const combatModuleContext = {
+      classRegistry: this.options.classRegistry,
+      combatModuleRegistry: this.options.combatModuleRegistry,
+    };
     const preview = resolveStageEnemyCompositionPreview(draft as StageDef);
     const usesStageEnemyGroupsPreview =
       compositionMode === "stageEnemyGroups" || preview.usesEnemyGroups;
@@ -703,12 +713,11 @@ export class StageEnemyEditorStep {
     );
 
     if (usesStageEnemyGroupsPreview) {
-      const groupCount =
-        draft.enemyGroups?.length ?? preview.enemyGroupLines.length;
+      const groups = draft.enemyGroups ?? [];
       compositionGrid.appendChild(
         createFieldRow(
           "グループ数",
-          createEl("span", "editor-readonly-value", String(groupCount))
+          createEl("span", "editor-readonly-value", String(groups.length))
         )
       );
       compositionGrid.appendChild(
@@ -718,25 +727,27 @@ export class StageEnemyEditorStep {
         )
       );
 
-      const groupLines =
-        draft.enemyGroups !== undefined
-          ? (draft.enemyGroups ?? []).map((group) => ({
-              classId: group.classId,
-              count: group.count,
-              hpScale: resolveScale(group.hpScale),
-              atkScale: resolveScale(group.atkScale),
-              defScale: resolveScale(group.defScale),
-              resScale: resolveScale(group.resScale),
-            }))
-          : preview.enemyGroupLines;
-
-      if (groupLines.length > 0) {
+      if (groups.length > 0) {
         const list = createEl("ul", "editor-preview-list");
-        for (const line of groupLines) {
+        for (const group of groups) {
           const item = createEl("li");
-          item.textContent = `${line.classId} ×${
-            line.count
-          }${formatEnemyGroupScaleSummary(line)}`;
+          const scaleLine = {
+            classId: group.classId,
+            count: group.count,
+            hpScale: resolveScale(group.hpScale),
+            atkScale: resolveScale(group.atkScale),
+            defScale: resolveScale(group.defScale),
+            resScale: resolveScale(group.resScale),
+          };
+          const modulePreview = resolveStageEnemyGroupModulePreview(
+            group,
+            combatModuleContext
+          );
+          item.textContent = `${group.classId} ×${
+            group.count
+          }${formatEnemyGroupScaleSummary(scaleLine)}${formatStageEnemyGroupModulePreviewLabel(
+            modulePreview
+          )}`;
           list.appendChild(item);
         }
         compositionSection.appendChild(list);
@@ -765,17 +776,20 @@ export class StageEnemyEditorStep {
         const item = createEl("li");
         if (wave.enemyGroups !== undefined) {
           const waveSummary = wave.enemyGroups
-            .map(
-              (group) =>
-                `${group.classId} ×${group.count}${formatEnemyGroupScaleSummary({
-                  classId: group.classId,
-                  count: group.count,
-                  hpScale: resolveScale(group.hpScale),
-                  atkScale: resolveScale(group.atkScale),
-                  defScale: resolveScale(group.defScale),
-                  resScale: resolveScale(group.resScale),
-                })}`
-            )
+            .map((group) => {
+              const modulePreview = resolveStageEnemyGroupModulePreview(
+                group,
+                combatModuleContext
+              );
+              return `${group.classId} ×${group.count}${formatEnemyGroupScaleSummary({
+                classId: group.classId,
+                count: group.count,
+                hpScale: resolveScale(group.hpScale),
+                atkScale: resolveScale(group.atkScale),
+                defScale: resolveScale(group.defScale),
+                resScale: resolveScale(group.resScale),
+              })}${formatStageEnemyGroupModulePreviewLabel(modulePreview)}`;
+            })
             .join(", ");
           item.textContent = `wave ${waveIndex}: ${waveSummary || "（未追加）"}`;
         } else {
@@ -828,6 +842,25 @@ export class StageEnemyEditorStep {
           "注意: 5体以上は表示・配置の後続調整対象です（入力は許容）。"
         )
       );
+    }
+
+    const authoringIssues = collectStageEnemyAuthoringIssues(
+      draft,
+      combatModuleContext
+    );
+    if (authoringIssues.length > 0) {
+      const issuesSection = createSection("参照整合");
+      this.container.appendChild(issuesSection);
+      for (const line of formatAuthoringIssuesForDisplay(authoringIssues)) {
+        const isError = line.startsWith("エラー");
+        issuesSection.appendChild(
+          createEl(
+            "p",
+            isError ? "editor-warning editor-warning-error" : "editor-warning",
+            line
+          )
+        );
+      }
     }
   }
 }

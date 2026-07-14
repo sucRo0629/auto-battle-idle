@@ -5,6 +5,11 @@ import type {
 } from '../battle/types.ts';
 import { R5_COMBAT_MODULE_CLASS_IDS } from '../battle/types.ts';
 import {
+  collectOperationPassiveCatalogAuthoringIssues,
+  formatAuthoringIssuesForDisplay,
+} from './authoringValidationPreview.ts';
+import {
+  buildPassiveIdSet,
   getOperationPassiveCandidatesForClassDraft,
   listOperationPassiveAuthoringClassIds,
   listPassiveIdsForClassStem,
@@ -117,6 +122,40 @@ export class OperationPassiveCatalogEditorStep {
       );
     }
     root.appendChild(candidatesSection);
+
+    const issues = collectOperationPassiveCatalogAuthoringIssues(draft, {
+      classRegistry: this.options.classRegistry,
+      combatModuleRegistry: {},
+      passiveIds: buildPassiveIdSet(this.options.passives),
+    });
+    const previewSection = createSection('参照プレビュー');
+    const previewList = createEl('ul', 'editor-preview-list');
+    for (const classId of authoringClassIds) {
+      const candidates = getOperationPassiveCandidatesForClassDraft(
+        draft,
+        classId,
+      );
+      const item = createEl('li');
+      item.textContent =
+        candidates.length > 0
+          ? `${classId}: ${candidates.join(', ')}`
+          : `${classId}: （候補なし）`;
+      previewList.appendChild(item);
+    }
+    previewSection.appendChild(previewList);
+    if (issues.length > 0) {
+      for (const line of formatAuthoringIssuesForDisplay(issues)) {
+        const isError = line.startsWith('エラー');
+        previewSection.appendChild(
+          createEl(
+            'p',
+            isError ? 'editor-warning editor-warning-error' : 'editor-warning',
+            line,
+          ),
+        );
+      }
+    }
+    root.appendChild(previewSection);
 
     const actions = createEl('div', 'editor-actions');
     const saveBtn = createActionButton(

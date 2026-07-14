@@ -1792,6 +1792,13 @@ export interface SkillRegistry {
   actives: Record<string, ActiveSkillDef>;
 }
 
+/** 作戦内パッシブ候補 catalog（`data/operation-passive-catalog.json`） */
+export interface OperationPassiveCatalogDef {
+  passiveAcquireCost: number;
+  waveClearResourceGrant: number;
+  candidatesByClass: Record<string, string[]>;
+}
+
 export interface GameData {
   /** classes.json の配列順（バランス表・編成クラス一覧の並び） */
   classOrder: ClassId[];
@@ -1802,6 +1809,8 @@ export interface GameData {
   enemyRegistry: Record<string, EnemyTemplate>;
   stages: StageDef[];
   parties: Record<string, PartyDef>;
+  /** 作戦内パッシブ候補・付与条件（R8/R9d） */
+  operationPassiveCatalog: OperationPassiveCatalogDef;
 }
 
 export type BattlePhase = "idle" | "running" | "victory" | "defeat";

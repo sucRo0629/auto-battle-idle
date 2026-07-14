@@ -499,6 +499,10 @@
   font-size: 0.9rem;
 }
 
+.editor-warning-error {
+  color: #e08a8a;
+}
+
 .editor-skill-desc-preview {
   margin: 0.75rem 0 0;
   padding: 0.6rem 0.75rem;

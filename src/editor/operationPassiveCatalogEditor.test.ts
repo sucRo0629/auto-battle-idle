@@ -232,6 +232,9 @@ describe('OperationPassiveCatalogEditorStep (R9d UI)', () => {
     expect(host.textContent).toContain('付与条件');
     expect(host.textContent).toContain('兵科ごとの取得候補');
     expect(host.textContent).toContain('df_guardian_passive_2');
+    expect(host.textContent).toContain('参照プレビュー');
+    expect(host.textContent).toContain('df_guardian:');
+    expect(host.textContent).toMatch(/取得候補が未設定|候補なし/);
     expect(host.querySelector('.editor-actions .editor-btn-primary')).not.toBeNull();
     expect(host.querySelectorAll('input.editor-input').length).toBeGreaterThanOrEqual(2);
   });

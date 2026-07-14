@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
-- **次の再開タスク:** **R9e** — preview・validation・参照整合の統合。**R9g** — 効果範囲 authoring（CombatModule editor + passive 範囲）。**R9h** — class 方式 pool（`combatModuleIds`）。R10 試作前提。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
+- **新ロードマップ現在地:** **R9e 完了** — preview・validation・参照整合の統合（§90）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
+- **次の再開タスク:** **R9g** — 効果範囲 authoring（CombatModule editor + passive 範囲）。**R9h** — class 方式 pool（`combatModuleIds`）。その後 R9f（**Stage 新規作成**含む authoring closure）→ **R9.6（A→B）** → R10。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6205,7 +6205,7 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 | **R8（完了）** | `src/game/operationPassiveCatalog.ts` 定数。`df_guardian` のみ候補 2 件 |
 | **R9b〜d** | **触らない** — Stage module 参照・CombatModule 本体を先に editor 化 |
 | **R9d（完了）** | `data/operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
-| **R9e** | preview・validation・参照整合。catalog 参照整合を validate に追加 |
+| **R9e** | preview・validation・参照整合。catalog 参照整合を validate に追加 | **完了（§90）** |
 | **R9g** | CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） |
 | **R9h** | Class `combatModuleIds` 編集（R5 4 兵科のみ、2 件必須） |
 | **R9f** | legacy stage / skill / tier **一括 migration**。catalog の全面拡張（M1 外 class）は R10 以降 |
@@ -6218,7 +6218,7 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 | **R9b** | Stage `enemyGroups[].selectedCombatModuleId` 編集 UI + draft validate 拡張 | `StageEnemyEditorStep.test.ts` / `editorApi.test.ts` — groups 保存で module ID が JSON に残り validate pass |
 | **R9c** | 複数 Wave・`enemyGroups` 構造 authoring | Wave 追加削除 UI + 2 Wave save round-trip |
 | **R9d** | 作戦内パッシブ候補・付与条件 authoring | `operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
-| **R9e** | preview・validation・参照整合の統合 | 不正 ID・重複・未設定警告 |
+| **R9e** | preview・validation・参照整合の統合 | **完了（§90）** — 不正 ID・重複・未設定警告 |
 | **R9g** | **効果範囲 authoring（試作前提）** — CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） | module / passive 範囲の save round-trip・preview と runtime 一致 |
 | **R9h** | **Class 方式 pool** — `combatModuleIds` 編集（**R5 4 兵科のみ**、2 件必須）。M1 外 class は read-only | `editorClassList.test.ts` 拡張 — 保存後 validate pass |
 | **R9f** | Legacy migration **独立** — script / 一括 normalize（`attackSpeedTier`→module、`waves.enemies`→groups **optional**、旧 active 整理）。**legacy フィールド削除は別 PR 可** | migration テスト + 旧新共存 read |
@@ -7326,6 +7326,57 @@ legacy の `classes.json` unlockLevel / Lv10・Lv20 構造は R9f migration ま�
 
 ### 89.10 次タスク
 
-**R9e** — preview・validation・参照整合の統合。**R9g** — 効果範囲 authoring。**R9h** — class 方式 pool（`combatModuleIds`）。その後 R9f（**Stage 新規作成**含む authoring closure）→ **R9.6（A→B）** → R10。
+**R9e** — preview・validation・参照整合の統合。§90 で完了。
 
 **未実装ギャップ（roadmap 追記）:** stage 自体の新規作成は **R9f 必須**。削除は **R10 以降（試作成立後）**。詳細は [phase-roadmap.md §R9](../plans/phase-roadmap.md#r9--新仕様-authoring)。
+
+---
+
+## 90. R9e — preview・validation・参照整合の統合（完了 2026-07-14）
+
+### 90.1 目的
+
+R9b〜d で分かれた authoring 経路の **preview / client validate / 参照整合警告** を統合する。不正 ID・重複は保存阻止、未設定は編集中警告。CombatModule preview は runtime と同じ `resolveSelectedCombatModuleId` を使う。
+
+### 90.2 実装
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/editor/authoringValidationPreview.ts` | Stage / catalog の issue 列挙、module preview（runtime 一致） |
+| `src/editor/editorApi.ts` | `validateStageDraftForSave` / `validateOperationPassiveCatalogDraftForSave` が optional context で参照検査 |
+| `src/editor/EditorApp.ts` | save 時に registry context を渡す |
+| `src/editor/StageEnemyEditorStep.ts` | 編成概要に解決済み CombatModule 表示 +「参照整合」警告 |
+| `src/editor/OperationPassiveCatalogEditorStep.ts` | 「参照プレビュー」+ 空候補 / 不正 ID 警告 |
+| `src/battle/types.ts` | R9d 欠落だった `OperationPassiveCatalogDef` / `GameData.operationPassiveCatalog` を追加 |
+| `src/styles/editor.css` | `.editor-warning-error` |
+
+### 90.3 警告 / エラー
+
+| 種別 | 例 | 保存 |
+| ---- | -- | ---- |
+| error | 未知 classId / moduleId / passiveId、別兵科 module、catalog 重複 passive | クライアントで阻止 |
+| warning | CombatModule 未設定（既定使用）、同一編成内 class 重複、R5 兵科の空パッシブ候補 | 保存可・UI 表示 |
+
+### 90.4 テスト
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `authoringValidationPreview.test.ts` | runtime 一致・不正 ID・重複・未設定・client validate |
+| `StageEnemyEditorStep.test.ts` | module 既定ラベル・参照整合 UI（R9e 2 件） |
+| `operationPassiveCatalogEditor.test.ts` | 参照プレビュー表示 |
+
+**結果:** 関連 3 ファイル + helper **40** テスト pass（R9e 新規 12 件含む）
+
+### 90.5 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R9e Backend** | **Yes** — client validate が server 参照整合と同種の不正 ID を阻止。preview 解決 = runtime |
+| **R9e Tooling** | **Yes** — Stage / Catalog UI 警告 + 自動テスト |
+| **R9e 全体** | **Yes** |
+| R9g 効果範囲 authoring | **No** — スコープ外 |
+| R9.6 Player UI | **No** — スコープ外 |
+
+### 90.6 次タスク
+
+**R9g** — 効果範囲 authoring（CombatModule editor + `SkillEditorStep` 範囲フィールド）。**R9h** — class 方式 pool。その後 R9f → **R9.6（A→B）** → R10。

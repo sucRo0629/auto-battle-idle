@@ -16,6 +16,7 @@ import {
   applyEnemyCustomBasicAttackInterval,
   buildClassPresetFromDraft,
   buildEnemyFromDraft,
+  buildPassiveIdSet,
   buildSkillRegistryFromSkillsJson,
   buildSkillDrafts,
   collectSkillsFromDrafts,
@@ -779,7 +780,10 @@ export class EditorApp {
       return;
     }
 
-    const validationError = validateStageDraftForSave(this.stageDraft);
+    const validationError = validateStageDraftForSave(this.stageDraft, {
+      classRegistry: this.classRegistry,
+      combatModuleRegistry: this.combatModuleRegistry,
+    });
     if (validationError) {
       this.setStatus(validationError, true);
       return;
@@ -823,6 +827,10 @@ export class EditorApp {
   private async saveOperationPassiveCatalog(): Promise<void> {
     const validationError = validateOperationPassiveCatalogDraftForSave(
       this.operationPassiveCatalogDraft,
+      {
+        classRegistry: this.classRegistry,
+        passiveIds: buildPassiveIdSet(this.skills.passives),
+      },
     );
     if (validationError) {
       this.setStatus(validationError, true);
