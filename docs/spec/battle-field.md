@@ -363,7 +363,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | 敵                                     | [combat.md](combat.md) §敵対単体ターゲット選定（`resolveEnemyChaseTargetPlayer`）                                                             | `ChaseTarget` が射程内のときのみその 1 体（`resolveEnemyAttackTargetPlayer`） |
 | 味方（敵対・全ロール共通）             | 同上デフォルト（相手戦線の最前 defender 優先）または優先ターゲット spec | 同じ spec 系の attack プールで `effectiveRangePx` 内なら停止 |
 | 味方（回復 basic 等）                  | [combat.md](combat.md) §回復 PHT（HP 割合最小の負傷味方） | 射程内に PHT がいれば停止 |
-| 味方（ally-heal 通常攻撃の supporter） | [combat.md](combat.md) §回復 PHT — PHT 射程外なら PHT へ、それ以外は最前線 anchor（`resolveAllyHealApproachAnchorX`：接触線内は `getPlayerFrontlineContactX`、前衛の一時越境時は生存味方 max `battleX`）を heal 射程内に入れるまで前進。敵接触 cap 非適用 | anchor が heal 射程内なら停止（`shouldSkipEngagedAutoApproach`）。PHT 不在でも可。回復対象は PHT のまま |
+| 味方（ally-heal 通常攻撃の supporter） | [combat.md](combat.md) §回復 PHT — PHT 射程外なら PHT 方向へ接近（後方 PHT は左へ後退、前方は前進）。それ以外は最前線 anchor（`resolveAllyHealApproachAnchorX`：接触線内は `getPlayerFrontlineContactX`、前衛の一時越境時は生存味方 max `battleX`）を heal 射程内に入れるまで前進。停止 X は abs 距離の射程バンド（`resolveAllyFrontlineHealApproachBattleX`）。敵接触 cap 非適用 | anchor が heal 射程内なら停止（`shouldSkipEngagedAutoApproach`）。PHT 不在でも可。回復対象は PHT のまま |
 
 敵の chase 候補は敵の前方側にいるプレイヤー（`enemyForwardFacingPool`）。rear assault アクセス中のプレイヤーは敵の新しい `ChaseTarget` や前線所有者にはしない。
 

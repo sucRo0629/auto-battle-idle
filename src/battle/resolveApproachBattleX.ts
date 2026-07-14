@@ -146,7 +146,11 @@ function isAllyFrontlineInHealRange(
   return Math.abs(anchorX - player.battleX) <= range;
 }
 
-/** ally-heal: 味方最前線 contact を heal 射程内に入れる停止 battleX */
+/**
+ * ally-heal: anchor を heal 射程内に入れる停止 battleX。
+ * 前方／後方どちらも abs 距離で判定し、後方 PHT へは左へ接近する。
+ * （`resolveApproachAttackBattleX` は接触線を常に前方前提にし、heal の左移動を潰すため使わない）
+ */
 export function resolveAllyFrontlineHealApproachBattleX(
   player: CombatantState,
   players: CombatantState[],
@@ -162,12 +166,18 @@ export function resolveAllyFrontlineHealApproachBattleX(
   if (anchorX === null) {
     return player.battleX;
   }
-  return resolveApproachAttackBattleX(
+  const range = resolveApproachRangePx(
     player,
-    anchorX,
     gameData,
     livingAllyCount(players),
   );
+  if (Math.abs(anchorX - player.battleX) <= range) {
+    return player.battleX;
+  }
+  if (anchorX > player.battleX) {
+    return anchorX - range;
+  }
+  return anchorX + range;
 }
 
 function resolveUnitTargetSpec(

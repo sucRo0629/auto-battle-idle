@@ -318,6 +318,34 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
     expect(resolveFacingSign(cleric, focus)).toBe(-1);
   });
 
+  it('retreats left toward rear PHT when sorcerer behind cleric is out of heal range', () => {
+    const cleric = mockCleric(280);
+    const guardian = mockGuardian(350, 235);
+    const sorcerer = mockSorcerer(20, 20);
+    const players = [guardian, sorcerer, cleric];
+
+    expect(resolvePriorityHealTarget(players)?.id).toBe('sorcerer');
+    const healEffect = gameData.skillRegistry.actives[CLERIC_MODULE_BASIC_ID]?.effect[0];
+    expect(healEffect?.type).toBe('heal');
+    const healRange = resolveSkillRangePx(cleric, healEffect!, players.length);
+    expect(isWithinSkillRange(cleric, sorcerer, healRange)).toBe(false);
+    expect(
+      shouldSkipEngagedAutoApproach(cleric, players, [enemy], gameData),
+    ).toBe(false);
+
+    const approachX = resolvePlayerApproachBattleX(
+      cleric,
+      players,
+      [enemy],
+      gameData,
+    );
+    expect(approachX).toBeLessThan(cleric.battleX);
+    expect(approachX).toBeGreaterThanOrEqual(sorcerer.battleX);
+    expect(
+      isWithinSkillRange({ ...cleric, battleX: approachX }, sorcerer, healRange),
+    ).toBe(true);
+  });
+
   it('does not cap cleric approach below frontline heal range when frontline is past enemy contact', () => {
     const cleric = mockCleric(52);
     const guardian = mockGuardian(350, 47);

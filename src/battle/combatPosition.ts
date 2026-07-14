@@ -719,6 +719,8 @@ export function resolveApproachAttackBattleX(
   const stopX = resolveAttackBattleX(unit, contactX, gameData, rangePx);
   if (!unit.isEnemy && stopX < unit.battleX) {
     if (isAllyHealBasicAttack(unit, gameData)) {
+      // 前方過進出時の左戻り抑止のみ。後方 PHT への接近は
+      // resolveAllyFrontlineHealApproachBattleX（双方向）が正本。
       return unit.battleX;
     }
     const basicRange = resolveBasicAttackRangePx(
