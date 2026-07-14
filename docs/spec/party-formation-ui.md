@@ -1,6 +1,6 @@
 # パーティ編成 UI
 
-実装：`src/game/gameScreen.ts`, `src/game/GameSession.ts`, `src/platform/DomFormationScreenHost.ts`, `src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/fonts.css`, `src/styles/game-shell.css`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermTooltip.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`. **現行正本:** 左ペイン（Class Select + Party Summary + 戦闘に戻る）/ 右ペイン（クラス概要 + 通常攻撃 + スキル、**右ペイン内スクロール可**）。**Phase 4d:** 閲覧スキルカード（`formatSkillCardLines`）とインライン用語パネル（§6.4）を継続使用。**フォント:** [ui-fonts.md](ui-fonts.md)。
+実装：`src/game/gameScreen.ts`, `src/game/GameSession.ts`, `src/platform/DomFormationScreenHost.ts`, `src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/ui/combatModulePrepDisplay.ts`, `src/styles/fonts.css`, `src/styles/game-shell.css`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/styles/operation-prep-panels.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermTooltip.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`。**現行正本:** 左ペイン（Class Select + Party Summary + 戦闘に戻る）/ 右ペイン（クラス概要 + **戦闘方式（CombatModule）** + 通常攻撃 + スキル、**右ペイン内スクロール可**）。**Phase 4d:** 閲覧スキルカード（`formatSkillCardLines`）とインライン用語パネル（§6.4）を継続使用。**R9.6-A:** 戦闘方式は候補プレート比較 UI（§6.2.1）。**フォント:** [ui-fonts.md](ui-fonts.md)。
 
 本ドキュメントは **メタメニューから開くパーティ編成画面**（`SkillMenuPanel`）の画面設計正本。戦闘フィールド上の隊形・座標は [battle-field.md](battle-field.md)、クラス・ロール・スキル習得は [classes-and-skills.md](classes-and-skills.md)、セーブ・Lv は [progression.md](progression.md) を参照。
 
@@ -377,6 +377,22 @@ Class Summary は **右ペイン上部** に表示する。左ペイン Class Se
 - 射程チップは `memberBasicAttackDisplay` 経由で `rangePx / 10` の単位なし数値 + 近接帯/遠隔帯（例: `12.8（遠隔帯）`）
 - 見出し `ステータス` は **使わない**（チップラベルで足りる）
 - **通常攻撃** は概要帯内または直下に独立ブロックとして表示（§4.6 項目 4）
+
+### 6.2.1 戦闘方式（CombatModule · R9.6-A）
+
+**位置づけ:** R9.6 の CombatModule UI は **Player 完了用の試作**（暫定 `<select>` の後継）。製品版の最終ビジュアル仕上げではない。
+
+`combatModuleIds` を持つ兵科をフォーカスし、かつ編成に含まれているとき、右ペイン詳細領域の **習得スキルより上** に「戦闘方式」セクションを出す。
+
+| 項目 | 方針 |
+| ---- | ---- |
+| 候補 | 対象兵科の `combatModuleIds` のみ。legacy active は混ぜない |
+| 表示 | 各候補プレートに **表示名**・**効果説明**・**挙動差分**（攻撃間隔・効果範囲・合成挙動）・**選択中 / 選択可能** |
+| 操作 | プレートクリックで party slot 単位の module を切替（`setPartySlotCombatModule`） |
+| 非表示 | `combatModuleIds` なし（legacy 兵科）、未編成フォーカス、wiring 未接続時 |
+| 内部 ID | 主表示に使わない（`displayName` が無い場合のみフォールバック） |
+
+Wave 間準備画面（`WavePrepScreenHost`）でも同一の CombatModule プレートを使う。作戦内パッシブ取得 UI は **別セクション**（`operation-passive-prep`）。正本フローは [operation-loop.md](operation-loop.md)、実装詳細は [phase-roadmap.md §R9.6](../plans/phase-roadmap.md#r96--作戦準備-player-ui)。
 
 ### 6.3 習得スキル（閲覧専用）
 

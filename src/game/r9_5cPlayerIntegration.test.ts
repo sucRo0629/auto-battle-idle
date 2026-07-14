@@ -91,12 +91,11 @@ function triggerVictory(session: GameSession, survivingIndices: number[] = [0, 1
 }
 
 function selectFormationModule(moduleId: string): void {
-  const moduleSelect = document.querySelector<HTMLSelectElement>(
-    '.skill-menu-combat-module-select',
+  const candidate = document.querySelector<HTMLButtonElement>(
+    `.combat-module-prep__candidate[data-module-id="${moduleId}"]`,
   );
-  if (!moduleSelect) throw new Error('Formation combat module select not found');
-  moduleSelect.value = moduleId;
-  moduleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  if (!candidate) throw new Error('Formation combat module candidate not found');
+  candidate.click();
 }
 
 function closeFormation(): void {
@@ -111,24 +110,22 @@ function selectWavePrepModule(moduleId: string, slotIndex = R8C_GUARDIAN_SLOT): 
   const rows = document.querySelectorAll<HTMLElement>('.wave-prep-screen__slot');
   const row = rows[slotIndex];
   if (!row) throw new Error(`Wave prep slot row not found: ${slotIndex}`);
-  const select = row.querySelector<HTMLSelectElement>(
-    '.wave-prep-screen__module-select',
+  const candidate = row.querySelector<HTMLButtonElement>(
+    `.combat-module-prep__candidate[data-module-id="${moduleId}"]`,
   );
-  if (!select) throw new Error('Wave prep module select not found');
-  select.value = moduleId;
-  select.dispatchEvent(new Event('change', { bubbles: true }));
+  if (!candidate) throw new Error('Wave prep module candidate not found');
+  candidate.click();
 }
 
 function selectWavePrepPassive(passiveId: string, slotIndex = R8C_GUARDIAN_SLOT): void {
   const rows = document.querySelectorAll<HTMLElement>('.wave-prep-screen__slot');
   const row = rows[slotIndex];
   if (!row) throw new Error(`Wave prep slot row not found: ${slotIndex}`);
-  const select = row.querySelector<HTMLSelectElement>(
-    '.wave-prep-screen__passive-select',
+  const card = row.querySelector<HTMLElement>(
+    `.operation-passive-prep__candidate[data-passive-id="${passiveId}"]`,
   );
-  if (!select) throw new Error('Wave prep passive select not found');
-  select.value = passiveId;
-  select.dispatchEvent(new Event('change', { bubbles: true }));
+  if (!card) throw new Error(`Wave prep passive card not found: ${passiveId}`);
+  void card;
 }
 
 function clickWavePrepAcquire(slotIndex = R8C_GUARDIAN_SLOT): void {
@@ -136,8 +133,8 @@ function clickWavePrepAcquire(slotIndex = R8C_GUARDIAN_SLOT): void {
   const row = rows[slotIndex];
   if (!row) throw new Error(`Wave prep slot row not found: ${slotIndex}`);
   const button = row.querySelector<HTMLButtonElement>(
-    '.wave-prep-screen__passive-acquire',
-  );
+    '.operation-passive-prep__acquire:not(:disabled)',
+  ) ?? row.querySelector<HTMLButtonElement>('.operation-passive-prep__acquire');
   if (!button) throw new Error('Wave prep passive acquire button not found');
   button.click();
 }

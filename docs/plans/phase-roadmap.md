@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R5〜R8 Backend 完了**、**R9a〜h 完了**、**R9f 完了**（Stage 新規作成 / authoring closure）、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**（R5〜R8 縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**。**公式次タスク: R9.6（A→B）**。詳細は [current-task.md §93](../ai-handoff/current-task.md)。
+**現在地:** **R5〜R8 Backend 完了**、**R9a〜h / R9f 完了**、**R9.5a〜b Player 完了**、**R9.5c Backend 完了**、**R9.6（A+B）Player 完了**（作戦準備の **Player 完了用試作 UI** — 暫定配線の後継。製品仕上げではない）。**公式次タスク: R10**。詳細は [current-task.md §94](../ai-handoff/current-task.md)。
 
 ---
 
@@ -37,7 +37,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R9a** | authoring 骨格 — エディタ現状調査・タスク分割 | 完了 | 開発者向け確認済み | **完了** |
 | **R9.5** | R5 Player completion / R10 preparation — legacy active 停止、HUD 攻撃間隔、統合確認 | **R9.5a〜c Backend 完了** | R9.5a〜b 完了。R9.5c は暫定 UI 縦切りのみ（正式 作戦準備 UI は **R9.6**） | **Backend 完了** |
 | **R9b〜h / R9f** | 新仕様 authoring 完成 — Stage / Wave / 敵方式 / 作戦内パッシブ / validate / **効果範囲** / **class 方式 pool** / **Stage 新規作成** | **R9b〜h・R9f 完了**（§87〜93） | R10 用作戦反映は未確認 | R9 Tooling 完了 |
-| **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の正式選択 | 未着手 | 未着手 | R9.5c Backend |
+| **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の選択（**試作・Player 完了用**。製品 polish ではない） | 完了（表示 metadata + 回帰） | **完了** | R9.5c Backend |
 | **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | 未着手 | 未着手 | **R9.6 Player** 待ち |
 
 **試作成立後（R10 以降・順序未固定）:** 兵科拡張、診断基盤再構築、**Stage 削除**（エディタ UI — legacy stage・テスト・進行 fallback 整理後）、**戦場移動 legacy cleanup**（[battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)）、正式コンテンツ、UI 仕上げ、画像、**正式 VFX**（範囲パッシブの演出制作・**遠隔弾道 projectiles** 含む — R8 ではプレースホルダ図形のみ）、効果音、i18n、packaging、公開準備。
@@ -623,7 +623,7 @@ R9 は新仕様の Stage、Wave、敵方式、作戦内パッシブをエディ�
 | **R9h** | **Class 方式 pool** — `combatModuleIds` 編集（R5 4 兵科） | **完了（§92）** — ClassEditorStep pool UI + class bundle save validate pass |
 | **R9f** | authoring closure — **Stage 新規作成**、回帰テスト・spec 一致・R10 用作戦作成可能判定 | **完了（§93）** — `createDefaultStageDraft` + 新規 UI + identity validate / round-trip |
 
-**次タスク（R9 系列）:** **R9.6（A→B）** — 作戦準備の正式 Player UI。R9 authoring（R9b〜h / R9f）は完了。
+**次タスク（R9 系列）:** **R10** — 新仕様 2 Wave 以上の試作・反復評価。R9.6（A+B）完了。
 
 ### R9g — 効果範囲 authoring（試作前提）
 
@@ -693,7 +693,7 @@ R9b〜c で **既存 stage の選択・Wave / enemyGroups 編集・保存** は�
 
 **触るファイル候補（Stage 新規作成）:** `src/editor/editorApi.ts`（`createDefaultStageDraft` / `addStageToBundle` 等）、`src/editor/StageEnemyEditorStep.ts`（一覧 + 新規ボタン）、`src/editor/editorApi.test.ts` / `StageEnemyEditorStep.test.ts`。
 
-**当面のフェーズ順:** **R9.6（A→B）** → R10。R9b〜**R9h**・**R9f** は完了（§87〜93）。R9.6（Player 準備 UI）は未着手。
+**当面のフェーズ順:** **R10**。R9b〜**R9h**・**R9f**・**R9.6（A+B）** は完了。
 
 ### R9a §80.6 技術前提（R9 Backend 完了に必要・R9.5 と並行可）
 
@@ -728,9 +728,13 @@ R9a 調査で分割した以下は、上表 R9b〜h の authoring 前提とし�
 
 ## R9.6 — 作戦準備 Player UI
 
-**目的:** CombatModule と作戦内パッシブを、プレイヤーが理解・比較して選択できる**正式な準備 UI** を実装する。R9b（Stage editor 敵設定 UI）とは分離する。
+**状態:** **A+B Player 完了**（2026-07-14）。handoff: [current-task.md §94](../ai-handoff/current-task.md)。
 
-**背景:** R9.5c で暫定 UI による Backend / runtime 配線は完了したが、プレイヤーが候補を理解・比較して選択できる正式 UI ではない。本 Phase で Player 完了とする。
+**「正式」の意味:** 対 **暫定配線 UI（R9.5c）** の後継で、R10 評価に足る比較・選択ができる **試作 UI**。直近目標のプレースホルダー／新ループ試作の一部であり、**画像・VFX・i18n・最終ビジュアル polish・公開向け仕上げは含めない**（試作成立後）。
+
+**目的:** CombatModule と作戦内パッシブを、プレイヤーが理解・比較して選択できる **Player 完了用の準備 UI（試作）** を実装する。R9b（Stage editor 敵設定 UI）とは分離する。
+
+**背景:** R9.5c で暫定 UI による Backend / runtime 配線は完了したが、プレイヤーが候補を理解・比較して選択できる UI ではない。本 Phase で Player 完了とする（製品 UI 完成ではない）。
 
 **サブフェーズ:**
 

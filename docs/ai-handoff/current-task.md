@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9f 完了** — Stage 新規作成（authoring closure、§93）。**R9h 完了** — class 方式 pool（`combatModuleIds`、§92）。**R9g 完了** — 効果範囲 authoring（CombatModule editor + passive 範囲、§91）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
-- **次の再開タスク:** **R9.6（A→B）** — 作戦準備の正式 Player UI。その後 R10。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
+- **新ロードマップ現在地:** **R9.6（A+B）完了** — 作戦準備の **Player 完了用試作 UI**（CombatModule・作戦内パッシブ。「正式」= 暫定配線の後継で R10 評価に足る比較・選択 UI。**製品仕上げではない**、§94）。**R9f 完了** — Stage 新規作成（authoring closure、§93）。**R9h 完了** — class 方式 pool（`combatModuleIds`、§92）。**R9g 完了** — 効果範囲 authoring（CombatModule editor + passive 範囲、§91）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。
+- **次の再開タスク:** **R10** — 新仕様 2 Wave 以上の試作・「繰り返し遊びたいか」評価。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7525,4 +7525,70 @@ R9 Backend 完了条件「新仕様の 2 Wave 以上の作戦をエディタで*
 
 ### 93.6 次タスク
 
-**R9.6（A→B）** — 作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）。その後 R10。
+**R9.6（A→B）** — §94 で完了。**次は R10**。
+
+---
+
+## 94. R9.6 — 作戦準備 Player UI（完了 2026-07-14）
+
+### 94.0 「正式」の意味（試作前提）
+
+R9.6 の「正式 Player UI」は **製品版 UI 完成** ではない。直近目標どおりプレースホルダー／新ループ試作の一部である。
+
+| 用語 | 意味 | 含まないもの |
+| ---- | ---- | ------------ |
+| **暫定 UI（R9.5c）** | Backend / 配線確認用。Player 完了根拠にしない | — |
+| **正式 Player UI（R9.6）** | 暫定の後継。候補の比較・状態区別・選択が R10 評価に足る **試作 UI** | 画像・VFX・効果音・i18n・最終ビジュアル polish・公開向け仕上げ |
+
+### 94.1 目的
+
+R9.5c の暫定 `<select>` 配線を、プレイヤーが候補を比較・理解して選択できる **Player 完了用試作 UI** に置き換える。
+
+| ID | 内容 | 対象 |
+| -- | ---- | ---- |
+| **R9.6-A** | CombatModule 選択 UI（試作・Player 完了用） | 出撃前編成（`SkillMenuPanel`）、Wave 間準備（`WavePrepScreenHost`） |
+| **R9.6-B** | 作戦内パッシブ選択 UI（試作・Player 完了用） | Wave 間準備 |
+
+### 94.2 実装
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/ui/combatModulePrepDisplay.ts` | 候補 view（表示名・説明・挙動差分・選択中）+ プレート UI |
+| `src/ui/operationPassivePrepDisplay.ts` | cost / 対象 / 効果量 / 条件 / 維持 / 状態文言 + 取得 UI |
+| `src/ui/SkillMenuPanel.ts` | 戦闘方式を比較プレートへ置換 |
+| `src/game/WavePrepScreenHost.ts` | module / passive を別セクションの試作プレートへ。sticky ヘッダ（資源）・フッタ（次 Wave） |
+| `src/styles/operation-prep-panels.css` | 共通 HUD プレート |
+| `src/styles/wave-prep-screen.css` | 1280×720 向けスクロール領域 + sticky 確定操作 |
+| `docs/spec/party-formation-ui.md` | §6.2.1 CombatModule |
+
+### 94.3 設計メモ
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 情報源 | module / passive のデータと既存 `formatActiveDescription` / `formatPassiveDescription`。無い情報は推測しない |
+| 状態区別 | 「選択中」「未取得・取得可能」「未取得・リソース不足」「取得済み」「候補なし」等を**文言**で表示（色だけにしない） |
+| セクション分離 | `data-prep-kind="combat-module"` と `operation-passive` を分離 |
+| Backend | R9.5c 縦切りを維持。表示 metadata 用の新 JSON フィールドは追加していない |
+
+### 94.4 テスト
+
+| ファイル | 結果 |
+| -------- | ---- |
+| `operationPrepDisplay.test.ts` | **5** pass |
+| `skillMenuCombatModuleSelection.dom.test.ts` | **3** pass（R9.6-A plates） |
+| `r9_5cPlayerIntegration.test.ts` | **2** pass（配線回帰） |
+| `wavePrepScreen.test.ts` | R8c UI 含むほぼすべて pass。**既存失敗:** R7d「restart from wave zero … isAwaitingNextWave」（clean HEAD でも再現・本 Phase 非導入） |
+
+### 94.5 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R9.6-A** | **Yes** — 出撃前 / Wave 間で CombatModule 比較選択 |
+| **R9.6-B** | **Yes** — Wave 間でパッシブ cost・効果事実・状態文言・取得 |
+| **R9.6 Backend** | **Yes** — 回帰 + 表示ヘルパー |
+| **R9.6 Player** | **Yes**（DOM / 統合テスト）。1280×720 目視は手元 `npm run dev` で確認推奨。**製品 polish 完了ではない** |
+| R10 | **No** — 次タスク（反復評価。UI 仕上げは試作成立後） |
+
+### 94.6 次タスク
+
+**R10** — 新仕様 2 Wave 以上の試作と「繰り返し遊びたいか」の Player 評価。

@@ -1,6 +1,7 @@
 import "../styles/game-ui-chrome.css";
 import "../styles/game-term-tooltip.css";
 import "../styles/skill-menu-panel.css";
+import "../styles/operation-prep-panels.css";
 import { getMemberStatLabels } from "../i18n/memberStatLabels.ts";
 import { getLocale, subscribeLocaleChange } from "../i18n/locale.ts";
 import { t } from "../i18n/t.ts";
@@ -29,7 +30,10 @@ import {
   compareByClassListOrder,
   sortClassIdsByListOrder,
 } from "../battle/data/classListOrder.ts";
-import { resolveSelectedCombatModuleId } from "../battle/data/resolveCombatModuleBasic.ts";
+import {
+  buildCombatModulePrepViews,
+  createCombatModulePrepSection,
+} from "./combatModulePrepDisplay.ts";
 import { createMemberFromClass, PARTY_DUPLICATE_CLASS_MESSAGE, validatePartyClassAssignment } from "../progression/partyCompose.ts";
 import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
@@ -828,54 +832,21 @@ export class SkillMenuPanel {
     const slotIndex = this.resolveFocusedPartySlotIndex();
     if (slotIndex === null) return null;
 
-    const section = document.createElement("section");
-    section.className =
-      "skill-menu-section skill-menu-combat-module-section";
-
-    const title = document.createElement("h3");
-    title.className = "skill-menu-section-title";
-    title.textContent = "戦闘方式";
-    section.appendChild(title);
-
-    const body = document.createElement("div");
-    body.className = "skill-menu-combat-module-body";
-
-    const moduleSelect = document.createElement("select");
-    moduleSelect.className = "skill-menu-combat-module-select";
-    for (const moduleId of moduleIds) {
-      const moduleDef = this.gameData.combatModuleRegistry[moduleId];
-      const option = document.createElement("option");
-      option.value = moduleId;
-      option.textContent = moduleDef?.displayName ?? moduleId;
-      moduleSelect.appendChild(option);
-    }
-
-    const resolved = resolveSelectedCombatModuleId(
+    const views = buildCombatModulePrepViews(
       preset,
       this.gameData.combatModuleRegistry,
       this.callbacks.getSelectedCombatModuleId(slotIndex),
     );
-    if (resolved) {
-      moduleSelect.value = resolved;
-    }
+    if (views.candidates.length === 0) return null;
 
-    moduleSelect.addEventListener("change", () => {
-      this.callbacks.onCombatModuleChanged?.(slotIndex, moduleSelect.value);
-      this.renderBody();
+    const section = createCombatModulePrepSection({
+      views,
+      variantClass: "skill-menu-section skill-menu-combat-module-section",
+      onSelect: (moduleId) => {
+        this.callbacks.onCombatModuleChanged?.(slotIndex, moduleId);
+        this.renderBody();
+      },
     });
-
-    const description = document.createElement("p");
-    description.className = "skill-menu-combat-module-description";
-    const selectedDef = this.gameData.combatModuleRegistry[moduleSelect.value];
-    description.textContent = selectedDef?.description ?? "";
-
-    moduleSelect.addEventListener("change", () => {
-      const nextDef = this.gameData.combatModuleRegistry[moduleSelect.value];
-      description.textContent = nextDef?.description ?? "";
-    });
-
-    body.append(moduleSelect, description);
-    section.appendChild(body);
     return section;
   }
 

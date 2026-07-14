@@ -1,14 +1,22 @@
 import type { ClassId, GameData, PartySlotState } from '../battle/types.ts';
 import { PARTY_SLOT_COUNT } from '../battle/types.ts';
-import { resolveSelectedCombatModuleId } from '../battle/data/resolveCombatModuleBasic.ts';
 import {
   createMemberFromClass,
   getAssignableClassIds,
   PARTY_DUPLICATE_CLASS_MESSAGE,
   type PartyClassAssignmentResult,
 } from '../progression/partyCompose.ts';
+import {
+  buildCombatModulePrepViews,
+  createCombatModulePrepSection,
+} from '../ui/combatModulePrepDisplay.ts';
+import {
+  buildOperationPassivePrepViews,
+  createOperationPassivePrepSection,
+} from '../ui/operationPassivePrepDisplay.ts';
 import type { OperationStateReadonlyView } from './OperationState.ts';
 import '../styles/wave-prep-screen.css';
+import '../styles/operation-prep-panels.css';
 
 export interface WavePrepScreenHostCallbacks {
   getOperationView: () => OperationStateReadonlyView | null;
@@ -33,15 +41,14 @@ export interface WavePrepScreenHostCallbacks {
   onRestartOperationFromWaveZero: () => boolean;
 }
 
-/** R6e / R8c: Wave 間準備の最小 DOM UI（正式デザインは後続）。 */
+/** R9.6: Wave 間準備の Player 完了用試作 UI（CombatModule + 作戦内パッシブ。製品 polish ではない）。 */
 export class WavePrepScreenHost {
   private root: HTMLElement | null = null;
   private statusEl: HTMLElement | null = null;
   private resourceEl: HTMLElement | null = null;
+  private slotsHost: HTMLElement | null = null;
+  private stickyFooter: HTMLElement | null = null;
   private retrySection: HTMLElement | null = null;
-  private slotRows: HTMLElement[] = [];
-  /** slot ごとの未確定 passive 選択（取得ボタンまで消費しない）。 */
-  private readonly pendingPassiveSelection = new Map<number, string>();
 
   constructor(
     private readonly host: HTMLElement,
@@ -62,11 +69,12 @@ export class WavePrepScreenHost {
   }
 
   refresh(): void {
-    if (!this.root) return;
+    if (!this.root || !this.slotsHost) return;
     const view = this.callbacks.getOperationView();
     if (!view) {
       this.statusEl!.textContent = '作戦データなし';
       this.resourceEl!.textContent = '';
+      this.slotsHost.replaceChildren();
       return;
     }
 
@@ -76,8 +84,9 @@ export class WavePrepScreenHost {
     this.resourceEl!.textContent =
       `作戦内リソース: ${this.callbacks.getUnspentOperationResource()}`;
 
+    this.slotsHost.replaceChildren();
     for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
-      this.refreshSlotRow(slotIndex, view);
+      this.slotsHost.appendChild(this.createSlotRow(slotIndex, view));
     }
 
     if (this.retrySection) {
@@ -90,14 +99,17 @@ export class WavePrepScreenHost {
     this.root = null;
     this.statusEl = null;
     this.resourceEl = null;
+    this.slotsHost = null;
+    this.stickyFooter = null;
     this.retrySection = null;
-    this.slotRows = [];
-    this.pendingPassiveSelection.clear();
   }
 
   private build(): void {
     this.root = document.createElement('section');
     this.root.className = 'wave-prep-screen game-panel-surface';
+
+    const stickyHeader = document.createElement('div');
+    stickyHeader.className = 'wave-prep-screen__sticky-header';
 
     const title = document.createElement('h1');
     title.className = 'wave-prep-screen__title';
@@ -109,18 +121,18 @@ export class WavePrepScreenHost {
     this.resourceEl = document.createElement('p');
     this.resourceEl.className = 'wave-prep-screen__resource';
 
-    const slotsHost = document.createElement('div');
-    slotsHost.className = 'wave-prep-screen__slots';
+    stickyHeader.append(title, this.statusEl, this.resourceEl);
 
-    for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
-      const row = this.createSlotRow(slotIndex);
-      slotsHost.appendChild(row);
-      this.slotRows[slotIndex] = row;
-    }
+    this.slotsHost = document.createElement('div');
+    this.slotsHost.className = 'wave-prep-screen__slots';
+
+    this.stickyFooter = document.createElement('div');
+    this.stickyFooter.className = 'wave-prep-screen__sticky-footer';
 
     const confirmButton = document.createElement('button');
     confirmButton.type = 'button';
-    confirmButton.className = 'wave-prep-screen__confirm game-ui-button';
+    confirmButton.className =
+      'wave-prep-screen__confirm game-ui-button game-ui-button--primary';
     confirmButton.textContent = '次の Wave へ';
     confirmButton.addEventListener('click', () => {
       const started = this.callbacks.onConfirmNextWave();
@@ -130,15 +142,9 @@ export class WavePrepScreenHost {
     });
 
     this.retrySection = this.createRetrySection();
+    this.stickyFooter.append(confirmButton, this.retrySection);
 
-    this.root.append(
-      title,
-      this.statusEl,
-      this.resourceEl,
-      slotsHost,
-      confirmButton,
-      this.retrySection,
-    );
+    this.root.append(stickyHeader, this.slotsHost, this.stickyFooter);
     this.host.replaceChildren(this.root);
   }
 
@@ -186,10 +192,16 @@ export class WavePrepScreenHost {
     return section;
   }
 
-  private createSlotRow(slotIndex: number): HTMLElement {
+  private createSlotRow(
+    slotIndex: number,
+    view: OperationStateReadonlyView,
+  ): HTMLElement {
     const row = document.createElement('div');
-    row.className = 'wave-prep-screen__slot';
+    row.className = 'wave-prep-screen__slot game-panel-surface';
     row.dataset.slotIndex = String(slotIndex);
+
+    const member = view.party[slotIndex];
+    const currentClassId = member?.classId ?? null;
 
     const header = document.createElement('div');
     header.className = 'wave-prep-screen__slot-header';
@@ -200,104 +212,12 @@ export class WavePrepScreenHost {
 
     const classSelect = document.createElement('select');
     classSelect.className = 'wave-prep-screen__class-select';
-    classSelect.addEventListener('change', () => {
-      this.handleClassChange(slotIndex, classSelect);
-    });
-
-    const moduleSelect = document.createElement('select');
-    moduleSelect.className = 'wave-prep-screen__module-select';
-    moduleSelect.addEventListener('change', () => {
-      this.handleModuleChange(slotIndex, moduleSelect);
-    });
-
-    header.append(label, classSelect, moduleSelect);
-
-    const passiveSection = document.createElement('div');
-    passiveSection.className = 'wave-prep-screen__passive-section';
-
-    const acquiredEl = document.createElement('div');
-    acquiredEl.className = 'wave-prep-screen__passive-acquired';
-
-    const passiveControls = document.createElement('div');
-    passiveControls.className = 'wave-prep-screen__passive-controls';
-
-    const passiveSelect = document.createElement('select');
-    passiveSelect.className = 'wave-prep-screen__passive-select';
-    passiveSelect.addEventListener('change', () => {
-      const passiveId = passiveSelect.value;
-      if (passiveId) {
-        this.pendingPassiveSelection.set(slotIndex, passiveId);
-      } else {
-        this.pendingPassiveSelection.delete(slotIndex);
-      }
-      this.updatePassiveDetail(passiveSection, passiveSelect.value || null);
-      acquireButton.disabled =
-        passiveId === '' ||
-        this.callbacks.getUnspentOperationResource() <
-        this.callbacks.getPassiveAcquireCost();
-    });
-
-    const passiveDetail = document.createElement('p');
-    passiveDetail.className = 'wave-prep-screen__passive-detail';
-    passiveDetail.dataset.slotIndex = String(slotIndex);
-
-    const acquireButton = document.createElement('button');
-    acquireButton.type = 'button';
-    acquireButton.className =
-      'wave-prep-screen__passive-acquire game-ui-button';
-    acquireButton.textContent = 'パッシブ取得';
-    acquireButton.addEventListener('click', () => {
-      this.handleAcquirePassive(slotIndex, passiveSelect);
-    });
-
-    passiveControls.append(passiveSelect, acquireButton);
-    passiveSection.append(acquiredEl, passiveControls, passiveDetail);
-    row.append(header, passiveSection);
-    return row;
-  }
-
-  private refreshSlotRow(
-    slotIndex: number,
-    view: OperationStateReadonlyView,
-  ): void {
-    const row = this.slotRows[slotIndex];
-    if (!row) return;
-
-    const classSelect = row.querySelector<HTMLSelectElement>(
-      '.wave-prep-screen__class-select',
-    );
-    const moduleSelect = row.querySelector<HTMLSelectElement>(
-      '.wave-prep-screen__module-select',
-    );
-    const acquiredEl = row.querySelector<HTMLElement>(
-      '.wave-prep-screen__passive-acquired',
-    );
-    const passiveSelect = row.querySelector<HTMLSelectElement>(
-      '.wave-prep-screen__passive-select',
-    );
-    const acquireButton = row.querySelector<HTMLButtonElement>(
-      '.wave-prep-screen__passive-acquire',
-    );
-    if (
-      !classSelect ||
-      !moduleSelect ||
-      !acquiredEl ||
-      !passiveSelect ||
-      !acquireButton
-    ) {
-      return;
-    }
-
-    const member = view.party[slotIndex];
-    const currentClassId = member?.classId ?? null;
     const assignable = getAssignableClassIds(
       [...view.party],
       this.callbacks.getUnlockedClassIds(),
       slotIndex,
       this.gameData.classOrder,
     );
-
-    classSelect.replaceChildren();
     for (const classId of assignable) {
       const preset = this.gameData.classRegistry[classId];
       const option = document.createElement('option');
@@ -308,98 +228,60 @@ export class WavePrepScreenHost {
     if (currentClassId) {
       classSelect.value = currentClassId;
     }
+    classSelect.addEventListener('change', () => {
+      this.handleClassChange(slotIndex, classSelect);
+    });
 
-    moduleSelect.replaceChildren();
-    if (currentClassId) {
-      const preset = this.gameData.classRegistry[currentClassId];
-      const moduleIds = preset?.combatModuleIds ?? [];
-      for (const moduleId of moduleIds) {
-        const moduleDef = this.gameData.combatModuleRegistry[moduleId];
-        const option = document.createElement('option');
-        option.value = moduleId;
-        option.textContent = moduleDef?.displayName ?? moduleId;
-        moduleSelect.appendChild(option);
-      }
-      const resolved = resolveSelectedCombatModuleId(
-        preset!,
-        this.gameData.combatModuleRegistry,
-        this.callbacks.getSelectedModuleId(slotIndex),
-      );
-      if (resolved) {
-        moduleSelect.value = resolved;
-      }
-      moduleSelect.disabled = moduleIds.length === 0;
-    } else {
-      moduleSelect.disabled = true;
-    }
+    header.append(label, classSelect);
+    row.appendChild(header);
 
-    const acquiredIds =
-      this.callbacks.getAcquiredOperationPassiveIds(slotIndex);
-    if (acquiredIds.length > 0) {
-      const labels = acquiredIds.map((id) => {
-        const name = this.callbacks.getPassiveDisplayName(id);
-        const desc = this.callbacks.getPassiveDescription(id);
-        return desc ? `${name}: ${desc}` : name;
-      });
-      acquiredEl.textContent = `取得済み: ${labels.join(' / ')}`;
-    } else {
-      acquiredEl.textContent = '取得済み: なし';
-    }
-
-    const acquiredSet = new Set(acquiredIds);
-    const selectableCandidates = this.callbacks
-      .getOperationPassiveCandidates(slotIndex)
-      .filter((passiveId) => !acquiredSet.has(passiveId));
-
-    passiveSelect.replaceChildren();
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent =
-      selectableCandidates.length > 0 ? '候補を選択' : '候補なし';
-    passiveSelect.appendChild(placeholder);
-
-    const acquireCost = this.callbacks.getPassiveAcquireCost();
-
-    for (const passiveId of selectableCandidates) {
-      const option = document.createElement('option');
-      option.value = passiveId;
-      const name = this.callbacks.getPassiveDisplayName(passiveId);
-      option.textContent = `${name}（消費 ${acquireCost}）`;
-      passiveSelect.appendChild(option);
-    }
-
-    const pending = this.pendingPassiveSelection.get(slotIndex);
-    if (pending && selectableCandidates.includes(pending)) {
-      passiveSelect.value = pending;
-    } else {
-      this.pendingPassiveSelection.delete(slotIndex);
-      passiveSelect.value = '';
-    }
-
-    const passiveSection = row.querySelector<HTMLElement>(
-      '.wave-prep-screen__passive-section',
+    const moduleHost = document.createElement('div');
+    moduleHost.className = 'wave-prep-screen__module-section';
+    const preset = currentClassId
+      ? this.gameData.classRegistry[currentClassId]
+      : undefined;
+    const moduleViews = buildCombatModulePrepViews(
+      preset,
+      this.gameData.combatModuleRegistry,
+      this.callbacks.getSelectedModuleId(slotIndex),
     );
-    if (passiveSection) {
-      this.updatePassiveDetail(
-        passiveSection,
-        passiveSelect.value || null,
-        acquiredIds,
-      );
-    }
+    moduleHost.appendChild(
+      createCombatModulePrepSection({
+        views: moduleViews,
+        variantClass: 'wave-prep-screen__combat-module',
+        onSelect: (moduleId) => {
+          this.handleModuleChange(slotIndex, moduleId);
+        },
+      }),
+    );
+    row.appendChild(moduleHost);
 
-    const canAcquire =
-      selectableCandidates.length > 0 &&
-      passiveSelect.value !== '' &&
-      this.callbacks.getUnspentOperationResource() >= acquireCost;
-    passiveSelect.disabled = selectableCandidates.length === 0;
-    acquireButton.disabled = !canAcquire;
+    const passiveViews = buildOperationPassivePrepViews({
+      candidateIds: this.callbacks.getOperationPassiveCandidates(slotIndex),
+      acquiredIds: this.callbacks.getAcquiredOperationPassiveIds(slotIndex),
+      acquireCost: this.callbacks.getPassiveAcquireCost(),
+      currentResource: this.callbacks.getUnspentOperationResource(),
+      getPassiveDef: (passiveId) =>
+        this.gameData.skillRegistry.passives[passiveId],
+    });
+    row.appendChild(
+      createOperationPassivePrepSection({
+        views: passiveViews,
+        includeResourceLine: false,
+        variantClass: 'wave-prep-screen__passive-block',
+        onAcquire: (passiveId) => {
+          this.handleAcquirePassive(slotIndex, passiveId);
+        },
+      }),
+    );
+
+    return row;
   }
 
   private handleClassChange(
     slotIndex: number,
     classSelect: HTMLSelectElement,
   ): void {
-    this.pendingPassiveSelection.delete(slotIndex);
     const classId = classSelect.value as ClassId;
     const member = createMemberFromClass(classId, this.gameData);
     const result = this.callbacks.onPartySlotChanged(slotIndex, member);
@@ -415,11 +297,7 @@ export class WavePrepScreenHost {
     this.refresh();
   }
 
-  private handleModuleChange(
-    slotIndex: number,
-    moduleSelect: HTMLSelectElement,
-  ): void {
-    const moduleId = moduleSelect.value;
+  private handleModuleChange(slotIndex: number, moduleId: string): void {
     if (!this.callbacks.onModuleChanged(slotIndex, moduleId)) {
       this.statusEl!.textContent = '戦闘方式を変更できませんでした';
       this.refresh();
@@ -428,55 +306,12 @@ export class WavePrepScreenHost {
     this.refresh();
   }
 
-  private handleAcquirePassive(
-    slotIndex: number,
-    passiveSelect: HTMLSelectElement,
-  ): void {
-    const passiveId = passiveSelect.value;
-    if (!passiveId) return;
-
+  private handleAcquirePassive(slotIndex: number, passiveId: string): void {
     if (!this.callbacks.onAcquireOperationPassive(slotIndex, passiveId)) {
       this.statusEl!.textContent = 'パッシブを取得できませんでした';
       this.refresh();
       return;
     }
-
-    this.pendingPassiveSelection.delete(slotIndex);
     this.refresh();
-  }
-
-  private updatePassiveDetail(
-    passiveSection: HTMLElement,
-    passiveId: string | null,
-    acquiredIds: readonly string[] = [],
-  ): void {
-    const detailEl = passiveSection.querySelector<HTMLElement>(
-      '.wave-prep-screen__passive-detail',
-    );
-    if (!detailEl) return;
-
-    if (passiveId) {
-      const acquireCost = this.callbacks.getPassiveAcquireCost();
-      const name = this.callbacks.getPassiveDisplayName(passiveId);
-      const desc = this.callbacks.getPassiveDescription(passiveId);
-      detailEl.textContent = desc
-        ? `${name} — ${desc}（消費 ${acquireCost}）`
-        : `${name}（消費 ${acquireCost}）`;
-      return;
-    }
-
-    if (acquiredIds.length > 0) {
-      detailEl.textContent = '';
-      return;
-    }
-
-    const resource = this.callbacks.getUnspentOperationResource();
-    const acquireCost = this.callbacks.getPassiveAcquireCost();
-    if (resource < acquireCost) {
-      detailEl.textContent = `リソース不足（必要 ${acquireCost} / 残 ${resource}）`;
-      return;
-    }
-
-    detailEl.textContent = '';
   }
 }

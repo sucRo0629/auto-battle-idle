@@ -1,5 +1,5 @@
 /**
- * R9.5c: Formation screen combat module selection (party slot unit).
+ * R9.6-A: Formation screen formal CombatModule selection UI.
  *
  * @vitest-environment happy-dom
  */
@@ -61,7 +61,7 @@ function sortieToStage(session: GameSession, stageId: string): void {
 
 const MODULE_B_ID = 'df_guardian_mod_guard_focus';
 
-describe('SkillMenuPanel combat module selection (R9.5c)', () => {
+describe('SkillMenuPanel combat module selection (R9.6-A)', () => {
   let session: GameSession | null = null;
 
   beforeEach(() => {
@@ -77,22 +77,46 @@ describe('SkillMenuPanel combat module selection (R9.5c)', () => {
     setVerifyModeEnabled(false);
   });
 
-  it('shows combat module select for module class and persists per party slot', () => {
+  it('shows class-scoped module plates with name, description, and selection', () => {
     session = createSession();
     session.start();
     sortieToStage(session, '1');
 
     expect(session.getCurrentScreen()).toBe('formation');
 
-    const moduleSelect = document.querySelector<HTMLSelectElement>(
-      '.skill-menu-combat-module-select',
-    );
-    expect(moduleSelect).not.toBeNull();
-    expect(moduleSelect!.options.length).toBeGreaterThanOrEqual(2);
+    const section = document.querySelector('.combat-module-prep');
+    expect(section).not.toBeNull();
     expect(document.body.textContent).toContain('戦闘方式');
 
-    moduleSelect!.value = MODULE_B_ID;
-    moduleSelect!.dispatchEvent(new Event('change', { bubbles: true }));
+    const candidates = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '.combat-module-prep__candidate',
+      ),
+    ];
+    expect(candidates.length).toBeGreaterThanOrEqual(2);
+
+    for (const candidate of candidates) {
+      expect(candidate.querySelector('.combat-module-prep__name')?.textContent)
+        .toBeTruthy();
+      expect(
+        candidate.querySelector('.combat-module-prep__description')?.textContent,
+      ).toBeTruthy();
+      expect(
+        candidate.querySelector('.combat-module-prep__behavior')?.textContent,
+      ).toContain('攻撃間隔');
+    }
+
+    const selected = candidates.find(
+      (entry) => entry.dataset.selected === 'true',
+    );
+    expect(selected?.querySelector('.combat-module-prep__status')?.textContent)
+      .toBe('選択中');
+
+    const moduleB = candidates.find(
+      (entry) => entry.dataset.moduleId === MODULE_B_ID,
+    );
+    expect(moduleB).toBeTruthy();
+    moduleB!.click();
 
     expect(session.getPartySlotCombatModule(0)).toBe(MODULE_B_ID);
 
@@ -106,7 +130,7 @@ describe('SkillMenuPanel combat module selection (R9.5c)', () => {
     expect(session.getPartySlotCombatModule(0)).toBe(MODULE_B_ID);
   });
 
-  it('does not show combat module select for legacy class focus', () => {
+  it('does not show combat module plates for legacy class focus', () => {
     session = createSession();
     session.start();
     sortieToStage(session, '1');
@@ -118,8 +142,23 @@ describe('SkillMenuPanel combat module selection (R9.5c)', () => {
     expect(listItem).toBeTruthy();
     listItem!.click();
 
+    expect(document.querySelector('.combat-module-prep')).toBeNull();
     expect(
       document.querySelector('.skill-menu-combat-module-select'),
     ).toBeNull();
+  });
+
+  it('does not mix legacy active skill rows into combat module candidates', () => {
+    session = createSession();
+    session.start();
+    sortieToStage(session, '1');
+
+    const moduleIds = [
+      ...document.querySelectorAll<HTMLElement>(
+        '.combat-module-prep__candidate',
+      ),
+    ].map((el) => el.dataset.moduleId);
+    expect(moduleIds.every((id) => id?.includes('_mod_'))).toBe(true);
+    expect(moduleIds.some((id) => id?.includes('_active_'))).toBe(false);
   });
 });

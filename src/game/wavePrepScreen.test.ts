@@ -540,12 +540,12 @@ function selectWavePrepPassive(
   const rows = container.querySelectorAll('.wave-prep-screen__slot');
   const row = rows[slotIndex];
   if (!row) throw new Error(`Wave prep slot row not found: ${slotIndex}`);
-  const select = row.querySelector<HTMLSelectElement>(
-    '.wave-prep-screen__passive-select',
+  const card = row.querySelector<HTMLElement>(
+    `.operation-passive-prep__candidate[data-passive-id="${passiveId}"]`,
   );
-  if (!select) throw new Error('Wave prep passive select not found');
-  select.value = passiveId;
-  select.dispatchEvent(new Event('change', { bubbles: true }));
+  if (!card) throw new Error(`Wave prep passive card not found: ${passiveId}`);
+  // Formal UI acquires from the card button; selecting is implicit.
+  void card;
 }
 
 function clickWavePrepAcquire(container: ParentNode, slotIndex: number): void {
@@ -553,9 +553,16 @@ function clickWavePrepAcquire(container: ParentNode, slotIndex: number): void {
   const row = rows[slotIndex];
   if (!row) throw new Error(`Wave prep slot row not found: ${slotIndex}`);
   const button = row.querySelector<HTMLButtonElement>(
-    '.wave-prep-screen__passive-acquire',
+    '.operation-passive-prep__acquire:not(:disabled)',
   );
-  if (!button) throw new Error('Wave prep acquire button not found');
+  if (!button) {
+    const anyButton = row.querySelector<HTMLButtonElement>(
+      '.operation-passive-prep__acquire',
+    );
+    if (!anyButton) throw new Error('Wave prep acquire button not found');
+    anyButton.click();
+    return;
+  }
   button.click();
 }
 
@@ -725,6 +732,12 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     reachAwaitingNextWave(getEngine(session));
 
     expect(document.body.textContent).toContain('作戦内リソース: 1');
+    expect(document.querySelector('[data-prep-kind="combat-module"]')).not.toBeNull();
+    expect(document.querySelector('[data-prep-kind="operation-passive"]')).not
+      .toBeNull();
+    expect(document.body.textContent).toContain('戦闘方式');
+    expect(document.body.textContent).toContain('作戦内パッシブ');
+
     selectWavePrepPassive(document.body, R8C_GUARDIAN_SLOT, R8C_PASSIVE_ID);
     clickWavePrepAcquire(document.body, R8C_GUARDIAN_SLOT);
 
@@ -732,5 +745,7 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
       R8C_PASSIVE_ID,
     ]);
     expect(document.body.textContent).toContain('作戦内リソース: 0');
+    expect(document.body.textContent).toContain('取得済み');
+    expect(document.body.textContent).toContain('立ちはだかる壁');
   });
 });

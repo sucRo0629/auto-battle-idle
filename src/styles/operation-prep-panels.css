@@ -1,0 +1,153 @@
+@import './game-ui-chrome.css';
+
+/* R9.6: CombatModule / 作戦内パッシブ共通の正式準備プレート */
+
+.combat-module-prep,
+.operation-passive-prep {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.combat-module-prep__title,
+.operation-passive-prep__title {
+  margin: 0;
+  font-family: var(--font-heading, inherit);
+  font-size: 1rem;
+}
+
+.combat-module-prep__hint,
+.operation-passive-prep__hint {
+  margin: 0;
+  font-family: var(--font-body, inherit);
+  font-size: var(--font-body-min-size);
+  line-height: 1.4;
+  color: var(--party-text-soft, #c8b8a0);
+}
+
+.combat-module-prep__candidates,
+.operation-passive-prep__candidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.5rem;
+}
+
+.combat-module-prep__candidate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: stretch;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: 2px solid var(--game-panel-border, #444);
+  border-radius: 0;
+  background: var(--game-slot-bg, rgba(15, 15, 26, 0.72));
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.combat-module-prep__candidate:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.combat-module-prep__candidate--selected,
+.combat-module-prep__candidate[data-selected='true'] {
+  border-color: var(--game-slot-border-active, rgba(74, 144, 217, 0.75));
+  background: var(--game-slot-bg-active, rgba(74, 144, 217, 0.14));
+}
+
+.combat-module-prep__candidate-header,
+.operation-passive-prep__candidate-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.combat-module-prep__name,
+.operation-passive-prep__name {
+  font-family: var(--font-heading, inherit);
+  font-weight: 700;
+}
+
+.combat-module-prep__status,
+.operation-passive-prep__status {
+  font-family: var(--font-ui, inherit);
+  font-size: var(--font-body-min-size);
+  border: 1px solid var(--game-panel-border, #444);
+  border-radius: 0;
+  padding: 0.1rem 0.35rem;
+}
+
+.combat-module-prep__description,
+.combat-module-prep__reason,
+.operation-passive-prep__effect,
+.operation-passive-prep__cost,
+.operation-passive-prep__reason,
+.operation-passive-prep__resource,
+.operation-passive-prep__empty,
+.combat-module-prep__empty,
+.operation-passive-prep__acquired-title {
+  margin: 0;
+  font-size: var(--font-body-min-size);
+  line-height: 1.45;
+}
+
+.combat-module-prep__behavior {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: var(--font-body-min-size);
+  line-height: 1.4;
+  color: var(--party-text-soft, #c8b8a0);
+}
+
+.operation-passive-prep__candidate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.operation-passive-prep__candidate[data-acquire-state='acquired'] {
+  border-color: rgba(100, 140, 100, 0.7);
+}
+
+.operation-passive-prep__candidate[data-acquire-state='insufficient_resource'] {
+  border-color: rgba(160, 120, 60, 0.7);
+}
+
+.operation-passive-prep__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.operation-passive-prep__fact {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.35rem;
+  font-size: var(--font-body-min-size);
+  line-height: 1.35;
+}
+
+.operation-passive-prep__fact-label {
+  font-family: var(--font-ui, inherit);
+  color: var(--party-text-soft, #c8b8a0);
+}
+
+.operation-passive-prep__fact-value {
+  font-family: var(--font-body, inherit);
+}
+
+.operation-passive-prep__acquired {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.operation-passive-prep__acquire {
+  align-self: flex-start;
+}
