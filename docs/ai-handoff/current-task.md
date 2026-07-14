@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9g 完了** — 効果範囲 authoring（CombatModule editor + passive 範囲、§91）。**R9e 完了** — preview・validation・参照整合の統合（§90）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
-- **次の再開タスク:** **R9h** — class 方式 pool（`combatModuleIds`）。その後 R9f（**Stage 新規作成**含む authoring closure）→ **R9.6（A→B）** → R10。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
+- **新ロードマップ現在地:** **R9h 完了** — class 方式 pool（`combatModuleIds`、§92）。**R9g 完了** — 効果範囲 authoring（CombatModule editor + passive 範囲、§91）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
+- **次の再開タスク:** **R9f** — Legacy migration **+ Stage 新規作成**（authoring closure）。その後 **R9.6（A→B）** → R10。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -6207,7 +6207,7 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 | **R9d（完了）** | `data/operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
 | **R9e** | preview・validation・参照整合。catalog 参照整合を validate に追加 | **完了（§90）** |
 | **R9g** | CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） | **完了（§91）** |
-| **R9h** | Class `combatModuleIds` 編集（R5 4 兵科のみ、2 件必須） |
+| **R9h** | Class `combatModuleIds` 編集（R5 4 兵科のみ、2 件必須） | **完了（§92）** |
 | **R9f** | legacy stage / skill / tier **一括 migration**。catalog の全面拡張（M1 外 class）は R10 以降 |
 
 ### 80.6 R9 小タスク一覧
@@ -6220,7 +6220,7 @@ R8e-fix（2026-07-13）: `defines a display label for every badge slot category`
 | **R9d** | 作戦内パッシブ候補・付与条件 authoring | `operation-passive-catalog.json` + editor GET/PUT + WavePrep 反映 |
 | **R9e** | preview・validation・参照整合の統合 | **完了（§90）** — 不正 ID・重複・未設定警告 |
 | **R9g** | **効果範囲 authoring（試作前提）** — CombatModule editor + `SkillEditorStep` passive 範囲フィールド（§5.7 最小） | **完了（§91）** — module / passive 範囲 save round-trip |
-| **R9h** | **Class 方式 pool** — `combatModuleIds` 編集（**R5 4 兵科のみ**、2 件必須）。M1 外 class は read-only | `editorClassList.test.ts` 拡張 — 保存後 validate pass |
+| **R9h** | **Class 方式 pool** — `combatModuleIds` 編集（**R5 4 兵科のみ**、2 件必須）。M1 外 class は read-only | **完了（§92）** — `editorClassList.test.ts` 拡張 |
 | **R9f** | Legacy migration **独立** — script / 一括 normalize（`attackSpeedTier`→module、`waves.enemies`→groups **optional**、旧 active 整理）。**legacy フィールド削除は別 PR 可** | migration テスト + 旧新共存 read |
 
 **不採用（場当たり）:** クラス・Stage・module を 1 PR にまとめる案 — 保存経路・validate 競合リスク大（R4 §13 / bug-fix-project 単一経路原則）。
@@ -7379,7 +7379,7 @@ R9b〜d で分かれた authoring 経路の **preview / client validate / 参照
 
 ### 90.6 次タスク
 
-**R9g** — §91 で完了。**R9h** — class 方式 pool（`combatModuleIds`）。その後 R9f → **R9.6（A→B）** → R10。
+**R9h** — §92 で完了。**R9f** — Legacy migration + Stage 新規作成。その後 **R9.6（A→B）** → R10。
 
 ---
 
@@ -7428,4 +7428,52 @@ R10 試作用に、戦闘方式・作戦内パッシブの効果範囲を **手�
 
 ### 91.6 次タスク
 
-**R9h** — Class 方式 pool（`combatModuleIds`）。その後 R9f → **R9.6（A→B）** → R10。
+**R9h** — §92 で完了。**R9f** — Legacy migration + Stage 新規作成。その後 **R9.6（A→B）** → R10。
+
+---
+
+## 92. R9h — Class 方式 pool（`combatModuleIds`）（完了 2026-07-14）
+
+### 92.1 目的
+
+R5 4 兵科の `combatModuleIds`（2 方式 pool）を、手編集 `classes.json` なしで class bundle 保存経路から設定できるようにする。
+
+### 92.2 実装
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/editor/classCombatModulePoolEditor.ts` | R5 判定・候補列挙・slot 更新・client validate |
+| `src/editor/ClassEditorStep.ts` | 「戦闘方式 pool」セクション（方式 A/B 選択。legacy は read-only） |
+| `src/editor/editorApi.ts` | `validateClassDraftForSave` に pool validate 追加 |
+| `src/editor/EditorApp.ts` | `combatModuleRegistry` 配線・保存前 pool 解決 |
+
+### 92.3 設計メモ
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 編集可 | `R5_COMBAT_MODULE_CLASS_IDS` の 4 兵科のみ |
+| 候補 | `combatModuleRegistry` から同一 `classId` の module のみ |
+| 件数 | 2 件必須。重複・未知 ID・別兵科 module は client / server validate で拒否 |
+| read-only | M1 外 class、`combatModuleIds` 未定義 legacy class |
+| server | 既存 `PUT /__editor/class-bundle` → `validateAll`（変更なし） |
+
+### 92.4 テスト
+
+| ファイル | 結果 |
+| -------- | ---- |
+| `classCombatModulePoolEditor.test.ts` | **4** pass |
+| `editorClassList.test.ts` | **13** pass（R9h 新規 2 件: swap round-trip + unknown ID 拒否） |
+
+### 92.5 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R9h Backend** | **Yes** — class bundle save + full validate |
+| **R9h Tooling** | **Yes** — ClassEditorStep pool UI + client validate |
+| **R9h 全体** | **Yes** |
+| R9f Stage 新規作成 | **No** — スコープ外 |
+| R9.6 Player UI | **No** — スコープ外 |
+
+### 92.6 次タスク
+
+**R9f** — Legacy migration + Stage 新規作成。その後 **R9.6（A→B）** → R10。

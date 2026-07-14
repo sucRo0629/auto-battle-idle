@@ -11,6 +11,7 @@ import { EnemyEditorStep, loadEnemyDraftById } from './EnemyEditorStep.ts';
 import { StageEnemyEditorStep } from './StageEnemyEditorStep.ts';
 import { OperationPassiveCatalogEditorStep } from './OperationPassiveCatalogEditorStep.ts';
 import { CombatModuleEditorStep } from './CombatModuleEditorStep.ts';
+import { resolveClassCombatModuleIdsDraft } from './classCombatModulePoolEditor.ts';
 import { StatusIconsEditorStep } from './StatusIconsEditorStep.ts';
 import {
   applyEnemyAttackSpeedTier,
@@ -419,6 +420,7 @@ export class EditorApp {
       getPreviewClassPreset: () =>
         buildClassPresetFromDraft(this.classDraft, this.classSkillEntries),
       getSkillRegistry: () => buildSkillRegistryFromSkillsJson(this.skills),
+      combatModuleRegistry: this.combatModuleRegistry,
       classes: this.classes,
       selectedClassId: this.selectedClassId,
       onDraftChange: (draft) => {
@@ -928,6 +930,14 @@ export class EditorApp {
   private selectClass(classId: string): void {
     this.selectedClassId = classId;
     this.classDraft = loadClassDraftById(this.classes, classId);
+    const resolvedPool = resolveClassCombatModuleIdsDraft(
+      classId,
+      this.classDraft.class.combatModuleIds,
+      this.combatModuleRegistry,
+    );
+    if (resolvedPool) {
+      this.classDraft.class.combatModuleIds = resolvedPool;
+    }
     this.classSkillEntries = initClassSkillEntriesFromPreset(this.classDraft.class, this.skills);
     this.persistSession();
     this.render();
@@ -1036,6 +1046,7 @@ export class EditorApp {
         getPreviewClassPreset: () =>
           buildClassPresetFromDraft(this.classDraft, this.classSkillEntries),
         getSkillRegistry: () => buildSkillRegistryFromSkillsJson(this.skills),
+        combatModuleRegistry: this.combatModuleRegistry,
         classes: this.classes,
         selectedClassId: this.selectedClassId,
         onDraftChange: (draft) => {
@@ -1096,7 +1107,17 @@ export class EditorApp {
     this.saving = true;
     this.refreshClassTabUi();
     try {
-      validateClassDraftForSave(this.classDraft);
+      const resolvedPool = resolveClassCombatModuleIdsDraft(
+        savedClassId,
+        this.classDraft.class.combatModuleIds,
+        this.combatModuleRegistry,
+      );
+      if (resolvedPool) {
+        this.classDraft.class.combatModuleIds = resolvedPool;
+      }
+      validateClassDraftForSave(this.classDraft, {
+        combatModuleRegistry: this.combatModuleRegistry,
+      });
       this.prepareClassSkillEntriesForSave();
       const cls = buildClassPresetFromDraft(this.classDraft, this.classSkillEntries);
       const { passives, actives } = collectSkillsFromDrafts(this.classSkillEntries);

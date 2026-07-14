@@ -60,6 +60,14 @@ import {
   createTextarea,
   preserveScrollDuring,
 } from "./formUtils.ts";
+import type { CombatModuleDef } from "../battle/types.ts";
+import {
+  formatClassCombatModulePoolSummary,
+  isClassCombatModulePoolEditable,
+  listClassCombatModulePoolOptions,
+  resolveClassCombatModuleIdsDraft,
+  setClassCombatModulePoolSlot,
+} from "./classCombatModulePoolEditor.ts";
 
 const ROLE_LABELS: Record<Role, string> = {
   defender: "守備 (defender)",
@@ -205,6 +213,7 @@ export interface ClassEditorStepOptions {
   getDraft: () => ClassDraft;
   getPreviewClassPreset?: () => ClassPresetBeforeEnrich;
   getSkillRegistry?: () => SkillRegistry;
+  combatModuleRegistry?: Record<string, CombatModuleDef>;
   classes: ClassPresetBeforeEnrich[];
   selectedClassId: string;
   onDraftChange: (draft: ClassDraft, options?: DraftChangeOptions) => void;
@@ -731,6 +740,107 @@ export class ClassEditorStep {
         )
       )
     );
+
+    const combatModuleRegistry = this.options.combatModuleRegistry ?? {};
+    const classId = draft.class.id.trim();
+    const poolEditable = isClassCombatModulePoolEditable(classId);
+    const poolIds = resolveClassCombatModuleIdsDraft(
+      classId,
+      draft.class.combatModuleIds,
+      combatModuleRegistry,
+    );
+    const poolSummary = poolEditable
+      ? formatClassCombatModulePoolSummary(poolIds, combatModuleRegistry)
+      : draft.class.combatModuleIds
+        ? draft.class.combatModuleIds.join(' · ')
+        : 'legacy（未対応）';
+    const { details: poolDetails, body: poolBody } = createCollapsibleSection({
+      id: 'class-combat-module-pool',
+      title: '戦闘方式 pool',
+      summaryExtra: poolSummary,
+      expandedState: sectionExpandedState,
+    });
+    this.container.appendChild(poolDetails);
+
+    if (poolEditable) {
+      poolBody.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          'R5 兵科は combatModuleIds を 2 件必須で設定します。方式 A（index 0）が runtime 既定。候補は同一兵科の CombatModule のみ。',
+        ),
+      );
+      const poolOptions = listClassCombatModulePoolOptions(classId, combatModuleRegistry);
+      if (poolOptions.length < 2) {
+        poolBody.appendChild(
+          createEl(
+            'p',
+            'editor-warning-error',
+            `CombatModule が ${poolOptions.length} 件しかありません。先に「戦闘方式」タブで 2 件登録してください。`,
+          ),
+        );
+      } else {
+        const fallback: [string, string] = [
+          poolOptions[0]!.moduleId,
+          poolOptions[1]!.moduleId,
+        ];
+        const selectOptions = poolOptions.map((option) => ({
+          value: option.moduleId,
+          label: `${option.displayName} (${option.moduleId})`,
+        }));
+        const poolGrid = appendGrid(poolBody);
+        for (const slotIndex of [0, 1] as const) {
+          const slotLabel = slotIndex === 0 ? '方式 A（既定）' : '方式 B';
+          const currentId = poolIds?.[slotIndex] ?? fallback[slotIndex];
+          poolGrid.appendChild(
+            createFieldRow(
+              slotLabel,
+              createSelect(currentId, selectOptions, (moduleId) => {
+                commitDraft((next) => {
+                  const resolved = resolveClassCombatModuleIdsDraft(
+                    classId,
+                    next.class.combatModuleIds,
+                    combatModuleRegistry,
+                  );
+                  next.class.combatModuleIds = setClassCombatModulePoolSlot(
+                    resolved,
+                    slotIndex,
+                    moduleId,
+                    fallback,
+                  );
+                }, { rerender: true });
+              }),
+            ),
+          );
+          const module = combatModuleRegistry[currentId];
+          if (module?.description) {
+            poolGrid.appendChild(
+              createEl('p', 'editor-hint', module.description),
+            );
+          }
+        }
+      }
+    } else {
+      poolBody.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          'M1 外 / legacy 兵科は combatModuleIds を editor から編集できません（read-only）。',
+        ),
+      );
+      if (draft.class.combatModuleIds?.length) {
+        poolBody.appendChild(
+          createFieldRow(
+            'combatModuleIds',
+            createEl(
+              'span',
+              'editor-readonly-value',
+              draft.class.combatModuleIds.join(' · '),
+            ),
+          ),
+        );
+      }
+    }
 
     const previewSection = createSection("プレビュー");
     previewSection.classList.add("editor-panel-preview-emphasis");

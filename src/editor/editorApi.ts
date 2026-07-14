@@ -34,6 +34,7 @@ import {
   type AuthoringCombatModuleContext,
   type AuthoringPassiveCatalogContext,
 } from './authoringValidationPreview.ts';
+import { validateClassCombatModulePoolDraft } from './classCombatModulePoolEditor.ts';
 import { groupCombatModulesByClassId } from './combatModuleEditor.ts';
 
 export type StageDraftValidateContext = AuthoringCombatModuleContext;
@@ -834,11 +835,26 @@ function assertMinNumber(label: string, value: number, min: number): void {
   }
 }
 
-export function validateClassDraftForSave(draft: ClassDraft): void {
+export function validateClassDraftForSave(
+  draft: ClassDraft,
+  options?: { combatModuleRegistry?: Record<string, CombatModuleDef> },
+): void {
   assertMinNumber('maxHp', draft.class.maxHp, 1);
   assertMinNumber('atk', draft.class.atk, 0);
   assertMinNumber('def', draft.class.def, 0);
   assertConfigurableRangePx('射程 (px)', draft.class.traits.rangePx ?? 0);
+
+  const classId = draft.class.id.trim();
+  if (options?.combatModuleRegistry && classId) {
+    const modulePoolError = validateClassCombatModulePoolDraft(
+      classId,
+      draft.class.combatModuleIds,
+      options.combatModuleRegistry,
+    );
+    if (modulePoolError) {
+      throw new Error(modulePoolError);
+    }
+  }
 }
 
 export function validateEnemyDraftForSave(draft: EnemyDraft): void {

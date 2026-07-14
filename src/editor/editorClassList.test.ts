@@ -10,6 +10,12 @@ import { loadGameData, tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { readSkillsRoot } from '../battle/data/skillsJsonFs.ts';
 import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+import {
+  buildClassPresetFromDraft,
+  classDraftFromPreset,
+  initClassSkillEntriesFromPreset,
+  validateClassDraftForSave,
+} from './editorApi.ts';
 
 const combatModuleFiles = import.meta.glob<CombatModuleDef[]>(
   '../../data/combat-modules/*.json',
@@ -180,5 +186,61 @@ describe('class editor class list (regression)', () => {
     for (const classId of TARGET_CLASS_IDS) {
       expect(parsed.classes.some((cls) => cls.id === classId)).toBe(true);
     }
+  });
+
+  it('R5 class combatModuleIds swap passes client validate and editor parse', () => {
+    const gameData = loadGameData();
+    const classes = classesJson as ClassPresetBeforeEnrich[];
+    const guardian = classes.find((cls) => cls.id === 'df_guardian');
+    expect(guardian).toBeDefined();
+
+    const draft = classDraftFromPreset(guardian!);
+    const original = draft.class.combatModuleIds!;
+    draft.class.combatModuleIds = [original[1], original[0]];
+
+    validateClassDraftForSave(draft, {
+      combatModuleRegistry: gameData.combatModuleRegistry,
+    });
+
+    const skills = readSkillsRoot();
+    const entries = initClassSkillEntriesFromPreset(draft.class, skills);
+    const savedClass = buildClassPresetFromDraft(draft, entries);
+    const nextClasses = upsertClassById(classes, savedClass);
+
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: nextClasses,
+          skills,
+          combatModules: loadCombatModules(),
+          enemies: enemiesJson,
+          stages: stagesJson,
+          parties: partiesJson,
+        },
+        { mode: 'editor' },
+      ),
+    ).not.toThrow();
+    expect(
+      nextClasses.find((cls) => cls.id === 'df_guardian')?.combatModuleIds,
+    ).toEqual([original[1], original[0]]);
+  });
+
+  it('client validate rejects unknown combatModuleId in R5 class pool', () => {
+    const gameData = loadGameData();
+    const classes = classesJson as ClassPresetBeforeEnrich[];
+    const guardian = classes.find((cls) => cls.id === 'df_guardian');
+    expect(guardian).toBeDefined();
+
+    const draft = classDraftFromPreset(guardian!);
+    draft.class.combatModuleIds = [
+      'df_guardian_mod_nearest_strike',
+      'df_guardian_mod_unknown_test',
+    ];
+
+    expect(() =>
+      validateClassDraftForSave(draft, {
+        combatModuleRegistry: gameData.combatModuleRegistry,
+      }),
+    ).toThrow(/未知の combatModuleId/);
   });
 });
