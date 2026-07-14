@@ -12,9 +12,11 @@ import {
   classDraftFromPreset,
   classStatsEqual,
   collectSkillsFromDrafts,
+  createDefaultStageDraft,
   defaultBasicAttackId,
   createEmptyStageDraft,
   initClassSkillEntriesFromPreset,
+  isNewStageDraft,
   loadStageDraftById,
   normalizeStageDraftForSave,
   removeStageDraftWave,
@@ -1378,5 +1380,111 @@ describe('legacy composition authoring helpers', () => {
     expect(resolveStageDraftCompositionMode(draft)).toBe('stageEnemyGroups');
     expect(draft.enemyGroups).toEqual([]);
     expect(draft.waves?.[0]?.enemyGroups).toBeUndefined();
+  });
+});
+
+describe('stage create authoring (R9f)', () => {
+  it('createDefaultStageDraft starts waveEnemyGroups with one group', () => {
+    const draft = createDefaultStageDraft({
+      defaultClassId: 'at_hunter',
+      recommendedLevel: 5,
+    });
+
+    expect(draft.id).toBe('');
+    expect(draft.displayName).toBe('');
+    expect(draft.recommendedLevel).toBe(5);
+    expect(resolveStageDraftCompositionMode(draft)).toBe('waveEnemyGroups');
+    expect(draft.waves).toHaveLength(1);
+    expect(draft.waves?.[0]?.enemyGroups).toEqual([
+      { classId: 'at_hunter', count: 1 },
+    ]);
+    expect(draft.waves?.[0]?.enemies).toEqual([]);
+    expect(isNewStageDraft(draft, loadGameData().stages)).toBe(true);
+  });
+
+  it('createDefaultStageDraft can seed two waves for R10-style operations', () => {
+    const draft = createDefaultStageDraft({
+      defaultClassId: 'df_paladin',
+      waveCount: 2,
+    });
+
+    expect(draft.waves).toHaveLength(2);
+    expect(resolveStageDraftCompositionMode(draft)).toBe('waveEnemyGroups');
+    expect(validateStageDraftForSave({
+      ...draft,
+      id: 'r9f_two_wave',
+      displayName: 'R9f Two Wave',
+    })).toBeNull();
+
+    const normalized = normalizeStageDraftForSave({
+      ...draft,
+      id: 'r9f_two_wave',
+      displayName: 'R9f Two Wave',
+    });
+    const reloaded = loadStageDraftById([normalized], 'r9f_two_wave');
+    expect(reloaded.waves).toHaveLength(2);
+    expect(resolveStageDraftCompositionMode(reloaded)).toBe('waveEnemyGroups');
+  });
+
+  it('rejects missing identity and duplicate stageId on new drafts', () => {
+    const draft = createDefaultStageDraft({ defaultClassId: 'df_paladin' });
+    expect(validateStageDraftForSave(draft, { isNewStage: true })).toMatch(
+      /stageId/,
+    );
+
+    draft.id = 'bad id';
+    draft.displayName = 'Bad';
+    expect(validateStageDraftForSave(draft, { isNewStage: true })).toMatch(
+      /英数字/,
+    );
+
+    draft.id = 'eg_smoke';
+    draft.displayName = 'Dup';
+    expect(
+      validateStageDraftForSave(draft, {
+        isNewStage: true,
+        existingStageIds: loadGameData().stages.map((stage) => stage.id),
+      }),
+    ).toMatch(/既に存在/);
+  });
+
+  it('accepts unique new stage identity and round-trips through normalize', () => {
+    const draft = createDefaultStageDraft({
+      defaultClassId: 'df_guardian',
+      waveCount: 2,
+      recommendedLevel: 8,
+    });
+    draft.id = 'r9f_new_op';
+    draft.displayName = 'R9f New Operation';
+    draft.waves![0]!.enemyGroups = [{ classId: 'df_guardian', count: 1 }];
+    draft.waves![1]!.enemyGroups = [{ classId: 'at_hunter', count: 2 }];
+
+    const existingIds = loadGameData().stages.map((stage) => stage.id);
+    expect(
+      validateStageDraftForSave(draft, {
+        isNewStage: true,
+        existingStageIds: existingIds,
+        classRegistry: loadGameData().classRegistry,
+        combatModuleRegistry: loadGameData().combatModuleRegistry,
+      }),
+    ).toBeNull();
+
+    const normalized = normalizeStageDraftForSave(draft);
+    const reloaded = loadStageDraftById(
+      [...loadGameData().stages, normalized],
+      'r9f_new_op',
+    );
+    expect(resolveStageDraftCompositionMode(reloaded)).toBe('waveEnemyGroups');
+    expect(reloaded.displayName).toBe('R9f New Operation');
+    expect(reloaded.waves).toHaveLength(2);
+    expect(reloaded.waves?.[0]?.enemyGroups?.[0]?.classId).toBe('df_guardian');
+    expect(reloaded.waves?.[1]?.enemyGroups?.[0]).toEqual({
+      classId: 'at_hunter',
+      count: 2,
+    });
+    expect(isNewStageDraft(reloaded, loadGameData().stages)).toBe(true);
+    expect(isNewStageDraft(reloaded, [...loadGameData().stages, normalized])).toBe(
+      false,
+    );
   });
 });

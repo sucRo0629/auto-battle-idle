@@ -581,4 +581,77 @@ describe('StageEnemyEditorStep', () => {
       expect(host.textContent).toContain('未知の selectedCombatModuleId');
     });
   });
+
+  describe('stage create authoring (R9f)', () => {
+    it('shows create button and editable identity while creating', () => {
+      const draft: StageDraft = {
+        id: '',
+        displayName: '',
+        recommendedLevel: 1,
+        waves: [
+          { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 1 }] },
+        ],
+      };
+      const onCreateStage = vi.fn();
+      const onDraftChange = vi.fn();
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(
+        host,
+        makeOptions(draft, [makeStage()], {
+          selectedStageId: '',
+          isCreatingStage: true,
+          onCreateStage,
+          onDraftChange,
+        }),
+      );
+
+      const createBtn = host.querySelector<HTMLButtonElement>(
+        'button[data-editor-action="createStage"]',
+      );
+      expect(createBtn).toBeTruthy();
+      createBtn!.click();
+      expect(onCreateStage).toHaveBeenCalledTimes(1);
+
+      expect(host.textContent).toContain('新規作成中');
+      expect(host.textContent).toContain('waves[].enemyGroups');
+
+      const identityInputs = host.querySelectorAll<HTMLInputElement>(
+        'input.editor-input',
+      );
+      expect(identityInputs.length).toBeGreaterThanOrEqual(2);
+      identityInputs[0]!.value = 'r9f_ui_stage';
+      identityInputs[0]!.dispatchEvent(new Event('input', { bubbles: true }));
+      identityInputs[0]!.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const nextDraft = onDraftChange.mock.calls.at(-1)?.[0] as StageDraft;
+      expect(nextDraft.id).toBe('r9f_ui_stage');
+    });
+
+    it('keeps save enabled while creating without selectedStageId', () => {
+      const draft: StageDraft = {
+        id: 'draft_only',
+        displayName: 'Draft Only',
+        recommendedLevel: 1,
+        waves: [
+          { enemies: [], enemyGroups: [{ classId: 'df_paladin', count: 1 }] },
+        ],
+      };
+
+      host = document.createElement('div');
+      new StageEnemyEditorStep(
+        host,
+        makeOptions(draft, [], {
+          selectedStageId: '',
+          isCreatingStage: true,
+        }),
+      );
+
+      const saveBtn = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('保存'),
+      );
+      expect(saveBtn).toBeTruthy();
+      expect(saveBtn!.disabled).toBe(false);
+    });
+  });
 });

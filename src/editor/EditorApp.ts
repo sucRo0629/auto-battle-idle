@@ -31,6 +31,7 @@ import {
   ensureClassBasicAttackPool,
   ensureClassGrowthFields,
   createEmptyStageDraft,
+  createDefaultStageDraft,
   fetchClasses,
   fetchCombatModules,
   fetchEnemies,
@@ -111,6 +112,7 @@ export class EditorApp {
 
   private stageDraft: StageDraft = createEmptyStageDraft();
   private selectedStageId = '';
+  private isCreatingStage = false;
   private operationPassiveCatalogDraft: OperationPassiveCatalogDef = {
     passiveAcquireCost: 1,
     waveClearResourceGrant: 1,
@@ -519,10 +521,12 @@ export class EditorApp {
       getDraft: () => this.stageDraft,
       stages: this.stages,
       selectedStageId: this.selectedStageId,
+      isCreatingStage: this.isCreatingStage,
       classOptions: this.buildClassPickerItems(),
       classRegistry: this.classRegistry,
       combatModuleRegistry: this.combatModuleRegistry,
       onSelectStage: (stageId) => this.selectStage(stageId),
+      onCreateStage: () => this.createStage(),
       onDraftChange: (draft) => {
         this.stageDraft = draft;
       },
@@ -791,14 +795,24 @@ export class EditorApp {
   }
 
   private selectStage(stageId: string): void {
+    this.isCreatingStage = false;
     this.selectedStageId = stageId;
     this.stageDraft = loadStageDraftById(this.stages, stageId);
     this.persistSession();
     this.render();
   }
 
+  private createStage(): void {
+    const defaultClassId = this.buildClassPickerItems()[0]?.id ?? 'df_paladin';
+    this.isCreatingStage = true;
+    this.selectedStageId = '';
+    this.stageDraft = createDefaultStageDraft({ defaultClassId });
+    this.persistSession();
+    this.render();
+  }
+
   private async saveStage(): Promise<void> {
-    if (!this.selectedStageId) {
+    if (!this.isCreatingStage && !this.selectedStageId) {
       this.setStatus('ステージを選択してください', true);
       return;
     }
@@ -806,18 +820,23 @@ export class EditorApp {
     const validationError = validateStageDraftForSave(this.stageDraft, {
       classRegistry: this.classRegistry,
       combatModuleRegistry: this.combatModuleRegistry,
+      existingStageIds: this.stages.map((stage) => stage.id),
+      isNewStage: this.isCreatingStage,
     });
     if (validationError) {
       this.setStatus(validationError, true);
       return;
     }
 
+    const savedId = this.stageDraft.id.trim();
     this.saving = true;
     this.render();
     try {
       await saveStageBundle({ stage: this.stageDraft });
       this.stages = await fetchStages();
-      this.stageDraft = loadStageDraftById(this.stages, this.selectedStageId);
+      this.isCreatingStage = false;
+      this.selectedStageId = savedId;
+      this.stageDraft = loadStageDraftById(this.stages, savedId);
       this.setStatus(`保存しました: ${this.stageDraft.displayName}`, false);
       this.persistSession();
     } catch (error) {

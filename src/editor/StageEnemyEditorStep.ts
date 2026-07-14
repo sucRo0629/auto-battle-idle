@@ -29,6 +29,7 @@ import {
   createNumberInput,
   createSection,
   createSelect,
+  createTextInput,
   preserveScrollDuring,
 } from "./formUtils.ts";
 import {
@@ -318,10 +319,13 @@ export interface StageEnemyEditorStepOptions {
   getDraft: () => StageDraft;
   stages: StageDef[];
   selectedStageId: string;
+  /** true = 未保存の新規 Stage（id / 表示名を編集可）。 */
+  isCreatingStage?: boolean;
   classOptions: { id: string; label: string }[];
   classRegistry: Record<ClassId, ClassPreset>;
   combatModuleRegistry: Record<string, CombatModuleDef>;
   onSelectStage: (stageId: string) => void;
+  onCreateStage?: () => void;
   onDraftChange: (draft: StageDraft) => void;
   onSave: () => void;
   saving?: boolean;
@@ -354,10 +358,12 @@ export class StageEnemyEditorStep {
       getDraft,
       stages,
       selectedStageId,
+      isCreatingStage,
       classOptions,
       classRegistry,
       combatModuleRegistry,
       onSelectStage,
+      onCreateStage,
       onDraftChange,
       onSave,
       saving,
@@ -365,6 +371,7 @@ export class StageEnemyEditorStep {
     const draft = getDraft();
     const compositionMode = resolveStageDraftCompositionMode(draft);
     const defaultClassId = classOptions[0]?.id ?? "";
+    const creating = Boolean(isCreatingStage);
     this.container.replaceChildren();
 
     const commitDraft = (
@@ -392,7 +399,7 @@ export class StageEnemyEditorStep {
       createEl(
         "p",
         "editor-step-desc",
-        "ステージの recommendedLevel と enemyGroups（直下または Wave ごと）を編集します。legacy waves.enemies は参照のみです。templateId の本体は「敵テンプレ」タブで確認・編集します。"
+        "ステージの recommendedLevel と enemyGroups（直下または Wave ごと）を編集します。新規ステージは Wave ごと enemyGroups で開始します。legacy waves.enemies は参照のみです。templateId の本体は「敵テンプレ」タブで確認・編集します。ステージ削除は R10 以降です。"
       )
     );
     this.container.appendChild(header);
@@ -401,13 +408,13 @@ export class StageEnemyEditorStep {
     const select = createEl("select", "editor-select") as HTMLSelectElement;
     const emptyOpt = createEl("option") as HTMLOptionElement;
     emptyOpt.value = "";
-    emptyOpt.textContent = "— 選択 —";
+    emptyOpt.textContent = creating ? "— 新規作成中 —" : "— 選択 —";
     select.appendChild(emptyOpt);
     for (const stage of stages) {
       const opt = createEl("option") as HTMLOptionElement;
       opt.value = stage.id;
       opt.textContent = `${stage.displayName} (${stage.id})`;
-      if (stage.id === selectedStageId) opt.selected = true;
+      if (!creating && stage.id === selectedStageId) opt.selected = true;
       select.appendChild(opt);
     }
     select.addEventListener("change", () => {
@@ -415,23 +422,67 @@ export class StageEnemyEditorStep {
     });
     picker.appendChild(createEl("span", "editor-picker-label", "既存ステージ"));
     picker.appendChild(select);
+    if (onCreateStage) {
+      const createBtn = createButton(
+        "+ 新規ステージ",
+        "editor-btn editor-btn-small",
+        onCreateStage
+      );
+      createBtn.dataset.editorAction = "createStage";
+      createBtn.disabled = Boolean(saving);
+      picker.appendChild(createBtn);
+    }
     this.container.appendChild(picker);
 
     const identity = createSection("概要");
     this.container.appendChild(identity);
     const identityGrid = appendGrid(identity);
-    identityGrid.appendChild(
-      createFieldRow(
-        "stageId",
-        createEl("span", "editor-readonly-value", draft.id || "—")
-      )
-    );
-    identityGrid.appendChild(
-      createFieldRow(
-        "表示名",
-        createEl("span", "editor-readonly-value", draft.displayName || "—")
-      )
-    );
+    if (creating) {
+      identityGrid.appendChild(
+        createFieldRow(
+          "stageId",
+          createTextInput(draft.id, (id) => {
+            commitDraft((next) => {
+              next.id = id;
+            });
+          })
+        )
+      );
+      identityGrid.appendChild(
+        createFieldRow(
+          "表示名",
+          createTextInput(draft.displayName, (displayName) => {
+            commitDraft((next) => {
+              next.displayName = displayName;
+            });
+          })
+        )
+      );
+      identity.appendChild(
+        createEl(
+          "p",
+          "editor-hint",
+          "新規ステージは保存時に stages.json へ追記されます。id は保存後に変更できません。"
+        )
+      );
+    } else {
+      identityGrid.appendChild(
+        createFieldRow(
+          "stageId",
+          createEl("span", "editor-readonly-value", draft.id || "—")
+        )
+      );
+      identityGrid.appendChild(
+        createFieldRow(
+          "表示名",
+          createTextInput(draft.displayName, (displayName) => {
+            commitDraft((next) => {
+              next.displayName = displayName;
+            });
+          })
+        )
+      );
+    }
 
     this.appendCompositionPreview(draft, compositionMode);
 
@@ -644,7 +695,7 @@ export class StageEnemyEditorStep {
       "editor-btn editor-btn-primary",
       onSave
     );
-    saveBtn.disabled = Boolean(saving) || !selectedStageId;
+    saveBtn.disabled = Boolean(saving) || (!creating && !selectedStageId);
     actions.appendChild(saveBtn);
     this.container.appendChild(actions);
   }

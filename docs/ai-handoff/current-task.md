@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R9h 完了** — class 方式 pool（`combatModuleIds`、§92）。**R9g 完了** — 効果範囲 authoring（CombatModule editor + passive 範囲、§91）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
-- **次の再開タスク:** **R9f** — Legacy migration **+ Stage 新規作成**（authoring closure）。その後 **R9.6（A→B）** → R10。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
+- **新ロードマップ現在地:** **R9f 完了** — Stage 新規作成（authoring closure、§93）。**R9h 完了** — class 方式 pool（`combatModuleIds`、§92）。**R9g 完了** — 効果範囲 authoring（CombatModule editor + passive 範囲、§91）。**R9d 完了** — 作戦内パッシブ候補・付与条件 authoring（§89）。**R9c 完了** — 複数 Wave・`enemyGroups` 構造 authoring（§88）。**R9b 完了** — Stage enemyGroups `selectedCombatModuleId` 編集 UI（§87）。**R9a 完了** — エディタ現状調査・6 タスク分割（§80）。**R8 完了** — 作戦内パッシブ（R8a〜f、§74〜79）、**R8-smoke-fix 完了** — 作戦結果 overlay 残留修正（§81）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。**R5〜R8 Backend 完了**。**R9.5a〜b Player 完了**。**R9.5c Backend 完了**（縦切り・暫定 UI 配線確認）。**作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）は R9.6 へ**（§86）。
+- **次の再開タスク:** **R9.6（A→B）** — 作戦準備の正式 Player UI。その後 R10。R9.5c / R9.6 の暫定 Player UI は配線確認用であり、正式 Player UI 完了根拠にしない（§85.20）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7379,7 +7379,7 @@ R9b〜d で分かれた authoring 経路の **preview / client validate / 参照
 
 ### 90.6 次タスク
 
-**R9h** — §92 で完了。**R9f** — Legacy migration + Stage 新規作成。その後 **R9.6（A→B）** → R10。
+**R9h / R9f** — §92・§93 で完了。**次は R9.6（A→B）** → R10。
 
 ---
 
@@ -7428,7 +7428,7 @@ R10 試作用に、戦闘方式・作戦内パッシブの効果範囲を **手�
 
 ### 91.6 次タスク
 
-**R9h** — §92 で完了。**R9f** — Legacy migration + Stage 新規作成。その後 **R9.6（A→B）** → R10。
+**R9h / R9f** — §92・§93 で完了。**次は R9.6（A→B）** → R10。
 
 ---
 
@@ -7476,4 +7476,53 @@ R5 4 兵科の `combatModuleIds`（2 方式 pool）を、手編集 `classes.json
 
 ### 92.6 次タスク
 
-**R9f** — Legacy migration + Stage 新規作成。その後 **R9.6（A→B）** → R10。
+**R9f** — §93 で完了。**次は R9.6（A→B）** → R10。
+
+---
+
+## 93. R9f — Stage 新規作成 / authoring closure（完了 2026-07-14）
+
+### 93.1 目的
+
+R9 Backend 完了条件「新仕様の 2 Wave 以上の作戦をエディタで**新規作成**・保存・再読込できる」を満たす。手編集 JSON なしで `stages.json` に新作戦を追記できる状態にする。
+
+### 93.2 実装
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/editor/editorApi.ts` | `createDefaultStageDraft`（既定は Wave ごと `enemyGroups`）、`isNewStageDraft`、identity / 重複 validate |
+| `src/editor/StageEnemyEditorStep.ts` | 「+ 新規ステージ」・作成中の id / 表示名編集・保存ボタン許可 |
+| `src/editor/EditorApp.ts` | `createStage` / `isCreatingStage`・保存後に選択へ切替 |
+| テスト | `editorApi.test.ts` / `StageEnemyEditorStep.test.ts` |
+
+### 93.3 設計メモ
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 新規既定形式 | `waveEnemyGroups`（legacy `waves.enemies` ではない）。`waveCount: 2` で R10 用作戦种子可 |
+| id | 新規のみ編集可。保存後は read-only。英数字・`_`・`-`（先頭英数字） |
+| 表示名 | 新規・既存とも編集可 |
+| 削除 | **スコープ外**（R10 以降） |
+| legacy 一括削除 | **別 PR / 後続** — `attackSpeedTier`・Lv/EXP・旧 active フィールド削除は行わない（§80.4 / §80.6 維持） |
+| legacy → groups | 既存 `beginWaveEnemyGroupsAuthoring` を利用。`templateId`→`classId` 自動変換はしない |
+
+### 93.4 テスト
+
+| ファイル | 結果 |
+| -------- | ---- |
+| `editorApi.test.ts` | R9f 新規 4 件含む pass（default draft・2 Wave・identity 拒否・round-trip） |
+| `StageEnemyEditorStep.test.ts` | R9f 新規 2 件含む pass（作成 UI・作成中 save 可） |
+
+### 93.5 完了判定
+
+| 判定 | 結果 |
+| ---- | ---- |
+| **R9f Backend** | **Yes** — 新規 Stage draft → normalize → client validate → `PUT /__editor/stages` upsert 経路 |
+| **R9f Tooling** | **Yes** — Stage 一覧から新規作成・id/表示名入力・Wave 追加可 |
+| **R9f 全体（authoring closure）** | **Yes** — R9 Backend 完了条件の Stage 新規作成を満たす |
+| legacy フィールド一括削除 | **No** — 意図的に別 PR |
+| R9.6 Player UI | **No** — スコープ外 |
+
+### 93.6 次タスク
+
+**R9.6（A→B）** — 作戦準備の正式 Player UI（CombatModule・作戦内パッシブ）。その後 R10。

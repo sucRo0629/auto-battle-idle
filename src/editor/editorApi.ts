@@ -37,7 +37,12 @@ import {
 import { validateClassCombatModulePoolDraft } from './classCombatModulePoolEditor.ts';
 import { groupCombatModulesByClassId } from './combatModuleEditor.ts';
 
-export type StageDraftValidateContext = AuthoringCombatModuleContext;
+export type StageDraftValidateContext = Partial<AuthoringCombatModuleContext> & {
+  /** 既存 stageId 一覧（新規保存時の重複検査用）。 */
+  existingStageIds?: readonly string[];
+  /** true = 新規作成。既存 id との重複を拒否する。 */
+  isNewStage?: boolean;
+};
 
 export type OperationPassiveCatalogValidateContext = Pick<
   AuthoringPassiveCatalogContext,
@@ -431,6 +436,45 @@ export function createEmptyStageDraft(): StageDraft {
   };
 }
 
+/**
+ * R9f — 新仕様 authoring 用の既定 Stage draft。
+ * Wave ごと `enemyGroups`（legacy `waves.enemies` ではない）で開始する。
+ */
+export function createDefaultStageDraft(options?: {
+  defaultClassId?: string;
+  recommendedLevel?: number;
+  waveCount?: number;
+}): StageDraft {
+  const defaultClassId = options?.defaultClassId ?? 'df_paladin';
+  const recommendedLevel = options?.recommendedLevel ?? 1;
+  const waveCount = Math.max(1, options?.waveCount ?? 1);
+  const waves: StageWave[] = [];
+  for (let index = 0; index < waveCount; index += 1) {
+    waves.push(
+      createDefaultStageWave({
+        withEnemyGroups: true,
+        defaultClassId,
+      }),
+    );
+  }
+  return {
+    id: '',
+    displayName: '',
+    recommendedLevel,
+    waves,
+  };
+}
+
+/** draft の id が既存 stages に無い（または空）なら新規作成扱い。 */
+export function isNewStageDraft(
+  draft: StageDraft,
+  existingStages: readonly Pick<StageDef, 'id'>[],
+): boolean {
+  const id = draft.id.trim();
+  if (!id) return true;
+  return !existingStages.some((stage) => stage.id === id);
+}
+
 export function stageDraftFromStage(stage: StageDef): StageDraft {
   return structuredClone(stage);
 }
@@ -501,11 +545,42 @@ function validateRecommendedLevelForSave(
   return null;
 }
 
+const STAGE_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+
+function validateStageIdentityForSave(
+  draft: StageDraft,
+  context?: Pick<StageDraftValidateContext, 'existingStageIds' | 'isNewStage'>,
+): string | null {
+  const id = draft.id.trim();
+  const displayName = draft.displayName.trim();
+  if (!id) {
+    return 'stageId を入力してください';
+  }
+  if (!STAGE_ID_PATTERN.test(id)) {
+    return 'stageId は英数字・_・-（先頭は英数字）で入力してください';
+  }
+  if (!displayName) {
+    return '表示名を入力してください';
+  }
+  if (context?.isNewStage && context.existingStageIds?.includes(id)) {
+    return `stageId "${id}" は既に存在します`;
+  }
+  return null;
+}
+
 /** 保存前の軽いクライアント検証。null = OK。context あり時は module / class 参照も検査。 */
 export function validateStageDraftForSave(
   draft: StageDraft,
   context?: StageDraftValidateContext,
 ): string | null {
+  const compositionMode = resolveStageDraftCompositionMode(draft);
+  const requiresIdentity =
+    context?.isNewStage === true || compositionMode !== 'legacy';
+  if (requiresIdentity) {
+    const identityError = validateStageIdentityForSave(draft, context);
+    if (identityError) return identityError;
+  }
+
   if (draft.enemyGroups !== undefined) {
     const levelError = validateRecommendedLevelForSave(draft.recommendedLevel);
     if (levelError) return levelError;
@@ -514,9 +589,12 @@ export function validateStageDraftForSave(
       'enemyGroups',
     );
     if (groupError) return groupError;
-    if (context) {
+    if (context?.classRegistry && context.combatModuleRegistry) {
       return firstAuthoringErrorMessage(
-        collectStageEnemyAuthoringIssues(draft, context),
+        collectStageEnemyAuthoringIssues(draft, {
+          classRegistry: context.classRegistry,
+          combatModuleRegistry: context.combatModuleRegistry,
+        }),
       );
     }
     return null;
@@ -540,9 +618,12 @@ export function validateStageDraftForSave(
     if (groupError) return groupError;
   }
 
-  if (context) {
+  if (context?.classRegistry && context.combatModuleRegistry) {
     return firstAuthoringErrorMessage(
-      collectStageEnemyAuthoringIssues(draft, context),
+      collectStageEnemyAuthoringIssues(draft, {
+        classRegistry: context.classRegistry,
+        combatModuleRegistry: context.combatModuleRegistry,
+      }),
     );
   }
 
