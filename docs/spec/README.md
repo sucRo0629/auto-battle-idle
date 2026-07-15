@@ -10,11 +10,13 @@
 
 **R3 注記（2026-07-12）:** [operation-loop.md](operation-loop.md) が Wave 作戦ループの正本。[battle-field.md](battle-field.md) / [progression.md](progression.md) に legacy 分離と 3 層進行を反映済み。
 
+**R12a 注記（2026-07-15）:** [operation-loop.md §5.3.1 / §15](operation-loop.md#531-wave-勝利条件r12a) — Wave 勝利条件（敵全滅）、敵問題・戦術目標・敗因の識別可能性の authoring 正本。
+
 **R4 注記（2026-07-12）:** データ責務・エディタ設計・validate / migration は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（plans）。spec 各書の R2 ゲームルール正本は維持。
 
 | ファイル | 内容 |
 |----------|------|
-| [operation-loop.md](operation-loop.md) | **作戦ループ**（R3）— 作戦状態 / 戦闘状態、Wave 間準備、チェックポイント、リトライ、途中セーブ方針 |
+| [operation-loop.md](operation-loop.md) | **作戦ループ**（R3）— 作戦状態 / 戦闘状態、Wave 間準備、チェックポイント、リトライ、途中セーブ方針。**敵問題・戦術目標**（R12a §15）、Wave 勝利条件＝敵全滅（§5.3.1） |
 | [stats.md](stats.md) | 兵科基礎ステ、攻撃間隔（R2）。Legacy: Lv 成長、growthPresets、attackSpeedTier |
 | [combat.md](combat.md) | Attack / Hit、攻撃間隔、戦闘方式、DoT・一時効果（R2）、**作戦内パッシブの戦闘中表示**（R8 doc）。Legacy: ダメージパイプライン、CD、gauge |
 | [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘画面 UI / HUD**、戦闘中統計 UI、**1 次元効果範囲のフィールド表示**（R8 doc）。Legacy: BattlePhase 自動 Wave 遷移 |

@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R11a〜d システム縦切り完了**。R10/R11 の「遊べる試作／プレイアビリティ」Player 完了は **2026-07-15 取り消し**（§98）。
-- **次の再開タスク:** **R12a** — 反復可能な作戦の Stage 要件を spec 正本化し、`r10_prototype` ギャップを明示。その後 R12b（module/passive データ）→ R12c（作戦データ）→ R12d（手元成立）→ R13（反復評価）。
+- **新ロードマップ現在地:** **R12a 完了**（§99）。敵問題・戦術目標を [operation-loop.md §15](../spec/operation-loop.md#15-敵問題と戦術目標r12a) へ正本化。
+- **次の再開タスク:** **R12b** — **1 Wave 単位の敵問題設計**。その後 R12c → R12d → R13（反復評価）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7753,4 +7753,37 @@ R10 時点で機能は存在しても、**ゲームとして楽しめる水準�
 
 ### 98.4 次の着手
 
-**R12a** — [operation-loop.md](../spec/operation-loop.md) / [enemy-design-concept.md](../enemy-design-concept.md) 等へ Stage authoring 要件を書き、`r10_prototype` ギャップ表を本節または §99 に残す。
+~~**R12a**~~ → §99 で完了。
+
+---
+
+## 99. R12a — 敵問題・戦術目標の spec 正本化（2026-07-15・完了）
+
+### 99.1 目的
+
+R12a で ChatGPT 側が確定した用語・構造を、新規設計せず [operation-loop.md](../spec/operation-loop.md) へ正本化した。
+
+### 99.2 反映先
+
+| 箇所 | 内容 |
+| ---- | ---- |
+| [operation-loop.md §5.3.1](../spec/operation-loop.md#531-wave-勝利条件r12a) | Wave 勝利条件＝敵全滅（ゲームルール。敵問題ではない） |
+| [operation-loop.md §15](../spec/operation-loop.md#15-敵問題と戦術目標r12a) | 敵問題、戦術目標、最小属性、数、5 要素、問題全体、敗因の識別可能性 |
+| [enemy-design-concept.md](../enemy-design-concept.md) | 用語正本へのリンク |
+| [spec/README.md](../spec/README.md) | R12a 注記 |
+| [phase-roadmap.md §R12](../plans/phase-roadmap.md#r12--試作をゲームにするデータ再設計) | R12a 完了・R12b 更新 |
+
+### 99.3 完了判定
+
+| 層 | 結果 |
+| -- | ---- |
+| Backend | 設計 Phase — production code / JSON 変更なし |
+| Player | 設計 Phase — authoring 用語が spec で参照可能 |
+
+### 99.4 次タスク（R12b 開始時点）
+
+**R12b — 1 Wave 単位の敵問題設計**
+
+前提正本: [operation-loop.md §15](../spec/operation-loop.md#15-敵問題と戦術目標r12a)。
+
+旧ロードマップ案の「CombatModule・作戦内パッシブのデータ再設計」は、R12b 後に着手順を確定する（R12 後続）。
