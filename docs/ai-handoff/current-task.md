@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12b Backend（設計）完了**（§100）。**R12c 設計確定**（§101・作戦全体の敵問題）。Stage 先行順へサブフェーズ再編済（R12a〜j）。
-- **次の再開タスク:** **R12c** — **作戦全体の敵問題の spec 正本化**（`operation-loop.md` §17 候補。新規設計しない）。その後 R12d〜j → R13（反復評価。開始条件は R12j 手元成立後）。
+- **新ロードマップ現在地:** **R12c Backend（設計）完了**（§102）。Stage 先行順へサブフェーズ再編済（R12a〜j）。
+- **次の再開タスク:** **R12d** — **試作 Stage の敵問題設計**（JSON 入力なし。能力導出は R12e）。その後 R12e〜j → R13（反復評価。開始条件は R12j 手元成立後）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7899,3 +7899,53 @@ R12b で ChatGPT 側が確定した「1 Wave 単位の敵問題・敵側戦術�
 - 確定事項は [phase-roadmap.md §R12c](../plans/phase-roadmap.md#r12c--作戦全体の敵問題) に要約済
 - 新規設計せず `operation-loop.md` へ正本化する（R12a / R12b と同型）
 - Backend 完了後の次は **R12d**（試作 Stage の敵問題設計）
+
+---
+
+## 102. R12c — 作戦全体の敵問題の spec 正本化（2026-07-15・Backend 完了 / Player 完了）
+
+### 102.1 目的
+
+R12c で確定済みの「作戦全体の敵問題・Wave 間関係」を、新規設計せず [operation-loop.md §17](../spec/operation-loop.md#17-作戦全体の敵問題r12c) へ正本化した。コード / JSON は変更していない。
+
+### 102.2 読んだファイル
+
+- [current-task.md](current-task.md)（§100〜101）
+- [phase-roadmap.md §R12c](../plans/phase-roadmap.md#r12c--作戦全体の敵問題)
+- [planning-rules.md](planning-rules.md)
+- [operation-loop.md §15 / §16](../spec/operation-loop.md#15-敵問題と戦術目標r12a)
+
+### 102.3 正本化した内容（要約）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 作戦全体の敵問題 | 各 Wave の敵問題を Wave 間関係で接続した構造 |
+| Wave 間関係 | **継続** / **転換** / **複合** / **対立**。1 作戦に 1 種類以上 |
+| Wave 数 | 2 Wave と 3 Wave 以上で成立基準は分けない。3 Wave 以上は高難度 |
+| 事前開示 | 全 Wave 敵編成を開示。戦術目標は非表示。推測させる |
+| 編成変更 | Wave 間 4 枠すべて変更可。制限・追加コストなし |
+| 作戦ポイント | 集中と分散の代償。原則 Wave クリア後付与 |
+| 最終 Wave | 通常 Stage は過去 Wave の戦術要求を統合する複合問題（合算ではない） |
+| 万能編成 | 全 Stage 共通は不許。特定 Stage 内の同一編成攻略は許容 |
+| Stage 先行 | 敵問題 → 能力導出（R12e）。現行能力は採否基準にしない |
+
+### 102.4 変更ファイル
+
+| 箇所 | 内容 |
+| ---- | ---- |
+| [operation-loop.md §17](../spec/operation-loop.md#17-作戦全体の敵問題r12c) | 作戦全体成立条件・Wave 間関係・不成立例・R12d チェック項目 |
+| [spec/README.md](../spec/README.md) | R12c 注記・索引 |
+| [enemy-design-concept.md](../enemy-design-concept.md) | §17 へのリンク |
+| [phase-roadmap.md §R12](../plans/phase-roadmap.md#r12--試作をゲームにするデータ再設計) | R12c Backend 完了・公式次 R12d |
+| [planning-rules.md §8 / §8c](planning-rules.md) | 現在地メモ |
+
+### 102.5 完了判定
+
+| 層 | 結果 |
+| -- | ---- |
+| Backend | **完了**（設計 Phase）— §17 正本化。production code / JSON 変更なし |
+| Player | **完了**（設計 Phase）— 画面変更なし。実 Stage 反映は R12d 以降 |
+
+### 102.6 次タスク
+
+**R12d — 試作 Stage の敵問題設計** — [operation-loop.md §17.14](../spec/operation-loop.md#1714-r12d-authoring-用チェック項目) を参照。JSON / class データは変更しない。
