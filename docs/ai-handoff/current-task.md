@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12a 完了**（§99）。敵問題・戦術目標を [operation-loop.md §15](../spec/operation-loop.md#15-敵問題と戦術目標r12a) へ正本化。
-- **次の再開タスク:** **R12b** — **1 Wave 単位の敵問題設計**。その後 R12c → R12d → R13（反復評価）。
+- **新ロードマップ現在地:** **R12b Backend（設計）完了**（§100）。1 Wave 敵問題・敵側戦術を [operation-loop.md §16](../spec/operation-loop.md#16-1-wave-単位の敵問題r12b) へ正本化。**Player 未達**。
+- **次の再開タスク:** **R12c** — **試作作戦 Stage / Wave データ再設計**。その後 R12d → R13（反復評価）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -7787,3 +7787,63 @@ R12a で ChatGPT 側が確定した用語・構造を、新規設計せず [oper
 前提正本: [operation-loop.md §15](../spec/operation-loop.md#15-敵問題と戦術目標r12a)。
 
 旧ロードマップ案の「CombatModule・作戦内パッシブのデータ再設計」は、R12b 後に着手順を確定する（R12 後続）。
+
+---
+
+## 100. R12b — 1 Wave 単位の敵問題設計の spec 正本化（2026-07-15・Backend 完了）
+
+### 100.1 目的
+
+R12b で ChatGPT 側が確定した「1 Wave 単位の敵問題・敵側戦術」を、新規設計せず [operation-loop.md](../spec/operation-loop.md) へ正本化した。コード / JSON は変更していない。
+
+### 100.2 設計確定内容（要約）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 戦術目標の成立時点 | Wave 開始時点ですべて成立。途中追加は基本形に含めない |
+| 事前予測可能性 | 敵編成・敵戦闘方式から合理的に予測可能（対処の一意特定は不要） |
+| 複数戦術目標 | 個別に記述・判定可能。期限・敗因・対処・代償・支配的敗因移動で相互作用可 |
+| 敵数 | 最低 2 体以上。2 体以上だけでは不足。敵側戦術が必要 |
+| 敵側戦術 | 複数敵が役割を組み合わせ、全滅を妨げて戦術目標を発生させる構造 |
+| 敵側戦術 3 分類 | **保護** / **分担** / **相乗**。1 Wave あたり少なくとも 1 つ |
+| 1 Wave 成立条件 | §16.8 の 10 項目すべて |
+| 結果差 | 勝利必須ではない。達成可否・時点・支配的敗因の変化等で検証可 |
+| 現行クラス能力 | **依存しない**。分類採否の根拠にしない |
+
+### 100.3 後続フェーズで再設計するもの
+
+次は R12b では確定しない。後続で §16 の敵側戦術・Wave 成立条件を満たすよう再設計する。
+
+- 各クラスが実現する敵側戦術、現行 R5 対象クラスとの対応
+- 将来追加クラスの能力、敵用 CombatModule、作戦内パッシブ
+- 対象選択・戦闘挙動、数値・敵数・コスト、実際の Stage・Wave データ
+
+### 100.4 反映先
+
+| 箇所 | 内容 |
+| ---- | ---- |
+| [operation-loop.md §15](../spec/operation-loop.md#15-敵問題と戦術目標r12a) | R12a 用語の微調整（二層構造・勝利条件との区別） |
+| [operation-loop.md §16](../spec/operation-loop.md#16-1-wave-単位の敵問題r12b) | 1 Wave 成立条件・敵側戦術・不成立例・後続再設計方針 |
+| [enemy-design-concept.md](../enemy-design-concept.md) | §16 へのリンク |
+| [spec/README.md](../spec/README.md) | R12b 注記 |
+| [phase-roadmap.md §R12](../plans/phase-roadmap.md#r12--試作をゲームにするデータ再設計) | R12b Backend 完了・Player 未達・公式次 R12c |
+| [planning-rules.md §8 / §8c](planning-rules.md) | 現在地メモ |
+
+### 100.5 完了判定
+
+| 層 | 結果 |
+| -- | ---- |
+| Backend | **完了**（設計 Phase）— §16 正本化。production code / JSON 変更なし |
+| Player | **未達** — 画面変更・実 Wave データでの確認はスコープ外。プレイ成立は R12c〜R12d |
+
+**Phase 完了とは書かない**（Player 未達のため）。
+
+### 100.6 次タスクの開始地点
+
+**R12c — 試作作戦 Stage / Wave のデータ再設計**
+
+前提正本: [operation-loop.md §15](../spec/operation-loop.md#15-敵問題と戦術目標r12a) / [§16](../spec/operation-loop.md#16-1-wave-単位の敵問題r12b)。
+
+roadmap: [phase-roadmap.md §R12c](../plans/phase-roadmap.md#r12c--試作作戦-stage--wave-のデータ再設計)。
+
+旧案の CombatModule・作戦内パッシブデータ再設計の着手順は、R12 後続で確定する（R12c と混同しない）。

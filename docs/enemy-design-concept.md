@@ -4,7 +4,7 @@
 
 個別の敵テンプレート、ステージ JSON、EXP 付与は [spec/progression.md](spec/progression.md) と `data/enemies.json` / `data/stages.json` を正本とする。クラス定義・スキルは [spec/classes-and-skills.md](spec/classes-and-skills.md)、Kill / Flow / Survival 構造は [combat-architecture.md](combat-architecture.md)、ローグライクの問題生成は [spec/roguelike-mode.md](spec/roguelike-mode.md) を参照する。敵データ編集ツールの改修計画は [plans/enemy-editor-refactor.md](plans/enemy-editor-refactor.md)。
 
-**敵問題・戦術目標・敗因の識別可能性** の用語と最小属性は [spec/operation-loop.md §15](spec/operation-loop.md#15-敵問題と戦術目標r12a) を正本とする（R12a）。Wave 勝利条件（敵全滅）は同書 [§5.3.1](spec/operation-loop.md#531-wave-勝利条件r12a)。
+**敵問題・戦術目標・敗因の識別可能性** の用語と最小属性は [spec/operation-loop.md §15](spec/operation-loop.md#15-敵問題と戦術目標r12a) を正本とする（R12a）。**1 Wave 成立条件・敵側戦術**は同書 [§16](spec/operation-loop.md#16-1-wave-単位の敵問題r12b)（R12b）。Wave 勝利条件（敵全滅）は同書 [§5.3.1](spec/operation-loop.md#531-wave-勝利条件r12a)。
 
 ここでは数値や JSON スキーマではなく、**敵が何のために存在するか** と **どう構成するか** を扱う。
 
