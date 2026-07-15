@@ -7949,3 +7949,68 @@ R12c で確定済みの「作戦全体の敵問題・Wave 間関係」を、新�
 ### 102.6 次タスク
 
 **R12d — 試作 Stage の敵問題設計** — [operation-loop.md §17.14](../spec/operation-loop.md#1714-r12d-authoring-用チェック項目) を参照。JSON / class データは変更しない。
+
+
+## 103. R12d / R12e — 試作 Stage 敵問題と必要能力の正本化（2026-07-15・Backend 完了 / Player 完了）
+
+### 103.1 目的
+
+ChatGPT 側で確定した R12d（試作 Stage の敵問題）と R12e（必要能力・対処能力）を、新規設計せず [operation-loop.md §18 / §19](../spec/operation-loop.md#18-試作stageの敵問題r12d) へ正本化した。R12d と R12e は別節・別フェーズとして記録する。production code / JSON / test は変更していない。
+
+### 103.2 読んだファイル
+
+- [current-task.md](current-task.md)（§102）
+- [phase-roadmap.md §R12](../plans/phase-roadmap.md#r12--試作をゲームにするデータ再設計)
+- [planning-rules.md](planning-rules.md)
+- [operation-loop.md §15〜§17](../spec/operation-loop.md#15-敵問題と戦術目標r12a)
+- [enemy-design-concept.md](../enemy-design-concept.md)
+- [classes-and-skills.md](../spec/classes-and-skills.md)（注記用）
+
+### 103.3 変更したファイル
+
+| 箇所 | 内容 |
+| ---- | ---- |
+| [operation-loop.md §18](../spec/operation-loop.md#18-試作stageの敵問題r12d) | R12d — 試作 Stage 1 本・3 Wave の敵問題 |
+| [operation-loop.md §19](../spec/operation-loop.md#19-必要能力対処能力r12e) | R12e — 能力カテゴリ A〜G・必須区分・能力セット A〜C |
+| [enemy-design-concept.md](../enemy-design-concept.md) | §18 / §19 への参照 |
+| [classes-and-skills.md](../spec/classes-and-skills.md) | R12e 能力は正式分配未確定の注記 |
+| [spec/README.md](../spec/README.md) | R12d / R12e 索引 |
+| [phase-roadmap.md §R12](../plans/phase-roadmap.md#r12--試作をゲームにするデータ再設計) | R12d / R12e 完了・公式次 R12f |
+| [planning-rules.md §8 / §8c](planning-rules.md) | 現在地メモ |
+
+### 103.4 R12d — Stage 構造（要約）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| Stage 数 | 試作 **1 本**。JSON / Stage ID 未確定 |
+| 中心判断 | 保護突破への集中と複数圧力への分担を 3 Wave で配分 |
+| Wave 1 | 保護。鉄衛士前衛 + 療養師・魔術師後衛 |
+| Wave 2 | 分担。双刃士前衛 + 魔術師後衛 |
+| Wave 3 | 複合。鉄衛士・双刃士前衛 + 療養師・魔術師後衛 |
+| Wave 間 | 1→2: 転換＋対立 / 1・2→3: 複合＋継続＋対立 |
+
+### 103.5 R12e — 能力カテゴリ（要約）
+
+| 層 | 処理 / 到達 / 抑制 / 維持 |
+| -- | ---- |
+| カテゴリ | A 高耐久突破 / B1 支援役到達 / B2 攻撃中核到達 / C 即応 / D 抑制 / E 複数対象耐久 / F 中核決定力 / G 分担・切り替え |
+| 無条件必須 | B2・E・F・G |
+| 条件付き | A または B1 / C または D |
+| セット | A 正面突破型 / B 後方攻略型 / C 分担安定型 |
+
+支援役到達（B1）と攻撃中核到達（B2）は分離。双刃士／弓術士対応は暫定のみ（正式は R12f）。
+
+### 103.6 完了判定
+
+| 層 | 結果 |
+| -- | ---- |
+| Backend | **完了**（設計 Phase）— §18 / §19 正本化。JSON・数値へ未進出 |
+| Player | **完了**（設計 Phase）— 画面変更・プレイ確認なし。実データは R12g〜h、手元成立は R12j、反復は R13 |
+
+### 103.7 production code / JSON / test
+
+**未変更。**
+
+### 103.8 次タスク
+
+**R12f — 必要能力を兵科・CombatModule・作戦内パッシブへ分配（設計）**

@@ -20,6 +20,8 @@
 
 **R9.5a 注記（2026-07-13）:** R5 対象 4 兵科で CombatModule 通常行動が解決済みのとき、legacy active JSON と `classes.json` 参照は **データ互換のため維持** するが、runtime では active cooldown を生成しない（[combat.md §戦闘方式](combat.md#戦闘方式)）。R9f まで JSON 削除は行わない。
 
+**R12e 注記（2026-07-15）:** 試作 Stage から導出した必要能力・対処能力は [operation-loop.md §19](operation-loop.md#19-必要能力対処能力r12e) を正本とする。本時点では兵科・CombatModule・作戦内パッシブへの **正式分配は未確定**（→ **R12f**）。本書へ具体能力表や module 案は追加しない。
+
 ### 兵科の主要構造
 
 | レイヤ | 内容 |
