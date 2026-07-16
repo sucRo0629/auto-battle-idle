@@ -4,6 +4,11 @@ import {
 } from "../sorcererFlame.ts";
 import type { BattleEventListener } from "../events.ts";
 import { applyIncomingDamage } from "../damageDelay.ts";
+import {
+  buildDamageAppliedEvent,
+  notifyDamageApplied,
+  type DamageAppliedCallback,
+} from "../damageAppliedEvent.ts";
 import { shouldTriggerBonusBasicAttackOnHit } from "../bonusBasicAttackOnHit.ts";
 import {
   ALLY_ATTACK_FOLLOW_UP_OVERLAY,
@@ -209,22 +214,7 @@ export interface SkillExecutorDeps {
     actor: CombatantState,
     info: { slotKind: "basic" | "active"; skillId: string },
   ) => void;
-  onDamageApplied?: (
-    actor: CombatantState,
-    target: CombatantState,
-    amount: number,
-    meta?: {
-      attackKind: "damage" | "dot";
-      slotKind?: "basic" | "active";
-      skillId?: string;
-      isCounterDamage?: boolean;
-      hpDamage?: number;
-      attackMethod?: import("../types.ts").AttackMethod;
-      didBlock?: boolean;
-      barrierHpBefore?: number;
-      barrierDamage?: number;
-    }
-  ) => void;
+  onDamageApplied?: DamageAppliedCallback;
   onDebuffApplied?: (actor: CombatantState) => void;
   onTargetReceivedDebuff?: (target: CombatantState) => void;
   onHealApplied?: (
@@ -1001,13 +991,23 @@ export class SkillExecutor {
       const damageResult = applyConfirmedHpDamage(target, harvestAmount);
       const applied = damageResult.hpDamage + damageResult.barrierDamage;
       if (applied <= 0) return false;
-      this.deps.onDamageApplied?.(actor, target, applied, {
-        attackKind: "damage",
-        slotKind: cd.slotKind,
-        skillId: skill.id,
-        hpDamage: damageResult.hpDamage,
-        attackMethod: resolveSkillAttackMethod(skill),
-      });
+      notifyDamageApplied(
+        this.deps.onDamageApplied,
+        actor,
+        target,
+        buildDamageAppliedEvent({
+          attacker: actor,
+          target,
+          sourceKind: "derived",
+          attackKind: "damage",
+          damageResult,
+          slotKind: cd.slotKind,
+          skillId: skill.id,
+          effectIndex,
+          hitIndex,
+          attackMethod: resolveSkillAttackMethod(skill),
+        }),
+      );
       this.emit({
         type: "skill",
         actorId: actor.id,
@@ -1285,19 +1285,21 @@ export class SkillExecutor {
                 const { damageResult } = incoming;
                 const appliedCounterDamage =
                   damageResult.hpDamage + damageResult.barrierDamage;
-                this.deps.onDamageApplied?.(
+                notifyDamageApplied(
+                  this.deps.onDamageApplied,
                   defender,
                   enemy,
-                  appliedCounterDamage,
-                  {
+                  buildDamageAppliedEvent({
+                    attacker: defender,
+                    target: enemy,
+                    sourceKind: "counter",
                     attackKind: "damage",
-                    isCounterDamage: true,
-                    hpDamage: damageResult.hpDamage,
+                    damageResult,
                     attackMethod: resolveUnitAttackMethod(
                       defender,
                       this.deps.gameData,
                     ),
-                  }
+                  }),
                 );
                 if (damageResult.lethal) {
                   enemy.isAlive = false;
@@ -1359,20 +1361,29 @@ export class SkillExecutor {
         skipBarrier: effectDef.pierceBarrier === true,
       });
       const { damageResult } = incoming;
+      notifyDamageApplied(
+        this.deps.onDamageApplied,
+        actor,
+        damageTarget,
+        buildDamageAppliedEvent({
+          attacker: actor,
+          target: damageTarget,
+          sourceKind: "skillHit",
+          attackKind: "damage",
+          damageResult,
+          slotKind: cd.slotKind,
+          skillId: skill.id,
+          effectIndex,
+          hitIndex,
+          attackMethod: resolveSkillAttackMethod(skill),
+        }),
+        {
+          didBlock,
+          barrierHpBefore,
+        },
+      );
       const appliedDamage =
-        damageResult.hpDamage +
-        damageResult.barrierDamage +
-        incoming.delayedDamage;
-      this.deps.onDamageApplied?.(actor, damageTarget, appliedDamage, {
-        attackKind: "damage",
-        slotKind: cd.slotKind,
-        skillId: skill.id,
-        hpDamage: damageResult.hpDamage,
-        attackMethod: resolveSkillAttackMethod(skill),
-        didBlock,
-        barrierHpBefore,
-        barrierDamage: damageResult.barrierDamage,
-      });
+        damageResult.hpDamage + damageResult.barrierDamage;
       const { lethal } = damageResult;
       if (cd.slotKind === "basic") {
         this.chargeBasicAttackCountForHit(actor);
@@ -1442,20 +1453,24 @@ export class SkillExecutor {
           );
           const explosionApplied =
             explosionIncoming.damageResult.hpDamage +
-            explosionIncoming.damageResult.barrierDamage +
-            explosionIncoming.delayedDamage;
+            explosionIncoming.damageResult.barrierDamage;
           if (explosionApplied <= 0) continue;
-          this.deps.onDamageApplied?.(
+          notifyDamageApplied(
+            this.deps.onDamageApplied,
             actor,
             explosionTarget,
-            explosionApplied,
-            {
+            buildDamageAppliedEvent({
+              attacker: actor,
+              target: explosionTarget,
+              sourceKind: "derived",
               attackKind: "damage",
+              damageResult: explosionIncoming.damageResult,
               slotKind: cd.slotKind,
               skillId: skill.id,
-              hpDamage: explosionIncoming.damageResult.hpDamage,
+              effectIndex,
+              hitIndex,
               attackMethod: resolveSkillAttackMethod(skill),
-            }
+            }),
           );
           this.emit({
             type: "skill",
@@ -1509,13 +1524,23 @@ export class SkillExecutor {
           const splashApplied =
             splashResult.hpDamage + splashResult.barrierDamage;
           if (splashApplied <= 0) continue;
-          this.deps.onDamageApplied?.(actor, splashTarget, splashApplied, {
-            attackKind: "damage",
-            slotKind: cd.slotKind,
-            skillId: skill.id,
-            hpDamage: splashResult.hpDamage,
-            attackMethod: resolveSkillAttackMethod(skill),
-          });
+          notifyDamageApplied(
+            this.deps.onDamageApplied,
+            actor,
+            splashTarget,
+            buildDamageAppliedEvent({
+              attacker: actor,
+              target: splashTarget,
+              sourceKind: "derived",
+              attackKind: "damage",
+              damageResult: splashResult,
+              slotKind: cd.slotKind,
+              skillId: skill.id,
+              effectIndex,
+              hitIndex,
+              attackMethod: resolveSkillAttackMethod(skill),
+            }),
+          );
           this.emit({
             type: "skill",
             actorId: actor.id,

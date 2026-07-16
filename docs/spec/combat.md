@@ -269,11 +269,11 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 
 **ブロック（魔法）:** 直接 `damage` かつ `damageType: magic`。`blocksMagic: true` の overlay の `blockChance` のみ合算して 1 回ロール。軽減率は固定 15%。`frontBlockAura`（護法士 P3 真言加護）で前列に付与。
 
-7. **DamageDelay 有効時（直接 `damage` / 反撃 `damage` のみ）:** Block 後の確定ダメージ `final` を `ratio` で分割。即時分は Barrier → HP。遅延分はプールに加算し、`buffDurationSec` 中 1 秒ごとに HP へ tick。遅延 tick は DEF/REG/Barrier/Block/Evasion を再適用しない（確定済みダメージ）。DoT 非対象。**遅延プール tick は現状 `onDamageApplied` を発火しない**（鉄衛士 M2 等の Hit トリガー対象外）。
+7. **DamageDelay 有効時（直接 `damage` / 反撃 `damage` のみ）:** Block 後の確定ダメージ `final` を `ratio` で分割。即時分は Barrier → HP。遅延分はプールに加算し、`buffDurationSec` 中 1 秒ごとに HP へ tick。遅延 tick は DEF/REG/Barrier/Block/Evasion を再適用しない（確定済みダメージ）。DoT 非対象。遅延プール tick は `sourceKind: delayedPoolTick` の `DamageAppliedEvent` を発火する（R12g-b1）。
 
 ## DamageAppliedEvent（R12g-b）
 
-実装予定の battle 内ダメージ適用通知。正本 handoff: [current-task.md §105.2](../ai-handoff/current-task.md)。鉄衛士 M2（敵 Attack Hit の実 HP ダメージ各 Hit ごと固定自己回復）の判定基盤。
+実装: `src/battle/damageAppliedEvent.ts`。正本 handoff: [current-task.md §105.2](../ai-handoff/current-task.md)。鉄衛士 M2（敵 Attack Hit の実 HP ダメージ各 Hit ごと固定自己回復）の判定基盤。
 
 **発火タイミング:** HP / Barrier 適用直後、`isAlive = false` 確定前、反撃（counter）処理前。
 
@@ -281,16 +281,18 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 
 | kind | 経路 |
 | ---- | ---- |
-| `skillHit` | `SkillExecutor` の `damage` effect 1 Hit（通常攻撃・CombatModule・MultiHit/MultiLock・pending 含む） |
+| `skillHit` | `SkillExecutor` の `damage` effect 1 Hit（通常攻撃・CombatModule・MultiHit/MultiLock・pending 含む）。即時適用分のみ（damageDelay の pool 分は含めない） |
 | `dotTick` | `BattleEngine` overlay `dot` tick |
-| `delayedPoolTick` | `damageDelay` プール HP tick（現状 callback 無し） |
-| `counter` | 反撃 `damage`（`isCounterDamage`） |
+| `delayedPoolTick` | `damageDelay` プール HP tick（`BattleEngine.applyConfirmedDelayedDamage`） |
+| `counter` | 反撃 `damage`（`sourceKind: counter`） |
 | `derived` | 炎爆発・弓 splash・dotHarvest 等の二次ダメージ |
 | `other` | 未分類 |
 
 **最小ペイロード:** `attackerId`, `targetId`, `sourceKind`, `attackKind`, `hpDamage`, `barrierDamage`, `lethal`, 任意で `slotKind`, `skillId`, `effectIndex`, `hitIndex`, `attackMethod`, `statusId`。
 
-**鉄衛士 M2（実装時）:** `sourceKind === skillHit` && `attackKind === damage` && `hpDamage > 0` && `!lethal` && 対象が鉄衛士 M2 module && 攻撃者が敵 && 非自傷。Barrier のみ・DoT・counter・derived・致死は対象外。大規模汎用 passive trigger は導入せず、専用 runtime が同一 event を購読する。
+**`lethal`:** `DamageApplicationResult.lethal` を正とする。callback 時点の `target.isAlive` には依存しない。
+
+**鉄衛士 M2（R12g-b2 実装予定）:** `sourceKind === skillHit` && `attackKind === damage` && `hpDamage > 0` && `!lethal` && 対象が鉄衛士 M2 module && 攻撃者が敵 && 非自傷。Barrier のみ・DoT・counter・derived・致死は対象外。
 
 `effectiveAtk = max(0, (atk + atkFlatSum) × atkMulProduct)`  
 `effectiveDef = max(0, (def + defFlatSum) × defMulProduct)`  

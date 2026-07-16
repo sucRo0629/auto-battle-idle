@@ -123,7 +123,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-16・R12g-b 完了）
+## 8. 現在地メモ（更新: 2026-07-16・R12g-b1 完了）
 
 | 項目 | 状態 |
 | ---- | ---- |
@@ -134,7 +134,8 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12a〜f** | **完了**（設計 Phase） |
 | **R12g-a** | **完了** — schema / damage 初回調査 |
 | **R12g-b** | **Backend 完了**（設計 Phase）— Attack Hit / HP damage event 契約。Player 未達 |
-| **公式次タスク** | **R12g-b1** — `DamageAppliedEvent` 導入 |
+| **R12g-b1** | **Backend 完了** — `DamageAppliedEvent` 型・emission 統一 |
+| **公式次タスク** | **R12g-b2** — 鉄衛士 M2 runtime（自己回復本体） |
 
 **R12f で確定した主要境界（短縮）:**
 

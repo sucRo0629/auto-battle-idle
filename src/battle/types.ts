@@ -1852,6 +1852,14 @@ export type BattlePhase = "idle" | "running" | "victory" | "defeat";
 
 export type { RuntimeBattlePhase } from "./battlePhase.ts";
 
+export type {
+  DamageAppliedAttackKind,
+  DamageAppliedCallback,
+  DamageAppliedCallbackMeta,
+  DamageAppliedEvent,
+  DamagePipelineSourceKind,
+} from "./damageAppliedEvent.ts";
+
 export type BattleXDebugTraceReason =
   | "approach"
   | "skillMove"

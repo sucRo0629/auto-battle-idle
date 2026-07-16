@@ -1,3 +1,4 @@
+import type { DamageAppliedCallbackMeta } from './damageAppliedEvent.ts';
 import type {
   ClassId,
   ClassPreset,
@@ -24,8 +25,24 @@ export interface DamageAppliedMeta {
 }
 
 export function resolveDamageSourceKind(
-  meta?: DamageAppliedMeta,
+  meta?: DamageAppliedMeta | DamageAppliedCallbackMeta,
 ): DamageSourceKind {
+  const event = meta && 'event' in meta ? meta.event : undefined;
+  if (event) {
+    switch (event.sourceKind) {
+      case 'skillHit':
+        if (event.slotKind === 'basic') return 'basic';
+        if (event.slotKind === 'active') return 'active_direct';
+        return 'other';
+      case 'dotTick':
+        return 'dot';
+      case 'counter':
+      case 'derived':
+      case 'delayedPoolTick':
+      case 'other':
+        return 'other';
+    }
+  }
   if (!meta?.attackKind) return 'unknown';
   if (meta.isCounterDamage) return 'other';
   if (meta.attackKind === 'dot') return 'dot';

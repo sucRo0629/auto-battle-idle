@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-a Backend（調査）完了**（§105.1 参照）。公式次は **R12g-b**（Attack Hit / HP damage event 基盤の詳細設計）。
-- **次の再開タスク:** **R12g-b Backend 完了後 → R12g-b1〜**（event 型導入・鉄衛士 M2 runtime）。データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
+- **新ロードマップ現在地:** **R12g-b1 Backend 完了**（§105.2 参照）。公式次は **R12g-b2**（鉄衛士 M2 runtime）。
+- **次の再開タスク:** **R12g-b2**（鉄衛士 M2 自己回復本体）→ R12g-b3（統合テスト）→ R12g-c（護法士 M2 danger targeting）。データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -8284,13 +8284,13 @@ interface DamageAppliedEvent {
 
 | ID | 内容 |
 | -- | ---- |
-| **R12g-b1** | `DamageAppliedEvent` 型導入・全 emission 点統一（`lethal` / `hitIndex` / `sourceKind`） |
-| **R12g-b2** | 鉄衛士 M2 runtime（`ironGuardianM2.ts` + module ゲート + 固定 heal） |
+| **R12g-b1** | `DamageAppliedEvent` 型導入・全 emission 点統一（`lethal` / `hitIndex` / `sourceKind`） | **Backend 完了** |
+| **R12g-b2** | 鉄衛士 M2 runtime（`ironGuardianM2.ts` + module ゲート + 固定 heal） | 未着手 |
 | **R12g-b3** | 統合テスト・戦闘ログ/デバッグでの発動理由検証 |
 | **R12g-c** | 護法士 M2 danger targeting（**本タスクのスコープ外**） |
 | **R12g 本流** | 8 兵科データ入力（M2 数値・JSON は b2 後） |
 
-delayed pool tick の event 化は **M2 除外が暗黙で成立するため必須にしない**。診断必要時のみ b1 に含める。
+delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: delayedPoolTick`）。鉄衛士 M2 トリガー対象外。
 
 #### 105.2.13 完了判定
 
@@ -8316,10 +8316,12 @@ delayed pool tick の event 化は **M2 除外が暗黙で成立するため必�
 - 戦闘ログまたはデバッグで発動理由を検証可能
 - 製品 UI / 正式 VFX は含めない
 
-#### 105.2.14 production code / JSON / test
+#### 105.2.14 production code / JSON / test（R12g-b1 完了）
 
-**未変更**（設計 Phase のみ）。
+**変更:** `src/battle/damageAppliedEvent.ts`（新規）、`SkillExecutor.ts`、`BattleEngine.ts`、`counterEffects.ts`、`stageDamageStats.ts`、`types.ts`（re-export）、`damageAppliedEvent.test.ts`（新規）、`docs/spec/combat.md`、`phase-roadmap.md`、`planning-rules.md`。
+
+**未変更:** JSON / editor / UI / 数値 / 鉄衛士 M2 本体。
 
 #### 105.2.15 次タスク
 
-**R12g-b1** — `DamageAppliedEvent` 導入と emission 統一（鉄衛士 M2 の前段）。
+**R12g-b2** — 鉄衛士 M2 runtime（`DamageAppliedEvent` 購読・固定自己回復）。

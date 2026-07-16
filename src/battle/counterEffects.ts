@@ -4,6 +4,11 @@ import {
   applyStunToTarget,
 } from './ccEffects.ts';
 import { applyIncomingDamage } from './damageDelay.ts';
+import {
+  buildDamageAppliedEvent,
+  notifyDamageApplied,
+  type DamageAppliedCallback,
+} from './damageAppliedEvent.ts';
 import { applyWardBarrierToIncomingDamage } from './wardBarrier.ts';
 import {
   applyDefenseMitigation,
@@ -87,16 +92,7 @@ export interface CounterRetaliationContext {
 export interface CounterRetaliationCallbacks {
   emit: BattleEventListener;
   getAllCombatants: () => CombatantState[];
-  onDamageApplied?: (
-    actor: CombatantState,
-    target: CombatantState,
-    amount: number,
-    meta?: {
-      attackKind: CounterAttackKind;
-      isCounterDamage?: boolean;
-      hpDamage?: number;
-    },
-  ) => void;
+  onDamageApplied?: DamageAppliedCallback;
   getSkillName?: (skillId: string) => string;
   onUnitDied?: (unit: CombatantState) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
@@ -238,13 +234,20 @@ function applyCounterDamageResponse(
     incoming.delayedDamage;
   if (appliedCounter <= 0) return;
 
-  callbacks.onDamageApplied?.(victim, attacker, appliedCounter, {
-    attackKind: 'damage',
-    isCounterDamage: true,
-    hpDamage: damageResult.hpDamage,
-    barrierHpBefore,
-    barrierDamage: damageResult.barrierDamage,
-  });
+  notifyDamageApplied(
+    callbacks.onDamageApplied,
+    victim,
+    attacker,
+    buildDamageAppliedEvent({
+      attacker: victim,
+      target: attacker,
+      sourceKind: 'counter',
+      attackKind: 'damage',
+      damageResult,
+      skillId: counterEffect.skillId,
+    }),
+    { barrierHpBefore },
+  );
 
   emitCounterSkillEvent(
     callbacks,

@@ -25,6 +25,14 @@ import {
   getDamageDelayRemainingSec,
   hasActiveDamageDelay,
 } from "./damageDelay.ts";
+import {
+  buildDamageAppliedEvent,
+  damageAppliedEventToLegacyMeta,
+  isCounterDamageMeta,
+  shouldTriggerCounterRetaliation,
+  type DamageAppliedCallback,
+  type DamageAppliedCallbackMeta,
+} from "./damageAppliedEvent.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveBasicAttackSkillIdFromGameData } from "./data/resolveCombatModuleBasic.ts";
 import { resolveUnitAttackMethod } from "./data/resolveUnitAttackMethod.ts";
@@ -210,23 +218,7 @@ const ALLY_DEATH_DEFEAT_DELAY_SEC =
   (deathAnimDurationMs() + 500) / 1000;
 
 export interface BattleEngineOptions {
-  onDamageApplied?: (
-    actor: CombatantState,
-    target: CombatantState,
-    amount: number,
-    meta?: {
-      attackKind?: CounterAttackKind;
-      slotKind?: 'basic' | 'active';
-      skillId?: string;
-      statusId?: string;
-      isCounterDamage?: boolean;
-      hpDamage?: number;
-      attackMethod?: import('./types.ts').AttackMethod;
-      didBlock?: boolean;
-      barrierHpBefore?: number;
-      barrierDamage?: number;
-    },
-  ) => void;
+  onDamageApplied?: DamageAppliedCallback;
   onHealRecorded?: (
     actor: CombatantState,
     target: CombatantState,
@@ -303,23 +295,7 @@ export class BattleEngine {
   private battleXDebugTickTrace: BattleXDebugTraceEntry[] = [];
   private stageId: string;
   private waveIndex = 0;
-  private readonly onDamageApplied?: (
-    actor: CombatantState,
-    target: CombatantState,
-    amount: number,
-    meta?: {
-      attackKind?: CounterAttackKind;
-      slotKind?: 'basic' | 'active';
-      skillId?: string;
-      statusId?: string;
-      isCounterDamage?: boolean;
-      hpDamage?: number;
-      attackMethod?: import('./types.ts').AttackMethod;
-      didBlock?: boolean;
-      barrierHpBefore?: number;
-      barrierDamage?: number;
-    },
-  ) => void;
+  private readonly onDamageApplied?: DamageAppliedCallback;
   private readonly onHealRecorded?: (
     actor: CombatantState,
     target: CombatantState,
@@ -396,20 +372,9 @@ export class BattleEngine {
     actor: CombatantState,
     target: CombatantState,
     amount: number,
-    meta?: {
-      attackKind: CounterAttackKind;
-      slotKind?: 'basic' | 'active';
-      skillId?: string;
-      statusId?: string;
-      isCounterDamage?: boolean;
-      hpDamage?: number;
-      attackMethod?: import('./types.ts').AttackMethod;
-      didBlock?: boolean;
-      barrierHpBefore?: number;
-      barrierDamage?: number;
-    },
+    meta?: DamageAppliedCallbackMeta,
   ): void {
-    if (amount > 0 && meta?.attackKind) {
+    if (shouldTriggerCounterRetaliation(meta, amount)) {
       const counterCallbacks = {
         emit: (event: Parameters<BattleEventListener>[0]) => this.emit(event),
         getAllCombatants: () => [...this.players, ...this.enemies],
@@ -417,11 +382,7 @@ export class BattleEngine {
           counterActor: CombatantState,
           counterTarget: CombatantState,
           counterAmount: number,
-          counterMeta?: {
-            attackKind: CounterAttackKind;
-            isCounterDamage?: boolean;
-            hpDamage?: number;
-          },
+          counterMeta?: DamageAppliedCallbackMeta,
         ) => {
           this.handleDamageApplied(
             counterActor,
@@ -444,11 +405,12 @@ export class BattleEngine {
           this.handlePassiveDispelOnDebuffReceived(debuffTarget);
         },
       };
+      const event = meta?.event;
       const counterCtx = {
-        attackKind: meta.attackKind,
+        attackKind: (event?.attackKind ?? meta?.attackKind ?? 'damage') as CounterAttackKind,
         appliedDamage: amount,
-        isCounterDamage: meta.isCounterDamage,
-        attackMethod: meta.attackMethod,
+        isCounterDamage: isCounterDamageMeta(meta),
+        attackMethod: event?.attackMethod ?? meta?.attackMethod,
       };
       const counterBeforeById = this.captureBattleXDebugBefore([
         ...this.players,
@@ -491,7 +453,7 @@ export class BattleEngine {
     if (
       !target.isEnemy &&
       target.isAlive &&
-      (meta?.hpDamage ?? amount) > 0
+      (meta?.event?.hpDamage ?? meta?.hpDamage ?? amount) > 0
     ) {
       const reservation = tryTriggerHealReservation(
         target,
@@ -2370,7 +2332,23 @@ export class BattleEngine {
     amount: number,
   ): void {
     const damageResult = applyDelayedDamageTick(unit, amount);
-    if (damageResult.hpDamage <= 0) return;
+    if (damageResult.hpDamage <= 0 && damageResult.barrierDamage <= 0) {
+      return;
+    }
+
+    const event = buildDamageAppliedEvent({
+      attacker: unit,
+      target: unit,
+      sourceKind: 'delayedPoolTick',
+      attackKind: 'damage',
+      damageResult,
+    });
+    this.handleDamageApplied(
+      unit,
+      unit,
+      event.hpDamage + event.barrierDamage,
+      damageAppliedEventToLegacyMeta(event),
+    );
 
     this.emit({ type: "hurt", targetId: unit.id });
     if (damageResult.lethal) {
@@ -2460,17 +2438,26 @@ export class BattleEngine {
         this.emit({ type: "lastStandGuts", targetId: target.id });
       }
       const damageResult = applyDamageToTarget(target, mitigation.finalDamage);
-      const appliedDamage =
-        damageResult.hpDamage + damageResult.barrierDamage;
-      this.handleDamageApplied(source, target, appliedDamage, {
-        attackKind: "dot",
+      const event = buildDamageAppliedEvent({
+        attacker: source,
+        target,
+        sourceKind: 'dotTick',
+        attackKind: 'dot',
+        damageResult,
         skillId: effect.skillId,
+        effectIndex: effect.effectIndex,
         statusId: effect.id,
-        hpDamage: damageResult.hpDamage,
         attackMethod: resolveUnitAttackMethod(source, this.gameData),
-        barrierHpBefore,
-        barrierDamage: damageResult.barrierDamage,
       });
+      const appliedDamage = damageResult.hpDamage + damageResult.barrierDamage;
+      this.handleDamageApplied(
+        source,
+        target,
+        appliedDamage,
+        damageAppliedEventToLegacyMeta(event, {
+          barrierHpBefore,
+        }),
+      );
       const { lethal } = damageResult;
       this.emit({
         type: "skill",
