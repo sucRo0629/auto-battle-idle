@@ -61,6 +61,7 @@ import type {
   TargetRule,
   TargetShape,
   TargetSpec,
+  TargetStatRequireBelow,
   VfxAnchor,
   VfxLayer,
   VfxParticleDef,
@@ -1866,6 +1867,32 @@ function normalizeTargetSide(
   return 'enemy';
 }
 
+function parseTargetStatRequireBelow(
+  raw: unknown,
+  context: string,
+): TargetStatRequireBelow | undefined {
+  if (raw === undefined) return undefined;
+  const obj = requireRecord(raw, context);
+  const kind = requireEnum(
+    obj,
+    'kind',
+    context,
+    new Set(['flat', 'maxHpRatio']),
+  );
+  if (kind === 'flat') {
+    const flatAmount = requireNumber(obj, 'flatAmount', context);
+    if (!Number.isFinite(flatAmount) || !(flatAmount > 0)) {
+      invalidField(context, 'flatAmount', 'must be a finite number greater than 0');
+    }
+    return { kind: 'flat', flatAmount };
+  }
+  const ratio = requireNumber(obj, 'ratio', context);
+  if (!Number.isFinite(ratio) || !(ratio > 0) || !(ratio <= 1)) {
+    invalidField(context, 'ratio', 'must be a finite number in (0, 1]');
+  }
+  return { kind: 'maxHpRatio', ratio };
+}
+
 function parseTargetSpec(raw: unknown, context: string): TargetSpec {
   if (typeof raw === 'string') {
     if (!TARGET_RULES_SET.has(raw as TargetRule)) {
@@ -1922,7 +1949,7 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
       obj,
       'stat',
       context,
-      new Set(['hp', 'atk', 'def', 'res', 'maxHp']),
+      new Set(['hp', 'atk', 'def', 'res', 'maxHp', 'barrier']),
     );
     const order = requireEnum(
       obj,
@@ -1947,16 +1974,21 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
         );
       }
     }
+    const requireBelow = parseTargetStatRequireBelow(
+      obj.requireBelow,
+      `${context}.requireBelow`,
+    );
     return {
       kind: 'stat',
       side,
-      stat: stat as 'hp' | 'maxHp' | 'atk' | 'def' | 'res',
+      stat: stat as 'hp' | 'maxHp' | 'atk' | 'def' | 'res' | 'barrier',
       order: order as 'highest' | 'lowest' | 'ratio',
       ...(typeof poolFromEffectIndex === 'number' &&
       Number.isInteger(poolFromEffectIndex) &&
       poolFromEffectIndex >= 0
         ? { poolFromEffectIndex }
         : {}),
+      ...(requireBelow !== undefined ? { requireBelow } : {}),
     };
   }
   if (kind === 'attackType') {
@@ -6594,6 +6626,81 @@ function validateSpClericCombatModule(module: CombatModuleDef): void {
   }
 }
 
+function isCombatModuleBarrierEffect(effect: SkillEffectDef): boolean {
+  return (
+    effect.type === 'barrier' ||
+    (effect.type === 'buff' && effect.buffSubKind === 'barrier')
+  );
+}
+
+/** R12g-d4: 結界師 CombatModule の役割境界（最小チェック。細目は data test） */
+function validateSpWardweaverCombatModule(module: CombatModuleDef): void {
+  if (module.classId !== 'sp_wardweaver') return;
+
+  for (const [index, effect] of module.action.effect.entries()) {
+    const effectContext = `combat module "${module.id}" effect[${index}]`;
+    if (!isCombatModuleBarrierEffect(effect)) {
+      throw new Error(
+        `${effectContext}: sp_wardweaver modules must use barrier effects only (got ${effect.type})`,
+      );
+    }
+    if (effect.type === 'heal') {
+      throw new Error(`${effectContext}: heal must not mix into wardweaver modules`);
+    }
+    assertPositiveHealResourceAmount(effect.amount, `${effectContext}.amount`);
+  }
+
+  if (module.id === 'sp_wardweaver_mod_focus_barrier') {
+    const effect = module.action.effect[0];
+    const target = effect?.target ?? module.action.target;
+    if (
+      target === undefined ||
+      target.kind !== 'danger' ||
+      target.side !== 'ally' ||
+      target.maxTargets !== 1
+    ) {
+      throw new Error(
+        `combat module "${module.id}": M1 must use danger ally target with maxTargets === 1`,
+      );
+    }
+    const shape = module.action.targetShape ?? 'single';
+    const hitCount = module.action.hitCount ?? 1;
+    if (shape !== 'single' || hitCount >= 2) {
+      throw new Error(
+        `combat module "${module.id}": M1 must be single-target`,
+      );
+    }
+  }
+
+  if (module.id === 'sp_wardweaver_mod_spread_barrier') {
+    const effect = module.action.effect[0];
+    const target = effect?.target ?? module.action.target;
+    if (
+      target === undefined ||
+      target.kind !== 'stat' ||
+      target.side !== 'ally' ||
+      target.stat !== 'barrier' ||
+      target.order !== 'lowest' ||
+      target.requireBelow === undefined
+    ) {
+      throw new Error(
+        `combat module "${module.id}": M2 must target ally barrier lowest with requireBelow`,
+      );
+    }
+    const hitCount = module.action.hitCount ?? 0;
+    if (module.action.targetShape !== 'multiLock' || hitCount < 2) {
+      throw new Error(
+        `combat module "${module.id}": M2 must be multiLock with hitCount >= 2`,
+      );
+    }
+    if (module.action.effectRange?.refillSameTargetOnShortfall !== false) {
+      throw new Error(
+        `combat module "${module.id}": M2 must set refillSameTargetOnShortfall false (no same-target re-hit)`,
+      );
+    }
+  }
+}
+
 function validateCombatModuleData(
   combatModules: CombatModuleDef[],
   classById: Map<string, ClassPreset>,
@@ -6610,6 +6717,7 @@ function validateCombatModuleData(
       );
     }
     validateSpClericCombatModule(module);
+    validateSpWardweaverCombatModule(module);
   }
 }
 

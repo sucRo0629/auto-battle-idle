@@ -206,6 +206,7 @@ export function mockCombatant(
 export type MockUnitOpts = {
   hp?: number;
   maxHp?: number;
+  barrierHp?: number;
   isEnemy?: boolean;
   atk?: number;
   def?: number;
@@ -229,6 +230,7 @@ export function mockUnit(
     battleX,
     hp,
     maxHp,
+    barrierHp: opts.barrierHp ?? 0,
     atk: opts.atk ?? 10,
     def: opts.def ?? 5,
     res: opts.res ?? 0,

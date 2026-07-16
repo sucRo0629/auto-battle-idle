@@ -14,6 +14,13 @@ export function resolveBasicAttackEffect(
   return skill.effect.find((entry) => entry.type !== 'move');
 }
 
+function isAllyFactionEffect(
+  effect: SkillEffectDef,
+  unit: CombatantState,
+): boolean {
+  return targetSpecFaction(getEffectTarget(effect), unit) === 'ally';
+}
+
 /** 通常攻撃が味方対象 heal か（後方ヒーラーの接敵停止判定用） */
 export function isAllyHealBasicAttack(
   unit: CombatantState,
@@ -21,7 +28,21 @@ export function isAllyHealBasicAttack(
 ): boolean {
   const effect = resolveBasicAttackEffect(unit, gameData);
   if (!effect || effect.type !== 'heal') return false;
-  return targetSpecFaction(getEffectTarget(effect), unit) === 'ally';
+  return isAllyFactionEffect(effect, unit);
+}
+
+/** 通常攻撃が味方対象 Barrier 付与か（結界師 CombatModule。敵 chase しない） */
+export function isAllyBarrierBasicAttack(
+  unit: CombatantState,
+  gameData: GameData,
+): boolean {
+  const effect = resolveBasicAttackEffect(unit, gameData);
+  if (!effect) return false;
+  const isBarrier =
+    effect.type === 'barrier' ||
+    (effect.type === 'buff' && effect.buffSubKind === 'barrier');
+  if (!isBarrier) return false;
+  return isAllyFactionEffect(effect, unit);
 }
 
 /** 通常攻撃が敵向け pierce か（contact 基準の接近停止用） */

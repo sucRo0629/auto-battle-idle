@@ -557,7 +557,16 @@ danger targeting の主判定は **集中攻撃** とする。
 - resolver は `collectDangerTargetSnapshots()` を呼び、danger signal が全候補 0 なら **空配列**（HP 割合代替なし）
 - 射程・距離・row による候補除外なし
 - `TargetingRuntimeContext` — `battleSec` / `pendingHits` / `gameData` / 任意 `resolveCurrentAttackTarget`。省略時は `createResolveCurrentAttackTarget()` が既存 Attack target resolver を再利用
-- editor UI 未接続（戻し先 **R12g-g**）。JSON 入力は editor 対応前に禁止
+- editor UI は TargetSpec 編集で danger / Barrier stat / `requireBelow` を扱える（CombatModule editor 同期済み）
+
+#### TargetSpec `stat: barrier` + `requireBelow`（R12g-d4）
+
+実装: `src/battle/types.ts`、`src/battle/skills/targetSpec.ts`、`src/battle/data/validateGameData.ts`
+
+- `TargetStat` に `barrier`（`unit.barrierHp`）を追加。順序は `highest` / `lowest`（`ratio` は hp のみ）
+- 任意 `requireBelow`: `{ kind: "flat", flatAmount }` または `{ kind: "maxHpRatio", ratio }` — 閾値**未満**の候補のみ選定。全候補が十分なら対象なし
+- 結界師 M2: ally `barrier` lowest + `requireBelow` + multiLock + `refillSameTargetOnShortfall: false`
+- 結界師 M1: `kind: danger` 味方1体へ厚い Barrier（護法士 M2 とは effect が異なる）
 
 #### 護法士 M2 防護 runtime（R12g-c4〜c5）
 

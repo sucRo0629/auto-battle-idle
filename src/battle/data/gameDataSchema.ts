@@ -931,6 +931,7 @@ export const TARGET_STAT_OPTIONS = [
   "atk",
   "def",
   "res",
+  "barrier",
 ] as const;
 export const TARGET_STAT_ORDER_OPTIONS = [
   "highest",
@@ -961,7 +962,7 @@ export const POWER_STEP_MODE_LABELS: Record<
 };
 
 export const TARGET_STAT_LABELS: Record<
-  "hp" | "maxHp" | "atk" | "def" | "res",
+  "hp" | "maxHp" | "atk" | "def" | "res" | "barrier",
   string
 > = {
   hp: "HP",
@@ -969,6 +970,7 @@ export const TARGET_STAT_LABELS: Record<
   atk: "ATK",
   def: "DEF",
   res: "RES",
+  barrier: "Barrier",
 };
 
 export const TARGET_STAT_ORDER_LABELS: Record<

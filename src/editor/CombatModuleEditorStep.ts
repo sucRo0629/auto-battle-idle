@@ -54,6 +54,10 @@ function defaultModuleActionTarget(
   if (action.target) {
     return action.target as TargetSpec;
   }
+  const primaryTarget = action.effect[0]?.target;
+  if (primaryTarget) {
+    return primaryTarget;
+  }
   return {
     kind: 'distance',
     side: 'enemy',
@@ -202,6 +206,7 @@ export class CombatModuleEditorStep {
     root.appendChild(this.buildRuntimeEffectSection(selected));
     root.appendChild(this.buildPrimaryBuffSection(selected));
     root.appendChild(this.buildPrimaryHealSection(selected));
+    root.appendChild(this.buildPrimaryBarrierSection(selected));
     root.appendChild(this.buildEffectRangeSection(selected));
     root.appendChild(this.buildPreviewSection(selected));
 
@@ -876,6 +881,114 @@ export class CombatModuleEditorStep {
     return section;
   }
 
+  private buildPrimaryBarrierSection(module: CombatModuleDef): HTMLElement {
+    const section = createSection('主効果（effect[0] barrier）');
+    section.appendChild(
+      createEl(
+        'p',
+        'editor-hint',
+        '結界師 M1/M2 など Barrier 付与量（atkScale）と stack を編集します。数値の本調整は R12i。',
+      ),
+    );
+    const primary = module.action.effect[0];
+    const isBarrier =
+      primary !== undefined &&
+      (primary.type === 'barrier' ||
+        (primary.type === 'buff' && primary.buffSubKind === 'barrier'));
+    if (!isBarrier || !primary) {
+      section.appendChild(
+        createEl(
+          'p',
+          'editor-help',
+          'effect[0] が barrier ではないため、この欄は非表示相当です。',
+        ),
+      );
+      return section;
+    }
+
+    const grid = appendGrid(section);
+    const readonly = this.options.saving;
+    const amount = primary.amount;
+    const atkScale =
+      amount?.kind === 'atkBased' ? (amount.atkScale ?? 1) : 1;
+
+    grid.appendChild(
+      createFieldRow(
+        'amount.kind（読取）',
+        createTextInput(amount?.kind ?? 'atkBased', () => undefined, {
+          readonly: true,
+          field: 'combat-module-barrier-amount-kind',
+        }),
+      ),
+    );
+    grid.appendChild(
+      createFieldRow(
+        'atkScale（Barrier量倍率・仮）',
+        createNumberInput(
+          atkScale,
+          (nextScale) => {
+            if (!(nextScale > 0) || !Number.isFinite(nextScale)) return;
+            this.updateModule((current) =>
+              patchCombatModuleAction(current, (action) => {
+                const effect = action.effect[0];
+                if (
+                  !effect ||
+                  !(
+                    effect.type === 'barrier' ||
+                    (effect.type === 'buff' && effect.buffSubKind === 'barrier')
+                  )
+                ) {
+                  return;
+                }
+                effect.amount = { kind: 'atkBased', atkScale: nextScale };
+              }),
+              { rerender: false },
+            );
+          },
+          {
+            min: 0.01,
+            step: 0.05,
+            readonly,
+            field: 'combat-module-barrier-atk-scale',
+          },
+        ),
+      ),
+    );
+    const stackRow = createEl('div', 'editor-field editor-field-checkbox');
+    const stackInput = createEl('input') as HTMLInputElement;
+    stackInput.type = 'checkbox';
+    stackInput.checked = primary.barrierStack === true;
+    stackInput.disabled = readonly;
+    stackInput.dataset.field = 'combat-module-barrier-stack';
+    stackInput.addEventListener('change', () => {
+      this.updateModule((current) =>
+        patchCombatModuleAction(current, (action) => {
+          const effect = action.effect[0];
+          if (
+            !effect ||
+            !(
+              effect.type === 'barrier' ||
+              (effect.type === 'buff' && effect.buffSubKind === 'barrier')
+            )
+          ) {
+            return;
+          }
+          if (stackInput.checked) {
+            effect.barrierStack = true;
+          } else {
+            delete effect.barrierStack;
+          }
+        }),
+        { rerender: false },
+      );
+    });
+    stackRow.appendChild(createEl('label', undefined, 'barrierStack（加算）'));
+    stackRow.appendChild(stackInput);
+    grid.appendChild(stackRow);
+
+    return section;
+  }
+
   private buildEffectRangeSection(module: CombatModuleDef): HTMLElement {
     const section = createSection('効果範囲');
     section.appendChild(
@@ -897,9 +1010,13 @@ export class CombatModuleEditorStep {
       (target) => {
         this.updateModule((current) =>
           patchCombatModuleAction(current, (nextAction) => {
-            nextAction.target = lockSelfOrigin
+            const nextTarget = lockSelfOrigin
               ? targetSpecForPierceShape(target)
               : target;
+            nextAction.target = nextTarget;
+            if (nextAction.effect[0]) {
+              nextAction.effect[0].target = nextTarget;
+            }
           }),
         );
       },

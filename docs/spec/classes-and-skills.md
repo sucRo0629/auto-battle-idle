@@ -336,6 +336,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | M2 分散 Barrier 型 | 複数人へ薄い Barrier。**E 寄り** |
 | Passive | Barrier 消費後の小規模回復、再付与安定、方式間の最低限補完。Barrier 消費後回復は **兵科本体に置かない** |
 | 持たせない | 本体回復、無限 Barrier、全体完全防護、療養師と同等の HP 復元 |
+| R12g-d4 data | `data/combat-modules/sp_wardweaver.json` — M1 `sp_wardweaver_mod_focus_barrier`（danger 味方1体・厚い Barrier・`barrierStack: true`）、M2 `sp_wardweaver_mod_spread_barrier`（ally Barrier 不足複数・薄い Barrier・`requireBelow`・`refillSameTargetOnShortfall: false`）。数値は仮。**Backend 完了 / Player 未完了** |
 
 ### R12f → R12g 未接続事項
 

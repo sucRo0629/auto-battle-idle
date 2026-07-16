@@ -1697,6 +1697,86 @@ function appendTargetSpecFieldsCore(
         )
       )
     );
+    const requireBelow = normalized.requireBelow;
+    const requireKind = requireBelow?.kind ?? "none";
+    parent.appendChild(
+      createFieldRow(
+        "requireBelow（閾値）",
+        createSelect(
+          requireKind,
+          [
+            { value: "none", label: "なし" },
+            { value: "flat", label: "flat（絶対量未満）" },
+            { value: "maxHpRatio", label: "maxHpRatio（割合未満）" },
+          ],
+          (nextKind) => {
+            if (nextKind === "none") {
+              const { requireBelow: _removed, ...rest } = normalized;
+              onChange(rest);
+              return;
+            }
+            if (nextKind === "flat") {
+              onChange({
+                ...normalized,
+                requireBelow: {
+                  kind: "flat",
+                  flatAmount:
+                    requireBelow?.kind === "flat"
+                      ? requireBelow.flatAmount
+                      : 30,
+                },
+              });
+              return;
+            }
+            onChange({
+              ...normalized,
+              requireBelow: {
+                kind: "maxHpRatio",
+                ratio:
+                  requireBelow?.kind === "maxHpRatio"
+                    ? requireBelow.ratio
+                    : 0.15,
+              },
+            });
+          }
+        )
+      )
+    );
+    if (requireBelow?.kind === "flat") {
+      parent.appendChild(
+        createFieldRow(
+          "flatAmount",
+          createNumberInput(requireBelow.flatAmount, (flatAmount) => {
+            if (!(flatAmount > 0) || !Number.isFinite(flatAmount)) return;
+            onChange({
+              ...normalized,
+              requireBelow: { kind: "flat", flatAmount },
+            });
+          }, { min: 0.01, step: 1 })
+        )
+      );
+    }
+    if (requireBelow?.kind === "maxHpRatio") {
+      parent.appendChild(
+        createFieldRow(
+          "ratio（0〜1）",
+          createNumberInput(requireBelow.ratio, (ratio) => {
+            if (!(ratio > 0) || !(ratio <= 1) || !Number.isFinite(ratio)) return;
+            onChange({
+              ...normalized,
+              requireBelow: { kind: "maxHpRatio", ratio },
+            });
+          }, { min: 0.01, max: 1, step: 0.01 })
+        )
+      );
+    }
+    parent.appendChild(
+      createEl(
+        "p",
+        "editor-hint",
+        "結界師 M2 等: Barrier が閾値以上の味方は候補外。全候補が十分なら対象なし。"
+      )
+    );
     if (
       options?.effectIndex !== undefined &&
       options.effectIndex > 0

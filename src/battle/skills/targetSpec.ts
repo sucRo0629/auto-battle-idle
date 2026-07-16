@@ -29,6 +29,7 @@ import type {
   TargetSpec,
   TargetStat,
   TargetStatOrder,
+  TargetStatRequireBelow,
 } from "../types.ts";
 import { TARGET_RULES } from "../data/gameDataSchema.ts";
 import { DEBUFF_FILTER_TAG_OPTIONS } from "../data/gameDataSchema.ts";
@@ -39,6 +40,37 @@ const TARGET_RULES_SET = new Set<string>(TARGET_RULES);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseRequireBelow(raw: unknown): TargetStatRequireBelow | undefined {
+  if (raw === undefined) return undefined;
+  if (!isRecord(raw)) {
+    throw new Error("Invalid target.requireBelow");
+  }
+  if (raw.kind === "flat") {
+    const flatAmount = raw.flatAmount;
+    if (
+      typeof flatAmount !== "number" ||
+      !Number.isFinite(flatAmount) ||
+      !(flatAmount > 0)
+    ) {
+      throw new Error("Invalid target.requireBelow.flatAmount");
+    }
+    return { kind: "flat", flatAmount };
+  }
+  if (raw.kind === "maxHpRatio") {
+    const ratio = raw.ratio;
+    if (
+      typeof ratio !== "number" ||
+      !Number.isFinite(ratio) ||
+      !(ratio > 0) ||
+      !(ratio <= 1)
+    ) {
+      throw new Error("Invalid target.requireBelow.ratio");
+    }
+    return { kind: "maxHpRatio", ratio };
+  }
+  throw new Error("Invalid target.requireBelow.kind");
 }
 
 function livingAllies(allies: CombatantState[]): CombatantState[] {
@@ -135,7 +167,8 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
         stat !== "maxHp" &&
         stat !== "atk" &&
         stat !== "def" &&
-        stat !== "res") ||
+        stat !== "res" &&
+        stat !== "barrier") ||
       (order !== "highest" && order !== "lowest" && order !== "ratio")
     ) {
       throw new Error("Invalid target.stat fields");
@@ -152,12 +185,14 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
     ) {
       throw new Error("Invalid target.poolFromEffectIndex");
     }
+    const requireBelow = parseRequireBelow(raw.requireBelow);
     return {
       kind: "stat",
       side,
       stat,
       order,
       ...(poolFromEffectIndex !== undefined ? { poolFromEffectIndex } : {}),
+      ...(requireBelow !== undefined ? { requireBelow } : {}),
     };
   }
   if (kind === "attackType") {
@@ -396,7 +431,22 @@ function compareStat(unit: CombatantState, stat: TargetStat): number {
       return getEffectiveDef(unit);
     case "res":
       return getEffectiveRes(unit);
+    case "barrier":
+      return unit.barrierHp;
   }
+}
+
+function matchesRequireBelow(
+  unit: CombatantState,
+  stat: TargetStat,
+  requireBelow: TargetStatRequireBelow,
+): boolean {
+  if (requireBelow.kind === "flat") {
+    return compareStat(unit, stat) < requireBelow.flatAmount;
+  }
+  const maxHp = getEffectiveMaxHp(unit);
+  if (maxHp <= 0) return false;
+  return compareStat(unit, stat) / maxHp < requireBelow.ratio;
 }
 
 function isFrontlineAnchorSpec(spec: TargetSpec): boolean {
@@ -520,11 +570,17 @@ export type PickTargetOptions = {
   dangerRuntime?: DangerTargetingRuntime;
 };
 
-/** 回復 effect は味方対象に使用者自身も含める。単体 damage は闘技場の掟判定用 */
+/** 回復 / Barrier 付与は味方対象に使用者自身も含める。単体 damage は闘技場の掟判定用 */
 export function pickOptionsForEffect(
   effect: SkillEffectDef | undefined
 ): PickTargetOptions | undefined {
   if (effect?.type === "heal") {
+    return { includeActorInAllyPool: true };
+  }
+  if (
+    effect?.type === "barrier" ||
+    (effect?.type === "buff" && effect.buffSubKind === "barrier")
+  ) {
     return { includeActorInAllyPool: true };
   }
   if (
@@ -842,8 +898,13 @@ export function pickTargetFromPool(
   }
 
   if (spec.kind === "stat") {
-    const selectable =
+    let selectable =
       spec.side === "ally" ? allySelectablePool(pool, actor, options) : pool;
+    if (spec.requireBelow !== undefined) {
+      selectable = selectable.filter((unit) =>
+        matchesRequireBelow(unit, spec.stat, spec.requireBelow!)
+      );
+    }
     if (selectable.length === 0) return null;
     const pickHigher = spec.order === "highest";
     const pickLower = spec.order === "lowest" || spec.order === "ratio";
@@ -868,22 +929,30 @@ export function pickTargetFromPool(
   return pool[0] ?? null;
 }
 
-/** ally HP 割合最低: 満タン（hp >= maxHp）の味方は対象プールから除外 */
+/** ally HP 割合最低: 満タン（hp >= maxHp）の味方は対象プールから除外。
+ *  requireBelow 付き stat: 閾値以上の候補を除外（結界師 M2 Barrier 不足）。 */
 export function filterSelectablePool(
   spec: TargetSpec,
   pool: CombatantState[]
 ): CombatantState[] {
+  let filtered = pool;
   if (
     spec.kind === "stat" &&
     spec.side === "ally" &&
     spec.stat === "hp" &&
     spec.order === "ratio"
   ) {
-    return pool.filter(
+    filtered = filtered.filter(
       (unit) => unit.isAlive && unit.hp < getEffectiveMaxHp(unit)
     );
   }
-  return pool;
+  if (spec.kind === "stat" && spec.requireBelow !== undefined) {
+    filtered = filtered.filter(
+      (unit) =>
+        unit.isAlive && matchesRequireBelow(unit, spec.stat, spec.requireBelow!)
+    );
+  }
+  return filtered;
 }
 
 export function orderPoolByTarget(
@@ -1002,6 +1071,7 @@ const STAT_LABELS: Record<TargetStat, string> = {
   atk: "ATK",
   def: "DEF",
   res: "RES",
+  barrier: "Barrier",
 };
 
 const STAT_ORDER_LABELS: Record<TargetStatOrder, string> = {
@@ -1018,10 +1088,17 @@ export function formatTargetLabel(spec: TargetSpec): string {
       return spec.side === "ally" ? "味方全員" : "敵全員";
     case "distance":
       return `${SIDE_LABELS[spec.side]}・${DISTANCE_ORDER_LABELS[spec.order]}`;
-    case "stat":
+    case "stat": {
+      const below =
+        spec.requireBelow === undefined
+          ? ""
+          : spec.requireBelow.kind === "flat"
+            ? `・閾値未満${spec.requireBelow.flatAmount}`
+            : `・閾値未満${Math.round(spec.requireBelow.ratio * 100)}%maxHP`;
       return `${SIDE_LABELS[spec.side]}・${STAT_LABELS[spec.stat]}${
         STAT_ORDER_LABELS[spec.order]
-      }`;
+      }${below}`;
+    }
     case "attackType": {
       const parts: string[] = [];
       if (spec.physical) parts.push("物理");

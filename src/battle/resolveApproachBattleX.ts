@@ -29,6 +29,7 @@ import {
   computePartyFormationBattleX,
 } from "./partyFormation.ts";
 import {
+  isAllyBarrierBasicAttack,
   isAllyHealBasicAttack,
   isPierceEnemyBasicAttack,
   resolveBasicAttackEffect,
@@ -310,8 +311,11 @@ function capOnFieldBeforeEnemyContact(
   if (isPlayerRearAssaultAccess(player, { players, enemies })) {
     return approachX;
   }
-  // ally-heal: 接近目標は味方最前線基準。敵接触 cap で手前に抑えると PHT が射程外のままになる。
-  if (isAllyHealBasicAttack(player, gameData)) {
+  // ally-heal / ally-barrier: 接近目標は味方基準。敵接触 cap で手前に抑えない。
+  if (
+    isAllyHealBasicAttack(player, gameData) ||
+    isAllyBarrierBasicAttack(player, gameData)
+  ) {
     return approachX;
   }
   const contactCapX = resolveApproachAttackBattleX(
@@ -402,6 +406,10 @@ function resolveSharedPlayerApproachBattleX(
       enemies,
       gameData,
     );
+  }
+  // 結界師 Barrier module: 敵 chase せず現在位置を維持（後衛距離除外なし・接近しない）
+  if (isAllyBarrierBasicAttack(player, gameData)) {
+    return player.battleX;
   }
   return resolvePlayerChaseApproachBattleX(
     player,
@@ -705,6 +713,10 @@ export function shouldSkipEngagedAutoApproach(
     }
     if (retreatingToApproachTarget) return false;
     return false;
+  }
+
+  if (isAllyBarrierBasicAttack(unit, gameData)) {
+    return true;
   }
 
   if (!isPierceEnemyBasicAttack(unit, gameData)) {

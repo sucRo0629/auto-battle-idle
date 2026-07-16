@@ -123,7 +123,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-16・R12g-d3 完了）
+## 8. 現在地メモ（更新: 2026-07-16・R12g-d4 完了）
 
 | 項目 | 状態 |
 | ---- | ---- |
@@ -145,7 +145,8 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12g-d1** | **Backend 完了 / Player 未完了** — 鉄衛士 M1/M2 CombatModule データ再設計 |
 | **R12g-d2** | **Backend 完了 / Player 未完了** — 護法士 M1/M2 CombatModule データ再設計 |
 | **R12g-d3** | **Backend 完了 / Player 未完了** — 療養師 M1/M2 CombatModule データ再設計 |
-| **公式次タスク** | **R12g-d4** — 結界師 M1/M2 |
+| **R12g-d4** | **Backend 完了 / Player 未完了** — 結界師 M1/M2 CombatModule データ再設計 |
+| **公式次タスク** | **R12g-d5** — 残 Kill 兵科の CombatModule データ再設計（順は roadmap） |
 
 **R12f で確定した主要境界（短縮）:**
 

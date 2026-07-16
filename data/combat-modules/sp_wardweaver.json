@@ -1,0 +1,71 @@
+[
+  {
+    "id": "sp_wardweaver_mod_focus_barrier",
+    "classId": "sp_wardweaver",
+    "displayName": "重点Barrier",
+    "description": "集中攻撃を受けている危険な味方1体へ厚いBarrierを付与する。単体崩壊を遅らせる重点防護。複数へ分散しない。",
+    "attackIntervalSec": 3.5,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "danger",
+            "side": "ally",
+            "maxTargets": 1,
+            "windowSec": 2
+          },
+          "type": "barrier",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1.6
+          },
+          "barrierStack": true,
+          "range": 1136
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single"
+    }
+  },
+  {
+    "id": "sp_wardweaver_mod_spread_barrier",
+    "classId": "sp_wardweaver",
+    "displayName": "分散Barrier",
+    "description": "Barrierが薄い複数味方へ、薄いBarrierを分配する。1体あたりの量は重点Barrierより低い。味方全員への一律Barrierではない。対象不足分を同一対象へ重ねない。",
+    "attackIntervalSec": 4,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "barrier",
+            "order": "lowest",
+            "requireBelow": {
+              "kind": "flat",
+              "flatAmount": 30
+            }
+          },
+          "type": "barrier",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.55
+          },
+          "barrierStack": true,
+          "range": 1136
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant",
+        "hitCount": 3,
+        "refillSameTargetOnShortfall": false
+      },
+      "targetShape": "multiLock",
+      "hitCount": 3
+    }
+  }
+]

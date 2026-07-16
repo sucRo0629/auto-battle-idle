@@ -43,7 +43,7 @@ function loadCombatModules(): CombatModuleDef[] {
 describe('combat module authoring helpers (R9g)', () => {
   it('lists two modules per R5 class from data', () => {
     const modules = loadCombatModules();
-    expect(modules).toHaveLength(10);
+    expect(modules).toHaveLength(12);
     const guardian = listCombatModulesForClass(modules, 'df_guardian');
     expect(guardian).toHaveLength(2);
     expect(guardian.every((module) => module.classId === 'df_guardian')).toBe(
@@ -65,6 +65,7 @@ describe('combat module authoring helpers (R9g)', () => {
       'df_guardian',
       'df_paladin',
       'sp_cleric',
+      'sp_wardweaver',
     ]);
     expect(files.every((file) => file.modules.length === 2)).toBe(true);
   });

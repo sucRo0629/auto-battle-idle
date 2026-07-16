@@ -155,8 +155,16 @@ export type TargetRule =
 
 export type TargetSide = "ally" | "enemy";
 export type TargetDistanceOrder = "nearest" | "farthest" | "selfOrigin";
-export type TargetStat = "hp" | "maxHp" | "atk" | "def" | "res";
+export type TargetStat = "hp" | "maxHp" | "atk" | "def" | "res" | "barrier";
 export type TargetStatOrder = "highest" | "lowest" | "ratio";
+
+/**
+ * stat 対象の不足閾値（R12g-d4）。
+ * 候補は compareStat(stat) が閾値未満のユニットのみ（十分な資源は除外 → 対象なし可）。
+ */
+export type TargetStatRequireBelow =
+  | { kind: "flat"; flatAmount: number }
+  | { kind: "maxHpRatio"; ratio: number };
 
 /** バフフィルタタグ（gameDataSchema.BUFF_FILTER_TAGS と同期） */
 export type BuffFilterTag = StatBuffTarget | "hot" | "block" | "evasion";
@@ -182,6 +190,11 @@ export type TargetSpec =
       order: TargetStatOrder;
       /** 同一スキル内の先行 effect 命中プール内だけで stat 選定 */
       poolFromEffectIndex?: number;
+      /**
+       * 閾値未満の候補のみ選定（結界師 M2: Barrier 不足）。
+       * 全候補が十分なら対象なし。
+       */
+      requireBelow?: TargetStatRequireBelow;
     }
   | {
       kind: "attackType";

@@ -894,7 +894,11 @@
         "枯渇回復",
         "事前猶予"
       ]
-    }
+    },
+    "combatModuleIds": [
+      "sp_wardweaver_mod_focus_barrier",
+      "sp_wardweaver_mod_spread_barrier"
+    ]
   },
   {
     "id": "sp_alchemist",

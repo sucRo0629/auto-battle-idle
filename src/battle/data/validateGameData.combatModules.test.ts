@@ -76,7 +76,7 @@ describe('combat module data (R5b)', () => {
     if (!loaded.ok) return;
 
     const registry = loaded.data.combatModuleRegistry;
-    expect(Object.keys(registry).length).toBe(10);
+    expect(Object.keys(registry).length).toBe(12);
     expect(registry.df_guardian_mod_nearest_strike.classId).toBe('df_guardian');
   });
 
@@ -254,6 +254,39 @@ describe('combat module data (R5b)', () => {
     expect(cls?.combatModuleIds).toEqual([
       'sp_cleric_mod_single_mend',
       'sp_cleric_mod_party_mend',
+    ]);
+  });
+
+  it('R12g-d4: parses wardweaver M1/M2 barrier CombatModule data', () => {
+    const parsed = parseAndValidateGameDataJson(loadRealBundle());
+    const m1 = parsed.combatModules.find(
+      (module) => module.id === 'sp_wardweaver_mod_focus_barrier',
+    );
+    const m2 = parsed.combatModules.find(
+      (module) => module.id === 'sp_wardweaver_mod_spread_barrier',
+    );
+    expect(m1?.action.effect[0]?.type).toBe('buff');
+    expect(m1?.action.effect[0]?.buffSubKind).toBe('barrier');
+    expect(m1?.action.effect[0]?.target).toEqual({
+      kind: 'danger',
+      side: 'ally',
+      maxTargets: 1,
+      windowSec: 2,
+    });
+    expect(m2?.action.targetShape).toBe('multiLock');
+    expect(m2?.action.hitCount).toBeGreaterThanOrEqual(2);
+    expect(m2?.action.effectRange?.refillSameTargetOnShortfall).toBe(false);
+    expect(m2?.action.effect[0]?.target).toMatchObject({
+      kind: 'stat',
+      side: 'ally',
+      stat: 'barrier',
+      order: 'lowest',
+      requireBelow: { kind: 'flat', flatAmount: 30 },
+    });
+    const cls = parsed.classes.find((entry) => entry.id === 'sp_wardweaver');
+    expect(cls?.combatModuleIds).toEqual([
+      'sp_wardweaver_mod_focus_barrier',
+      'sp_wardweaver_mod_spread_barrier',
     ]);
   });
 
