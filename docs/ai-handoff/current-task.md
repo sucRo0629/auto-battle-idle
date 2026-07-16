@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-c Backend 完了（設計）**。鉄衛士 M2 の damage event 基盤・runtime に続き、護法士 M2 danger targeting の一次ソース調査と最小契約を確定した。Player は未達。
-- **次の再開タスク:** **R12g-c 後続実装**（runtime API → TargetSpec 拡張 → 護法士 M2 接続 → test/debug）。8兵科データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
+- **新ロードマップ現在地:** **R12g-c2 Backend 完了**。護法士 M2 danger 集計 runtime API（`dangerTargeting.ts`）を実装。TargetSpec / 護法士 M2 runtime は未接続。Player は未達。
+- **次の再開タスク:** **R12g-c3**（最小 `TargetSpec` 拡張と resolver 接続）→ c4 護法士 M2 接続 → c5 test/debug。8兵科データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8466,3 +8466,37 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 **変更:** `current-task.md`、`phase-roadmap.md`、`combat.md`、`classes-and-skills.md`
 
 **未変更:** production code / JSON / test / editor / UI / 数値 / 名称 / ID / VFX / Stage / Wave データ / 鉄衛士 M2
+
+### 105.4 R12g-c2 — danger 集計 runtime API（Backend 完了）
+
+**目的:** 戦闘状態から各 candidate の danger 情報を収集する read-only runtime API。`TargetSpec` / 護法士 M2 には未接続。
+
+#### 105.4.1 変更ファイル
+
+- `src/battle/dangerTargeting.ts`（新規）
+- `src/battle/dangerTargeting.test.ts`（新規）
+- `docs/spec/combat.md`、`phase-roadmap.md`、`current-task.md`、`planning-rules.md`
+
+#### 105.4.2 API 概要
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 所有者 | `src/battle/dangerTargeting.ts` |
+| 型 | `DangerTargetSnapshot` |
+| 集計 | `collectDangerTargetSnapshots()` |
+| 比較 | `compareDangerTargetSnapshots()` / `sortDangerTargetSnapshots()` |
+| current target | 注入 `resolveCurrentAttackTarget(attacker)` callback |
+| pending 窓 | `battleSec <= applyAt <= battleSec + windowSec`（両端含む） |
+| hpRatio | `currentHpRatio()` = `hp / effectiveMaxHp` |
+| 対称性 | `candidates` / `opponents` + `isEnemy` 不一致で敵対判定 |
+
+#### 105.4.3 完了判定
+
+**Backend 完了:** snapshot 型、current / pending 集計、比較関数、専用 test 21 件 pass、既存戦闘挙動不変。
+
+**Player 完了:** なし（R12g-c 全体は c4〜c5 後）。
+
+#### 105.4.4 次タスク
+
+**R12g-c3** — 最小 `TargetSpec` 拡張と `targeting.ts` resolver 接続。
+

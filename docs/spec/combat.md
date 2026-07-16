@@ -513,6 +513,20 @@ danger targeting の主判定は **集中攻撃** とする。
 
 `hp / effectiveMaxHp` は **主判定へ昇格させない**。後衛を不利にする row / 距離 tie-break も使わない。
 
+#### danger 集計 runtime API（R12g-c2）
+
+実装: `src/battle/dangerTargeting.ts`
+
+- `collectDangerTargetSnapshots()` — 各 candidate の danger スナップショットを副作用なしで返す
+- `compareDangerTargetSnapshots()` / `sortDangerTargetSnapshots()` — 上記最小規則どおりの決定的順位
+- `resolveCurrentAttackTarget` は **注入 callback**（`resolveEnemyAttackTargetPlayer` 等の既存 resolver を呼ぶ）。API 内で target 解決を複製しない
+- `candidates` / `opponents` は敵味方対称（`isEnemy` 固定条件なし）。敵対判定は `isEnemy` の不一致
+- pending 時間窓: **`battleSec <= applyAtBattleSec <= battleSec + windowSec`**（両端含む）
+- pending 除外: 死者、同陣営、候補 pool 外、`effectDef.type !== 'damage'`、`suppressBonus*` 等の derived pending。DoT tick / delayed pool / counter は `pendingHitQueue` に入らない前提
+- `hpRatio` = `currentHpRatio()`（`hp / effectiveMaxHp`。Barrier 不含）
+
+**未接続（R12g-c3 以降）:** `TargetSpec` 拡張、護法士 M2 runtime、debug 理由表示。
+
 **`fireConditionMatch`** — `all`（省略時 AND）または `any`（OR）。三重の障壁は `any`。
 
 HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 HP の右端から描画。HP 満タン時は tier1 を左から HP fill の上に重ねる。超過分 tier2（`max(0, barrierHp − maxHp)`）は従来どおり左端から明るい色で描画。
