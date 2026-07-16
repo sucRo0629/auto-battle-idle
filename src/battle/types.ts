@@ -393,7 +393,8 @@ export interface StatusEffect {
     | "nextOutgoingDamage"
     | "allyAttackFollowUp"
     | "poisonWeapon"
-    | "duelistPride";
+    | "duelistPride"
+    | "dfPaladinM2Protection";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
@@ -451,6 +452,8 @@ export interface StatusEffect {
   dotCompressImmune?: boolean;
   /** blazingFlame dot: stack ごとの被魔法ダメ加算（付与時コピー） */
   blazingFlameMagicTakenPerStack?: number;
+  /** dfPaladinM2Protection overlay: 魔法被ダメ追加倍率（全属性軽減とは別乗算） */
+  dfPaladinM2MagicTakenMultiplier?: number;
 }
 
 /** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */

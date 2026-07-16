@@ -140,7 +140,8 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12g-c** | **Backend 完了**（設計）— 護法士 M2 danger targeting 契約 |
 | **R12g-c2** | **Backend 完了** — danger 集計 runtime API（`dangerTargeting.ts`） |
 | **R12g-c3** | **Backend 完了** — 最小 `TargetSpec` `kind: danger` + resolver 接続 |
-| **公式次タスク** | **R12g-c4** — 護法士 M2 防護 runtime / Module action 接続 |
+| **R12g-c4** | **Backend 完了** — 護法士 M2 防護 runtime / `TargetingRuntimeContext` 実戦注入。Player 未達 |
+| **公式次タスク** | **R12g-c5** — M2 統合 test / debug 検証 |
 
 **R12f で確定した主要境界（短縮）:**
 

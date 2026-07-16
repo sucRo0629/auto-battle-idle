@@ -35,6 +35,7 @@ import { consumeNextOutgoingDamageMultiplier } from './nextOutgoingDamage.ts';
 import { resolveTargetHpRatioDamageScale } from './targetHpRatioDamageScale.ts';
 import { resolvePartyFinisherDamageMultiplier } from './hunterPassives.ts';
 import { resolveBlazingFlameMagicDamageTakenMultiplier } from './sorcererFlame.ts';
+import { resolveDfPaladinM2MagicExtraDamageTakenMultiplier } from './dfPaladinM2.ts';
 
 export function getPassiveDefs(
   combatant: CombatantState,
@@ -491,7 +492,8 @@ export function resolveDamage(
     ? 1
     : getDamageTakenMultiplier(target) *
       (damageType === 'magic'
-        ? resolveBlazingFlameMagicDamageTakenMultiplier(target)
+        ? resolveBlazingFlameMagicDamageTakenMultiplier(target) *
+          resolveDfPaladinM2MagicExtraDamageTakenMultiplier(target)
         : 1);
   return Math.max(1, Math.floor(subtotal * takenMul * finisherMul));
 }

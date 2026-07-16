@@ -36,6 +36,8 @@ import {
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveBasicAttackSkillIdFromGameData } from "./data/resolveCombatModuleBasic.ts";
 import { tryIronGuardianM2SelfHeal } from "./ironGuardianM2.ts";
+import { clearDfPaladinM2RuntimeState } from "./dfPaladinM2.ts";
+import { buildDangerTargetingRuntime } from "./skills/targeting.ts";
 import { resolveUnitAttackMethod } from "./data/resolveUnitAttackMethod.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
@@ -365,6 +367,16 @@ export class BattleEngine {
       addPlacedField: (field) => {
         this.placedFields.push(field);
       },
+      getTargetingRuntimeContext: () =>
+        buildDangerTargetingRuntime(
+          this.players,
+          this.enemies,
+          this.gameData,
+          {
+            battleSec: this.battleTimeSec,
+            pendingHits: this.pendingHitQueue,
+          },
+        ),
     });
     this.reloadBattlefield();
   }
@@ -688,6 +700,7 @@ export class BattleEngine {
 
   private reloadBattlefield(explicitStartWaveIndex?: number): void {
     resetEntityIdCounter();
+    clearDfPaladinM2RuntimeState();
     this.trainingWaveReadyToEngage = false;
     this.pendingHitQueue = [];
     this.placedFields = [];
@@ -723,6 +736,7 @@ export class BattleEngine {
    * 作戦通算の battleTimeSec / tickIndex / worldOffsetX と Stage 内発動回数は維持する。
    */
   private prepareAlliesForNextWave(): void {
+    clearDfPaladinM2RuntimeState();
     const stageTriggerLimitsBySlot = new Map<
       number,
       {

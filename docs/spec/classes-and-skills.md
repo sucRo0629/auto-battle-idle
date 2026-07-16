@@ -308,7 +308,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 基本対象数 | **1 体**。常時複数保護を標準にしない |
 | tie-break | pending 中の異なる敵数 → 最短 apply 時刻 → pending Hit 数 → HP 割合 → 決定的 ID 順 |
 | 魔法特化 | 対象選定と effect 強度を分離。魔法は同値時の補助加点候補に留める |
-| 未接続 | 護法士 M2 Module action / 防護 effect / BattleEngine runtime 注入は **R12g-c4**。editor `danger` kind 入力は **R12g-g** |
+| 未接続 | editor `danger` kind 入力は **R12g-g**。仮 Module ID / 仮数値の data 移管は **R12g Survival Module data** |
+| R12g-c4 runtime | `src/battle/dfPaladinM2.ts` — 暫定 ID `df_paladin_mod_danger_guard`、全属性 `damageTaken` 軽減 + 魔法追加倍率、`TargetingRuntimeContext` は `BattleEngine` → `SkillExecutor` 注入 |
 
 #### `sp_cleric` 療養師
 

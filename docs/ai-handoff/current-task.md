@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-c3 Backend 完了**。`TargetSpec` に `kind: danger` を追加し、`targeting.ts` resolver 経由で `dangerTargeting.ts` を接続。護法士 M2 Module / 防護 effect は未接続。Player は未達。
-- **次の再開タスク:** **R12g-c4**（護法士 M2 防護 runtime / Module action 接続）→ c5 統合 test / debug。8兵科データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
+- **新ロードマップ現在地:** **R12g-c4 Backend 完了**。`TargetingRuntimeContext` を `BattleEngine` → `SkillExecutor` へ注入。護法士 M2（`dfPaladinM2.ts`）が danger 対象へ仮防護を付与。Player は未達。
+- **次の再開タスク:** **R12g-c5**（M2 統合 test / debug 検証）→ 8兵科データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8550,4 +8550,11 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 
 #### 105.5.6 次タスク
 
-**R12g-c4** — 護法士 M2 防護 runtime / Module action 接続（`TargetingRuntimeContext` を BattleEngine / SkillExecutor へ注入）。
+**R12g-c4** — **Backend 完了**（2026-07-16）。護法士 M2 防護 runtime / `TargetingRuntimeContext` 実戦注入。
+
+- 所有者: `src/battle/dfPaladinM2.ts`
+- 暫定 Module ID: `df_paladin_mod_danger_guard`（production JSON 未追加。移管先: R12g Survival Module data）
+- 仮数値: `DF_PALADIN_M2_*` 定数（R12i / CombatModule JSON へ移管）
+- Player: 未達（自動統合 test のみ。手元検証は **R12g-c5**）
+
+**R12g-c5** — M2 統合 test / debug 検証。

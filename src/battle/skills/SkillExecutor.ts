@@ -173,11 +173,18 @@ import {
   resolutionHasTargets,
   resolveEffectResolution,
   resolveEffectTargetSpec,
+  type TargetingRuntimeContext,
 } from "./targeting.ts";
 import {
   ensureSharedTargetingLock,
   mergeEffectWithSkillTargeting,
 } from "./skillSharedTargeting.ts";
+import {
+  DF_PALADIN_M2_ATTACK_INTERVAL_SEC,
+  DF_PALADIN_M2_COMBAT_MODULE_ID,
+  executeDfPaladinM2DangerProtection,
+  isDfPaladinM2Selected,
+} from "../dfPaladinM2.ts";
 
 interface ApplyResolvedEffectStepResult {
   applied: boolean;
@@ -230,6 +237,7 @@ export interface SkillExecutorDeps {
     beforeX: number,
     reason: "knockback" | "enemyReelIn"
   ) => void;
+  getTargetingRuntimeContext?: () => TargetingRuntimeContext | undefined;
 }
 
 function shouldDeferUntilHostileToAnchorInRange(
@@ -291,6 +299,43 @@ export class SkillExecutor {
     private readonly deps: SkillExecutorDeps
   ) {}
 
+  private getTargetingRuntimeContext(): TargetingRuntimeContext | undefined {
+    return this.deps.getTargetingRuntimeContext?.();
+  }
+
+  private tryExecuteDfPaladinM2Protection(
+    actor: CombatantState,
+    cd: SkillCooldown,
+    allies: CombatantState[],
+    enemies: CombatantState[],
+  ): boolean {
+    const result = executeDfPaladinM2DangerProtection(
+      actor,
+      allies,
+      enemies,
+      this.getTargetingRuntimeContext(),
+    );
+    cd.remaining = DF_PALADIN_M2_ATTACK_INTERVAL_SEC;
+    this.deps.onBasicAttackExecuted?.(actor.id);
+    this.deps.onCombatActionExecuted?.(actor, {
+      slotKind: "basic",
+      skillId: DF_PALADIN_M2_COMBAT_MODULE_ID,
+    });
+    if (result.selectedTargetId) {
+      this.emit({
+        type: "skill",
+        actorId: actor.id,
+        targetId: result.selectedTargetId,
+        skillId: DF_PALADIN_M2_COMBAT_MODULE_ID,
+        skillName: DF_PALADIN_M2_COMBAT_MODULE_ID,
+        slotKind: "basic",
+        effect: "buff",
+        statusLabel: `dfPaladinM2:${result.outcome}`,
+      });
+    }
+    return true;
+  }
+
   tryExecute(
     actor: CombatantState,
     cd: SkillCooldown,
@@ -299,6 +344,10 @@ export class SkillExecutor {
   ): boolean {
     if (!actor.isAlive) return false;
     if (isUnitStunned(actor)) return false;
+
+    if (cd.slotKind === "basic" && isDfPaladinM2Selected(actor)) {
+      return this.tryExecuteDfPaladinM2Protection(actor, cd, allies, enemies);
+    }
 
     const baseSkill = this.gameData.skillRegistry.actives[cd.skillId];
     if (!baseSkill || baseSkill.effect.length === 0) return false;
@@ -488,7 +537,9 @@ export class SkillExecutor {
               passives,
               skill.effect,
               priorEffectHitPools,
-              skill
+              skill,
+              sharedTargetingLocks,
+              this.getTargetingRuntimeContext(),
             ),
           sharedTargetingLocks
         );
@@ -504,7 +555,8 @@ export class SkillExecutor {
         skill.effect,
         priorEffectHitPools,
         skill,
-        sharedTargetingLocks
+        sharedTargetingLocks,
+        this.getTargetingRuntimeContext(),
       );
       if (!resolutionHasTargets(resolution)) return empty;
       const targets = resolution!.waves.flatMap((wave) =>
@@ -630,7 +682,9 @@ export class SkillExecutor {
             passives,
             skill.effect,
             priorEffectHitPools,
-            skill
+            skill,
+            sharedTargetingLocks,
+            this.getTargetingRuntimeContext(),
           ),
         sharedTargetingLocks
       );
@@ -646,7 +700,8 @@ export class SkillExecutor {
       skill.effect,
       priorEffectHitPools,
       skill,
-      sharedTargetingLocks
+      sharedTargetingLocks,
+      this.getTargetingRuntimeContext(),
     );
     if (!resolutionHasTargets(resolution)) return empty;
     const hitUnits = extractResolutionHitUnits(resolution!);
