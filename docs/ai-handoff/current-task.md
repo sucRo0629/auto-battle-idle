@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-b1 Backend 完了**（§105.2 参照）。公式次は **R12g-b2**（鉄衛士 M2 runtime）。
-- **次の再開タスク:** **R12g-b2**（鉄衛士 M2 自己回復本体）→ R12g-b3（統合テスト）→ R12g-c（護法士 M2 danger targeting）。データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
+- **新ロードマップ現在地:** **R12g-b2 Backend 完了**（鉄衛士 M2 固定自己回復 runtime）。公式次は **R12g-b3**（統合テスト・デバッグ検証）。
+- **次の再開タスク:** **R12g-b3**（M2 統合テスト）→ R12g-c（護法士 M2 danger targeting）。データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)

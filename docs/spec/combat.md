@@ -292,7 +292,7 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 
 **`lethal`:** `DamageApplicationResult.lethal` を正とする。callback 時点の `target.isAlive` には依存しない。
 
-**鉄衛士 M2（R12g-b2 実装予定）:** `sourceKind === skillHit` && `attackKind === damage` && `hpDamage > 0` && `!lethal` && 対象が鉄衛士 M2 module && 攻撃者が敵 && 非自傷。Barrier のみ・DoT・counter・derived・致死は対象外。
+**鉄衛士 M2（R12g-b2 実装済）:** `sourceKind === skillHit` && `attackKind === damage` && `hpDamage > 0` && `!lethal` && 対象が鉄衛士 M2 module && 攻撃者が敵 && 非自傷。Barrier のみ・DoT・counter・derived・致死は対象外。回復量は runtime 仮定数（R12i 調整・R12g Survival Module データ実装で module データへ移管予定）。
 
 `effectiveAtk = max(0, (atk + atkFlatSum) × atkMulProduct)`  
 `effectiveDef = max(0, (def + defFlatSum) × defMulProduct)`  

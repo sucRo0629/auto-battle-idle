@@ -35,6 +35,7 @@ import {
 } from "./damageAppliedEvent.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveBasicAttackSkillIdFromGameData } from "./data/resolveCombatModuleBasic.ts";
+import { tryIronGuardianM2SelfHeal } from "./ironGuardianM2.ts";
 import { resolveUnitAttackMethod } from "./data/resolveUnitAttackMethod.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
@@ -374,6 +375,9 @@ export class BattleEngine {
     amount: number,
     meta?: DamageAppliedCallbackMeta,
   ): void {
+    if (meta?.event) {
+      tryIronGuardianM2SelfHeal(meta.event, actor, target);
+    }
     if (shouldTriggerCounterRetaliation(meta, amount)) {
       const counterCallbacks = {
         emit: (event: Parameters<BattleEventListener>[0]) => this.emit(event),
