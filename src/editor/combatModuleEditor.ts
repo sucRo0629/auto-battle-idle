@@ -31,6 +31,67 @@ export const COMBAT_MODULE_ATTACK_METHOD_OPTIONS: Array<{
   { value: 'ranged', label: '遠隔' },
 ];
 
+export const COMBAT_MODULE_RUNTIME_EFFECT_KIND_OPTIONS: Array<{
+  value: '' | 'healOnEnemyAttackHpHit' | 'physicalDamageTakenReduction';
+  label: string;
+}> = [
+  { value: '', label: 'なし' },
+  {
+    value: 'physicalDamageTakenReduction',
+    label: '選択中・自身への物理被ダメ軽減（永続）',
+  },
+  {
+    value: 'healOnEnemyAttackHpHit',
+    label: '敵Attack Hit実HPダメージ時・固定自己回復',
+  },
+];
+
+export const DAMAGE_TAKEN_DAMAGE_TYPE_OPTIONS: Array<{
+  value: 'physical' | 'magic' | 'physical,magic' | '';
+  label: string;
+}> = [
+  { value: '', label: '全属性（未指定）' },
+  { value: 'physical', label: '物理のみ' },
+  { value: 'magic', label: '魔法のみ' },
+  { value: 'physical,magic', label: '物理+魔法' },
+];
+
+export function runtimeEffectKindValue(
+  module: CombatModuleDef,
+): '' | 'healOnEnemyAttackHpHit' | 'physicalDamageTakenReduction' {
+  const kind = module.runtimeEffect?.kind;
+  if (
+    kind === 'healOnEnemyAttackHpHit' ||
+    kind === 'physicalDamageTakenReduction'
+  ) {
+    return kind;
+  }
+  return '';
+}
+
+export function damageTakenDamageTypesSelectValue(
+  types: readonly string[] | undefined,
+): '' | 'physical' | 'magic' | 'physical,magic' {
+  if (!types || types.length === 0) return '';
+  const set = new Set(types);
+  const hasPhysical = set.has('physical');
+  const hasMagic = set.has('magic');
+  if (hasPhysical && hasMagic) return 'physical,magic';
+  if (hasPhysical) return 'physical';
+  if (hasMagic) return 'magic';
+  return '';
+}
+
+export function parseDamageTakenDamageTypesSelect(
+  value: string,
+): Array<'physical' | 'magic'> | undefined {
+  if (value === '') return undefined;
+  if (value === 'physical') return ['physical'];
+  if (value === 'magic') return ['magic'];
+  if (value === 'physical,magic') return ['physical', 'magic'];
+  return undefined;
+}
+
 export function listCombatModulesForClass(
   modules: readonly CombatModuleDef[],
   classId: string,

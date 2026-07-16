@@ -10,10 +10,15 @@ import { R5_COMBAT_MODULE_CLASS_IDS } from '../battle/types.ts';
 import { formatActiveDescription } from '../ui/formatSkillText.ts';
 import {
   COMBAT_MODULE_ATTACK_METHOD_OPTIONS,
+  COMBAT_MODULE_RUNTIME_EFFECT_KIND_OPTIONS,
+  DAMAGE_TAKEN_DAMAGE_TYPE_OPTIONS,
+  damageTakenDamageTypesSelectValue,
   findCombatModuleDraft,
   listCombatModuleAuthoringClassIds,
   listCombatModulesForClass,
+  parseDamageTakenDamageTypesSelect,
   patchCombatModuleAction,
+  runtimeEffectKindValue,
   summarizeCombatModuleEffectRange,
   upsertCombatModuleDraft,
 } from './combatModuleEditor.ts';
@@ -194,6 +199,8 @@ export class CombatModuleEditorStep {
     }
 
     root.appendChild(this.buildMetaSection(selected));
+    root.appendChild(this.buildRuntimeEffectSection(selected));
+    root.appendChild(this.buildPrimaryBuffSection(selected));
     root.appendChild(this.buildEffectRangeSection(selected));
     root.appendChild(this.buildPreviewSection(selected));
 
@@ -300,6 +307,237 @@ export class CombatModuleEditorStep {
         ),
       ),
     );
+
+    return section;
+  }
+
+  private buildRuntimeEffectSection(module: CombatModuleDef): HTMLElement {
+    const section = createSection('runtimeEffect（CombatModule 専用）');
+    section.appendChild(
+      createEl(
+        'p',
+        'editor-hint',
+        '通常 action では表現しない選択中永続効果・被 Hit リアクション等。鉄衛士 M1 物理軽減 / M2 固定自己回復など。',
+      ),
+    );
+    const grid = appendGrid(section);
+    const readonly = this.options.saving;
+    const kind = runtimeEffectKindValue(module);
+
+    grid.appendChild(
+      createFieldRow(
+        'kind',
+        (() => {
+          const select = createSelect(
+            kind,
+            COMBAT_MODULE_RUNTIME_EFFECT_KIND_OPTIONS,
+            (value) => {
+              this.updateModule((current) => {
+                const next = structuredClone(current);
+                if (value === '') {
+                  delete next.runtimeEffect;
+                  return next;
+                }
+                if (value === 'physicalDamageTakenReduction') {
+                  const takenMultiplier =
+                    next.runtimeEffect?.kind === 'physicalDamageTakenReduction'
+                      ? next.runtimeEffect.takenMultiplier
+                      : 0.85;
+                  next.runtimeEffect = {
+                    kind: 'physicalDamageTakenReduction',
+                    takenMultiplier,
+                  };
+                  return next;
+                }
+                const flatAmount =
+                  next.runtimeEffect?.kind === 'healOnEnemyAttackHpHit'
+                    ? next.runtimeEffect.flatAmount
+                    : 20;
+                next.runtimeEffect = {
+                  kind: 'healOnEnemyAttackHpHit',
+                  flatAmount,
+                };
+                return next;
+              });
+            },
+          );
+          select.disabled = readonly;
+          return select;
+        })(),
+      ),
+    );
+
+    if (kind === 'healOnEnemyAttackHpHit') {
+      grid.appendChild(
+        createFieldRow(
+          'flatAmount（Hitごと固定回復）',
+          createNumberInput(
+            module.runtimeEffect?.kind === 'healOnEnemyAttackHpHit'
+              ? module.runtimeEffect.flatAmount
+              : 20,
+            (flatAmount) => {
+              if (!(flatAmount > 0) || !Number.isFinite(flatAmount)) return;
+              this.updateModule((current) => {
+                const next = structuredClone(current);
+                next.runtimeEffect = {
+                  kind: 'healOnEnemyAttackHpHit',
+                  flatAmount,
+                };
+                return next;
+              }, { rerender: false });
+            },
+            { min: 0.1, step: 1, readonly, field: 'combat-module-runtime-flat' },
+          ),
+        ),
+      );
+    }
+
+    if (kind === 'physicalDamageTakenReduction') {
+      grid.appendChild(
+        createFieldRow(
+          'takenMultiplier（物理被ダメ倍率・永続）',
+          createNumberInput(
+            module.runtimeEffect?.kind === 'physicalDamageTakenReduction'
+              ? module.runtimeEffect.takenMultiplier
+              : 0.85,
+            (takenMultiplier) => {
+              if (
+                !(takenMultiplier > 0) ||
+                takenMultiplier > 1 ||
+                !Number.isFinite(takenMultiplier)
+              ) {
+                return;
+              }
+              this.updateModule((current) => {
+                const next = structuredClone(current);
+                next.runtimeEffect = {
+                  kind: 'physicalDamageTakenReduction',
+                  takenMultiplier,
+                };
+                return next;
+              }, { rerender: false });
+            },
+            {
+              min: 0.01,
+              max: 1,
+              step: 0.01,
+              readonly,
+              field: 'combat-module-runtime-taken-mul',
+            },
+          ),
+        ),
+      );
+    }
+
+    return section;
+  }
+
+  private buildPrimaryBuffSection(module: CombatModuleDef): HTMLElement {
+    const section = createSection('主効果（effect[0] buff）');
+    section.appendChild(
+      createEl(
+        'p',
+        'editor-hint',
+        '鉄衛士 M1 など self buff の倍率・属性限定を編集します。damage 主効果の module では変更しないでください。',
+      ),
+    );
+    const primary = module.action.effect[0];
+    if (!primary || primary.type !== 'buff' || primary.buffSubKind !== 'stat') {
+      section.appendChild(
+        createEl(
+          'p',
+          'editor-help',
+          'effect[0] が buff/stat ではないため、この欄は非表示相当です。',
+        ),
+      );
+      return section;
+    }
+
+    const grid = appendGrid(section);
+    const readonly = this.options.saving;
+    const buffStat = Array.isArray(primary.buffStat)
+      ? primary.buffStat[0] ?? 'damageTaken'
+      : primary.buffStat ?? 'damageTaken';
+
+    grid.appendChild(
+      createFieldRow(
+        'buffStat（読取）',
+        createTextInput(String(buffStat), () => undefined, {
+          readonly: true,
+          field: 'combat-module-buff-stat',
+        }),
+      ),
+    );
+    grid.appendChild(
+      createFieldRow(
+        'buffMultiplier',
+        createNumberInput(
+          primary.buffMultiplier ?? 1,
+          (buffMultiplier) => {
+            if (!Number.isFinite(buffMultiplier) || buffMultiplier <= 0) return;
+            this.updateModule((current) =>
+              patchCombatModuleAction(current, (action) => {
+                const effect = action.effect[0];
+                if (!effect || effect.type !== 'buff') return;
+                effect.buffMultiplier = buffMultiplier;
+              }),
+              { rerender: false },
+            );
+          },
+          { min: 0.01, step: 0.01, readonly, field: 'combat-module-buff-mul' },
+        ),
+      ),
+    );
+    grid.appendChild(
+      createFieldRow(
+        'buffDurationSec',
+        createNumberInput(
+          primary.buffDurationSec ?? 1,
+          (buffDurationSec) => {
+            if (!(buffDurationSec > 0)) return;
+            this.updateModule((current) =>
+              patchCombatModuleAction(current, (action) => {
+                const effect = action.effect[0];
+                if (!effect || effect.type !== 'buff') return;
+                effect.buffDurationSec = buffDurationSec;
+              }),
+              { rerender: false },
+            );
+          },
+          { min: 0.1, step: 0.1, readonly, field: 'combat-module-buff-dur' },
+        ),
+      ),
+    );
+
+    if (buffStat === 'damageTaken') {
+      grid.appendChild(
+        createFieldRow(
+          'damageTakenDamageTypes',
+          (() => {
+            const select = createSelect(
+              damageTakenDamageTypesSelectValue(primary.damageTakenDamageTypes),
+              DAMAGE_TAKEN_DAMAGE_TYPE_OPTIONS,
+              (value) => {
+                this.updateModule((current) =>
+                  patchCombatModuleAction(current, (action) => {
+                    const effect = action.effect[0];
+                    if (!effect || effect.type !== 'buff') return;
+                    const types = parseDamageTakenDamageTypesSelect(value);
+                    if (types === undefined) {
+                      delete effect.damageTakenDamageTypes;
+                    } else {
+                      effect.damageTakenDamageTypes = types;
+                    }
+                  }),
+                );
+              },
+            );
+            select.disabled = readonly;
+            return select;
+          })(),
+        ),
+      );
+    }
 
     return section;
   }

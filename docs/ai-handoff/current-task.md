@@ -9,8 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-c5 Backend 完了**。護法士 M2 danger targeting は c1〜c5 まで Backend 縦切り成立。**R12g-c 全体: Backend 完了 / Player 未完了**（既存 JSON 未接続のため手元戦闘確認不可。戻し先: Survival Module JSON 接続後）。
-- **次の再開タスク:** **R12g 本流**（8 兵科 JSON データ入力・数値は最小）→ R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
+- **新ロードマップ現在地:** **R12g-d1 Backend 完了**（鉄衛士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし）。**次:** **R12g-d2**（護法士 M1/M2）。
+- **R12g-c:** Backend 完了 / Player 未完了（既存 JSON 未接続のため手元戦闘確認不可。戻し先: Survival Module JSON 接続後）。
+- **次の再開タスク:** **R12g-d2**（護法士）→ d3〜 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8587,3 +8588,16 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 **R12g-c 全体判定:** **Backend 完了 / Player 未完了**。
 
 **次タスク:** **R12g 本流** — 8 兵科 JSON データ入力（数値は最小）。JSON / editor UI / 正式 UI は本タスクで未変更。
+
+### 105.6 R12g-d1 — 鉄衛士 M1/M2 CombatModule データ再設計（完了・Backend）
+
+**状態:** Backend 完了 / Player 未完了（手元画面確認なし）
+
+**実施内容（要約）:**
+- M1 `df_guardian_mod_nearest_strike`: self・物理限定 `damageTaken`（`damageTakenDamageTypes: ["physical"]`）。再付与は同一 skillId+stat で置換
+- M2 `df_guardian_mod_guard_focus`: `runtimeEffect.healOnEnemyAttackHpHit.flatAmount` が回復量の所有者。runtime 仮定数削除
+- schema: `CombatModuleRuntimeEffect` / `damageTakenDamageTypes`。validation + CombatModule editor 同期
+- M1/M2 排他・module 切替で旧 M1 status 除去（`syncIronGuardianModuleStatusEffects`）
+- 敵味方対称維持。他兵科 / Stage / Passive 未変更
+
+**次:** **R12g-d2** — 護法士 M1/M2 CombatModule データ再設計

@@ -2198,6 +2198,77 @@ function validateAttackMethodForCombatModuleAction(
   }
 }
 
+function parseDamageTakenDamageTypes(
+  obj: Record<string, unknown>,
+  context: string,
+  buffStat: import('../types.ts').StatBuffTarget | import('../types.ts').StatBuffTarget[],
+): import('../types.ts').DamageType[] | undefined {
+  if (obj.damageTakenDamageTypes === undefined) {
+    return undefined;
+  }
+  const stats = Array.isArray(buffStat) ? buffStat : [buffStat];
+  if (!stats.includes('damageTaken')) {
+    invalidField(
+      context,
+      'damageTakenDamageTypes',
+      'may only be set when buffStat includes damageTaken',
+    );
+  }
+  const raw = obj.damageTakenDamageTypes;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    invalidField(
+      context,
+      'damageTakenDamageTypes',
+      'must be a non-empty array',
+    );
+  }
+  const types = (raw as unknown[]).map((entry, index) => {
+    if (typeof entry !== 'string' || !DAMAGE_TYPES_SET.has(entry as import('../types.ts').DamageType)) {
+      invalidField(
+        context,
+        `damageTakenDamageTypes[${index}]`,
+        `must be one of ${[...DAMAGE_TYPES_SET].join(', ')}`,
+      );
+    }
+    return entry as import('../types.ts').DamageType;
+  });
+  return [...new Set(types)];
+}
+
+function parseCombatModuleRuntimeEffect(
+  raw: unknown,
+  context: string,
+): import('../types.ts').CombatModuleRuntimeEffect | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  const obj = requireRecord(raw, context);
+  const kind = requireString(obj, 'kind', context);
+  if (kind === 'healOnEnemyAttackHpHit') {
+    const flatAmount = requireNumber(obj, 'flatAmount', context);
+    if (!Number.isFinite(flatAmount) || flatAmount <= 0) {
+      invalidField(context, 'flatAmount', 'must be a finite number greater than 0');
+    }
+    return { kind: 'healOnEnemyAttackHpHit', flatAmount };
+  }
+  if (kind === 'physicalDamageTakenReduction') {
+    const takenMultiplier = requireNumber(obj, 'takenMultiplier', context);
+    if (
+      !Number.isFinite(takenMultiplier) ||
+      !(takenMultiplier > 0) ||
+      takenMultiplier > 1
+    ) {
+      invalidField(
+        context,
+        'takenMultiplier',
+        'must be a finite number in the range (0, 1]',
+      );
+    }
+    return { kind: 'physicalDamageTakenReduction', takenMultiplier };
+  }
+  invalidField(context, 'kind', `unknown runtimeEffect kind "${kind}"`);
+}
+
 function parseCombatModuleAction(
   raw: unknown,
   context: string,
@@ -2271,6 +2342,10 @@ function parseCombatModules(raw: unknown): CombatModuleDef[] {
       missingField(context, 'action');
     }
     const action = parseCombatModuleAction(obj.action, `${context}.action`);
+    const runtimeEffect = parseCombatModuleRuntimeEffect(
+      obj.runtimeEffect,
+      `${context}.runtimeEffect`,
+    );
     return {
       id,
       classId,
@@ -2278,6 +2353,7 @@ function parseCombatModules(raw: unknown): CombatModuleDef[] {
       description,
       attackIntervalSec,
       action,
+      ...(runtimeEffect !== undefined ? { runtimeEffect } : {}),
     };
   });
 }
@@ -3245,6 +3321,11 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         'buffMultiplier',
         'buffFlatBonus',
       );
+      const damageTakenDamageTypes = parseDamageTakenDamageTypes(
+        obj,
+        context,
+        buffStat,
+      );
       return normalizeSkillEffect({
         ...(target !== undefined ? { target } : {}),
         ...targetShapeFields,
@@ -3258,6 +3339,9 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
           : {}),
         ...(typeof obj.buffFlatBonus === 'number'
           ? { buffFlatBonus: obj.buffFlatBonus }
+          : {}),
+        ...(damageTakenDamageTypes !== undefined
+          ? { damageTakenDamageTypes }
           : {}),
         ...sequenceTiming,
         ...presentation,

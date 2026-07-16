@@ -1274,7 +1274,9 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | **R12g-c3** | 最小 `TargetSpec` 拡張と resolver 接続 | **Backend 完了**。`kind: danger` + validation + `targeting.ts` 接続。護法士 M2 / editor UI 未接続 |
 | **R12g-c4** | 護法士 M2 防護 runtime / Module action | **Backend 完了**。`dfPaladinM2.ts` + `TargetingRuntimeContext` 実戦注入 |
 | **R12g-c5** | M2 統合 test / debug 検証 | **Backend 完了**。`dfPaladinM2.integration.test.ts` + `onDfPaladinM2ProtectionResult` debug hook。**R12g-c 全体: Backend 完了 / Player 未完了**（手元確認は Survival Module JSON 接続後） |
-| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | 未着手（**公式次タスク**） |
+| **R12g-d1** | 鉄衛士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
+| **R12g-d2** | 護法士 M1/M2 CombatModule データ再設計 | 未着手（**次タスク**） |
+| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | R12g-d1 進行中 |
 
 正本: [current-task.md §105](../ai-handoff/current-task.md)、[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)、[combat.md §Danger Targeting](../spec/combat.md#danger-targetingr12g-c)、[classes-and-skills.md §df_paladin 護法士](../spec/classes-and-skills.md#df_paladin-護法士)。
 

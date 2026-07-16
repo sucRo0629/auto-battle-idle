@@ -25,6 +25,7 @@ import {
   resolveClassSpriteKey,
   resolveEnemySpriteKey,
 } from '../render/entityVisuals.ts';
+import { syncIronGuardianModuleStatusEffects } from './ironGuardianM2.ts';
 import {
   computeStatsAtLevel,
   type LevelCurvesConfig,
@@ -114,7 +115,7 @@ export function createAllyFromMember(
           res: classPreset.res,
         };
 
-  return {
+  const combatant: CombatantState = {
     id: nextId(classPreset.id),
     name: classPreset.displayName,
     role: classPreset.role,
@@ -144,6 +145,13 @@ export function createAllyFromMember(
     battleX: 0,
     corpseVisible: true,
   };
+  if (gameData !== undefined) {
+    syncIronGuardianModuleStatusEffects(
+      combatant,
+      gameData.combatModuleRegistry,
+    );
+  }
+  return combatant;
 }
 
 function copyTraits(traits: NormalizedEntityTraits): NormalizedEntityTraits {
@@ -311,7 +319,7 @@ export function createEnemyFromClassGroup(
     activeSkillIds,
   );
 
-  return {
+  const combatant: CombatantState = {
     id: nextId(classPreset.id),
     name: classPreset.displayName,
     role: classPreset.role,
@@ -338,6 +346,11 @@ export function createEnemyFromClassGroup(
     spawnX: spawnOffset,
     corpseVisible: true,
   };
+  syncIronGuardianModuleStatusEffects(
+    combatant,
+    gameData.combatModuleRegistry,
+  );
+  return combatant;
 }
 
 function createEnemiesFromEnemyGroups(

@@ -73,8 +73,18 @@ export function clampHpToEffectiveMax(combatant: CombatantState): void {
   }
 }
 
-export function getDamageTakenMultiplier(combatant: CombatantState): number {
-  const agg = aggregateStatEffects(combatant.statusEffects, 'damageTaken');
+export function getDamageTakenMultiplier(
+  combatant: CombatantState,
+  damageType?: DamageType,
+): number {
+  const relevant = combatant.statusEffects.filter((effect) => {
+    if (effect.stat !== 'damageTaken') return false;
+    const types = effect.damageTakenDamageTypes;
+    if (!types || types.length === 0) return true;
+    if (damageType === undefined) return true;
+    return types.includes(damageType);
+  });
+  const agg = aggregateStatEffects(relevant, 'damageTaken');
   return computeEffectiveStat(1, agg);
 }
 
@@ -321,7 +331,7 @@ export function applyDefenseMitigation(
     afterDefense = Math.floor((afterSubtract * 100) / (100 + effectiveDef));
   }
 
-  const takenMul = getDamageTakenMultiplier(defender);
+  const takenMul = getDamageTakenMultiplier(defender, damageType);
   return Math.floor(afterDefense * takenMul);
 }
 
@@ -490,7 +500,7 @@ export function resolveDamage(
       : 1;
   const takenMul = ignoreDr
     ? 1
-    : getDamageTakenMultiplier(target) *
+    : getDamageTakenMultiplier(target, damageType) *
       (damageType === 'magic'
         ? resolveBlazingFlameMagicDamageTakenMultiplier(target) *
           resolveDfPaladinM2MagicExtraDamageTakenMultiplier(target)

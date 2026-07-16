@@ -80,7 +80,7 @@ describe('resolveUnitAttackMethod', () => {
       gameData,
       'df_guardian_mod_guard_focus',
     );
-    expect(resolveUnitAttackMethod(melee, gameData)).toBe('melee');
+    expect(resolveUnitAttackMethod(melee, gameData)).toBeUndefined();
     expect(resolveUnitAttackMethod(buff, gameData)).toBeUndefined();
   });
 });

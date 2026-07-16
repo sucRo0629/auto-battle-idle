@@ -201,7 +201,6 @@ describe('combat module basic attack (R5c)', () => {
     const basicCd = ally.cooldowns.find((cd) => cd.slotKind === 'basic')!;
     expect(basicCd.remaining).toBe(module.attackIntervalSec);
     expect(basicCd.remaining).not.toBe(legacyBasic?.trigger?.value ?? 2);
-    expect(basicCd.remaining).toBe(2.5);
   });
 
   it('does not fire before attackIntervalSec elapses and resets to the same interval after fire', () => {
@@ -385,8 +384,8 @@ describe('combat module basic attack (R5c)', () => {
     const gameData = loadGameData();
     const cases = [
       {
-        classId: 'df_guardian' as const,
-        moduleId: 'df_guardian_mod_nearest_strike',
+        classId: 'at_swordsman' as const,
+        moduleId: 'at_swordsman_mod_single_slash',
         expectEffect: 'damage' as const,
         expectDamageType: 'physical' as const,
       },

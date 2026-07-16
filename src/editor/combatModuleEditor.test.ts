@@ -193,10 +193,49 @@ describe('CombatModuleEditorStep (R9g UI)', () => {
     expect(host.textContent).toContain('効果範囲');
     expect(host.textContent).toContain('効果範囲の形式');
     expect(host.textContent).toContain('攻撃間隔（秒）');
+    expect(host.textContent).toContain('runtimeEffect');
     expect(host.textContent).toContain('合成説明');
     expect(host.querySelector('button.editor-btn-primary')?.textContent).toBe(
       '保存',
     );
+  });
+
+  it('R12g-d1: edits and keeps M2 runtimeEffect flatAmount through draft', () => {
+    const gameData = loadGameData();
+    let draft = combatModulesDraftFromModules(
+      Object.values(gameData.combatModuleRegistry),
+    );
+    const onDraftChange = vi.fn((next: CombatModuleDef[]) => {
+      draft = next;
+    });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const step = new CombatModuleEditorStep(host, {
+      getDraft: () => draft,
+      classRegistry: gameData.classRegistry,
+      onDraftChange,
+      onSave: vi.fn(),
+      saving: false,
+    });
+
+    const moduleSelect = host.querySelectorAll('select')[1];
+    moduleSelect!.value = 'df_guardian_mod_guard_focus';
+    moduleSelect!.dispatchEvent(new Event('change'));
+    step.refresh();
+
+    const flatInput = [...host.querySelectorAll('input')].find((input) =>
+      input.closest('.editor-field')?.textContent?.includes('flatAmount'),
+    );
+    expect(flatInput).toBeTruthy();
+    flatInput!.value = '25';
+    flatInput!.dispatchEvent(new Event('change'));
+    const m2 = findCombatModuleDraft(draft, 'df_guardian_mod_guard_focus');
+    expect(m2?.runtimeEffect).toEqual({
+      kind: 'healOnEnemyAttackHpHit',
+      flatAmount: 25,
+    });
+    expect(validateCombatModulesDraftForSave(draft)).toBeNull();
   });
 
   it('updates draft when aoe radius changes', () => {

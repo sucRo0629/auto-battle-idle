@@ -10,8 +10,8 @@ import type { DamageAppliedEvent } from './damageAppliedEvent.ts';
 import type { CombatantState, GameData, StageDef } from './types.ts';
 import {
   DF_GUARDIAN_M2_COMBAT_MODULE_ID,
-  IRON_GUARDIAN_M2_SELF_HEAL_FLAT_AMOUNT,
   getResolvedBasicCombatModuleId,
+  resolveIronGuardianM2SelfHealFlatAmount,
 } from './ironGuardianM2.ts';
 
 const levelCurves = loadLevelCurves(levelCurvesJson);
@@ -129,6 +129,10 @@ describe('ironGuardianM2 integration (R12g-b3)', () => {
 
   it('M2 selected: skill hit damage heals in same damage path (ally + enemy symmetry)', () => {
     const gameData = loadGameData();
+    const m2Heal = resolveIronGuardianM2SelfHealFlatAmount(
+      gameData.combatModuleRegistry,
+    );
+    expect(m2Heal).toBeDefined();
     const events: DamageAppliedEvent[] = [];
     const engine = createEngine(gameData, {
       onDamageEvent: (event) => events.push(event),
@@ -148,7 +152,7 @@ describe('ironGuardianM2 integration (R12g-b3)', () => {
     expect(allyHit).toBeDefined();
     if (allyHit) {
       expect(afterAllyHp).toBe(
-        beforeAllyHp - allyHit.hpDamage + IRON_GUARDIAN_M2_SELF_HEAL_FLAT_AMOUNT,
+        beforeAllyHp - allyHit.hpDamage + m2Heal!,
       );
     }
 
@@ -165,7 +169,7 @@ describe('ironGuardianM2 integration (R12g-b3)', () => {
     expect(enemyHit).toBeDefined();
     if (enemyHit) {
       expect(enemyGuardian.hp).toBe(
-        beforeEnemyHp - enemyHit.hpDamage + IRON_GUARDIAN_M2_SELF_HEAL_FLAT_AMOUNT,
+        beforeEnemyHp - enemyHit.hpDamage + m2Heal!,
       );
     }
   });
@@ -184,6 +188,9 @@ describe('ironGuardianM2 integration (R12g-b3)', () => {
 
   it('multi-hit triggers exactly once per hit; barrier-only, lethal, and dotTick do not trigger', () => {
     const gameData = loadGameData();
+    const m2Heal = resolveIronGuardianM2SelfHealFlatAmount(
+      gameData.combatModuleRegistry,
+    )!;
     const events: DamageAppliedEvent[] = [];
     const engine = createEngine(gameData, {
       onDamageEvent: (event) => events.push(event),
@@ -214,7 +221,7 @@ describe('ironGuardianM2 integration (R12g-b3)', () => {
     expect(skillHitEvents.length).toBe(2);
     const multiHitDamage = skillHitEvents.reduce((sum, event) => sum + event.hpDamage, 0);
     expect(afterMultiHit).toBe(
-      beforeMultiHit - multiHitDamage + IRON_GUARDIAN_M2_SELF_HEAL_FLAT_AMOUNT * 2,
+      beforeMultiHit - multiHitDamage + m2Heal * 2,
     );
 
     guardian.hp = 220;

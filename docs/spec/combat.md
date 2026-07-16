@@ -67,6 +67,20 @@
 
 Wave ごとに各兵科へ **2 方式** を選択する。全兵科を「単体 / 複数」に統一 **しない**。単なる倍率違い **禁止** — 対象数、射程、位置取り、Hit 構造、行動内容、防護方法、回復方法など、兵科に適した軸で差を付ける。
 
+**防護・軽減・自己強化などの状態効果（原則）:**
+
+- CombatModule の自己 / 味方への防護・軽減・強化は、**選択中ずっと有効な永続**を原則とする
+- **周期バフ**（攻撃間隔ごとに duration 付き buff を付け直す・更新するだけの設計）は **実装しない**
+- `attackIntervalSec` は攻撃・回復・撃発行動の周期、または HUD 攻撃間隔表示の正本であり、**期間バフの再付与タイマーとしては使わない**
+- Hit ごと・被弾ごとなど **イベント起点**の効果（例: 鉄衛士 M2 の Hit ごと自己回復）は周期バフではない。本原則の対象外
+- 例外が必要なら、その Module ごとに仕様へ明示する（黙って周期バフへ戻さない）
+
+**旧 active 廃止との関係（方針）:**
+
+- 旧 active は CD / gauge / smart 発火条件 / SkillHold 待ちなどにより、**効果が有効なタイミングにスキルが実行されない**ことがあり得た
+- active 枠を廃し CombatModule を **通常行動（攻撃間隔到達で実行）** と **選択中永続効果**へ寄せるのは、その「欲しいときに効かない」を減らす意味もある
+- 方式差は「撃てた／撃てなかった」の運や待ちではなく、**選択した方式が Wave 中ずっと効いていること**で読む
+
 **戦闘方式が定義しうる要素:**
 
 - 行動種別
@@ -302,6 +316,8 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 `effectiveDef = max(0, (def + defFlatSum) × defMulProduct)`  
 `effectiveMaxHp = max(0, (maxHp + hpFlatSum) × hpMulProduct)`  
 `damageTakenMul = max(0, (1 + damageTakenFlatSum) × damageTakenMulProduct)` × パッシブ `damageTakenMultiplier`
+
+`damageTaken` status に `damageTakenDamageTypes` がある場合、その属性のダメージ計算にのみ乗算する（未指定 = 全属性）。R12g-d1 鉄衛士 M1 物理堅守用。
 
 固定値（flat）: 同一 stat 内で buff は `+flatBonus`、debuff は `-flatBonus` を代数和。  
 係数（multiplier）: 同一 stat 内で乗算。

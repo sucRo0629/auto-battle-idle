@@ -35,7 +35,7 @@ import {
 } from "./damageAppliedEvent.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveBasicAttackSkillIdFromGameData } from "./data/resolveCombatModuleBasic.ts";
-import { tryIronGuardianM2SelfHeal } from "./ironGuardianM2.ts";
+import { tryIronGuardianM2SelfHeal, syncIronGuardianModuleStatusEffects } from "./ironGuardianM2.ts";
 import {
   clearDfPaladinM2RuntimeState,
   type DfPaladinM2ProtectionResult,
@@ -402,7 +402,7 @@ export class BattleEngine {
     meta?: DamageAppliedCallbackMeta,
   ): void {
     if (meta?.event) {
-      tryIronGuardianM2SelfHeal(meta.event, actor, target);
+      tryIronGuardianM2SelfHeal(meta.event, actor, target, this.gameData);
     }
     if (shouldTriggerCounterRetaliation(meta, amount)) {
       const counterCallbacks = {
@@ -1867,6 +1867,10 @@ export class BattleEngine {
         activeSkillIds,
       );
       initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives);
+      syncIronGuardianModuleStatusEffects(
+        ally,
+        this.gameData.combatModuleRegistry,
+      );
     }
   }
 

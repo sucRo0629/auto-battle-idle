@@ -186,6 +186,12 @@ import {
   isDfPaladinM2Selected,
   type DfPaladinM2ProtectionResult,
 } from "../dfPaladinM2.ts";
+import {
+  DF_GUARDIAN_M1_COMBAT_MODULE_ID,
+  DF_GUARDIAN_M2_COMBAT_MODULE_ID,
+  isIronGuardianM1Selected,
+  isIronGuardianM2Selected,
+} from "../ironGuardianM2.ts";
 
 interface ApplyResolvedEffectStepResult {
   applied: boolean;
@@ -342,6 +348,34 @@ export class SkillExecutor {
     return true;
   }
 
+  private tryExecuteIronGuardianStance(
+    actor: CombatantState,
+    cd: SkillCooldown,
+    moduleId: typeof DF_GUARDIAN_M1_COMBAT_MODULE_ID | typeof DF_GUARDIAN_M2_COMBAT_MODULE_ID,
+    statusLabel: string,
+  ): boolean {
+    const module = this.gameData.combatModuleRegistry[moduleId];
+    const intervalSec = module?.attackIntervalSec;
+    if (!(intervalSec !== undefined && intervalSec > 0)) return false;
+    cd.remaining = intervalSec;
+    this.deps.onBasicAttackExecuted?.(actor.id);
+    this.deps.onCombatActionExecuted?.(actor, {
+      slotKind: "basic",
+      skillId: moduleId,
+    });
+    this.emit({
+      type: "skill",
+      actorId: actor.id,
+      targetId: actor.id,
+      skillId: moduleId,
+      skillName: module?.displayName ?? moduleId,
+      slotKind: "basic",
+      effect: "buff",
+      statusLabel,
+    });
+    return true;
+  }
+
   tryExecute(
     actor: CombatantState,
     cd: SkillCooldown,
@@ -353,6 +387,22 @@ export class SkillExecutor {
 
     if (cd.slotKind === "basic" && isDfPaladinM2Selected(actor)) {
       return this.tryExecuteDfPaladinM2Protection(actor, cd, allies, enemies);
+    }
+    if (cd.slotKind === "basic" && isIronGuardianM1Selected(actor)) {
+      return this.tryExecuteIronGuardianStance(
+        actor,
+        cd,
+        DF_GUARDIAN_M1_COMBAT_MODULE_ID,
+        "ironGuardianM1:stance",
+      );
+    }
+    if (cd.slotKind === "basic" && isIronGuardianM2Selected(actor)) {
+      return this.tryExecuteIronGuardianStance(
+        actor,
+        cd,
+        DF_GUARDIAN_M2_COMBAT_MODULE_ID,
+        "ironGuardianM2:stance",
+      );
     }
 
     const baseSkill = this.gameData.skillRegistry.actives[cd.skillId];
@@ -2277,6 +2327,21 @@ export class SkillExecutor {
           if (entryMultiplier === undefined && entryFlatBonus === undefined) {
             continue;
           }
+          const damageTakenDamageTypes =
+            entry.stat === "damageTaken" &&
+            effectDef.type === "buff" &&
+            effectDef.damageTakenDamageTypes &&
+            effectDef.damageTakenDamageTypes.length > 0
+              ? [...effectDef.damageTakenDamageTypes]
+              : undefined;
+          target.statusEffects = target.statusEffects.filter(
+            (existing) =>
+              !(
+                existing.skillId === skill.id &&
+                existing.stat === entry.stat &&
+                existing.kind === "buff"
+              ),
+          );
           const effect: StatusEffect = {
             id: `${skill.id}_${entry.stat}_${appliedAt}_${i}`,
             kind: "buff",
@@ -2284,8 +2349,13 @@ export class SkillExecutor {
             multiplier: entryMultiplier ?? 1,
             durationSec: duration,
             remainingSec: duration,
+            sourceId: actor.id,
+            skillId: skill.id,
             ...(entryFlatBonus !== undefined
               ? { flatBonus: Math.abs(entryFlatBonus) }
+              : {}),
+            ...(damageTakenDamageTypes !== undefined
+              ? { damageTakenDamageTypes }
               : {}),
           };
           target.statusEffects.push(effect);

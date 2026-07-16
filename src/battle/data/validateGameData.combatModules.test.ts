@@ -187,4 +187,68 @@ describe('combat module data (R5b)', () => {
   it('accepts real bundle with existing validate tests baseline', () => {
     expect(() => parseAndValidateGameDataJson(loadRealBundle())).not.toThrow();
   });
+
+  it('R12g-d1: parses iron guardian M1 permanent physical DR and M2 runtimeEffect', () => {
+    const parsed = parseAndValidateGameDataJson(loadRealBundle());
+    const m1 = parsed.combatModules.find(
+      (module) => module.id === 'df_guardian_mod_nearest_strike',
+    );
+    const m2 = parsed.combatModules.find(
+      (module) => module.id === 'df_guardian_mod_guard_focus',
+    );
+    expect(m1?.runtimeEffect).toEqual({
+      kind: 'physicalDamageTakenReduction',
+      takenMultiplier: 0.85,
+    });
+    expect(m2?.runtimeEffect).toEqual({
+      kind: 'healOnEnemyAttackHpHit',
+      flatAmount: 20,
+    });
+  });
+
+  it('rejects unknown runtimeEffect kind', () => {
+    const bundle = loadRealBundle();
+    const combatModules = structuredClone(bundle.combatModules);
+    const m2 = combatModules.find(
+      (module) => module.id === 'df_guardian_mod_guard_focus',
+    )!;
+    m2.runtimeEffect = {
+      kind: 'unknownKind' as 'healOnEnemyAttackHpHit',
+      flatAmount: 20,
+    };
+    expect(() =>
+      parseAndValidateGameDataJson({ ...bundle, combatModules }),
+    ).toThrow(/unknown runtimeEffect kind/);
+  });
+
+  it('rejects runtimeEffect flatAmount <= 0 / NaN', () => {
+    const bundle = loadRealBundle();
+    for (const flatAmount of [0, -1, Number.NaN]) {
+      const combatModules = structuredClone(bundle.combatModules);
+      const m2 = combatModules.find(
+        (module) => module.id === 'df_guardian_mod_guard_focus',
+      )!;
+      m2.runtimeEffect = { kind: 'healOnEnemyAttackHpHit', flatAmount };
+      expect(() =>
+        parseAndValidateGameDataJson({ ...bundle, combatModules }),
+      ).toThrow(/flatAmount/);
+    }
+  });
+
+  it('rejects physicalDamageTakenReduction takenMultiplier out of range', () => {
+    const bundle = loadRealBundle();
+    for (const takenMultiplier of [0, -0.1, 1.1, Number.NaN]) {
+      const combatModules = structuredClone(bundle.combatModules);
+      const m1 = combatModules.find(
+        (module) => module.id === 'df_guardian_mod_nearest_strike',
+      )!;
+      m1.runtimeEffect = {
+        kind: 'physicalDamageTakenReduction',
+        takenMultiplier,
+      };
+      expect(() =>
+        parseAndValidateGameDataJson({ ...bundle, combatModules }),
+      ).toThrow(/takenMultiplier/);
+    }
+  });
 });

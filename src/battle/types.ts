@@ -454,6 +454,11 @@ export interface StatusEffect {
   blazingFlameMagicTakenPerStack?: number;
   /** dfPaladinM2Protection overlay: 魔法被ダメ追加倍率（全属性軽減とは別乗算） */
   dfPaladinM2MagicTakenMultiplier?: number;
+  /**
+   * damageTaken 軽減/増加の適用属性。未指定 = 全属性。
+   * R12g-d1: 鉄衛士 M1 物理堅守用。
+   */
+  damageTakenDamageTypes?: DamageType[];
 }
 
 /** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */
@@ -1400,6 +1405,11 @@ export interface BuffSkillEffect extends SkillEffectCommon {
   followUpDefDebuffMultiplier?: number;
   /** allyAttackFollowUp: DEF debuff 持続秒（未指定 5） */
   followUpDefDebuffDurationSec?: number;
+  /**
+   * buffStat が damageTaken のとき、軽減/増加を適用する属性。
+   * 未指定 = 全属性。R12g-d1 鉄衛士 M1。
+   */
+  damageTakenDamageTypes?: DamageType[];
 }
 
 export interface BasicAttackTransformSkillEffect extends SkillEffectCommon {
@@ -1660,6 +1670,25 @@ export interface CombatModuleActionDef extends SkillSharedTargetingFields {
   attackMethod?: AttackMethod;
 }
 
+/**
+ * CombatModule 専用の Hit トリガー / 選択中永続効果等（大規模汎用 trigger DSL ではない）。
+ * R12g-d1: 鉄衛士 M1 物理軽減・M2 固定自己回復の所有者。
+ */
+export type CombatModuleRuntimeEffect =
+  | {
+      kind: 'healOnEnemyAttackHpHit';
+      /** Hit ごとの固定自己回復量（> 0）。R12i で調整 */
+      flatAmount: number;
+    }
+  | {
+      kind: 'physicalDamageTakenReduction';
+      /**
+       * 物理被ダメ倍率（0 < takenMultiplier ≤ 1 が軽減）。
+       * 選択中は永続。R12i で調整。
+       */
+      takenMultiplier: number;
+    };
+
 /** R5 最小戦闘方式。R5c で ActiveSkillDef へ合成し basic スロットで実行 */
 export interface CombatModuleDef {
   id: string;
@@ -1669,6 +1698,8 @@ export interface CombatModuleDef {
   /** 秒単位攻撃間隔（初回 CD・継続周期の正本候補。R5c で SkillExecutor 接続） */
   attackIntervalSec: number;
   action: CombatModuleActionDef;
+  /** 任意。通常 action では表現しない被 Hit リアクション等 */
+  runtimeEffect?: CombatModuleRuntimeEffect;
 }
 
 /** R5 最小縦切りの module 対象兵科（4 兵科 × 2 方式） */

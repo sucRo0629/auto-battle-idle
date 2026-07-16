@@ -2,38 +2,13 @@
   {
     "id": "df_guardian_mod_nearest_strike",
     "classId": "df_guardian",
-    "displayName": "近接打撃（仮）",
-    "description": "最近傍の敵へ単体物理攻撃。R5b プレースホルダー。",
-    "attackIntervalSec": 2.5,
-    "action": {
-      "effect": [
-        {
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          },
-          "type": "damage",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ],
-      "effectRange": {
-        "form": "single",
-        "applyMode": "instant"
-      },
-      "targetShape": "single",
-      "attackMethod": "melee"
-    }
-  },
-  {
-    "id": "df_guardian_mod_guard_focus",
-    "classId": "df_guardian",
-    "displayName": "防御姿勢（仮）",
-    "description": "自身の DEF を一時強化。Barrier は既存 basic 安全例が無いため buff で代替。R5b プレースホルダー。",
+    "displayName": "物理堅守",
+    "description": "選択中、自身への物理ダメージを常時軽減する。魔法ダメージは同率では軽減しない。",
     "attackIntervalSec": 3,
+    "runtimeEffect": {
+      "kind": "physicalDamageTakenReduction",
+      "takenMultiplier": 0.85
+    },
     "action": {
       "effect": [
         {
@@ -43,8 +18,38 @@
           "type": "buff",
           "buffSubKind": "stat",
           "buffStat": "def",
-          "buffMultiplier": 1.2,
-          "buffDurationSec": 4
+          "buffMultiplier": 1,
+          "buffDurationSec": 0.1
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single"
+    }
+  },
+  {
+    "id": "df_guardian_mod_guard_focus",
+    "classId": "df_guardian",
+    "displayName": "不屈",
+    "description": "敵の攻撃Hitで実HPダメージを受けたとき、各Hitごとに自身を固定量回復する。BarrierのみのHitでは発動しない。",
+    "attackIntervalSec": 3,
+    "runtimeEffect": {
+      "kind": "healOnEnemyAttackHpHit",
+      "flatAmount": 20
+    },
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "buff",
+          "buffSubKind": "stat",
+          "buffStat": "def",
+          "buffMultiplier": 1,
+          "buffDurationSec": 0.1
         }
       ],
       "effectRange": {

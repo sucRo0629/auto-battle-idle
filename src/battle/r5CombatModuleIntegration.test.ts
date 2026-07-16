@@ -377,9 +377,13 @@ describe('R5 combat module integration (R5g)', () => {
 
     const physicalDamage = basicSkillEvents.filter(
       (e) =>
-        e.effect === 'damage' &&
-        (e.skillId.startsWith('df_guardian_') ||
-          e.skillId.startsWith('at_swordsman_')),
+        e.effect === 'damage' && e.skillId.startsWith('at_swordsman_'),
+    );
+    const guardianStance = basicSkillEvents.filter(
+      (e) =>
+        e.effect === 'buff' &&
+        (e.skillId === 'df_guardian_mod_guard_focus' ||
+          e.skillId === 'df_guardian_mod_nearest_strike'),
     );
     const magicDamage = basicSkillEvents.filter(
       (e) => e.effect === 'damage' && e.skillId.startsWith('at_sorcerer_'),
@@ -389,6 +393,7 @@ describe('R5 combat module integration (R5g)', () => {
     );
 
     expect(physicalDamage.length).toBeGreaterThan(0);
+    expect(guardianStance.length).toBeGreaterThan(0);
     expect(magicDamage.length).toBeGreaterThan(0);
     expect(allyHeals.length).toBeGreaterThan(0);
 
@@ -424,7 +429,17 @@ describe('R5 combat module integration (R5g)', () => {
       guardianFirstTime !== undefined &&
       clericFirstTime !== undefined
     ) {
-      expect(swordsmanFirstTime).toBeLessThan(guardianFirstTime);
+      // 接敵遅延があるため、間隔そのものは module data で固定する
+      const swordsmanInterval =
+        gameData.combatModuleRegistry.at_swordsman_mod_single_slash
+          .attackIntervalSec;
+      const guardianInterval =
+        gameData.combatModuleRegistry.df_guardian_mod_guard_focus
+          .attackIntervalSec;
+      const clericInterval =
+        gameData.combatModuleRegistry.sp_cleric_mod_party_mend.attackIntervalSec;
+      expect(swordsmanInterval).toBeLessThan(guardianInterval);
+      expect(guardianInterval).toBeLessThan(clericInterval);
       expect(guardianFirstTime).toBeLessThan(clericFirstTime);
     }
 

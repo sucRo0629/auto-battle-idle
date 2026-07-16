@@ -35,6 +35,8 @@
 
 旧 **Lv0 / Lv10 / Lv20**、**passive_1〜4 / active_1〜4** 枠、**習得解放**、**CD / gauge** は新仕様の正本から **外す**。
 
+**active 廃止の意図（方針）:** 旧 active は CD / gauge / smart 条件 / SkillHold 待ちなどにより、**効果が欲しいタイミングに発動しない**ことが起き得た。戦闘方式（CombatModule）へ寄せるのは、選択中の通常行動と選択中永続効果を **攻撃間隔・選択状態に沿って確実に効かせる**ためでもある（詳細は [combat.md §戦闘方式](combat.md#戦闘方式)）。
+
 ### 旧 active / passive の再分類
 
 旧スキル JSON は **素材** として次へ再分類する。旧枠・旧レベル・旧 CD・旧ゲージは **引き継がない**。
@@ -160,7 +162,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 層 | 担うもの |
 | -- | -------- |
 | **兵科本体** | 基礎ステ方向、攻撃間隔・射程の骨格、**固定優先ターゲット**、固定ダメージ属性、分類（Kill / Survival） |
-| **CombatModule（×2）** | 処理の形（集中/分散、侵入/非侵入、重点/広域）。**単なる倍率違い禁止**。M1 と M2 を同時には使えない |
+| **CombatModule（×2）** | 処理の形（集中/分散、侵入/非侵入、重点/広域）。**単なる倍率違い禁止**。M1 と M2 を同時には使えない。防護・軽減・自己強化は **選択中永続が原則**（周期バフ禁止 — [combat.md §戦闘方式](combat.md#戦闘方式)） |
 | **作戦内 Passive** | 方式の深掘り、または隣接補完。取得しなくても基本役割が成立する |
 
 ### Passive 分配原則
@@ -289,6 +291,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | Passive | 自己耐久深掘り。追加取得時のみ、自己防護を条件付き・限定的に味方へ波及（護法士より劣る） |
 | 持たせない | 常設の味方防護、強い妨害、ターゲット強制変更、反撃主軸、前線外への高い干渉 |
 | D / E | **直接担当として数えない**。自身への支援要求を減らし、他味方へ支援資源を回す間接貢献 |
+| R12g-d1 data | `data/combat-modules/df_guardian.json` — M1 `df_guardian_mod_nearest_strike`（`runtimeEffect.physicalDamageTakenReduction`・選択中永続）、M2 `df_guardian_mod_guard_focus`（`runtimeEffect.healOnEnemyAttackHpHit`）。数値は仮。**Backend 完了 / Player 未完了** |
 
 > **legacy との差分（記録）:** Legacy 節の「鉄衛士は barrier / HoT を持たない」および R2 候補表の方式 B「反撃圧」は、本節の M2 不屈型・反撃主軸禁止と食い違う。**新仕様の正本は本節。** Legacy 説明は現行 production データの説明に留める。
 
@@ -2274,7 +2277,7 @@ interface CharacterBuild {
 
 | サブ種別 (`buffSubKind`) | 対象・効果                                                                  | 主なパラメータ                                                                                            | 重複・スタックルール                                                                                                                                                                    | 備考                                                                                                                                                                    |
 | :----------------------- | :-------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stat`                   | ステータス（`StatusEffectStat` または `damageTaken`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus`<br>`buffStatModifiers?`                                 | `multiplier` は乗算、`flatBonus` は代数和。複数ステを別々に上げるときは `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1 ステのみは従来 3 フィールドでも可。 | `hp` は maxHp 上昇（`effectiveMaxHp`）。`damageTaken`（`StatBuffTarget`）の減少（ダメージ軽減）や `attackSpeed` の上昇もこれに含みます。                                        |
+| `stat`                   | ステータス（`StatusEffectStat` または `damageTaken`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus`<br>`buffStatModifiers?`<br>`damageTakenDamageTypes?` | `multiplier` は乗算、`flatBonus` は代数和。同一 `skillId`+`stat` の再付与は置換（重ねがけしない）。複数ステを別々に上げるときは `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1 ステのみは従来 3 フィールドでも可。 | `hp` は maxHp 上昇（`effectiveMaxHp`）。`damageTaken`（`StatBuffTarget`）の減少（ダメージ軽減）や `attackSpeed` の上昇もこれに含みます。`damageTakenDamageTypes` は `damageTaken` 専用（例: `["physical"]`）。未指定 = 全属性。 |
 | `barrier`                | ダメージを身代わりに受けるバリアを付与                                      | `ResourceAmountSpec`                                                                                      | 既定は max(既存, 付与量)。`barrierStack: true` で加算。                                                                                                                                 | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。                                                                                                    |
 | `block`                  | 物理直接ダメージのブロック率を上昇                                          | `chance`（0〜1）                                                                                          | 複数ソースは加算（上限 1.0）。                                                                                                                                                          | 成功時、DEF 適用後の物理直接ダメージを一定割合カット。DoT は対象外。魔法 block は Paladin 後半 passive 候補で、採用時は新フィールドまたは新 effect として別途定義する。 |
 | `evasion`                | 直接ダメージ（物理/魔法）の回避率を上昇                                     | `chance`（0〜1）                                                                                          | 複数ソースは加算（上限 1.0）。                                                                                                                                                          | 成功時、直接ダメージを完全に無効化。DoT は対象外。                                                                                                                      |
@@ -2501,6 +2504,12 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `danger`     | **R12g-c3** — 集中攻撃 danger targeting。`side` + `maxTargets`（`>= 1`）+ `windowSec`（`>= 0`）。主判定は [combat.md](combat.md) §Danger Targeting。danger signal 全 0 時は対象なし。射程・距離制限なし。runtime 解決に `TargetingRuntimeContext` が必要                                                                                                                      |
 
 **`attackMethod`（通常攻撃 / 戦闘方式）:** `ActiveSkillDef` および `CombatModuleDef.action` の任意フィールド。`"melee"` | `"ranged"`。**primary effect が `damage` のとき必須**。heal-only basic / buff module は未設定。`resolveUnitAttackMethod(unit, gameData)` は basic スロットの `skillId` から解決（CombatModule 差し替え対応）。接近・射程計算は従来どおり `traits.rangePx` / effect `range`。
+
+**`CombatModuleDef.runtimeEffect`（任意・R12g-d1）:** 通常 `action` では表現しない選択中永続効果・被 Hit リアクション等。現行 kind:
+- `physicalDamageTakenReduction`（`takenMultiplier` ∈ (0, 1]）— 鉄衛士 M1。選択中は永続物理被ダメ軽減
+- `healOnEnemyAttackHpHit`（`flatAmount > 0`）— 鉄衛士 M2。固定自己回復量の所有者
+
+大規模汎用 trigger DSL ではない。防護・軽減系は [combat.md §戦闘方式](combat.md#戦闘方式) の **選択中永続原則**（周期バフ禁止）に従う。
 
 ### アンカーの意味
 
