@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-b3 Backend 完了**（鉄衛士 M2 固定自己回復 runtime の実経路統合テスト・デバッグ検証まで完了）。公式次は **R12g-c**（護法士 M2 danger targeting）。
-- **次の再開タスク:** **R12g-c**（護法士 M2 danger targeting）。8兵科データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
+- **新ロードマップ現在地:** **R12g-c Backend 完了（設計）**。鉄衛士 M2 の damage event 基盤・runtime に続き、護法士 M2 danger targeting の一次ソース調査と最小契約を確定した。Player は未達。
+- **次の再開タスク:** **R12g-c 後続実装**（runtime API → TargetSpec 拡張 → 護法士 M2 接続 → test/debug）。8兵科データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8288,7 +8288,7 @@ interface DamageAppliedEvent {
 | **R12g-b1** | `DamageAppliedEvent` 型導入・全 emission 点統一（`lethal` / `hitIndex` / `sourceKind`） | **Backend 完了** |
 | **R12g-b2** | 鉄衛士 M2 runtime（`ironGuardianM2.ts` + module ゲート + 固定 heal） | 未着手 |
 | **R12g-b3** | 統合テスト・戦闘ログ/デバッグでの発動理由検証 |
-| **R12g-c** | 護法士 M2 danger targeting（**本タスクのスコープ外**） |
+| **R12g-c** | 護法士 M2 danger targeting（**本節で Backend 設計完了**。production 実装は後続） |
 | **R12g 本流** | 8 兵科データ入力（M2 数値・JSON は b2 後） |
 
 delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: delayedPoolTick`）。鉄衛士 M2 トリガー対象外。
@@ -8325,4 +8325,144 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 
 #### 105.2.15 次タスク
 
-**R12g-b2** — 鉄衛士 M2 runtime（`DamageAppliedEvent` 購読・固定自己回復）。
+**R12g-c** — 護法士 M2 danger targeting（調査・詳細設計）。
+
+### 105.3 R12g-c — 護法士 M2 danger targeting（Backend 完了・設計）
+
+**目的:** 護法士 M2 が「現在集中攻撃を受けている味方」を **被弾前に** 防護するための target 契約を、一次ソースに基づいて確定する。**HP 割合最低 / PHT / 直近被弾 / 自己防御** への置換は禁止。
+
+#### 105.3.1 読んだ production source
+
+1. `src/battle/types.ts`
+2. `src/battle/BattleEngine.ts`
+3. `src/battle/skills/pendingSkillHits.ts`
+4. `src/battle/skills/SkillExecutor.ts`（該当箇所）
+5. `src/battle/skills/targeting.ts`（該当箇所）
+6. `src/battle/resolveApproachBattleX.ts`（該当箇所）
+7. `src/battle/pendingIncomingDamage.ts`（該当箇所）
+
+#### 105.3.2 一次ソース確認
+
+| 項目 | 結論 |
+| ---- | ---- |
+| Attack target の所有者 | **保持フィールドなし**。主に `resolveEnemyChaseTargetPlayer()` / `resolveEnemyAttackTargetPlayer()` が都度解決 |
+| target 確定タイミング | Chase / Attack 判定時に毎 tick 再計算。`pending Hit` 化されたものは **予約時点の targetId を保持** |
+| 各 Hit で再選定するか | 即時 single/aoe/multiLock はその effect 解決時に確定。`pierce` / `chain` / `scatter` は `resolveEffectResolution()` で `waves[]` を先に確定し、pending 化後は再選定しない |
+| MultiLock の所有者 | `SkillEffectResolution.waves[0].targets[]` → 必要時 `PendingSkillHit.targets[]` |
+| pending Hit の所有者 | `BattleEngine.pendingHitQueue` |
+| pending Hit が持つ情報 | `applyAtBattleSec` / `actorId` / `skillId` / `effectDef` / `effectIndex` / `slotKind` / `hitIndex` / `targets[]` / 一部 suppress フラグ |
+| apply 時刻 | **ある**（`applyAtBattleSec`） |
+| hitIndex | **ある** |
+| 複数対象の区別 | **ある**（`targets[]` 各 `targetId`） |
+| 対象死亡時 | queue から事前除去はしない。apply 時に `target?.isAlive` を確認し、死者は skip |
+| projectile 相当の遅延 Hit | **含む**（`applyFrame` / spread 由来 pending） |
+| Attack 由来と derived 由来 | `PendingSkillHit` 単体では明示区別なし。`effectDef.type` は持つが sourceKind は持たない |
+| DoT tick 混在 | `pendingHitQueue` には DoT tick は入らない。DoT は status tick 別経路 |
+
+#### 105.3.3 danger targeting へ使える既存情報
+
+- **現在狙っている敵数:** 取得可。各敵に対して `resolveEnemyAttackTargetPlayer()` を評価し、同じ味方を返す敵 ID 数を数える
+- **pending 中の異なる敵数:** 取得可。`pendingHitQueue` 内の `actorId` を味方ごとに集合化できる
+- **pending Hit 数:** 取得可。`PendingSkillHit.targets[]` と `hitIndex` を利用
+- **最短 apply 時刻:** 取得可。味方ごとに `min(applyAtBattleSec)` を取れる
+- **後衛を距離無制限で選ぶ:** 取得可。danger resolver が `TargetSpec` 既存の距離 order を使わず、味方全体 pool を直接評価すればよい
+
+#### 105.3.4 予測 damage の扱い
+
+- `pendingIncomingDamage.ts` に `estimatePendingDamageToTarget()` があり、`resolveDamage` → 防御軽減 → `damageTaken` 倍率 → 物理 block 期待値 → 回避期待値までは既存再利用できる
+- ただし **Barrier / wardBarrier / damageReduction / lowHpCover / danger 防護自身の循環** を完全には反映しない
+- よって **予測 damage を danger targeting の主判定には採用しない**
+- 既存 estimator は将来の補助比較または debug 表示の候補に留める
+
+#### 105.3.5 危険度の最小規則（推奨）
+
+1. 主判定 = **現在その味方を狙っている異なる敵数**
+2. 次判定 = **近い時間窓に pending している異なる敵数**
+3. 補助 = **pending Hit 数**
+4. 補助 = **最短 applyAtBattleSec**
+5. tie-break 限定で `hp / effectiveMaxHp`、最後に `combatant.id`
+
+**不採用:**
+
+- HP 割合最低
+- 現在 HP 最低
+- Barrier 最低
+- PHT
+- 直近被弾
+- 後衛固定優先
+- 支援役固定優先
+
+#### 105.3.6 魔法 Attack の扱い
+
+- 魔法特化は **targeting と effect 強度を分離**する
+- 主判定は集中度のまま維持し、**魔法 pending の有無は同値時の補助加点 / tie-break 候補**に留める
+- 物理集中対象を捨てて単一魔法対象を常に優先する規則は **今回確定しない**
+
+#### 105.3.7 対象数・tie-break
+
+| 項目 | 推奨 |
+| ---- | ---- |
+| 基本対象数 | **1 体** |
+| 少数化 | 今回は広げない。2 体化は将来 Passive / Module 上位拡張候補として分離 |
+| 同値 tie-break 1 | pending 中の異なる敵数 |
+| 同値 tie-break 2 | pending Hit の最短 applyAt |
+| 同値 tie-break 3 | pending Hit 数 |
+| 同値 tie-break 4 | `hp / effectiveMaxHp`（主判定に昇格させない） |
+| 最終決定 | `combatant.id` の決定的順序 |
+
+#### 105.3.8 Targeting 実装形状（推奨）
+
+- 第一候補: **最小 `TargetSpec` 拡張**
+  - 例: `kind: "danger"`, `side`, `maxTargets`, `windowSec`
+  - runtime は `targeting.ts` の resolver 1 箇所へ閉じる
+- 不採用寄り: module ID で護法士 M2 専用 resolver を分岐
+  - 理由: authoring 不可、再利用不可、ハードコード増加
+- 保留: 大きな dynamic targeting rule system
+  - 理由: R12g-c の範囲を超える
+
+#### 105.3.9 danger targeting に不足するもの
+
+| 種別 | 不足 |
+| ---- | ---- |
+| 型 | `TargetSpec` に danger 系の最小表現 |
+| runtime API | 「現在 target 中の異なる敵数」「pending 中の異なる敵数 / Hit 数 / 最短 applyAt」を味方単位で返す read-only 集計 |
+| debug | 対象選定理由を戦闘ログまたは debug 表示へ出す理由文字列 |
+
+#### 105.3.10 後続小タスク分割
+
+| ID | 内容 |
+| -- | ---- |
+| **R12g-c1** | docs 正本化（本節 / `combat.md` / `classes-and-skills.md` / `phase-roadmap.md`） |
+| **R12g-c2** | danger 集計 runtime API（現在 target 数 / pending 異敵数 / 最短 apply） |
+| **R12g-c3** | 最小 `TargetSpec` 拡張と resolver 実装 |
+| **R12g-c4** | 護法士 M2 runtime 接続 |
+| **R12g-c5** | test / debug 理由表示 |
+
+#### 105.3.11 完了判定
+
+**Backend（今回の調査・設計タスク）完了:**
+
+- Attack target の所有者と確定時点を一次ソースで確認
+- pending Hit の所有者と情報量を確認
+- 集中攻撃数を算出可能と確認
+- 予測 damage は補助止まりと確定
+- HP 割合代替を不採用として維持
+- 後衛を距離無制限で選べる設計を確定
+- 危険度の最小規則・対象数・tie-break・実装形状を確定
+- docs に反映
+
+**Player（R12g-c 全体・後続実装後）完了:**
+
+- 護法士 M2 が現在集中攻撃を受けている味方を防護する
+- 後衛も対象になる
+- HP 割合最低対象へ固定されない
+- 危険対象が変われば防護対象も切り替わる
+- 同じ状態なら同じ対象を選ぶ
+- 敵側護法士でも同じ規則
+- 戦闘ログまたは debug で選定理由を確認できる
+
+#### 105.3.12 今回の変更境界
+
+**変更:** `current-task.md`、`phase-roadmap.md`、`combat.md`、`classes-and-skills.md`
+
+**未変更:** production code / JSON / test / editor / UI / 数値 / 名称 / ID / VFX / Stage / Wave データ / 鉄衛士 M2

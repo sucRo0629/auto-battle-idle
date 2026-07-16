@@ -459,6 +459,60 @@ hp = max(0, hp - remaining)
 
 **`pendingIncomingDamage`（fire 条件）** — 敵 origin の `pendingHitQueue` 内、味方対象 `damage` を `windowSec` 以内に評価。見積もり = `resolveDamage` → `applyDefenseMitigation` → `damageTaken` 倍率 → 物理は block 期待値・回避は期待値 `(1-p)×dmg`。バリア・障壁は見積もりに含めない。
 
+### Danger Targeting（R12g-c）
+
+護法士 M2 などの **被弾前防護** 用ターゲット規則。**回復 targeting ではない。** HP 割合最低、現在 HP 最低、Barrier 最低、PHT、直近被弾、支援役固定優先、後衛固定優先、護法士自身固定を **主判定に使わない**。
+
+#### 現行 runtime で使う情報
+
+- **現在 target:** `resolveEnemyChaseTargetPlayer` / `resolveEnemyAttackTargetPlayer` で都度解決する。Combatant に「現在 targetId」を保持する正本フィールドはない
+- **pending Hit:** `BattleEngine.pendingHitQueue` に `PendingSkillHit[]` として保持する
+- **予約情報:** `PendingSkillHit` は `applyAtBattleSec`、`actorId`、`effectDef`、`effectIndex`、`hitIndex`、`targets[]` を持つ
+- **重要:** `pierce` / `chain` / `scatter` は `resolveEffectResolution().waves[]` で先に target を確定し、pending 化後は再ターゲットしない。apply 時に死者だけ skip する
+
+#### danger の最小規則
+
+danger targeting の主判定は **集中攻撃** とする。
+
+1. **現在その味方を狙っている異なる敵数**
+2. **近い時間窓に pending している異なる敵数**
+3. **同時間窓の pending Hit 数**
+4. **最短 `applyAtBattleSec`**
+5. `hp / effectiveMaxHp`
+6. `combatant.id`
+
+**定義メモ:**
+
+- 「集中攻撃」は原則として **複数敵から同一味方が狙われている状態**
+- 同一敵の MultiHit は **敵数** としては重複カウントしない
+- ただし pending Hit 数では MultiHit 圧力を補助情報として別集計してよい
+- 主判定は **受けた damage** ではなく **これから受ける / 現在狙われている状態**
+
+#### 魔法特化との分離
+
+- 護法士 M2 は全属性防護だが魔法に特に強い
+- そのため **danger 判定** と **防護 effect 強度** を分離する
+- 魔法 attack は、必要なら **同値時の補助加点または tie-break** としてのみ扱う
+- 物理集中対象を完全に外し、単一魔法対象を常に優先する規則は R12g-c では確定しない
+
+#### 対象数
+
+- 基本は **1 体**
+- 2 体化・少数化拡張は将来の Passive / Module 拡張候補とし、R12g-c の基本規則には入れない
+- M1 の「複数対象耐久」領域を侵食しないため、常時複数保護を M2 の基準にはしない
+
+#### tie-break
+
+同じ戦闘状態なら同じ対象を返すため、乱数は禁止する。推奨順は次のとおり。
+
+1. pending 中の異なる敵数
+2. pending Hit の最短 `applyAtBattleSec`
+3. pending Hit 数
+4. `hp / effectiveMaxHp`
+5. `combatant.id`
+
+`hp / effectiveMaxHp` は **主判定へ昇格させない**。後衛を不利にする row / 距離 tie-break も使わない。
+
 **`fireConditionMatch`** — `all`（省略時 AND）または `any`（OR）。三重の障壁は `any`。
 
 HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 HP の右端から描画。HP 満タン時は tier1 を左から HP fill の上に重ねる。超過分 tier2（`max(0, barrierHp − maxHp)`）は従来どおり左端から明るい色で描画。

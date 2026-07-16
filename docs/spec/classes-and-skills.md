@@ -303,7 +303,12 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | M1/M2 | 同時には使えない |
 | Passive | 防護持続、対象切替、限定的な物理補完 |
 | 持たせない | HP 回復、厚い Barrier、鉄衛士以上の自己耐久 |
-| 未接続 | 危険対象判定の具体規則は **R12g**。PHT と同一とは限らない |
+| danger targeting | **集中攻撃の防護**が主判定。HP 割合最低 / 現在 HP 最低 / Barrier 最低 / PHT / 自己防御へ置換しない |
+| 後衛 | 距離制限なしで対象になり得る。formation row 固定優先にしない |
+| 基本対象数 | **1 体**。常時複数保護を標準にしない |
+| tie-break | pending 中の異なる敵数 → 最短 apply 時刻 → pending Hit 数 → HP 割合 → 決定的 ID 順 |
+| 魔法特化 | 対象選定と effect 強度を分離。魔法は同値時の補助加点候補に留める |
+| 未接続 | 具体 TargetSpec / runtime API / debug 表示は **R12g-c 後続実装**。PHT と同一とは限らない |
 
 #### `sp_cleric` 療養師
 
@@ -333,7 +338,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | ---- | ---- |
 | 方式名・Passive 名・ID | R12g 以降 |
 | 数値・倍率・秒数・コスト | R12i 中心（形状は R12g） |
-| 危険対象判定規則（護法士 M2 等） | R12g-c |
+| 危険対象判定規則（護法士 M2 等） | **R12g-c で設計確定**。runtime / test / debug 実装は後続 |
 | 鉄衛士 M2 の effect schema / 直接ダメージ型 | R12g-b で **DamageAppliedEvent** 契約確定（[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)）。runtime 実装は R12g-b1〜b2。JSON 数値入力は R12g 本流 |
 | R11b 現行 Passive 効果 | 維持義務なし。R12f 方向に合わせて再設計 |
 | R2 候補表の方式 A/B | 本節の M1/M2 方向が正。旧案は素材のみ |

@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** システム縦切り（R5〜R11）の上に、**データ再設計で「ゲームとして遊べる試作」を成立**させる（R12）。その後に初めて「繰り返し遊びたいか」を評価する（R13）。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R13 完了後**に再開する。
 
-**現在地:** **R12g-a Backend（調査）完了 / R12g-b Backend（設計）完了 / R12g-b1〜b3 Backend 完了**（`DamageAppliedEvent` emission 統一 + 鉄衛士 M2 runtime + 統合テスト/検証経路）。公式次は **R12g-c**（護法士 M2 danger targeting）。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
+**現在地:** **R12g-a Backend（調査）完了 / R12g-b Backend（設計）完了 / R12g-b1〜b3 Backend 完了 / R12g-c Backend 完了（設計）**。`DamageAppliedEvent` emission 統一 + 鉄衛士 M2 runtime + 護法士 M2 danger targeting 契約まで確定。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
 
 ---
 
@@ -1269,10 +1269,10 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | **R12g-b1** | `DamageAppliedEvent` 型・全 emission 統一（`lethal` / `hitIndex` / `sourceKind`） | **Backend 完了** |
 | **R12g-b2** | 鉄衛士 M2 runtime（固定自己回復・module ゲート） | **Backend 完了** |
 | **R12g-b3** | M2 統合テスト・デバッグ検証 | **Backend 完了** |
-| **R12g-c** | 護法士 M2 danger targeting | 未着手（b とは分離） |
+| **R12g-c** | 護法士 M2 danger targeting | **Backend 完了**（設計）。一次ソースで current target / pending Hit / 予測 damage 再利用範囲を確認し、最小 danger 規則・tie-break・TargetSpec 拡張方針を確定。Player 未達 |
 | **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | 未着手 |
 
-正本: [current-task.md §105](../ai-handoff/current-task.md)、[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)。
+正本: [current-task.md §105](../ai-handoff/current-task.md)、[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)、[combat.md §Danger Targeting](../spec/combat.md#danger-targetingr12g-c)、[classes-and-skills.md §df_paladin 護法士](../spec/classes-and-skills.md#df_paladin-護法士)。
 
 **Backend 完了（R12g 本流）:**
 
