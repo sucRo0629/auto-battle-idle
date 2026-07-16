@@ -2,16 +2,17 @@
   {
     "id": "at_swordsman_mod_single_slash",
     "classId": "at_swordsman",
-    "displayName": "単体斬撃（仮）",
-    "description": "最近傍の敵へ単体物理攻撃。R5b プレースホルダー。",
+    "displayName": "正面集中",
+    "description": "防御力が高い敵1体へ強い単体攻撃を行う。防御力の一部を無視する。複数対象へ分散しない。",
     "attackIntervalSec": 2.5,
     "action": {
       "effect": [
         {
           "target": {
-            "kind": "distance",
+            "kind": "stat",
             "side": "enemy",
-            "order": "nearest"
+            "stat": "def",
+            "order": "highest"
           },
           "type": "damage",
           "damageType": "physical",
@@ -32,32 +33,34 @@
   {
     "id": "at_swordsman_mod_pierce_slash",
     "classId": "at_swordsman",
-    "displayName": "貫通斬（仮）",
-    "description": "前方進行・全対象の物理攻撃。R5b プレースホルダー。",
+    "displayName": "前線分担",
+    "description": "防御力が高い敵を複数対象に分散して攻撃する。1体あたりのダメージは正面集中より低い。防御力の一部を無視する。対象が足りない場合は同一対象へ再命中しない。",
     "attackIntervalSec": 3,
     "action": {
       "effect": [
         {
           "target": {
-            "kind": "distance",
+            "kind": "stat",
             "side": "enemy",
-            "order": "nearest"
+            "stat": "def",
+            "order": "highest"
           },
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.85
+            "atkScale": 0.55
           }
         }
       ],
       "effectRange": {
-        "form": "forward",
-        "applyMode": "progress",
-        "maxTargets": "all"
+        "form": "single",
+        "applyMode": "instant",
+        "hitCount": 3,
+        "refillSameTargetOnShortfall": false
       },
-      "targetShape": "pierce",
-      "pierceDurationSec": 0.15,
+      "targetShape": "multiLock",
+      "hitCount": 3,
       "attackMethod": "melee"
     }
   }

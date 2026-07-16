@@ -235,6 +235,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | M2 前線分担型 | 高 DEF 主対象を維持しつつ、前線の別対象へ処理を分ける。双刃士への確実な C ではない |
 | Passive | 高 DEF 対象への継続安定、被弾中の攻撃維持、撃破後の対象移行 |
 | 持たせない | 後方到達、低 HP 優先、広域殲滅、大幅な追加 DEF 無視 |
+| R12g-e1 data | `data/combat-modules/at_swordsman.json` — M1 `at_swordsman_mod_single_slash`（正面集中・敵 DEF highest 単体・高 atkScale）、M2 `at_swordsman_mod_pierce_slash`（前線分担・DEF highest 複数 multiLock・`refillSameTargetOnShortfall: false`）。DEF 無視は class passive `at_swordsman_passive_1` 所有（Module 差は対象数と damage 量）。近接維持。数値は仮。**Backend 完了 / Player 未完了** |
 
 #### `at_assassin` 双刃士
 
@@ -337,7 +338,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | Passive | Barrier 消費後の小規模回復、再付与安定、方式間の最低限補完。Barrier 消費後回復は **兵科本体に置かない** |
 | 持たせない | 本体回復、無限 Barrier、全体完全防護、療養師と同等の HP 復元 |
 | R12g-d4 data | `data/combat-modules/sp_wardweaver.json` — M1 `sp_wardweaver_mod_focus_barrier`（danger 味方1体・厚い Barrier・`barrierStack: true`）、M2 `sp_wardweaver_mod_spread_barrier`（ally Barrier 不足複数・薄い Barrier・`requireBelow`・`refillSameTargetOnShortfall: false`）。数値は仮。**Backend 完了 / Player 未完了** |
-| R12g-d5 統合 | Survival 4 兵科（鉄衛士・護法士・療養師・結界師）を同一実戦経路で確認。`src/battle/survivalCombatModules.integration.test.ts`。**R12g-d 本流 Backend 完了 / Player 未完了**。次は Kill 兵科（R12g-d6〜） |
+| R12g-d5 統合 | Survival 4 兵科（鉄衛士・護法士・療養師・結界師）を同一実戦経路で確認。`src/battle/survivalCombatModules.integration.test.ts`。**R12g-d 本流 Backend 完了 / Player 未完了**。次は Kill 兵科（R12g-e1〜） |
+| R12g-e1 data | 剣術士 M1/M2 — 上記 `at_swordsman` 節。`src/battle/atSwordsmanModules.test.ts`。**Backend 完了 / Player 未完了**。次は R12g-e2（双刃士） |
 
 ### R12f → R12g 未接続事項
 

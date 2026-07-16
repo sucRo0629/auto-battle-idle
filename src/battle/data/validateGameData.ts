@@ -6701,6 +6701,63 @@ function validateSpWardweaverCombatModule(module: CombatModuleDef): void {
   }
 }
 
+/** R12g-e1: 剣術士 CombatModule の役割境界（最小チェック。細目は data test） */
+function validateAtSwordsmanCombatModule(module: CombatModuleDef): void {
+  if (module.classId !== 'at_swordsman') return;
+
+  for (const [index, effect] of module.action.effect.entries()) {
+    const effectContext = `combat module "${module.id}" effect[${index}]`;
+    if (effect.type !== 'damage') {
+      throw new Error(
+        `${effectContext}: at_swordsman modules must use damage effects only (got ${effect.type})`,
+      );
+    }
+    assertPositiveHealResourceAmount(effect.amount, `${effectContext}.amount`);
+    const target = effect.target ?? module.action.target;
+    if (
+      target === undefined ||
+      target.kind !== 'stat' ||
+      target.side !== 'enemy' ||
+      target.stat !== 'def' ||
+      target.order !== 'highest'
+    ) {
+      throw new Error(
+        `${effectContext}: target must be enemy def highest`,
+      );
+    }
+  }
+
+  if (module.action.attackMethod !== 'melee') {
+    throw new Error(
+      `combat module "${module.id}": at_swordsman modules must remain melee`,
+    );
+  }
+
+  if (module.id === 'at_swordsman_mod_single_slash') {
+    const shape = module.action.targetShape ?? 'single';
+    const hitCount = module.action.hitCount ?? 1;
+    if (shape !== 'single' || hitCount >= 2) {
+      throw new Error(
+        `combat module "${module.id}": M1 must be single-target`,
+      );
+    }
+  }
+
+  if (module.id === 'at_swordsman_mod_pierce_slash') {
+    const hitCount = module.action.hitCount ?? 0;
+    if (module.action.targetShape !== 'multiLock' || hitCount < 2) {
+      throw new Error(
+        `combat module "${module.id}": M2 must be multiLock with hitCount >= 2`,
+      );
+    }
+    if (module.action.effectRange?.refillSameTargetOnShortfall !== false) {
+      throw new Error(
+        `combat module "${module.id}": M2 must set refillSameTargetOnShortfall false (no same-target re-hit)`,
+      );
+    }
+  }
+}
+
 function validateCombatModuleData(
   combatModules: CombatModuleDef[],
   classById: Map<string, ClassPreset>,
@@ -6718,6 +6775,7 @@ function validateCombatModuleData(
     }
     validateSpClericCombatModule(module);
     validateSpWardweaverCombatModule(module);
+    validateAtSwordsmanCombatModule(module);
   }
 }
 

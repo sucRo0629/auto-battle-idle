@@ -78,13 +78,14 @@ describe('combatModulePrepDisplay (R9.6-A)', () => {
     );
     expect(single?.effectSummary).not.toContain('最近傍');
 
-    const pierce = views.candidates.find(
+    const frontlineSplit = views.candidates.find(
       (c) => c.moduleId === 'at_swordsman_mod_pierce_slash',
     );
-    expect(pierce?.effectSummary).toContain(
-      '最も防御力が高い敵に攻撃力の85%の物理ダメージ',
+    expect(frontlineSplit?.effectSummary).toContain(
+      '最も防御力が高い敵に攻撃力の55%の物理ダメージ',
     );
-    expect(pierce?.effectSummary.match(/貫通/g)?.length).toBe(1);
+    expect(frontlineSplit?.effectSummary).toContain('マルチロック');
+    expect(frontlineSplit?.effectSummary).not.toContain('貫通');
   });
 
   it('merges range and attack method without duplicating shape already in effect text', () => {

@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-d5 Backend 完了**（Survival 4 兵科 CombatModule 共通統合確認）。**Player 未完了**（手元画面確認なし。戻し先: R12g-d5 Player 確認）。**次:** **R12g-d6**（Kill 兵科 Module data・1 兵科）。
+- **新ロードマップ現在地:** **R12g-e1 Backend 完了**（剣術士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e1 Player 確認）。**次:** **R12g-e2**（双刃士 Module data）。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12g-d6**（Kill 兵科）→ d7〜 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
+- **次の再開タスク:** **R12g-e2**（双刃士）→ e3〜e5 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8645,4 +8645,23 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 
 **R12g-d 全体:** Survival 4 兵科の Module data（d1〜d4）+ 共通統合（d5）は **Backend 完了 / Player 未完了**
 
-**次:** **R12g-d6** — Kill 兵科 CombatModule データ再設計（剣術士 `at_swordsman` → 双刃士 `at_assassin` → 弓術士 → 魔術師の順で 1 兵科ずつ。既存 placeholder がある兵科は再設計、未入力は新規入力）
+**次（完了時点）:** Kill 兵科へ。分割は **R12g-e1〜e5**（剣術士 → 双刃士 → 弓術士 → 魔術師 → Kill 共通統合）
+
+### 105.10 R12g-e1 — 剣術士 M1/M2 CombatModule データ再設計（完了・Backend）
+
+**状態:** Backend 完了 / Player 未完了（手元画面確認なし）
+
+**実施内容（要約）:**
+- M1 `at_swordsman_mod_single_slash`（正面集中）: 敵 DEF highest 1 体へ単体物理。近接。atkScale 1.0
+- M2 `at_swordsman_mod_pierce_slash`（前線分担）: 敵 DEF highest 複数へ multiLock（hitCount 3）。`refillSameTargetOnShortfall: false`。atkScale 0.55。旧 pierce 形状を廃止
+- DEF 無視: class passive `at_swordsman_passive_1`（15%）所有。Module effect には重複定義しない
+- validation: `validateAtSwordsmanCombatModule`。editor 既存項目で round-trip 可（新規 schema なし）
+- 新規 test: `src/battle/atSwordsmanModules.test.ts`
+- Survival / 双刃士 / 弓術士 / 魔術師 / Stage / Passive / 数値本調整は未変更
+
+**Player 未完了の不足:**
+- 出撃前 / Wave 間で剣術士 M1/M2 差を手元確認していない
+- 戻し先: **R12g-e1 Player 確認**（既存 R9.5c SkillMenuPanel / WavePrep 配線は利用可能）
+- 正式 VFX / 専用アイコンは不要
+
+**次:** **R12g-e2** — 双刃士 M1/M2 CombatModule データ再設計

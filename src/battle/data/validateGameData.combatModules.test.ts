@@ -290,6 +290,40 @@ describe('combat module data (R5b)', () => {
     ]);
   });
 
+  it('R12g-e1: parses swordsman M1/M2 high-DEF CombatModule data', () => {
+    const parsed = parseAndValidateGameDataJson(loadRealBundle());
+    const m1 = parsed.combatModules.find(
+      (module) => module.id === 'at_swordsman_mod_single_slash',
+    );
+    const m2 = parsed.combatModules.find(
+      (module) => module.id === 'at_swordsman_mod_pierce_slash',
+    );
+    expect(m1?.action.effect[0]?.type).toBe('damage');
+    expect(m1?.action.effect[0]?.target).toEqual({
+      kind: 'stat',
+      side: 'enemy',
+      stat: 'def',
+      order: 'highest',
+    });
+    expect(m1?.action.targetShape ?? 'single').toBe('single');
+    expect(m1?.action.attackMethod).toBe('melee');
+    expect(m2?.action.targetShape).toBe('multiLock');
+    expect(m2?.action.hitCount).toBeGreaterThanOrEqual(2);
+    expect(m2?.action.effectRange?.refillSameTargetOnShortfall).toBe(false);
+    expect(m2?.action.attackMethod).toBe('melee');
+    expect(m2?.action.effect[0]?.target).toEqual({
+      kind: 'stat',
+      side: 'enemy',
+      stat: 'def',
+      order: 'highest',
+    });
+    const cls = parsed.classes.find((entry) => entry.id === 'at_swordsman');
+    expect(cls?.combatModuleIds).toEqual([
+      'at_swordsman_mod_single_slash',
+      'at_swordsman_mod_pierce_slash',
+    ]);
+  });
+
   it('rejects protectFrontlineAllies invalid multipliers / maxTargets', () => {
     const bundle = loadRealBundle();
     for (const magicDamageTakenMultiplier of [0, -0.1, 1.1, Number.NaN]) {

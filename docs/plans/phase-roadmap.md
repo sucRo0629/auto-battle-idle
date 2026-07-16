@@ -1279,8 +1279,12 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | **R12g-d3** | 療養師 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
 | **R12g-d4** | 結界師 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
 | **R12g-d5** | Survival 4 兵科 CombatModule 共通統合確認 | **Backend 完了 / Player 未完了** |
-| **R12g-d6** | Kill 兵科 CombatModule データ再設計（剣術士・双刃士・弓術士・魔術師のうち次1兵科） | 未着手（**次タスク**） |
-| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | R12g-d5 完了。次 d6 |
+| **R12g-e1** | 剣術士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
+| **R12g-e2** | 双刃士 M1/M2 CombatModule データ再設計 | 未着手（**次タスク**） |
+| **R12g-e3** | 弓術士 M1/M2 CombatModule データ再設計 | 未着手 |
+| **R12g-e4** | 魔術師 M1/M2 CombatModule データ再設計 | 未着手 |
+| **R12g-e5** | Kill 4 兵科 CombatModule 共通統合確認 | 未着手 |
+| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | R12g-e1 完了。次 e2 |
 
 正本: [current-task.md §105](../ai-handoff/current-task.md)、[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)、[combat.md §Danger Targeting](../spec/combat.md#danger-targetingr12g-c)、[classes-and-skills.md §df_paladin 護法士](../spec/classes-and-skills.md#df_paladin-護法士)。
 
