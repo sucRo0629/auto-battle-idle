@@ -32,7 +32,12 @@ export const COMBAT_MODULE_ATTACK_METHOD_OPTIONS: Array<{
 ];
 
 export const COMBAT_MODULE_RUNTIME_EFFECT_KIND_OPTIONS: Array<{
-  value: '' | 'healOnEnemyAttackHpHit' | 'physicalDamageTakenReduction';
+  value:
+    | ''
+    | 'healOnEnemyAttackHpHit'
+    | 'physicalDamageTakenReduction'
+    | 'protectFrontlineAllies'
+    | 'protectDangerTarget';
   label: string;
 }> = [
   { value: '', label: 'なし' },
@@ -43,6 +48,14 @@ export const COMBAT_MODULE_RUNTIME_EFFECT_KIND_OPTIONS: Array<{
   {
     value: 'healOnEnemyAttackHpHit',
     label: '敵Attack Hit実HPダメージ時・固定自己回復',
+  },
+  {
+    value: 'protectFrontlineAllies',
+    label: '選択中・前線複数味方への魔法中心防護（護法士M1）',
+  },
+  {
+    value: 'protectDangerTarget',
+    label: '選択中・危険対象1体への全属性＋魔法追加防護（護法士M2）',
   },
 ];
 
@@ -56,13 +69,18 @@ export const DAMAGE_TAKEN_DAMAGE_TYPE_OPTIONS: Array<{
   { value: 'physical,magic', label: '物理+魔法' },
 ];
 
+export type CombatModuleRuntimeEffectKindOption =
+  (typeof COMBAT_MODULE_RUNTIME_EFFECT_KIND_OPTIONS)[number]['value'];
+
 export function runtimeEffectKindValue(
   module: CombatModuleDef,
-): '' | 'healOnEnemyAttackHpHit' | 'physicalDamageTakenReduction' {
+): CombatModuleRuntimeEffectKindOption {
   const kind = module.runtimeEffect?.kind;
   if (
     kind === 'healOnEnemyAttackHpHit' ||
-    kind === 'physicalDamageTakenReduction'
+    kind === 'physicalDamageTakenReduction' ||
+    kind === 'protectFrontlineAllies' ||
+    kind === 'protectDangerTarget'
   ) {
     return kind;
   }

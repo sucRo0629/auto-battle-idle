@@ -1280,6 +1280,8 @@ function defaultTargetForKind(kind: TargetSpecKind): TargetSpec {
       return { kind: "status", side: "enemy", debuffTags: ["def"] };
     case "clusterCenter":
       return { kind: "clusterCenter", side: "enemy" };
+    case "danger":
+      return { kind: "danger", side: "ally", maxTargets: 1, windowSec: 2 };
     default:
       return { kind: "self" };
   }
@@ -1819,6 +1821,47 @@ function appendTargetSpecFieldsCore(
           })),
           (side) => onChange({ ...normalized, side })
         )
+      )
+    );
+  }
+
+  if (normalized.kind === "danger") {
+    parent.appendChild(
+      createFieldRow(
+        "対象側",
+        createSelect(
+          normalized.side,
+          (["ally", "enemy"] as const).map((value) => ({
+            value,
+            label: TARGET_SIDE_LABELS[value],
+          })),
+          (side) => onChange({ ...normalized, side })
+        )
+      )
+    );
+    parent.appendChild(
+      createFieldRow(
+        "maxTargets",
+        createNumberInput(normalized.maxTargets, (maxTargets) => {
+          if (!(maxTargets >= 1) || !Number.isFinite(maxTargets)) return;
+          onChange({ ...normalized, maxTargets: Math.floor(maxTargets) });
+        }, { min: 1, step: 1 })
+      )
+    );
+    parent.appendChild(
+      createFieldRow(
+        "windowSec",
+        createNumberInput(normalized.windowSec, (windowSec) => {
+          if (!(windowSec >= 0) || !Number.isFinite(windowSec)) return;
+          onChange({ ...normalized, windowSec });
+        }, { min: 0, step: 0.1 })
+      )
+    );
+    parent.appendChild(
+      createEl(
+        "p",
+        "editor-hint",
+        "集中攻撃 danger targeting。signal 全 0 時は対象なし。護法士 M2 は runtimeEffect.protectDangerTarget が正本。"
       )
     );
   }

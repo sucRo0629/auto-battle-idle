@@ -167,8 +167,23 @@ describe('combat module basic attack (R5c)', () => {
 
   it('legacy class keeps synthesized legacy basic skill id', () => {
     const gameData = loadGameData();
-    const preset = gameData.classRegistry.df_paladin!;
+    const preset = gameData.classRegistry.df_duelist!;
     expect(preset.combatModuleIds).toBeUndefined();
+
+    const ally = createAllyFromMember(
+      mockMember('df_duelist'),
+      preset,
+      levelCurves,
+      gameData,
+    );
+    const basicCd = ally.cooldowns.find((cd) => cd.slotKind === 'basic');
+    expect(basicCd?.skillId).toBe(preset.basicAttackSkillId);
+  });
+
+  it('paladin uses CombatModule basic after R12g-d2', () => {
+    const gameData = loadGameData();
+    const preset = gameData.classRegistry.df_paladin!;
+    expect(preset.combatModuleIds?.[0]).toBe('df_paladin_mod_frontline_ward');
 
     const ally = createAllyFromMember(
       mockMember('df_paladin'),
@@ -177,7 +192,7 @@ describe('combat module basic attack (R5c)', () => {
       gameData,
     );
     const basicCd = ally.cooldowns.find((cd) => cd.slotKind === 'basic');
-    expect(basicCd?.skillId).toBe('df_paladin_basic_attack');
+    expect(basicCd?.skillId).toBe('df_paladin_mod_frontline_ward');
   });
 
   it('initializes first action cooldown from attackIntervalSec, not legacy trigger=2', () => {
@@ -311,9 +326,9 @@ describe('combat module basic attack (R5c)', () => {
 
   it('module basic uses effective attackSpeed buff without attackSpeedTier', () => {
     const gameData = loadGameData();
-    const preset = gameData.classRegistry.at_swordsman!;
+    const preset = gameData.classRegistry.at_sorcerer!;
     const ally = createAllyFromMember(
-      mockMember('at_swordsman'),
+      mockMember('at_sorcerer'),
       preset,
       levelCurves,
       gameData,
@@ -355,8 +370,9 @@ describe('combat module basic attack (R5c)', () => {
 
   it('legacy basic still applies attackSpeedTier and effective attackSpeed together', () => {
     const gameData = loadGameData();
-    const preset = gameData.classRegistry.df_paladin!;
-    const stage = stageWithEnemyGroup('df_paladin');
+    const preset = gameData.classRegistry.df_duelist!;
+    expect(preset.combatModuleIds).toBeUndefined();
+    const stage = stageWithEnemyGroup('df_duelist');
     const spec = expandEnemyGroups(stage)[0]!;
     const enemy = createEnemyFromClassGroup(
       spec,

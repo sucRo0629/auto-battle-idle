@@ -180,12 +180,14 @@ import {
   mergeEffectWithSkillTargeting,
 } from "./skillSharedTargeting.ts";
 import {
-  DF_PALADIN_M2_ATTACK_INTERVAL_SEC,
   DF_PALADIN_M2_COMBAT_MODULE_ID,
-  executeDfPaladinM2DangerProtection,
   isDfPaladinM2Selected,
   type DfPaladinM2ProtectionResult,
 } from "../dfPaladinM2.ts";
+import {
+  DF_PALADIN_M1_COMBAT_MODULE_ID,
+  isDfPaladinM1Selected,
+} from "../dfPaladinM1.ts";
 import {
   DF_GUARDIAN_M1_COMBAT_MODULE_ID,
   DF_GUARDIAN_M2_COMBAT_MODULE_ID,
@@ -314,44 +316,10 @@ export class SkillExecutor {
     return this.deps.getTargetingRuntimeContext?.();
   }
 
-  private tryExecuteDfPaladinM2Protection(
+  private tryExecuteModuleStance(
     actor: CombatantState,
     cd: SkillCooldown,
-    allies: CombatantState[],
-    enemies: CombatantState[],
-  ): boolean {
-    const result = executeDfPaladinM2DangerProtection(
-      actor,
-      allies,
-      enemies,
-      this.getTargetingRuntimeContext(),
-    );
-    this.deps.onDfPaladinM2ProtectionResult?.(result);
-    cd.remaining = DF_PALADIN_M2_ATTACK_INTERVAL_SEC;
-    this.deps.onBasicAttackExecuted?.(actor.id);
-    this.deps.onCombatActionExecuted?.(actor, {
-      slotKind: "basic",
-      skillId: DF_PALADIN_M2_COMBAT_MODULE_ID,
-    });
-    if (result.selectedTargetId) {
-      this.emit({
-        type: "skill",
-        actorId: actor.id,
-        targetId: result.selectedTargetId,
-        skillId: DF_PALADIN_M2_COMBAT_MODULE_ID,
-        skillName: DF_PALADIN_M2_COMBAT_MODULE_ID,
-        slotKind: "basic",
-        effect: "buff",
-        statusLabel: `dfPaladinM2:${result.outcome}`,
-      });
-    }
-    return true;
-  }
-
-  private tryExecuteIronGuardianStance(
-    actor: CombatantState,
-    cd: SkillCooldown,
-    moduleId: typeof DF_GUARDIAN_M1_COMBAT_MODULE_ID | typeof DF_GUARDIAN_M2_COMBAT_MODULE_ID,
+    moduleId: string,
     statusLabel: string,
   ): boolean {
     const module = this.gameData.combatModuleRegistry[moduleId];
@@ -385,11 +353,24 @@ export class SkillExecutor {
     if (!actor.isAlive) return false;
     if (isUnitStunned(actor)) return false;
 
+    if (cd.slotKind === "basic" && isDfPaladinM1Selected(actor)) {
+      return this.tryExecuteModuleStance(
+        actor,
+        cd,
+        DF_PALADIN_M1_COMBAT_MODULE_ID,
+        "dfPaladinM1:stance",
+      );
+    }
     if (cd.slotKind === "basic" && isDfPaladinM2Selected(actor)) {
-      return this.tryExecuteDfPaladinM2Protection(actor, cd, allies, enemies);
+      return this.tryExecuteModuleStance(
+        actor,
+        cd,
+        DF_PALADIN_M2_COMBAT_MODULE_ID,
+        "dfPaladinM2:stance",
+      );
     }
     if (cd.slotKind === "basic" && isIronGuardianM1Selected(actor)) {
-      return this.tryExecuteIronGuardianStance(
+      return this.tryExecuteModuleStance(
         actor,
         cd,
         DF_GUARDIAN_M1_COMBAT_MODULE_ID,
@@ -397,7 +378,7 @@ export class SkillExecutor {
       );
     }
     if (cd.slotKind === "basic" && isIronGuardianM2Selected(actor)) {
-      return this.tryExecuteIronGuardianStance(
+      return this.tryExecuteModuleStance(
         actor,
         cd,
         DF_GUARDIAN_M2_COMBAT_MODULE_ID,

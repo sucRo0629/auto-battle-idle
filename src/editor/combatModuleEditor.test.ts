@@ -43,12 +43,14 @@ function loadCombatModules(): CombatModuleDef[] {
 describe('combat module authoring helpers (R9g)', () => {
   it('lists two modules per R5 class from data', () => {
     const modules = loadCombatModules();
-    expect(modules).toHaveLength(8);
+    expect(modules).toHaveLength(10);
     const guardian = listCombatModulesForClass(modules, 'df_guardian');
     expect(guardian).toHaveLength(2);
     expect(guardian.every((module) => module.classId === 'df_guardian')).toBe(
       true,
     );
+    const paladin = listCombatModulesForClass(modules, 'df_paladin');
+    expect(paladin).toHaveLength(2);
   });
 
   it('normalize sorts by classId then id and groups by class file', () => {
@@ -61,6 +63,7 @@ describe('combat module authoring helpers (R9g)', () => {
       'at_sorcerer',
       'at_swordsman',
       'df_guardian',
+      'df_paladin',
       'sp_cleric',
     ]);
     expect(files.every((file) => file.modules.length === 2)).toBe(true);

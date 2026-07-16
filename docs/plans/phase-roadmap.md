@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** システム縦切り（R5〜R11）の上に、**データ再設計で「ゲームとして遊べる試作」を成立**させる（R12）。その後に初めて「繰り返し遊びたいか」を評価する（R13）。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R13 完了後**に再開する。
 
-**現在地:** **R12g-a〜c5 Backend 完了**（R12g-c 全体は **Backend 完了 / Player 未完了**）。護法士 M2 danger targeting + 防護 runtime + 統合 test / debug hook まで確定。Player 手元確認の戻し先は **Survival Module JSON 接続後**。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
+**現在地:** **R12g-d2 Backend 完了**（護法士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし）。**次:** **R12g-d3**（療養師 M1/M2）。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
 
 ---
 
@@ -1275,8 +1275,9 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | **R12g-c4** | 護法士 M2 防護 runtime / Module action | **Backend 完了**。`dfPaladinM2.ts` + `TargetingRuntimeContext` 実戦注入 |
 | **R12g-c5** | M2 統合 test / debug 検証 | **Backend 完了**。`dfPaladinM2.integration.test.ts` + `onDfPaladinM2ProtectionResult` debug hook。**R12g-c 全体: Backend 完了 / Player 未完了**（手元確認は Survival Module JSON 接続後） |
 | **R12g-d1** | 鉄衛士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
-| **R12g-d2** | 護法士 M1/M2 CombatModule データ再設計 | 未着手（**次タスク**） |
-| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | R12g-d1 進行中 |
+| **R12g-d2** | 護法士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
+| **R12g-d3** | 療養師 M1/M2 CombatModule データ再設計 | 未着手（**次タスク**） |
+| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | R12g-d2 完了。次 d3 |
 
 正本: [current-task.md §105](../ai-handoff/current-task.md)、[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)、[combat.md §Danger Targeting](../spec/combat.md#danger-targetingr12g-c)、[classes-and-skills.md §df_paladin 護法士](../spec/classes-and-skills.md#df_paladin-護法士)。
 

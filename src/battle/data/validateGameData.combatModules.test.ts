@@ -76,7 +76,7 @@ describe('combat module data (R5b)', () => {
     if (!loaded.ok) return;
 
     const registry = loaded.data.combatModuleRegistry;
-    expect(Object.keys(registry).length).toBe(8);
+    expect(Object.keys(registry).length).toBe(10);
     expect(registry.df_guardian_mod_nearest_strike.classId).toBe('df_guardian');
   });
 
@@ -204,6 +204,95 @@ describe('combat module data (R5b)', () => {
       kind: 'healOnEnemyAttackHpHit',
       flatAmount: 20,
     });
+  });
+
+  it('R12g-d2: parses paladin M1/M2 runtimeEffect from CombatModule data', () => {
+    const parsed = parseAndValidateGameDataJson(loadRealBundle());
+    const m1 = parsed.combatModules.find(
+      (module) => module.id === 'df_paladin_mod_frontline_ward',
+    );
+    const m2 = parsed.combatModules.find(
+      (module) => module.id === 'df_paladin_mod_danger_guard',
+    );
+    expect(m1?.runtimeEffect).toEqual({
+      kind: 'protectFrontlineAllies',
+      maxTargets: 4,
+      magicDamageTakenMultiplier: 0.85,
+      allDamageTakenMultiplier: 0.95,
+    });
+    expect(m2?.runtimeEffect).toEqual({
+      kind: 'protectDangerTarget',
+      maxTargets: 1,
+      windowSec: 2,
+      allDamageTakenMultiplier: 0.85,
+      magicDamageTakenMultiplier: 0.85,
+      durationSec: 4,
+    });
+    const cls = parsed.classes.find((entry) => entry.id === 'df_paladin');
+    expect(cls?.combatModuleIds).toEqual([
+      'df_paladin_mod_frontline_ward',
+      'df_paladin_mod_danger_guard',
+    ]);
+  });
+
+  it('rejects protectFrontlineAllies invalid multipliers / maxTargets', () => {
+    const bundle = loadRealBundle();
+    for (const magicDamageTakenMultiplier of [0, -0.1, 1.1, Number.NaN]) {
+      const combatModules = structuredClone(bundle.combatModules);
+      const m1 = combatModules.find(
+        (module) => module.id === 'df_paladin_mod_frontline_ward',
+      )!;
+      m1.runtimeEffect = {
+        kind: 'protectFrontlineAllies',
+        maxTargets: 4,
+        magicDamageTakenMultiplier,
+      };
+      expect(() =>
+        parseAndValidateGameDataJson({ ...bundle, combatModules }),
+      ).toThrow(/magicDamageTakenMultiplier/);
+    }
+    const combatModules = structuredClone(bundle.combatModules);
+    const m1 = combatModules.find(
+      (module) => module.id === 'df_paladin_mod_frontline_ward',
+    )!;
+    m1.runtimeEffect = {
+      kind: 'protectFrontlineAllies',
+      maxTargets: 0,
+      magicDamageTakenMultiplier: 0.85,
+    };
+    expect(() =>
+      parseAndValidateGameDataJson({ ...bundle, combatModules }),
+    ).toThrow(/maxTargets/);
+  });
+
+  it('rejects protectDangerTarget invalid window / duration / multipliers', () => {
+    const bundle = loadRealBundle();
+    const cases: Array<Record<string, unknown>> = [
+      { windowSec: -1 },
+      { durationSec: 0 },
+      { durationSec: -2 },
+      { allDamageTakenMultiplier: 0 },
+      { magicDamageTakenMultiplier: 1.5 },
+      { maxTargets: 0 },
+    ];
+    for (const patch of cases) {
+      const combatModules = structuredClone(bundle.combatModules);
+      const m2 = combatModules.find(
+        (module) => module.id === 'df_paladin_mod_danger_guard',
+      )!;
+      m2.runtimeEffect = {
+        kind: 'protectDangerTarget',
+        maxTargets: 1,
+        windowSec: 2,
+        allDamageTakenMultiplier: 0.85,
+        magicDamageTakenMultiplier: 0.85,
+        durationSec: 4,
+        ...patch,
+      };
+      expect(() =>
+        parseAndValidateGameDataJson({ ...bundle, combatModules }),
+      ).toThrow();
+    }
   });
 
   it('rejects unknown runtimeEffect kind', () => {

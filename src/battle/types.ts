@@ -394,6 +394,7 @@ export interface StatusEffect {
     | "allyAttackFollowUp"
     | "poisonWeapon"
     | "duelistPride"
+    | "dfPaladinM1Protection"
     | "dfPaladinM2Protection";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
@@ -1673,6 +1674,7 @@ export interface CombatModuleActionDef extends SkillSharedTargetingFields {
 /**
  * CombatModule 専用の Hit トリガー / 選択中永続効果等（大規模汎用 trigger DSL ではない）。
  * R12g-d1: 鉄衛士 M1 物理軽減・M2 固定自己回復の所有者。
+ * R12g-d2: 護法士 M1 前線防護・M2 危険対象防護の所有者。
  */
 export type CombatModuleRuntimeEffect =
   | {
@@ -1687,6 +1689,28 @@ export type CombatModuleRuntimeEffect =
        * 選択中は永続。R12i で調整。
        */
       takenMultiplier: number;
+    }
+  | {
+      kind: 'protectFrontlineAllies';
+      /** 前線（formationRow: front）味方の上限人数（>= 1）。自身が前線なら含む */
+      maxTargets: number;
+      /** 魔法被ダメ倍率（0 < value ≤ 1）。R12i で調整 */
+      magicDamageTakenMultiplier: number;
+      /** 任意。弱い全属性被ダメ倍率（0 < value ≤ 1）。省略時は魔法のみ */
+      allDamageTakenMultiplier?: number;
+    }
+  | {
+      kind: 'protectDangerTarget';
+      /** danger TargetSpec.maxTargets（護法士 M2 は 1） */
+      maxTargets: number;
+      /** danger TargetSpec.windowSec（>= 0） */
+      windowSec: number;
+      /** 全属性被ダメ倍率（0 < value ≤ 1）。R12i で調整 */
+      allDamageTakenMultiplier: number;
+      /** 魔法追加被ダメ倍率（0 < value ≤ 1）。全属性とは別乗算。R12i で調整 */
+      magicDamageTakenMultiplier: number;
+      /** 防護 duration 秒（> 0）。signal 0 時は満了まで残す */
+      durationSec: number;
     };
 
 /** R5 最小戦闘方式。R5c で ActiveSkillDef へ合成し basic スロットで実行 */

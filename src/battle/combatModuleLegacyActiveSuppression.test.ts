@@ -193,10 +193,11 @@ describe('R9.5a combat module legacy active suppression', () => {
     expect(activeExecutions).toEqual([]);
   });
 
-  it('keeps legacy active runtime for non-module class df_paladin', () => {
+  it('keeps legacy active runtime for non-module class df_duelist', () => {
     const gameData = loadGameData();
-    const preset = gameData.classRegistry.df_paladin!;
-    const member = mockMemberAtLevel('df_paladin', 20, gameData);
+    const preset = gameData.classRegistry.df_duelist!;
+    expect(preset.combatModuleIds).toBeUndefined();
+    const member = mockMemberAtLevel('df_duelist', 20, gameData);
     const ally = createAllyFromMember(
       member,
       preset,
@@ -241,6 +242,22 @@ describe('R9.5a combat module legacy active suppression', () => {
 
     runUnitSkills(engine, [ally]);
     expect(activeExecutions.length).toBeGreaterThan(0);
+  });
+
+  it('suppresses legacy actives for module class df_paladin', () => {
+    const gameData = loadGameData();
+    const preset = gameData.classRegistry.df_paladin!;
+    expect(preset.combatModuleIds).toHaveLength(2);
+    const member = mockMemberAtLevel('df_paladin', 20, gameData);
+    const ally = createAllyFromMember(
+      member,
+      preset,
+      levelCurves,
+      gameData,
+    );
+    initializeSkillCooldowns(ally, gameData.skillRegistry.actives);
+    const activeCds = ally.cooldowns.filter((cd) => cd.slotKind === 'active');
+    expect(activeCds).toHaveLength(0);
   });
 
   it('keeps learned passives effective for module class df_guardian', () => {

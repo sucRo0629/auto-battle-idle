@@ -15,13 +15,12 @@ import type {
   StageDef,
 } from './types.ts';
 import {
-  DF_PALADIN_M2_ALL_DAMAGE_TAKEN_MULTIPLIER,
   DF_PALADIN_M2_COMBAT_MODULE_ID,
-  DF_PALADIN_M2_MAGIC_EXTRA_TAKEN_MULTIPLIER,
-  DF_PALADIN_M2_PROTECTION_DURATION_SEC,
   DF_PALADIN_M2_PROTECTION_OVERLAY,
   clearDfPaladinM2RuntimeState,
+  executeDfPaladinM2DangerProtection,
   hasDfPaladinM2ProtectionFrom,
+  resolveDfPaladinM2RuntimeParams,
   tryApplyDfPaladinM2Protection,
   type DfPaladinM2ProtectionResult,
 } from './dfPaladinM2.ts';
@@ -29,6 +28,10 @@ import { mockCombatant } from './testFixtures.ts';
 
 const gameData = loadGameData();
 const levelCurves = loadLevelCurves(levelCurvesJson);
+const m2Params = resolveDfPaladinM2RuntimeParams(gameData.combatModuleRegistry)!;
+const DF_PALADIN_M2_ALL_DAMAGE_TAKEN_MULTIPLIER = m2Params.allDamageTakenMultiplier;
+const DF_PALADIN_M2_MAGIC_EXTRA_TAKEN_MULTIPLIER = m2Params.magicDamageTakenMultiplier;
+const DF_PALADIN_M2_PROTECTION_DURATION_SEC = m2Params.durationSec;
 
 const damageEffect = {
   type: 'damage',
@@ -272,10 +275,20 @@ describe('dfPaladinM2 integration (R12g-c5)', () => {
   }
 
   function fireM2(engine: BattleEngine, paladin: CombatantState) {
-    const basic = paladin.cooldowns.find((cd) => cd.slotKind === 'basic')!;
-    basic.remaining = 0;
-    basic.skillId = DF_PALADIN_M2_COMBAT_MODULE_ID;
-    runUnitSkills(engine, [paladin]);
+    const internals = engine as unknown as {
+      players: CombatantState[];
+      enemies: CombatantState[];
+    };
+    const runtime = getExecutorDeps(engine).getTargetingRuntimeContext?.();
+    // テスト用: 指定 protector のみ評価（production continuous sync は全員）
+    const result = executeDfPaladinM2DangerProtection(
+      paladin,
+      internals.players,
+      internals.enemies,
+      runtime,
+      gameData.combatModuleRegistry,
+    );
+    protectionResults.push(result);
   }
 
   it('full combat path: danger select → protect → physical/magic HP delta', () => {
@@ -645,13 +658,17 @@ describe('dfPaladinM2 integration (R12g-c5)', () => {
     const enemies = [e1, e2];
     const internals = setEngineUnits(engine, players, enemies);
 
-    tryApplyDfPaladinM2Protection(otherPaladin, allyA, players);
+    tryApplyDfPaladinM2Protection(otherPaladin, allyA, players,
+      m2Params);
     expect(hasDfPaladinM2ProtectionFrom(allyA, 'otherPaladin')).toBe(true);
 
     internals.pendingHitQueue = [makePendingHit('e1', 'allyA')];
     installAttackTargetMap(engine, players, enemies, { e1: 'allyA', e2: null });
     fireM2(engine, paladin);
-    expect(protectionResults.at(-1)?.outcome).toBe('applied');
+    expect(
+      protectionResults.find((result) => result.protectorId === 'paladin')
+        ?.outcome,
+    ).toBe('applied');
     expect(hasDfPaladinM2ProtectionFrom(allyA, 'paladin')).toBe(true);
 
     internals.pendingHitQueue = [
@@ -886,7 +903,8 @@ describe('dfPaladinM2 integration (R12g-c5)', () => {
     const paladin = makePaladin(DF_PALADIN_M2_COMBAT_MODULE_ID, {
       id: 'paladin',
     });
-    tryApplyDfPaladinM2Protection(paladin, ally, [paladin, ally]);
+    tryApplyDfPaladinM2Protection(paladin, ally, [paladin, ally],
+      m2Params);
     expect(hasDfPaladinM2ProtectionFrom(ally, 'paladin')).toBe(true);
 
     (
@@ -901,7 +919,7 @@ describe('dfPaladinM2 integration (R12g-c5)', () => {
       makePaladin(DF_PALADIN_M2_COMBAT_MODULE_ID, { id: 'paladin' }),
       makeAlly('fresh'),
       [],
-    );
+      m2Params);
     expect(nextApply.previousTargetId).toBeNull();
     expect(nextApply.outcome).toBe('applied');
 

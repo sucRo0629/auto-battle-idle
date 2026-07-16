@@ -1,0 +1,68 @@
+[
+  {
+    "id": "df_paladin_mod_frontline_ward",
+    "classId": "df_paladin",
+    "displayName": "前線加護",
+    "description": "選択中、前線の複数味方への魔法ダメージを中心に軽減する。後衛全体や全体防護ではない。",
+    "attackIntervalSec": 3,
+    "runtimeEffect": {
+      "kind": "protectFrontlineAllies",
+      "maxTargets": 4,
+      "magicDamageTakenMultiplier": 0.85,
+      "allDamageTakenMultiplier": 0.95
+    },
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "buff",
+          "buffSubKind": "stat",
+          "buffStat": "def",
+          "buffMultiplier": 1,
+          "buffDurationSec": 0.1
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single"
+    }
+  },
+  {
+    "id": "df_paladin_mod_danger_guard",
+    "classId": "df_paladin",
+    "displayName": "危険加護",
+    "description": "選択中、集中攻撃を受けている危険対象1体（後衛を含む）を防護する。全属性ダメージを軽減し、魔法をさらに軽減する。",
+    "attackIntervalSec": 3,
+    "runtimeEffect": {
+      "kind": "protectDangerTarget",
+      "maxTargets": 1,
+      "windowSec": 2,
+      "allDamageTakenMultiplier": 0.85,
+      "magicDamageTakenMultiplier": 0.85,
+      "durationSec": 4
+    },
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "buff",
+          "buffSubKind": "stat",
+          "buffStat": "def",
+          "buffMultiplier": 1,
+          "buffDurationSec": 0.1
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single"
+    }
+  }
+]

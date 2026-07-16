@@ -72,7 +72,8 @@ describe('resolveCombatModuleBasic (R5d fallback)', () => {
   });
 
   it('returns undefined for legacy class without combatModuleIds', () => {
-    const preset = gameData.classRegistry.df_paladin!;
+    const preset = gameData.classRegistry.df_duelist!;
+    expect(preset.combatModuleIds).toBeUndefined();
     expect(
       resolveSelectedCombatModuleId(
         preset,
@@ -86,7 +87,29 @@ describe('resolveCombatModuleBasic (R5d fallback)', () => {
         gameData.combatModuleRegistry,
         'df_guardian_mod_nearest_strike',
       ),
-    ).toBe('df_paladin_basic_attack');
+    ).toBe(preset.basicAttackSkillId);
+  });
+
+  it('resolves paladin modules after R12g-d2 combatModuleIds', () => {
+    const preset = gameData.classRegistry.df_paladin!;
+    expect(preset.combatModuleIds).toEqual([
+      'df_paladin_mod_frontline_ward',
+      'df_paladin_mod_danger_guard',
+    ]);
+    expect(
+      resolveSelectedCombatModuleId(
+        preset,
+        gameData.combatModuleRegistry,
+        undefined,
+      ),
+    ).toBe('df_paladin_mod_frontline_ward');
+    expect(
+      resolveSelectedCombatModuleId(
+        preset,
+        gameData.combatModuleRegistry,
+        'df_paladin_mod_danger_guard',
+      ),
+    ).toBe('df_paladin_mod_danger_guard');
   });
 
   it('resolves module B for all R5 target classes when explicitly selected', () => {

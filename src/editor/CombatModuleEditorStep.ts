@@ -317,7 +317,7 @@ export class CombatModuleEditorStep {
       createEl(
         'p',
         'editor-hint',
-        '通常 action では表現しない選択中永続効果・被 Hit リアクション等。鉄衛士 M1 物理軽減 / M2 固定自己回復など。',
+        '通常 action では表現しない選択中永続効果・被 Hit リアクション等。鉄衛士 / 護法士 M1・M2 など。',
       ),
     );
     const grid = appendGrid(section);
@@ -346,6 +346,42 @@ export class CombatModuleEditorStep {
                   next.runtimeEffect = {
                     kind: 'physicalDamageTakenReduction',
                     takenMultiplier,
+                  };
+                  return next;
+                }
+                if (value === 'protectFrontlineAllies') {
+                  const prev =
+                    next.runtimeEffect?.kind === 'protectFrontlineAllies'
+                      ? next.runtimeEffect
+                      : undefined;
+                  next.runtimeEffect = {
+                    kind: 'protectFrontlineAllies',
+                    maxTargets: prev?.maxTargets ?? 4,
+                    magicDamageTakenMultiplier:
+                      prev?.magicDamageTakenMultiplier ?? 0.85,
+                    ...(prev?.allDamageTakenMultiplier !== undefined
+                      ? {
+                          allDamageTakenMultiplier:
+                            prev.allDamageTakenMultiplier,
+                        }
+                      : { allDamageTakenMultiplier: 0.95 }),
+                  };
+                  return next;
+                }
+                if (value === 'protectDangerTarget') {
+                  const prev =
+                    next.runtimeEffect?.kind === 'protectDangerTarget'
+                      ? next.runtimeEffect
+                      : undefined;
+                  next.runtimeEffect = {
+                    kind: 'protectDangerTarget',
+                    maxTargets: prev?.maxTargets ?? 1,
+                    windowSec: prev?.windowSec ?? 2,
+                    allDamageTakenMultiplier:
+                      prev?.allDamageTakenMultiplier ?? 0.85,
+                    magicDamageTakenMultiplier:
+                      prev?.magicDamageTakenMultiplier ?? 0.85,
+                    durationSec: prev?.durationSec ?? 4,
                   };
                   return next;
                 }
@@ -425,6 +461,234 @@ export class CombatModuleEditorStep {
               field: 'combat-module-runtime-taken-mul',
             },
           ),
+        ),
+      );
+    }
+
+    if (kind === 'protectFrontlineAllies') {
+      const effect =
+        module.runtimeEffect?.kind === 'protectFrontlineAllies'
+          ? module.runtimeEffect
+          : undefined;
+      grid.appendChild(
+        createFieldRow(
+          'maxTargets（前線味方上限）',
+          createNumberInput(effect?.maxTargets ?? 4, (maxTargets) => {
+            if (!(maxTargets >= 1) || !Number.isFinite(maxTargets)) return;
+            this.updateModule((current) => {
+              const next = structuredClone(current);
+              const prev =
+                next.runtimeEffect?.kind === 'protectFrontlineAllies'
+                  ? next.runtimeEffect
+                  : {
+                      kind: 'protectFrontlineAllies' as const,
+                      maxTargets: 4,
+                      magicDamageTakenMultiplier: 0.85,
+                    };
+              next.runtimeEffect = {
+                ...prev,
+                kind: 'protectFrontlineAllies',
+                maxTargets: Math.floor(maxTargets),
+              };
+              return next;
+            }, { rerender: false });
+          }, { min: 1, step: 1, readonly, field: 'combat-module-runtime-m1-max' }),
+        ),
+      );
+      grid.appendChild(
+        createFieldRow(
+          'magicDamageTakenMultiplier',
+          createNumberInput(
+            effect?.magicDamageTakenMultiplier ?? 0.85,
+            (magicDamageTakenMultiplier) => {
+              if (
+                !(magicDamageTakenMultiplier > 0) ||
+                magicDamageTakenMultiplier > 1 ||
+                !Number.isFinite(magicDamageTakenMultiplier)
+              ) {
+                return;
+              }
+              this.updateModule((current) => {
+                const next = structuredClone(current);
+                const prev =
+                  next.runtimeEffect?.kind === 'protectFrontlineAllies'
+                    ? next.runtimeEffect
+                    : {
+                        kind: 'protectFrontlineAllies' as const,
+                        maxTargets: 4,
+                        magicDamageTakenMultiplier: 0.85,
+                      };
+                next.runtimeEffect = {
+                  ...prev,
+                  kind: 'protectFrontlineAllies',
+                  magicDamageTakenMultiplier,
+                };
+                return next;
+              }, { rerender: false });
+            },
+            {
+              min: 0.01,
+              max: 1,
+              step: 0.01,
+              readonly,
+              field: 'combat-module-runtime-m1-magic',
+            },
+          ),
+        ),
+      );
+      grid.appendChild(
+        createFieldRow(
+          'allDamageTakenMultiplier（任意）',
+          createNumberInput(
+            effect?.allDamageTakenMultiplier ?? 0.95,
+            (allDamageTakenMultiplier) => {
+              if (
+                !(allDamageTakenMultiplier > 0) ||
+                allDamageTakenMultiplier > 1 ||
+                !Number.isFinite(allDamageTakenMultiplier)
+              ) {
+                return;
+              }
+              this.updateModule((current) => {
+                const next = structuredClone(current);
+                const prev =
+                  next.runtimeEffect?.kind === 'protectFrontlineAllies'
+                    ? next.runtimeEffect
+                    : {
+                        kind: 'protectFrontlineAllies' as const,
+                        maxTargets: 4,
+                        magicDamageTakenMultiplier: 0.85,
+                      };
+                next.runtimeEffect = {
+                  ...prev,
+                  kind: 'protectFrontlineAllies',
+                  allDamageTakenMultiplier,
+                };
+                return next;
+              }, { rerender: false });
+            },
+            {
+              min: 0.01,
+              max: 1,
+              step: 0.01,
+              readonly,
+              field: 'combat-module-runtime-m1-all',
+            },
+          ),
+        ),
+      );
+    }
+
+    if (kind === 'protectDangerTarget') {
+      const effect =
+        module.runtimeEffect?.kind === 'protectDangerTarget'
+          ? module.runtimeEffect
+          : undefined;
+      const patchM2 = (
+        patch: Partial<{
+          maxTargets: number;
+          windowSec: number;
+          allDamageTakenMultiplier: number;
+          magicDamageTakenMultiplier: number;
+          durationSec: number;
+        }>,
+      ) => {
+        this.updateModule((current) => {
+          const next = structuredClone(current);
+          const prev =
+            next.runtimeEffect?.kind === 'protectDangerTarget'
+              ? next.runtimeEffect
+              : {
+                  kind: 'protectDangerTarget' as const,
+                  maxTargets: 1,
+                  windowSec: 2,
+                  allDamageTakenMultiplier: 0.85,
+                  magicDamageTakenMultiplier: 0.85,
+                  durationSec: 4,
+                };
+          next.runtimeEffect = {
+            ...prev,
+            kind: 'protectDangerTarget',
+            ...patch,
+          };
+          return next;
+        }, { rerender: false });
+      };
+      grid.appendChild(
+        createFieldRow(
+          'maxTargets（danger）',
+          createNumberInput(effect?.maxTargets ?? 1, (maxTargets) => {
+            if (!(maxTargets >= 1) || !Number.isFinite(maxTargets)) return;
+            patchM2({ maxTargets: Math.floor(maxTargets) });
+          }, { min: 1, step: 1, readonly, field: 'combat-module-runtime-m2-max' }),
+        ),
+      );
+      grid.appendChild(
+        createFieldRow(
+          'windowSec（danger）',
+          createNumberInput(effect?.windowSec ?? 2, (windowSec) => {
+            if (!(windowSec >= 0) || !Number.isFinite(windowSec)) return;
+            patchM2({ windowSec });
+          }, { min: 0, step: 0.1, readonly, field: 'combat-module-runtime-m2-window' }),
+        ),
+      );
+      grid.appendChild(
+        createFieldRow(
+          'allDamageTakenMultiplier',
+          createNumberInput(
+            effect?.allDamageTakenMultiplier ?? 0.85,
+            (allDamageTakenMultiplier) => {
+              if (
+                !(allDamageTakenMultiplier > 0) ||
+                allDamageTakenMultiplier > 1 ||
+                !Number.isFinite(allDamageTakenMultiplier)
+              ) {
+                return;
+              }
+              patchM2({ allDamageTakenMultiplier });
+            },
+            {
+              min: 0.01,
+              max: 1,
+              step: 0.01,
+              readonly,
+              field: 'combat-module-runtime-m2-all',
+            },
+          ),
+        ),
+      );
+      grid.appendChild(
+        createFieldRow(
+          'magicDamageTakenMultiplier（追加）',
+          createNumberInput(
+            effect?.magicDamageTakenMultiplier ?? 0.85,
+            (magicDamageTakenMultiplier) => {
+              if (
+                !(magicDamageTakenMultiplier > 0) ||
+                magicDamageTakenMultiplier > 1 ||
+                !Number.isFinite(magicDamageTakenMultiplier)
+              ) {
+                return;
+              }
+              patchM2({ magicDamageTakenMultiplier });
+            },
+            {
+              min: 0.01,
+              max: 1,
+              step: 0.01,
+              readonly,
+              field: 'combat-module-runtime-m2-magic',
+            },
+          ),
+        ),
+      );
+      grid.appendChild(
+        createFieldRow(
+          'durationSec',
+          createNumberInput(effect?.durationSec ?? 4, (durationSec) => {
+            if (!(durationSec > 0) || !Number.isFinite(durationSec)) return;
+            patchM2({ durationSec });
+          }, { min: 0.1, step: 0.1, readonly, field: 'combat-module-runtime-m2-dur' }),
         ),
       );
     }

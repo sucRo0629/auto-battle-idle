@@ -140,7 +140,11 @@
         "周囲軽減",
         "味方支援"
       ]
-    }
+    },
+    "combatModuleIds": [
+      "df_paladin_mod_frontline_ward",
+      "df_paladin_mod_danger_guard"
+    ]
   },
   {
     "id": "df_duelist",

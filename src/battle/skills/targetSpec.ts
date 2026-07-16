@@ -1034,6 +1034,8 @@ export function formatTargetLabel(spec: TargetSpec): string {
       return `${SIDE_LABELS[spec.side ?? "enemy"]}・状態`;
     case "clusterCenter":
       return `${SIDE_LABELS[spec.side]}・クラスタ中心`;
+    case "danger":
+      return `${SIDE_LABELS[spec.side]}・危険対象×${spec.maxTargets}（${spec.windowSec}s）`;
   }
 }
 

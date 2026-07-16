@@ -11,21 +11,24 @@ import { buildDangerTargetingRuntime } from './skills/targeting.ts';
 import { createResolveCurrentAttackTarget } from './resolveApproachBattleX.ts';
 import type { CombatantState, PendingSkillHit, SkillEffectDef } from './types.ts';
 import {
-  DF_PALADIN_M2_ALL_DAMAGE_TAKEN_MULTIPLIER,
   DF_PALADIN_M2_COMBAT_MODULE_ID,
-  DF_PALADIN_M2_MAGIC_EXTRA_TAKEN_MULTIPLIER,
-  DF_PALADIN_M2_PROTECTION_DURATION_SEC,
   DF_PALADIN_M2_PROTECTION_OVERLAY,
   clearDfPaladinM2RuntimeState,
   executeDfPaladinM2DangerProtection,
   hasDfPaladinM2ProtectionFrom,
   isDfPaladinM2Selected,
+  resolveDfPaladinM2RuntimeParams,
   tryApplyDfPaladinM2Protection,
 } from './dfPaladinM2.ts';
+import { syncDfPaladinCombatModuleEffects } from './dfPaladinModules.ts';
 import { mockCombatant } from './testFixtures.ts';
 
 const gameData = loadGameData();
 const levelCurves = loadLevelCurves(levelCurvesJson);
+const m2Params = resolveDfPaladinM2RuntimeParams(gameData.combatModuleRegistry)!;
+const DF_PALADIN_M2_ALL_DAMAGE_TAKEN_MULTIPLIER = m2Params.allDamageTakenMultiplier;
+const DF_PALADIN_M2_MAGIC_EXTRA_TAKEN_MULTIPLIER = m2Params.magicDamageTakenMultiplier;
+const DF_PALADIN_M2_PROTECTION_DURATION_SEC = m2Params.durationSec;
 
 const damageEffect = {
   type: 'damage',
@@ -170,7 +173,7 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
       allies,
       enemies,
       runtime,
-    );
+      gameData.combatModuleRegistry);
 
     expect(result.outcome).toBe('applied');
     expect(result.selectedTargetId).toBe('back');
@@ -198,7 +201,7 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
       allies,
       enemies,
       runtimeFor(allies, enemies),
-    );
+      gameData.combatModuleRegistry);
     expect(result.outcome).toBe('noTarget');
     expect(result.selectedTargetId).toBeNull();
     expect(hasDfPaladinM2ProtectionFrom(lowHp, 'paladin')).toBe(false);
@@ -229,7 +232,7 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
       allies,
       enemies,
       runtime,
-    );
+      gameData.combatModuleRegistry);
     expect(result.selectedTargetId).toBe('back');
   });
 
@@ -246,7 +249,7 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
       mockCombatant({ id: 'paladin' }),
       target,
       [target],
-    );
+      m2Params);
     const protectedDamage = resolveDamage(
       attacker,
       target,
@@ -265,7 +268,7 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
       mockCombatant({ id: 'paladin' }),
       target,
       [target],
-    );
+      m2Params);
     const physical = resolveDamage(
       attacker,
       target,
@@ -301,12 +304,14 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
     const protector = mockCombatant({ id: 'paladin' });
     const oldTarget = mockCombatant({ id: 'old' });
     const newTarget = mockCombatant({ id: 'new' });
-    tryApplyDfPaladinM2Protection(protector, oldTarget, [oldTarget, newTarget]);
+    tryApplyDfPaladinM2Protection(protector, oldTarget, [oldTarget, newTarget],
+      m2Params);
     expect(hasDfPaladinM2ProtectionFrom(oldTarget, 'paladin')).toBe(true);
     const switched = tryApplyDfPaladinM2Protection(protector, newTarget, [
       oldTarget,
       newTarget,
-    ]);
+    ],
+      m2Params);
     expect(switched.outcome).toBe('switched');
     expect(hasDfPaladinM2ProtectionFrom(oldTarget, 'paladin')).toBe(false);
     expect(hasDfPaladinM2ProtectionFrom(newTarget, 'paladin')).toBe(true);
@@ -315,9 +320,11 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
   it('refreshes duration on same target without stacking', () => {
     const protector = mockCombatant({ id: 'paladin' });
     const target = mockCombatant({ id: 'target' });
-    tryApplyDfPaladinM2Protection(protector, target, [target]);
+    tryApplyDfPaladinM2Protection(protector, target, [target],
+      m2Params);
     target.statusEffects[0]!.remainingSec = 0.5;
-    const refreshed = tryApplyDfPaladinM2Protection(protector, target, [target]);
+    const refreshed = tryApplyDfPaladinM2Protection(protector, target, [target],
+      m2Params);
     expect(refreshed.outcome).toBe('refreshed');
     const protectionEffects = target.statusEffects.filter(
       (fx) => fx.overlay === DF_PALADIN_M2_PROTECTION_OVERLAY,
@@ -330,8 +337,10 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
     const paladinA = mockCombatant({ id: 'paladinA' });
     const paladinB = mockCombatant({ id: 'paladinB' });
     const target = mockCombatant({ id: 'target' });
-    tryApplyDfPaladinM2Protection(paladinA, target, [target]);
-    tryApplyDfPaladinM2Protection(paladinB, target, [target]);
+    tryApplyDfPaladinM2Protection(paladinA, target, [target],
+      m2Params);
+    tryApplyDfPaladinM2Protection(paladinB, target, [target],
+      m2Params);
     expect(hasDfPaladinM2ProtectionFrom(target, 'paladinA')).toBe(true);
     expect(hasDfPaladinM2ProtectionFrom(target, 'paladinB')).toBe(true);
   });
@@ -361,7 +370,7 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
       allies,
       enemies,
       runtime,
-    );
+      gameData.combatModuleRegistry);
     expect(result.selectedTargetId).toBe('enemyAlly');
     expect(hasDfPaladinM2ProtectionFrom(enemyAlly, 'enemyPaladin')).toBe(true);
   });
@@ -380,7 +389,7 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
       allies,
       enemies,
       runtime,
-    );
+      gameData.combatModuleRegistry);
     expect(result.selectedTargetId).toBe('ally');
     expect(hasDfPaladinM2ProtectionFrom(paladin, 'paladin')).toBe(false);
   });
@@ -394,13 +403,14 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
     const withDanger = runtimeFor(allies, enemies, {
       pendingHits: [makePendingHit('enemy', 'ally')],
     });
-    executeDfPaladinM2DangerProtection(paladin, allies, enemies, withDanger);
+    executeDfPaladinM2DangerProtection(paladin, allies, enemies, withDanger,
+      gameData.combatModuleRegistry);
     const noDanger = executeDfPaladinM2DangerProtection(
       paladin,
       allies,
       enemies,
       runtimeFor(allies, enemies),
-    );
+      gameData.combatModuleRegistry);
     expect(noDanger.outcome).toBe('noTarget');
     expect(hasDfPaladinM2ProtectionFrom(ally, 'paladin')).toBe(true);
   });
@@ -424,7 +434,7 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
       allies,
       enemies,
       runtime,
-    );
+      gameData.combatModuleRegistry);
     expect(result.selectedTargetId).not.toBeNull();
     const protectedCount = [a, b].filter((unit) =>
       unit.statusEffects.some(
@@ -437,10 +447,12 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
   it('clears runtime state on wave reset helper', () => {
     const protector = mockCombatant({ id: 'paladin' });
     const target = mockCombatant({ id: 'target' });
-    tryApplyDfPaladinM2Protection(protector, target, [target]);
+    tryApplyDfPaladinM2Protection(protector, target, [target],
+      m2Params);
     clearDfPaladinM2RuntimeState();
     target.statusEffects = [];
-    const result = tryApplyDfPaladinM2Protection(protector, target, [target]);
+    const result = tryApplyDfPaladinM2Protection(protector, target, [target],
+      m2Params);
     expect(result.previousTargetId).toBeNull();
   });
 });
@@ -502,9 +514,31 @@ describe('dfPaladinM2 integration (R12g-c4)', () => {
     setEngineUnits(engine, [paladin, ally], [enemy]);
     const internals = engine as unknown as {
       pendingHitQueue: PendingSkillHit[];
+      players: CombatantState[];
+      enemies: CombatantState[];
+      battleTimeSec: number;
     };
     internals.pendingHitQueue = [makePendingHit('enemy', 'ally')];
 
+    // M2 防護は選択中 continuous sync（旧 basic 周期ではない）
+    syncDfPaladinCombatModuleEffects(
+      internals.players,
+      internals.enemies,
+      gameData.combatModuleRegistry,
+      buildDangerTargetingRuntime(
+        internals.players,
+        internals.enemies,
+        gameData,
+        {
+          battleSec: internals.battleTimeSec,
+          pendingHits: internals.pendingHitQueue,
+          resolveCurrentAttackTarget: resolveTargets(
+            [...internals.players, ...internals.enemies],
+            { enemy: 'ally' },
+          ),
+        },
+      ),
+    );
     runUnitSkills(engine, [paladin]);
 
     expect(hasDfPaladinM2ProtectionFrom(ally, 'paladin')).toBe(true);

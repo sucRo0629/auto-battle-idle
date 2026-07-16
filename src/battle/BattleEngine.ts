@@ -40,6 +40,7 @@ import {
   clearDfPaladinM2RuntimeState,
   type DfPaladinM2ProtectionResult,
 } from "./dfPaladinM2.ts";
+import { syncDfPaladinCombatModuleEffects } from "./dfPaladinModules.ts";
 import { buildDangerTargetingRuntime } from "./skills/targeting.ts";
 import { resolveUnitAttackMethod } from "./data/resolveUnitAttackMethod.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
@@ -854,6 +855,25 @@ export class BattleEngine {
     syncDuelistPrideAuras([...this.players, ...this.enemies], passives);
     syncHerbalPotencyAuras(this.players, this.enemies, passives, this.gameData);
     syncBallistaMarks(this.players, this.enemies, passives);
+    syncDfPaladinCombatModuleEffects(
+      this.players,
+      this.enemies,
+      this.gameData.combatModuleRegistry,
+      buildDangerTargetingRuntime(
+        this.players,
+        this.enemies,
+        this.gameData,
+        {
+          battleSec: this.battleTimeSec,
+          pendingHits: this.pendingHitQueue,
+        },
+      ),
+      (result) => {
+        if (result.outcome === 'applied' || result.outcome === 'switched') {
+          this.onDfPaladinM2ProtectionResult?.(result);
+        }
+      },
+    );
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
       const config = resolveBlockResonanceConfigForUnit(ally, passives);
@@ -1872,6 +1892,25 @@ export class BattleEngine {
         this.gameData.combatModuleRegistry,
       );
     }
+    syncDfPaladinCombatModuleEffects(
+      this.players,
+      this.enemies,
+      this.gameData.combatModuleRegistry,
+      buildDangerTargetingRuntime(
+        this.players,
+        this.enemies,
+        this.gameData,
+        {
+          battleSec: this.battleTimeSec,
+          pendingHits: this.pendingHitQueue,
+        },
+      ),
+      (result) => {
+        if (result.outcome === 'applied' || result.outcome === 'switched') {
+          this.onDfPaladinM2ProtectionResult?.(result);
+        }
+      },
+    );
   }
 
   stopBattle(): void {

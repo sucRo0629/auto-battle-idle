@@ -2235,6 +2235,22 @@ function parseDamageTakenDamageTypes(
   return [...new Set(types)];
 }
 
+function requireDamageTakenMultiplier(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): number {
+  const value = requireNumber(obj, key, context);
+  if (!Number.isFinite(value) || !(value > 0) || value > 1) {
+    invalidField(
+      context,
+      key,
+      'must be a finite number in the range (0, 1]',
+    );
+  }
+  return value;
+}
+
 function parseCombatModuleRuntimeEffect(
   raw: unknown,
   context: string,
@@ -2252,19 +2268,68 @@ function parseCombatModuleRuntimeEffect(
     return { kind: 'healOnEnemyAttackHpHit', flatAmount };
   }
   if (kind === 'physicalDamageTakenReduction') {
-    const takenMultiplier = requireNumber(obj, 'takenMultiplier', context);
-    if (
-      !Number.isFinite(takenMultiplier) ||
-      !(takenMultiplier > 0) ||
-      takenMultiplier > 1
-    ) {
-      invalidField(
-        context,
-        'takenMultiplier',
-        'must be a finite number in the range (0, 1]',
-      );
-    }
+    const takenMultiplier = requireDamageTakenMultiplier(
+      obj,
+      'takenMultiplier',
+      context,
+    );
     return { kind: 'physicalDamageTakenReduction', takenMultiplier };
+  }
+  if (kind === 'protectFrontlineAllies') {
+    const maxTargets = requireNumber(obj, 'maxTargets', context);
+    if (!Number.isFinite(maxTargets) || maxTargets < 1) {
+      invalidField(context, 'maxTargets', 'must be a finite number >= 1');
+    }
+    const magicDamageTakenMultiplier = requireDamageTakenMultiplier(
+      obj,
+      'magicDamageTakenMultiplier',
+      context,
+    );
+    const allRaw = obj.allDamageTakenMultiplier;
+    const allDamageTakenMultiplier =
+      allRaw === undefined
+        ? undefined
+        : requireDamageTakenMultiplier(obj, 'allDamageTakenMultiplier', context);
+    return {
+      kind: 'protectFrontlineAllies',
+      maxTargets,
+      magicDamageTakenMultiplier,
+      ...(allDamageTakenMultiplier !== undefined
+        ? { allDamageTakenMultiplier }
+        : {}),
+    };
+  }
+  if (kind === 'protectDangerTarget') {
+    const maxTargets = requireNumber(obj, 'maxTargets', context);
+    if (!Number.isFinite(maxTargets) || maxTargets < 1) {
+      invalidField(context, 'maxTargets', 'must be a finite number >= 1');
+    }
+    const windowSec = requireNumber(obj, 'windowSec', context);
+    if (!Number.isFinite(windowSec) || windowSec < 0) {
+      invalidField(context, 'windowSec', 'must be a finite number >= 0');
+    }
+    const allDamageTakenMultiplier = requireDamageTakenMultiplier(
+      obj,
+      'allDamageTakenMultiplier',
+      context,
+    );
+    const magicDamageTakenMultiplier = requireDamageTakenMultiplier(
+      obj,
+      'magicDamageTakenMultiplier',
+      context,
+    );
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    if (!Number.isFinite(durationSec) || !(durationSec > 0)) {
+      invalidField(context, 'durationSec', 'must be a finite number greater than 0');
+    }
+    return {
+      kind: 'protectDangerTarget',
+      maxTargets,
+      windowSec,
+      allDamageTakenMultiplier,
+      magicDamageTakenMultiplier,
+      durationSec,
+    };
   }
   invalidField(context, 'kind', `unknown runtimeEffect kind "${kind}"`);
 }

@@ -123,7 +123,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-16・R12g-d1 完了）
+## 8. 現在地メモ（更新: 2026-07-16・R12g-d2 完了）
 
 | 項目 | 状態 |
 | ---- | ---- |
@@ -143,7 +143,8 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12g-c4** | **Backend 完了** — 護法士 M2 防護 runtime / `TargetingRuntimeContext` 実戦注入 |
 | **R12g-c5** | **Backend 完了** — 統合 test / debug 検証。Player 手元確認は Survival Module JSON 接続後 |
 | **R12g-d1** | **Backend 完了 / Player 未完了** — 鉄衛士 M1/M2 CombatModule データ再設計 |
-| **公式次タスク** | **R12g-d2** — 護法士 M1/M2 |
+| **R12g-d2** | **Backend 完了 / Player 未完了** — 護法士 M1/M2 CombatModule データ再設計 |
+| **公式次タスク** | **R12g-d3** — 療養師 M1/M2 |
 
 **R12f で確定した主要境界（短縮）:**
 
@@ -182,7 +183,7 @@ R11 は仕組み（範囲・専用パッシブ枠・資源式・基礎ステ極�
 | **R12d** | 試作 Stage の敵問題設計（JSON 入力なし） | **完了**（設計 Phase） |
 | **R12e** | 必要能力・対処能力の導出 | **完了**（設計 Phase） |
 | **R12f** | 兵科・CombatModule・作戦内パッシブへの分配（設計） | **完了**（設計 Phase） |
-| **R12g** | class / module / passive データ再設計 | R12g-d1 Backend 完了。次 R12g-d2 |
+| **R12g** | class / module / passive データ再設計 | R12g-d2 Backend 完了。次 R12g-d3 |
 | **R12h** | Stage / Wave データ実装 | 未着手 |
 | **R12i** | 数値強度調整 | 未着手 |
 | **R12j** | 手元成立ゲート | 未着手 |

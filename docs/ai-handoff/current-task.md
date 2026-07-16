@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-d1 Backend 完了**（鉄衛士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし）。**次:** **R12g-d2**（護法士 M1/M2）。
+- **新ロードマップ現在地:** **R12g-d2 Backend 完了**（護法士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし）。**次:** **R12g-d3**（療養師 M1/M2）。
 - **R12g-c:** Backend 完了 / Player 未完了（既存 JSON 未接続のため手元戦闘確認不可。戻し先: Survival Module JSON 接続後）。
-- **次の再開タスク:** **R12g-d2**（護法士）→ d3〜 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
+- **次の再開タスク:** **R12g-d3**（療養師）→ d4〜 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8601,3 +8601,16 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 - 敵味方対称維持。他兵科 / Stage / Passive 未変更
 
 **次:** **R12g-d2** — 護法士 M1/M2 CombatModule データ再設計
+
+### 105.7 R12g-d2 — 護法士 M1/M2 CombatModule データ再設計（完了・Backend）
+
+**状態:** Backend 完了 / Player 未完了（手元画面確認なし）
+
+**実施内容（要約）:**
+- M1 `df_paladin_mod_frontline_ward`: `runtimeEffect.protectFrontlineAllies` — `formationRow: front` 複数味方へ魔法中心（任意弱い全属性）永続防護。選択中 sync
+- M2 `df_paladin_mod_danger_guard`: `runtimeEffect.protectDangerTarget` — danger 1 体・全属性＋魔法追加。倍率/duration/window/maxTargets を data 所有。runtime 仮定数削除
+- M1/M2 排他・切替時旧 effect 即解除（`syncDfPaladinCombatModuleEffects`）。M2 danger 再評価は continuous sync（旧 active 周期ではない）
+- validation + CombatModule editor（protect* kinds / danger TargetSpec 最小 UI）
+- 敵味方対称。他兵科 / Stage / Passive / 数値バランス未変更
+
+**次:** **R12g-d3** — 療養師 M1/M2 CombatModule データ再設計

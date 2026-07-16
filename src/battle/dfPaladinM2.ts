@@ -2,29 +2,19 @@ import { getResolvedBasicCombatModuleId } from './ironGuardianM2.ts';
 import type { DangerTargetSnapshot } from './dangerTargeting.ts';
 import { collectDangerTargetSnapshots, resolveDangerTargets } from './dangerTargeting.ts';
 import type { TargetingRuntimeContext } from './skills/targeting.ts';
-import type { CombatantState, StatusEffect, TargetSpec } from './types.ts';
+import type {
+  CombatModuleDef,
+  CombatantState,
+  StatusEffect,
+  TargetSpec,
+} from './types.ts';
 
 /**
- * R12g-c4 provisional CombatModule ID (danger-target protection).
- * Migrates to CombatModule JSON in R12g Survival Module data task.
+ * R12g-d2 M2 combat module ID（危険加護）。
+ * 正式 ID 変更時は runtime・test・JSON を同時更新。
  */
 export const DF_PALADIN_M2_COMBAT_MODULE_ID =
   'df_paladin_mod_danger_guard' as const;
-
-/** R12g-c4 placeholder action interval (R12i tunes). Owner: CombatModule data. */
-export const DF_PALADIN_M2_ATTACK_INTERVAL_SEC = 3;
-
-/** R12g-c4 placeholder danger window (R12i tunes). Owner: CombatModule action TargetSpec. */
-export const DF_PALADIN_M2_DANGER_WINDOW_SEC = 2;
-
-/** R12g-c4 placeholder all-damage taken multiplier (R12i tunes). Owner: CombatModule effect data. */
-export const DF_PALADIN_M2_ALL_DAMAGE_TAKEN_MULTIPLIER = 0.85;
-
-/** R12g-c4 placeholder extra magic taken multiplier (R12i tunes). Owner: CombatModule effect data. */
-export const DF_PALADIN_M2_MAGIC_EXTRA_TAKEN_MULTIPLIER = 0.85;
-
-/** R12g-c4 placeholder protection duration (R12i tunes). Owner: CombatModule effect data. */
-export const DF_PALADIN_M2_PROTECTION_DURATION_SEC = 4;
 
 export const DF_PALADIN_M2_PROTECTION_OVERLAY = 'dfPaladinM2Protection' as const;
 
@@ -45,6 +35,14 @@ export interface DfPaladinM2ProtectionResult {
   dangerSnapshots?: readonly DangerTargetSnapshot[];
 }
 
+export interface DfPaladinM2RuntimeParams {
+  maxTargets: number;
+  windowSec: number;
+  allDamageTakenMultiplier: number;
+  magicDamageTakenMultiplier: number;
+  durationSec: number;
+}
+
 const protectorTargetById = new Map<string, string>();
 
 export function clearDfPaladinM2RuntimeState(): void {
@@ -58,14 +56,52 @@ export function isDfPaladinM2Selected(combatant: CombatantState): boolean {
   );
 }
 
-function protectedSideForActor(
-  _actor: CombatantState,
+export function resolveDfPaladinM2RuntimeParams(
+  combatModuleRegistry: Record<string, CombatModuleDef>,
+): DfPaladinM2RuntimeParams | undefined {
+  const module = combatModuleRegistry[DF_PALADIN_M2_COMBAT_MODULE_ID];
+  const runtimeEffect = module?.runtimeEffect;
+  if (runtimeEffect?.kind !== 'protectDangerTarget') return undefined;
+  const {
+    maxTargets,
+    windowSec,
+    allDamageTakenMultiplier,
+    magicDamageTakenMultiplier,
+    durationSec,
+  } = runtimeEffect;
+  if (
+    !(maxTargets >= 1) ||
+    !Number.isFinite(maxTargets) ||
+    !(windowSec >= 0) ||
+    !Number.isFinite(windowSec) ||
+    !(allDamageTakenMultiplier > 0) ||
+    allDamageTakenMultiplier > 1 ||
+    !Number.isFinite(allDamageTakenMultiplier) ||
+    !(magicDamageTakenMultiplier > 0) ||
+    magicDamageTakenMultiplier > 1 ||
+    !Number.isFinite(magicDamageTakenMultiplier) ||
+    !(durationSec > 0) ||
+    !Number.isFinite(durationSec)
+  ) {
+    return undefined;
+  }
+  return {
+    maxTargets,
+    windowSec,
+    allDamageTakenMultiplier,
+    magicDamageTakenMultiplier,
+    durationSec,
+  };
+}
+
+function buildDangerTargetSpec(
+  params: DfPaladinM2RuntimeParams,
 ): TargetSpec & { kind: 'danger' } {
   return {
     kind: 'danger',
     side: 'ally',
-    maxTargets: 1,
-    windowSec: DF_PALADIN_M2_DANGER_WINDOW_SEC,
+    maxTargets: params.maxTargets,
+    windowSec: params.windowSec,
   };
 }
 
@@ -116,7 +152,7 @@ function removeDfPaladinM2ProtectionFromTarget(
 function applyDfPaladinM2ProtectionToTarget(
   protector: CombatantState,
   target: CombatantState,
-  durationSec: number,
+  params: DfPaladinM2RuntimeParams,
 ): void {
   removeDfPaladinM2ProtectionFromTarget(target, protector.id);
   const appliedAt = Date.now();
@@ -125,10 +161,10 @@ function applyDfPaladinM2ProtectionToTarget(
     kind: 'buff',
     stat: 'damageTaken',
     overlay: DF_PALADIN_M2_PROTECTION_OVERLAY,
-    multiplier: DF_PALADIN_M2_ALL_DAMAGE_TAKEN_MULTIPLIER,
-    dfPaladinM2MagicTakenMultiplier: DF_PALADIN_M2_MAGIC_EXTRA_TAKEN_MULTIPLIER,
-    durationSec,
-    remainingSec: durationSec,
+    multiplier: params.allDamageTakenMultiplier,
+    dfPaladinM2MagicTakenMultiplier: params.magicDamageTakenMultiplier,
+    durationSec: params.durationSec,
+    remainingSec: params.durationSec,
     sourceId: protector.id,
     skillId: DF_PALADIN_M2_COMBAT_MODULE_ID,
     displayName: '危険対象防護',
@@ -140,11 +176,22 @@ export function removeDfPaladinM2ProtectionForProtector(
   roster: readonly CombatantState[],
 ): string | null {
   const previousTargetId = protectorTargetById.get(protectorId) ?? null;
-  if (!previousTargetId) return null;
+  if (!previousTargetId) {
+    for (const unit of roster) {
+      removeDfPaladinM2ProtectionFromTarget(unit, protectorId);
+    }
+    protectorTargetById.delete(protectorId);
+    return null;
+  }
   const previousTarget = roster.find((unit) => unit.id === previousTargetId);
   if (previousTarget) {
     removeDfPaladinM2ProtectionFromTarget(previousTarget, protectorId);
   }
+  for (const unit of roster) {
+    if (unit.id === previousTargetId) continue;
+    removeDfPaladinM2ProtectionFromTarget(unit, protectorId);
+  }
+  protectorTargetById.delete(protectorId);
   return previousTargetId;
 }
 
@@ -152,7 +199,7 @@ export function tryApplyDfPaladinM2Protection(
   protector: CombatantState,
   target: CombatantState,
   roster: readonly CombatantState[],
-  durationSec: number = DF_PALADIN_M2_PROTECTION_DURATION_SEC,
+  params: DfPaladinM2RuntimeParams,
 ): DfPaladinM2ProtectionResult {
   const previousTargetId = protectorTargetById.get(protector.id) ?? null;
   let outcome: DfPaladinM2ProtectionOutcome = 'applied';
@@ -167,7 +214,7 @@ export function tryApplyDfPaladinM2Protection(
     outcome = 'switched';
   }
 
-  applyDfPaladinM2ProtectionToTarget(protector, target, durationSec);
+  applyDfPaladinM2ProtectionToTarget(protector, target, params);
   protectorTargetById.set(protector.id, target.id);
 
   return {
@@ -175,9 +222,9 @@ export function tryApplyDfPaladinM2Protection(
     selectedTargetId: target.id,
     previousTargetId,
     outcome,
-    allDamageTakenMultiplier: DF_PALADIN_M2_ALL_DAMAGE_TAKEN_MULTIPLIER,
-    magicExtraTakenMultiplier: DF_PALADIN_M2_MAGIC_EXTRA_TAKEN_MULTIPLIER,
-    durationSec,
+    allDamageTakenMultiplier: params.allDamageTakenMultiplier,
+    magicExtraTakenMultiplier: params.magicDamageTakenMultiplier,
+    durationSec: params.durationSec,
   };
 }
 
@@ -186,6 +233,7 @@ function resolveDangerProtectionTarget(
   allies: readonly CombatantState[],
   enemies: readonly CombatantState[],
   runtime: TargetingRuntimeContext | undefined,
+  params: DfPaladinM2RuntimeParams,
 ): {
   target: CombatantState | null;
   snapshots?: readonly DangerTargetSnapshot[];
@@ -194,7 +242,7 @@ function resolveDangerProtectionTarget(
     return { target: null };
   }
 
-  const spec = protectedSideForActor(protector);
+  const spec = buildDangerTargetSpec(params);
   const candidates = (protector.isEnemy ? enemies : allies).filter(
     (unit) => unit.isAlive,
   );
@@ -237,13 +285,28 @@ export function executeDfPaladinM2DangerProtection(
   allies: readonly CombatantState[],
   enemies: readonly CombatantState[],
   runtime: TargetingRuntimeContext | undefined,
+  combatModuleRegistry: Record<string, CombatModuleDef>,
 ): DfPaladinM2ProtectionResult {
   const previousTargetId = protectorTargetById.get(protector.id) ?? null;
+  const params = resolveDfPaladinM2RuntimeParams(combatModuleRegistry);
+  if (!params) {
+    return {
+      protectorId: protector.id,
+      selectedTargetId: null,
+      previousTargetId,
+      outcome: 'noTarget',
+      allDamageTakenMultiplier: 1,
+      magicExtraTakenMultiplier: 1,
+      durationSec: 0,
+    };
+  }
+
   const { target, snapshots } = resolveDangerProtectionTarget(
     protector,
     allies,
     enemies,
     runtime,
+    params,
   );
 
   if (!target) {
@@ -252,15 +315,20 @@ export function executeDfPaladinM2DangerProtection(
       selectedTargetId: null,
       previousTargetId,
       outcome: 'noTarget',
-      allDamageTakenMultiplier: DF_PALADIN_M2_ALL_DAMAGE_TAKEN_MULTIPLIER,
-      magicExtraTakenMultiplier: DF_PALADIN_M2_MAGIC_EXTRA_TAKEN_MULTIPLIER,
-      durationSec: DF_PALADIN_M2_PROTECTION_DURATION_SEC,
+      allDamageTakenMultiplier: params.allDamageTakenMultiplier,
+      magicExtraTakenMultiplier: params.magicDamageTakenMultiplier,
+      durationSec: params.durationSec,
       dangerSnapshots: snapshots,
     };
   }
 
   const roster = [...allies, ...enemies];
-  const result = tryApplyDfPaladinM2Protection(protector, target, roster);
+  const result = tryApplyDfPaladinM2Protection(
+    protector,
+    target,
+    roster,
+    params,
+  );
   return {
     ...result,
     dangerSnapshots: snapshots,

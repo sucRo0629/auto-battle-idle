@@ -311,8 +311,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 基本対象数 | **1 体**。常時複数保護を標準にしない |
 | tie-break | pending 中の異なる敵数 → 最短 apply 時刻 → pending Hit 数 → HP 割合 → 決定的 ID 順 |
 | 魔法特化 | 対象選定と effect 強度を分離。魔法は同値時の補助加点候補に留める |
-| 未接続 | editor `danger` kind 入力は **R12g-g**。仮 Module ID / 仮数値の data 移管は **R12g Survival Module data**。Player 手元確認も同接続後 |
-| R12g-c4〜c5 runtime | `src/battle/dfPaladinM2.ts` — 暫定 ID `df_paladin_mod_danger_guard`、全属性 `damageTaken` 軽減 + 魔法追加倍率、`TargetingRuntimeContext` 注入、統合 test / `onDfPaladinM2ProtectionResult`。**Backend 完了 / Player 未完了** |
+| 未接続 | 仮 Module ID / 仮数値の data 移管は **R12g-d2 Backend 完了**。Player 手元確認は未達。editor 追加 UI の残りは **R12g-g** |
+| R12g-c4〜c5 / R12g-d2 runtime | `dfPaladinM1.ts` / `dfPaladinM2.ts` / `dfPaladinModules.ts` — M1 `df_paladin_mod_frontline_ward`（前線複数・魔法中心）、M2 `df_paladin_mod_danger_guard`（danger 1 体・全属性＋魔法追加）。倍率・duration・window・maxTargets は CombatModule data 所有。**Backend 完了 / Player 未完了** |
 
 #### `sp_cleric` 療養師
 
@@ -2505,9 +2505,11 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 **`attackMethod`（通常攻撃 / 戦闘方式）:** `ActiveSkillDef` および `CombatModuleDef.action` の任意フィールド。`"melee"` | `"ranged"`。**primary effect が `damage` のとき必須**。heal-only basic / buff module は未設定。`resolveUnitAttackMethod(unit, gameData)` は basic スロットの `skillId` から解決（CombatModule 差し替え対応）。接近・射程計算は従来どおり `traits.rangePx` / effect `range`。
 
-**`CombatModuleDef.runtimeEffect`（任意・R12g-d1）:** 通常 `action` では表現しない選択中永続効果・被 Hit リアクション等。現行 kind:
+**`CombatModuleDef.runtimeEffect`（任意・R12g-d1/d2）:** 通常 `action` では表現しない選択中永続効果・被 Hit リアクション等。現行 kind:
 - `physicalDamageTakenReduction`（`takenMultiplier` ∈ (0, 1]）— 鉄衛士 M1。選択中は永続物理被ダメ軽減
 - `healOnEnemyAttackHpHit`（`flatAmount > 0`）— 鉄衛士 M2。固定自己回復量の所有者
+- `protectFrontlineAllies`（`maxTargets` / `magicDamageTakenMultiplier` / 任意 `allDamageTakenMultiplier`）— 護法士 M1。`formationRow: front` の同陣営複数味方へ選択中永続防護
+- `protectDangerTarget`（`maxTargets` / `windowSec` / `allDamageTakenMultiplier` / `magicDamageTakenMultiplier` / `durationSec`）— 護法士 M2。danger TargetSpec を runtime 構築し危険対象を防護
 
 大規模汎用 trigger DSL ではない。防護・軽減系は [combat.md §戦闘方式](combat.md#戦闘方式) の **選択中永続原則**（周期バフ禁止）に従う。
 
