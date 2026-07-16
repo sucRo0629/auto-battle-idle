@@ -247,9 +247,10 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 副担当 | C、F、G |
 | M1 後方侵入型 | 前線を越えて現在 HP 最低対象へ接近。支援役到達を担当。敵魔術師の最近傍攻撃を受けやすい。魔術師との相克を越えて療養師へ到達する |
 | M2 前線内仕留め型 | 前線を追い越さない。中距離射程内の現在 HP 最低対象を攻撃。敵後衛の初期位置へ直接届かない。侵入した敵双刃士が射程内かつ最低 HP なら C へ条件付き寄与（敵双刃士を固定優先する方式ではない） |
-| 射程 | 具体値未確定。槍術士との違いは射程差ではなく Kill / Flow 分類差 |
-| Passive | 侵入直後の短い生存猶予、撃破後移行、低 HP 処理の安定 |
+| 射程 | M1 近接（traits）。M2 中距離 `range: 90`（仮）。槍術士との違いは射程差ではなく Kill / Flow 分類差 |
+| Passive | 侵入直後の短い生存猶予、撃破後移行、低 HP 処理の安定。固定優先は `at_assassin_passive_2`（現在 HP 最低・絶対値） |
 | 持たせない | 高 DEF 突破、遠隔攻撃役優先、自己回復・HP 吸収、恒常的な高魔法耐久 |
+| R12g-e2 data | `data/combat-modules/at_assassin.json` — M1 `at_assassin_mod_rear_intrude`（後方侵入・melee・単発物理・接触 cap 越え Chase）、M2 `at_assassin_mod_frontline_finish`（前線内仕留め・ranged mid・単発物理・接触線まで・後衛初期位置非到達）。legacy basic 固定 2 Hit は Module に継承しない。数値は仮。**Backend 完了 / Player 未完了** |
 
 #### `at_ranger` 弓術士
 
@@ -339,7 +340,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 持たせない | 本体回復、無限 Barrier、全体完全防護、療養師と同等の HP 復元 |
 | R12g-d4 data | `data/combat-modules/sp_wardweaver.json` — M1 `sp_wardweaver_mod_focus_barrier`（danger 味方1体・厚い Barrier・`barrierStack: true`）、M2 `sp_wardweaver_mod_spread_barrier`（ally Barrier 不足複数・薄い Barrier・`requireBelow`・`refillSameTargetOnShortfall: false`）。数値は仮。**Backend 完了 / Player 未完了** |
 | R12g-d5 統合 | Survival 4 兵科（鉄衛士・護法士・療養師・結界師）を同一実戦経路で確認。`src/battle/survivalCombatModules.integration.test.ts`。**R12g-d 本流 Backend 完了 / Player 未完了**。次は Kill 兵科（R12g-e1〜） |
-| R12g-e1 data | 剣術士 M1/M2 — 上記 `at_swordsman` 節。`src/battle/atSwordsmanModules.test.ts`。**Backend 完了 / Player 未完了**。次は R12g-e2（双刃士） |
+| R12g-e1 data | 剣術士 M1/M2 — 上記 `at_swordsman` 節。`src/battle/atSwordsmanModules.test.ts`。**Backend 完了 / Player 未完了** |
+| R12g-e2 data | 双刃士 M1/M2 — 上記 `at_assassin` 節。`src/battle/atAssassinModules.test.ts`。**Backend 完了 / Player 未完了**。次は R12g-e3（弓術士） |
 
 ### R12f → R12g 未接続事項
 

@@ -252,17 +252,17 @@ describe('ally combat module selection (R5d)', () => {
 
   it('7. legacy class keeps synthesized legacy basic skill id', () => {
     const gameData = loadGameData();
-    const preset = gameData.classRegistry.at_assassin!;
+    const preset = gameData.classRegistry.at_lancer!;
     expect(preset.combatModuleIds).toBeUndefined();
     const ally = createAllyFromMember(
-      mockMember('at_assassin'),
+      mockMember('at_lancer'),
       preset,
       levelCurves,
       gameData,
       'df_guardian_mod_nearest_strike',
     );
     expect(ally.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
-      'at_assassin_basic_attack',
+      'at_lancer_basic_attack',
     );
   });
 

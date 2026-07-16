@@ -361,9 +361,9 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
 
   it('15. legacy group keeps synthesized legacy basic', () => {
     const gameData = loadGameData();
-    const preset = gameData.classRegistry.at_assassin!;
+    const preset = gameData.classRegistry.at_lancer!;
     expect(preset.combatModuleIds).toBeUndefined();
-    const stage = stageWithGroups([{ classId: 'at_assassin', count: 1 }]);
+    const stage = stageWithGroups([{ classId: 'at_lancer', count: 1 }]);
     const [enemy] = createEnemiesForStage(
       gameDataWithStage(stage),
       stage.id,
@@ -373,6 +373,26 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
 
     expect(enemy.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
       preset.basicAttackSkillId,
+    );
+  });
+
+  it('15b. assassin enemy group uses CombatModule basic (R12g-e2)', () => {
+    const gameData = loadGameData();
+    const preset = gameData.classRegistry.at_assassin!;
+    expect(preset.combatModuleIds).toEqual([
+      'at_assassin_mod_rear_intrude',
+      'at_assassin_mod_frontline_finish',
+    ]);
+    const stage = stageWithGroups([{ classId: 'at_assassin', count: 1 }]);
+    const [enemy] = createEnemiesForStage(
+      gameDataWithStage(stage),
+      stage.id,
+      0,
+      levelCurves,
+    )!;
+
+    expect(enemy.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
+      'at_assassin_mod_rear_intrude',
     );
   });
 

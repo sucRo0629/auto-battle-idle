@@ -1,0 +1,65 @@
+[
+  {
+    "id": "at_assassin_mod_rear_intrude",
+    "classId": "at_assassin",
+    "displayName": "後方侵入",
+    "description": "現在のHPが最も低い敵へ前線を越えて接近し、単体物理攻撃で仕留める。前線で停止しない。",
+    "attackIntervalSec": 2.2,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "stat",
+            "side": "enemy",
+            "stat": "hp",
+            "order": "lowest"
+          },
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single",
+      "attackMethod": "melee"
+    }
+  },
+  {
+    "id": "at_assassin_mod_frontline_finish",
+    "classId": "at_assassin",
+    "displayName": "前線仕留め",
+    "description": "前線を越えず、中距離射程内の現在HPが最も低い敵を単体物理攻撃で仕留める。敵後衛の奥までは直接届かない。",
+    "attackIntervalSec": 2.4,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "stat",
+            "side": "enemy",
+            "stat": "hp",
+            "order": "lowest"
+          },
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.85
+          },
+          "range": 90
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single",
+      "attackMethod": "ranged"
+    }
+  }
+]

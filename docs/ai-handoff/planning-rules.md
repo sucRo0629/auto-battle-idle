@@ -48,6 +48,11 @@ R10 は「新作戦ステージを 1 本追加する」だけではない。
 
 `learnedActiveIds=[]` のテスト fixture だけでは Player 完了にならない。
 
+### テスト作成の観点
+
+テストは現行実装のスナップショットではなく、**確定仕様どおりか**を確かめるために書く。  
+**正本:** [test-policy.md](test-policy.md)。CombatModule 詳細は [combat-module-test-policy.md](combat-module-test-policy.md)。
+
 ---
 
 ## 3. R5 と R10 の橋渡し（R9.5 / R10-prep）
@@ -123,7 +128,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-16・R12g-e1 完了）
+## 8. 現在地メモ（更新: 2026-07-16・R12g-e2 完了）
 
 | 項目 | 状態 |
 | ---- | ---- |
@@ -148,7 +153,8 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12g-d4** | **Backend 完了 / Player 未完了** — 結界師 M1/M2 CombatModule データ再設計 |
 | **R12g-d5** | **Backend 完了 / Player 未完了** — Survival 4 兵科共通統合確認 |
 | **R12g-e1** | **Backend 完了 / Player 未完了** — 剣術士 M1/M2 CombatModule データ再設計 |
-| **公式次タスク** | **R12g-e2** — 双刃士 CombatModule データ再設計 |
+| **R12g-e2** | **Backend 完了 / Player 未完了** — 双刃士 M1/M2 CombatModule データ再設計 |
+| **公式次タスク** | **R12g-e3** — 弓術士 CombatModule データ再設計 |
 
 **R12f で確定した主要境界（短縮）:**
 
@@ -187,7 +193,7 @@ R11 は仕組み（範囲・専用パッシブ枠・資源式・基礎ステ極�
 | **R12d** | 試作 Stage の敵問題設計（JSON 入力なし） | **完了**（設計 Phase） |
 | **R12e** | 必要能力・対処能力の導出 | **完了**（設計 Phase） |
 | **R12f** | 兵科・CombatModule・作戦内パッシブへの分配（設計） | **完了**（設計 Phase） |
-| **R12g** | class / module / passive データ再設計 | R12g-e1 Backend 完了。次 R12g-e2 |
+| **R12g** | class / module / passive データ再設計 | R12g-e2 Backend 完了。次 R12g-e3 |
 | **R12h** | Stage / Wave データ実装 | 未着手 |
 | **R12i** | 数値強度調整 | 未着手 |
 | **R12j** | 手元成立ゲート | 未着手 |

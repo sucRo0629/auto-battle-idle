@@ -352,7 +352,11 @@
         "出血",
         "背後移動"
       ]
-    }
+    },
+    "combatModuleIds": [
+      "at_assassin_mod_rear_intrude",
+      "at_assassin_mod_frontline_finish"
+    ]
   },
   {
     "id": "at_lancer",

@@ -1,7 +1,16 @@
 import type { CombatantState, GameData, TargetSpec } from "./types.ts";
 import { getPassiveDefs } from "./combatMath.ts";
 import {
+  isAllyBarrierBasicAttack,
+  isAllyHealBasicAttack,
+  isAssassinFrontlineFinishBasicAttack,
+  isAssassinRearIntrudeBasicAttack,
+  isPierceEnemyBasicAttack,
+  resolveBasicAttackEffect,
+} from "./allyHealBasicAttack.ts";
+import {
   getEnemyContactX,
+  getPlayerContactX,
   getPlayerFrontlineContactX,
   isPlayerRearAssaultAccess,
   PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
@@ -28,12 +37,6 @@ import {
   comparePartyFormationSlot,
   computePartyFormationBattleX,
 } from "./partyFormation.ts";
-import {
-  isAllyBarrierBasicAttack,
-  isAllyHealBasicAttack,
-  isPierceEnemyBasicAttack,
-  resolveBasicAttackEffect,
-} from "./allyHealBasicAttack.ts";
 
 /** `bodyAnimMarching.BODY_ANIM_APPROACH_SETTLED_PX` と同期 */
 const APPROACH_SETTLE_EPSILON_PX = 0.5;
@@ -311,12 +314,20 @@ function capOnFieldBeforeEnemyContact(
   if (isPlayerRearAssaultAccess(player, { players, enemies })) {
     return approachX;
   }
+  // 双刃士 M1: 前線接触 cap を越え、ChaseTarget（現在 HP 最低）へ侵入する
+  if (isAssassinRearIntrudeBasicAttack(player, gameData)) {
+    return approachX;
+  }
   // ally-heal / ally-barrier: 接近目標は味方基準。敵接触 cap で手前に抑えない。
   if (
     isAllyHealBasicAttack(player, gameData) ||
     isAllyBarrierBasicAttack(player, gameData)
   ) {
     return approachX;
+  }
+  // 双刃士 M2: 前線（敵接触線）は越えないが、接触線まで寄せて中距離攻撃する
+  if (isAssassinFrontlineFinishBasicAttack(player, gameData)) {
+    return Math.min(approachX, contact);
   }
   const contactCapX = resolveApproachAttackBattleX(
     player,
@@ -528,9 +539,11 @@ export function resolveAllPlayerApproachBattleX(
     // 敵接触線（min）より奥＝敵の背後側。chase stop（左・味方側）へは戻さない。
     // いま背後にいる敵（最奥の左隣敵）+ hold offset を追従する。
     // 前衛 contact 固定だと後衛背後から contact 側へ左引きになる。
+    // 双刃士 M1 は hold に切り替えず、現在 HP 最低 ChaseTarget への接近を維持する。
     if (
       isPlayerRearAssaultAccess(player, battleContext) &&
-      player.battleX > contact + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX
+      player.battleX > contact + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX &&
+      !isAssassinRearIntrudeBasicAttack(player, gameData)
     ) {
       const hold = resolvePlayerRearAssaultHoldBattleX(player, enemies);
       if (hold !== null) {
@@ -681,7 +694,15 @@ export function resolveEnemyApproachBattleX(
     const frontX = Math.max(...contact.map((p) => p.battleX));
     return resolveAttackBattleX(enemy, frontX, gameData);
   }
-  return resolveApproachAttackBattleX(enemy, chase.battleX, gameData);
+  const approachX = resolveApproachAttackBattleX(enemy, chase.battleX, gameData);
+  // 双刃士 M2: 味方前線（player contact）を追い越さない（接触線まで寄せて中距離）
+  if (isAssassinFrontlineFinishBasicAttack(enemy, gameData)) {
+    const playerContact = getPlayerContactX(players);
+    if (playerContact !== null) {
+      return Math.max(approachX, playerContact);
+    }
+  }
+  return approachX;
 }
 
 /** 接敵中: 射程内に攻撃対象がいれば自動接近を止める */

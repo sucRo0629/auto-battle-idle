@@ -6758,6 +6758,98 @@ function validateAtSwordsmanCombatModule(module: CombatModuleDef): void {
   }
 }
 
+const AT_ASSASSIN_M1_ID = 'at_assassin_mod_rear_intrude';
+const AT_ASSASSIN_M2_ID = 'at_assassin_mod_frontline_finish';
+/** M2 中距離の上限（後衛初期位置へ直接届く長射程を禁止） */
+const AT_ASSASSIN_M2_RANGE_MAX_PX = 150;
+/** M2 中距離の下限（近接と同形にならない） */
+const AT_ASSASSIN_M2_RANGE_MIN_PX = 50;
+
+function isLowestCurrentHpEnemyTarget(
+  target: import('../types.ts').TargetSpec | undefined,
+): boolean {
+  return (
+    target !== undefined &&
+    target.kind === 'stat' &&
+    target.side === 'enemy' &&
+    target.stat === 'hp' &&
+    target.order === 'lowest'
+  );
+}
+
+/** R12g-e2: 双刃士 CombatModule の役割境界（最小チェック。細目は data / runtime test） */
+function validateAtAssassinCombatModule(module: CombatModuleDef): void {
+  if (module.classId !== 'at_assassin') return;
+
+  for (const [index, effect] of module.action.effect.entries()) {
+    const effectContext = `combat module "${module.id}" effect[${index}]`;
+    if (effect.type !== 'damage') {
+      throw new Error(
+        `${effectContext}: at_assassin modules must use damage effects only (got ${effect.type})`,
+      );
+    }
+    if (effect.damageType !== 'physical') {
+      throw new Error(
+        `${effectContext}: at_assassin modules must be physical damage`,
+      );
+    }
+    assertPositiveHealResourceAmount(effect.amount, `${effectContext}.amount`);
+    const target = effect.target ?? module.action.target;
+    if (!isLowestCurrentHpEnemyTarget(target)) {
+      throw new Error(
+        `${effectContext}: target must be enemy hp lowest (current HP)`,
+      );
+    }
+  }
+
+  const shape = module.action.targetShape ?? 'single';
+  const hitCount = module.action.hitCount ?? 1;
+  if (shape !== 'single' || hitCount >= 2) {
+    throw new Error(
+      `combat module "${module.id}": at_assassin modules must be single-target single Hit`,
+    );
+  }
+
+  if (module.id === AT_ASSASSIN_M1_ID) {
+    if (module.action.attackMethod !== 'melee') {
+      throw new Error(
+        `combat module "${module.id}": M1 rear intrude must be melee`,
+      );
+    }
+    for (const effect of module.action.effect) {
+      if (effect.range !== undefined && effect.range > 40) {
+        throw new Error(
+          `combat module "${module.id}": M1 must stay near-melee range (not mid/long)`,
+        );
+      }
+    }
+  }
+
+  if (module.id === AT_ASSASSIN_M2_ID) {
+    if (module.action.attackMethod !== 'ranged') {
+      throw new Error(
+        `combat module "${module.id}": M2 frontline finish must be ranged mid-range`,
+      );
+    }
+    const range = module.action.effect[0]?.range;
+    if (
+      range === undefined ||
+      range < AT_ASSASSIN_M2_RANGE_MIN_PX ||
+      range > AT_ASSASSIN_M2_RANGE_MAX_PX
+    ) {
+      throw new Error(
+        `combat module "${module.id}": M2 range must be mid-range (${AT_ASSASSIN_M2_RANGE_MIN_PX}..${AT_ASSASSIN_M2_RANGE_MAX_PX})`,
+      );
+    }
+  }
+
+  if (module.id !== AT_ASSASSIN_M1_ID && module.id !== AT_ASSASSIN_M2_ID) {
+    throw new Error(
+      `combat module "${module.id}": unknown at_assassin module id`,
+    );
+  }
+}
+
 function validateCombatModuleData(
   combatModules: CombatModuleDef[],
   classById: Map<string, ClassPreset>,
@@ -6776,6 +6868,7 @@ function validateCombatModuleData(
     validateSpClericCombatModule(module);
     validateSpWardweaverCombatModule(module);
     validateAtSwordsmanCombatModule(module);
+    validateAtAssassinCombatModule(module);
   }
 }
 

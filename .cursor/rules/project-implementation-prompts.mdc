@@ -30,7 +30,8 @@ alwaysApply: true
 
 - 変更対象が battle / combat / progression / classes / skills のどれに属するかを明示する。
 - 更新すべき spec は `docs/spec/README.md` と `docs/README.md` の対応表で確認させる。
-- acceptance criteria には、テストだけでなく仕様書との一致確認も含める。テスト緑だけでは完了にしない（`tests-not-proof.mdc`）。
+- acceptance criteria には、テストだけでなく仕様書との一致確認も含める。テスト緑だけでは完了にしない（`tests-not-proof.mdc` / [test-policy.md](../../docs/ai-handoff/test-policy.md)）。
+- テストは「確定仕様どおりか」の観点で書く。CombatModule（R12g 兵科 M1/M2）は [combat-module-test-policy.md](../../docs/ai-handoff/combat-module-test-policy.md) に従い、JSON / registry 件数だけでは Backend 完了にしない。
 
 
 ## バグ修正

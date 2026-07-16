@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-e1 Backend 完了**（剣術士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e1 Player 確認）。**次:** **R12g-e2**（双刃士 Module data）。
+- **新ロードマップ現在地:** **R12g-e2 Backend 完了**（双刃士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e2 Player 確認）。**次:** **R12g-e3**（弓術士 Module data）。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12g-e2**（双刃士）→ e3〜e5 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
+- **次の再開タスク:** **R12g-e3**（弓術士）→ e4〜e5 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8665,3 +8665,22 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 - 正式 VFX / 専用アイコンは不要
 
 **次:** **R12g-e2** — 双刃士 M1/M2 CombatModule データ再設計
+
+### 105.11 R12g-e2 — 双刃士 M1/M2 CombatModule データ再設計（完了・Backend）
+
+**状態:** Backend 完了 / Player 未完了（手元画面確認なし）
+
+**実施内容（要約）:**
+- M1 `at_assassin_mod_rear_intrude`（後方侵入）: 現在 HP 最低へ近接単発物理。味方は敵接触 cap を越え Chase。rearAssault hold へ切り替えず対象へ接近維持
+- M2 `at_assassin_mod_frontline_finish`（前線仕留め）: 現在 HP 最低へ中距離（`range: 90`）単発物理。接触線まで寄せるが越えない。敵側も player contact で対称。後衛初期位置へ直接届かない
+- 固定 target: class passive `at_assassin_passive_2`（現在 HP 絶対値最低）＋ Module 同仕様。legacy basic 固定 2 Hit は Module に継承しない（両方 single Hit）
+- Approach: `isAssassinRearIntrudeBasicAttack` / `isAssassinFrontlineFinishBasicAttack`（新 schema なし）
+- validation: `validateAtAssassinCombatModule`。editor 既存項目で round-trip
+- 新規 test: `src/battle/atAssassinModules.test.ts`（target / 位置 / damage / 排他 / 敵味方対称 / Operation Wave 切替の runtime）
+- Survival / 剣術士 / 弓術士 / 魔術師 / Stage / Passive / 数値本調整は未変更
+
+**Player 未完了の不足:**
+- 出撃前 / Wave 間で双刃士 M1/M2 差を手元確認していない
+- 戻し先: **R12g-e2 Player 確認**（既存 R9.5c SkillMenuPanel / WavePrep 配線は利用可能）
+
+**次:** **R12g-e3** — 弓術士 M1/M2 CombatModule データ再設計

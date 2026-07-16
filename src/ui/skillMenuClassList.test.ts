@@ -44,8 +44,11 @@ describe('game class selection list', () => {
       'sp_wardweaver_mod_focus_barrier',
       'sp_wardweaver_mod_spread_barrier',
     ]);
-    // 未入力の legacy（Kill 兵科など）
-    expect(gameData.classRegistry.at_assassin?.combatModuleIds).toBeUndefined();
+    expect(gameData.classRegistry.at_assassin?.combatModuleIds).toEqual([
+      'at_assassin_mod_rear_intrude',
+      'at_assassin_mod_frontline_finish',
+    ]);
+    // 未入力の legacy
     expect(gameData.classRegistry.at_sigilist?.combatModuleIds).toBeUndefined();
   });
 

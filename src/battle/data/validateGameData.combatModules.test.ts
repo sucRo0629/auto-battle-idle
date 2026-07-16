@@ -76,8 +76,10 @@ describe('combat module data (R5b)', () => {
     if (!loaded.ok) return;
 
     const registry = loaded.data.combatModuleRegistry;
-    expect(Object.keys(registry).length).toBe(12);
+    // Survival4×2 + 剣術士×2 + 双刃士×2 + 魔術師×2 = 14
+    expect(Object.keys(registry).length).toBe(14);
     expect(registry.df_guardian_mod_nearest_strike.classId).toBe('df_guardian');
+    expect(registry.at_assassin_mod_rear_intrude.classId).toBe('at_assassin');
   });
 
   it('R5 target classes each reference exactly 2 combat modules', () => {
@@ -321,6 +323,39 @@ describe('combat module data (R5b)', () => {
     expect(cls?.combatModuleIds).toEqual([
       'at_swordsman_mod_single_slash',
       'at_swordsman_mod_pierce_slash',
+    ]);
+  });
+
+  it('R12g-e2: parses assassin M1/M2 current-HP CombatModule data', () => {
+    const parsed = parseAndValidateGameDataJson(loadRealBundle());
+    const m1 = parsed.combatModules.find(
+      (module) => module.id === 'at_assassin_mod_rear_intrude',
+    );
+    const m2 = parsed.combatModules.find(
+      (module) => module.id === 'at_assassin_mod_frontline_finish',
+    );
+    expect(m1?.action.effect[0]?.type).toBe('damage');
+    expect(m1?.action.effect[0]?.damageType).toBe('physical');
+    expect(m1?.action.effect[0]?.target).toEqual({
+      kind: 'stat',
+      side: 'enemy',
+      stat: 'hp',
+      order: 'lowest',
+    });
+    expect(m1?.action.attackMethod).toBe('melee');
+    expect(m1?.action.targetShape ?? 'single').toBe('single');
+    expect(m2?.action.attackMethod).toBe('ranged');
+    expect(m2?.action.effect[0]?.range).toBe(90);
+    expect(m2?.action.effect[0]?.target).toEqual({
+      kind: 'stat',
+      side: 'enemy',
+      stat: 'hp',
+      order: 'lowest',
+    });
+    const cls = parsed.classes.find((entry) => entry.id === 'at_assassin');
+    expect(cls?.combatModuleIds).toEqual([
+      'at_assassin_mod_rear_intrude',
+      'at_assassin_mod_frontline_finish',
     ]);
   });
 

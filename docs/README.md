@@ -4,6 +4,7 @@
 
 - **[Plans](plans/README.md)** — 開発ロードマップ（[フェーズ詳細](plans/phase-roadmap.md)、[Phase 4 詳細](plans/phase-4-roadmap.md)、[itch.io Devlog](plans/itch-io-devlog.md)）
 - **[Spec](spec/README.md)** — ゲーム設計リファレンス（ステータス・戦闘・クラス・進行）
+- **[AI handoff](ai-handoff/planning-rules.md)** — フェーズ二層完了・受け渡し（[テスト方針](ai-handoff/test-policy.md)、[CombatModule test](ai-handoff/combat-module-test-policy.md)）
 - **[Dev](dev/balance-diagnostics.md)** — M1 体験版バランス診断（smoke / puzzle / 診断ログの運用意図）
 - **[Design Philosophy](design-philosophy.md)** — コアコンセプト（編成への思考圧縮）、評価軸、設計判断基準
 - **[Combat Architecture](combat-architecture.md)** — 戦闘システム全体の上位構造（Kill / Flow / Survival）

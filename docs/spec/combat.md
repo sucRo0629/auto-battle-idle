@@ -395,6 +395,8 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 | 味方 `stat` + `order: ratio` 単体 heal / hot | PHT を選ぶ（従来 spec と同一意味を PHT 名で正本化） |
 | ally-heal 自動接近 | PHT が射程外なら PHT 方向へ接近（**後方の負傷味方へは左へ後退**。前方前提の `resolveApproachAttackBattleX` は使わない）。それ以外は味方最前線（`getPlayerFrontlineContactX`）を heal 射程内に入れるまで前進。**前衛が敵接触線を越えた一時侵入は FrontlineOwner から除外されるが、接近 anchor は生存味方の最大 `battleX` を採用**（後方だけ届いて前衛未達にならない）。敵接触 cap は ally-heal には適用しない。全員満タンでも同じ（敵 chase しない） |
 | ally-heal 接近停止 | 上記 anchor が heal 射程内なら停止（PHT 不在でも可）。回復発動対象は引き続き PHT |
+| 双刃士 M1 接近（R12g-e2） | 選択 Module が `at_assassin_mod_rear_intrude` のとき、味方は敵接触 cap を越え現在 HP 最低 ChaseTarget へ侵入。rearAssault hold（前衛背後固定）へ切り替えない。敵側は従来どおり Chase 接近（接触 cap なし） |
+| 双刃士 M2 接近（R12g-e2） | 選択 Module が `at_assassin_mod_frontline_finish` のとき、味方は敵接触線まで寄せるが越えない。敵は player contact を越えない。中距離攻撃で後衛初期位置へ直接届かない |
 | heal / hot withhold — 単体・`stat` | **actor 視点の同陣営**に PHT（負傷者）がいなければ保留。PHT が射程内にいなければ保留（CD 進行なし）。敵ヒーラーは敵陣を見る |
 | heal / hot withhold — `selfOrigin` + `aoe` | **PHT が aoe 半径内**（使用者足元）にいなければ保留 |
 | heal / hot withhold — `kind: all` + ally | actor 視点の同陣営に負傷者（≡ PHT）がいなければ保留。位置制約なし |

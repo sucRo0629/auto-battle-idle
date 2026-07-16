@@ -55,3 +55,37 @@ export function isPierceEnemyBasicAttack(
   if (effect.targetShape !== 'pierce') return false;
   return targetSpecFaction(getEffectTarget(effect), unit) === 'enemy';
 }
+
+/** 双刃士 M1: 前線接触 cap を越え、現在 HP 最低対象へ侵入接近する */
+export const AT_ASSASSIN_M1_REAR_INTRUDE_MODULE_ID =
+  'at_assassin_mod_rear_intrude';
+
+/** 双刃士 M2: 前線を越えず中距離で仕留める */
+export const AT_ASSASSIN_M2_FRONTLINE_FINISH_MODULE_ID =
+  'at_assassin_mod_frontline_finish';
+
+function resolveSelectedCombatModuleId(
+  unit: CombatantState,
+): string | undefined {
+  return unit.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId;
+}
+
+/** 双刃士 M1 後方侵入 Module が basic として選択中か */
+export function isAssassinRearIntrudeBasicAttack(
+  unit: CombatantState,
+  gameData: GameData,
+): boolean {
+  const moduleId = resolveSelectedCombatModuleId(unit);
+  if (moduleId !== AT_ASSASSIN_M1_REAR_INTRUDE_MODULE_ID) return false;
+  return gameData.combatModuleRegistry[moduleId]?.classId === 'at_assassin';
+}
+
+/** 双刃士 M2 前線内仕留め Module が basic として選択中か */
+export function isAssassinFrontlineFinishBasicAttack(
+  unit: CombatantState,
+  gameData: GameData,
+): boolean {
+  const moduleId = resolveSelectedCombatModuleId(unit);
+  if (moduleId !== AT_ASSASSIN_M2_FRONTLINE_FINISH_MODULE_ID) return false;
+  return gameData.combatModuleRegistry[moduleId]?.classId === 'at_assassin';
+}

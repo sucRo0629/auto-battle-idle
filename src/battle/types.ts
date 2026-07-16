@@ -1739,7 +1739,7 @@ export interface CombatModuleDef {
   runtimeEffect?: CombatModuleRuntimeEffect;
 }
 
-/** R5 最小縦切りの module 対象兵科（4 兵科 × 2 方式） */
+/** R5 最小縦切りの module 対象兵科（4 兵科 × 2 方式）。R12g 追加兵科は modules JSON 側で editor 発見 */
 export const R5_COMBAT_MODULE_CLASS_IDS = [
   'df_guardian',
   'at_swordsman',

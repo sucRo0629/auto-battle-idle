@@ -88,8 +88,14 @@ describe('class editor class list (regression)', () => {
     for (const classId of TARGET_CLASS_IDS) {
       expect(gameData.classRegistry[classId]).toBeDefined();
     }
-    expect(gameData.classRegistry.df_paladin?.combatModuleIds).toBeUndefined();
-    expect(gameData.classRegistry.at_assassin?.combatModuleIds).toBeUndefined();
+    expect(gameData.classRegistry.df_paladin?.combatModuleIds).toEqual([
+      'df_paladin_mod_frontline_ward',
+      'df_paladin_mod_danger_guard',
+    ]);
+    expect(gameData.classRegistry.at_assassin?.combatModuleIds).toEqual([
+      'at_assassin_mod_rear_intrude',
+      'at_assassin_mod_frontline_finish',
+    ]);
     expect(gameData.classRegistry.at_sigilist?.combatModuleIds).toBeUndefined();
   });
 
