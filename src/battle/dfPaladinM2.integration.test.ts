@@ -139,7 +139,7 @@ function makeMagicEnemy(
     preset,
     levelCurves,
     gameData,
-    'at_sorcerer_mod_twin_bolt',
+    'at_sorcerer_mod_chain',
   );
   unit.build.learnedPassiveIds = [];
   unit.id = id;

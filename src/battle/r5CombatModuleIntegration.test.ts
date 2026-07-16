@@ -50,7 +50,7 @@ const R5_STAGE_ID = 'r5_integration_test';
 const ALLY_MODULE_BY_SLOT: Record<number, string | undefined> = {
   0: 'df_guardian_mod_guard_focus',
   1: undefined,
-  2: 'at_sorcerer_mod_twin_bolt',
+  2: 'at_sorcerer_mod_chain',
   3: 'sp_cleric_mod_party_mend',
 };
 
@@ -64,7 +64,7 @@ const ALLY_CLASS_BY_SLOT: ClassId[] = [
 const MODULE_B_BY_CLASS: Record<string, string> = {
   df_guardian: 'df_guardian_mod_guard_focus',
   at_swordsman: 'at_swordsman_mod_pierce_slash',
-  at_sorcerer: 'at_sorcerer_mod_twin_bolt',
+  at_sorcerer: 'at_sorcerer_mod_chain',
   sp_cleric: 'sp_cleric_mod_party_mend',
 };
 
@@ -111,7 +111,7 @@ function buildR5IntegrationStage(): StageDef {
       {
         classId: 'at_sorcerer',
         count: 1,
-        selectedCombatModuleId: 'at_sorcerer_mod_twin_bolt',
+        selectedCombatModuleId: 'at_sorcerer_mod_chain',
         atkScale: 0.05,
         hpScale: 50,
       },
@@ -297,7 +297,7 @@ describe('R5 combat module integration (R5g)', () => {
       'at_swordsman_mod_single_slash',
     );
     expect(allies[2]?.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
-      'at_sorcerer_mod_twin_bolt',
+      'at_sorcerer_mod_chain',
     );
     expect(allies[3]?.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
       'sp_cleric_mod_party_mend',
@@ -318,7 +318,7 @@ describe('R5 combat module integration (R5g)', () => {
 
     const guardianA = enemies.find((e) => e.classId === 'df_guardian');
     const sorcererB = enemies.find(
-      (e) => e.classId === 'at_sorcerer' && byBasicSkill(e) === 'at_sorcerer_mod_twin_bolt',
+      (e) => e.classId === 'at_sorcerer' && byBasicSkill(e) === 'at_sorcerer_mod_chain',
     );
     const swordsmanDefault = enemies.find(
       (e) =>
@@ -331,7 +331,7 @@ describe('R5 combat module integration (R5g)', () => {
     const legacyPaladin = enemies.find((e) => e.classId === 'df_paladin');
 
     expect(byBasicSkill(guardianA!)).toBe('df_guardian_mod_nearest_strike');
-    expect(byBasicSkill(sorcererB!)).toBe('at_sorcerer_mod_twin_bolt');
+    expect(byBasicSkill(sorcererB!)).toBe('at_sorcerer_mod_chain');
     expect(byBasicSkill(swordsmanDefault!)).toBe('at_swordsman_mod_single_slash');
     expect(swordsmanPierce).toHaveLength(2);
     // 未指定 selectedCombatModuleId → combatModuleIds[0]（R12g-d2 以降）
@@ -400,7 +400,7 @@ describe('R5 combat module integration (R5g)', () => {
     expect(allyHeals.length).toBeGreaterThan(0);
 
     const twinBoltHits = basicSkillEvents.filter(
-      (e) => e.skillId === 'at_sorcerer_mod_twin_bolt' && e.effect === 'damage',
+      (e) => e.skillId === 'at_sorcerer_mod_chain' && e.effect === 'damage',
     );
     expect(twinBoltHits.length).toBeGreaterThanOrEqual(2);
 
@@ -468,7 +468,7 @@ describe('R5 combat module integration (R5g)', () => {
     const enemyPaladin = internals.enemies.find((e) => e.classId === 'df_paladin');
     expect(
       allySorcerer?.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId,
-    ).toBe('at_sorcerer_mod_twin_bolt');
+    ).toBe('at_sorcerer_mod_chain');
     expect(
       enemyPaladin?.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId,
     ).toBe('df_paladin_mod_frontline_ward');
@@ -589,8 +589,8 @@ describe('R5 combat module integration (R5g)', () => {
     const sorcererEnemy = enemyOnly.find((e) => e.classId === 'at_sorcerer')!;
     expect(
       sorcererEnemy.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId,
-    ).toBe('at_sorcerer_mod_twin_bolt');
-    expect(selection.getSelectedCombatModuleId(2)).toBe('at_sorcerer_mod_twin_bolt');
+    ).toBe('at_sorcerer_mod_chain');
+    expect(selection.getSelectedCombatModuleId(2)).toBe('at_sorcerer_mod_chain');
 
     const allies = createAlliesFromPartyState(
       gameData,
@@ -601,10 +601,10 @@ describe('R5 combat module integration (R5g)', () => {
     const allySorcerer = allies.find((a) => a.classId === 'at_sorcerer')!;
     expect(
       allySorcerer.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId,
-    ).toBe('at_sorcerer_mod_twin_bolt');
+    ).toBe('at_sorcerer_mod_chain');
     expect(
       sorcererEnemy.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId,
-    ).toBe('at_sorcerer_mod_twin_bolt');
+    ).toBe('at_sorcerer_mod_chain');
   });
 
   it('16b: duplicate rejection at compose API (thin wire; full coverage in partyClassDuplicate.test.ts)', () => {

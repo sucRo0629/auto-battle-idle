@@ -124,7 +124,7 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
       {
         classId: 'at_sorcerer',
         count: 1,
-        selectedCombatModuleId: 'at_sorcerer_mod_twin_bolt',
+        selectedCombatModuleId: 'at_sorcerer_mod_chain',
       },
     ]);
     const [enemy] = createEnemiesForStage(
@@ -135,7 +135,7 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
     )!;
 
     expect(enemy.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
-      'at_sorcerer_mod_twin_bolt',
+      'at_sorcerer_mod_chain',
     );
   });
 
@@ -165,7 +165,7 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
 
   it('11. module B attackIntervalSec applies to initial basic cooldown', () => {
     const gameData = loadGameData();
-    const moduleId = 'at_sorcerer_mod_twin_bolt';
+    const moduleId = 'at_sorcerer_mod_chain';
     const interval = gameData.combatModuleRegistry[moduleId].attackIntervalSec;
     const stage = stageWithGroups([
       {
@@ -405,7 +405,7 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
       {
         classId: 'at_sorcerer',
         count: 1,
-        selectedCombatModuleId: 'at_sorcerer_mod_twin_bolt',
+        selectedCombatModuleId: 'at_sorcerer_mod_chain',
       },
     ]);
     const [enemy] = createEnemiesForStage(
@@ -416,7 +416,7 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
     )!;
 
     expect(enemy.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
-      'at_sorcerer_mod_twin_bolt',
+      'at_sorcerer_mod_chain',
     );
     expect(selection.getSelectedCombatModuleId(0)).toBe(
       'df_guardian_mod_guard_focus',
@@ -428,7 +428,7 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
     const stage = stageWithGroups([{ classId: 'df_guardian', count: 1 }]);
     const spec: ResolvedEnemySpawnSpec = {
       ...expandEnemyGroups(stage)[0]!,
-      selectedCombatModuleId: 'at_sorcerer_mod_twin_bolt',
+      selectedCombatModuleId: 'at_sorcerer_mod_chain',
     };
     const enemy = createEnemyFromClassGroup(
       spec,
@@ -468,8 +468,9 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
       },
       {
         classId: 'at_sorcerer' as const,
-        moduleId: 'at_sorcerer_mod_twin_bolt',
-        minEvents: 2,
+        // chain M2 with one in-range ally resolves as a single hop (pending chain hops covered in atSorcererModules.test.ts)
+        moduleId: 'at_sorcerer_mod_chain',
+        minEvents: 1,
       },
     ];
 

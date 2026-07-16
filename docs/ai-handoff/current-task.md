@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-e3 Backend 完了**（弓術士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e3 Player 確認）。**次:** **R12g-e4**（魔術師 Module data）。
+- **新ロードマップ現在地:** **R12g-e4 Backend 完了**（魔術師 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e4 Player 確認）。**次:** **R12g-e5**（Kill 4 兵科 CombatModule 共通統合確認）。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12g-e4**（魔術師）→ e5 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
+- **次の再開タスク:** **R12g-e5**（Kill 4 兵科共通統合）→ R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8704,4 +8704,31 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 - 戻し先: **R12g-e3 Player 確認**（既存 R9.5c SkillMenuPanel / WavePrep 配線は利用可能）
 - 正式 VFX / 専用アイコンは不要
 
-**次:** **R12g-e4** — 魔術師 M1/M2 CombatModule データ再設計
+**次（完了時点）:** **R12g-e4** — 魔術師 M1/M2 CombatModule データ再設計
+
+### 105.13 R12g-e4 — 魔術師 M1/M2 CombatModule データ再設計（完了・Backend）
+
+**状態:** Backend 完了 / Player 未完了（手元画面確認なし）
+
+**実施内容（要約）:**
+- M1「収束」`at_sorcerer_mod_focus`: `targetShape: chain`・`chainCount: 1`。最近傍への実質単体魔法
+- M2「連鎖」`at_sorcerer_mod_chain`: `targetShape: chain`・`chainCount: 2`。最近傍 anchor から 80px 以内の別対象へ連鎖。波及倍率 0.8
+- 暫定値: M1 `attackIntervalSec: 3`・`atkScale: 1` / M2 `attackIntervalSec: 3.5`・`atkScale: 0.65` / `chainMaxDistancePx: 80` / `chainPowerStepMultiplier: 0.8` / `chainPowerStepMode: multiply`。暫定値は **R12i** で再調整。`chainCount: 1 / 2` は確定構造値（R12i 非送付）
+- 旧 ID `at_sorcerer_mod_single_bolt` / `at_sorcerer_mod_twin_bolt` を正式 ID へ置換。`data/classes.json` と `data/stages.json` を正式 ID へ更新
+- validation: `validateAtSorcererCombatModule`。既存 chain runtime を再利用（新 runtime・新 schema なし）
+- 新規 test: `src/battle/atSorcererModules.test.ts`（Module 選択、Wave 間切替、敵味方対称、距離内連鎖、距離外終了、減衰、production validation、editor round-trip）
+- Passive・種火・P4・active JSON は未変更。後続 Passive 設計メモは維持（[classes-and-skills.md §at_sorcerer](../spec/classes-and-skills.md#at_sorcerer-魔術師)）
+- Survival / 剣術士 / 双刃士 / 弓術士 / Stage・Wave 本入力 / 数値本調整は未変更
+
+**検証結果:**
+- `src/battle/atSorcererModules.test.ts`: 16 passed
+- 関連一括 test: 242 passed / 6 pre-existing failures（古い Module 総数固定期待、editor の古い Module 数・class 一覧期待、鉄衛士 multi-hit 診断、Wave retry 診断、operation prep 表示診断）
+- 全体型チェックは既存エラーで失敗。今回追加した `atSorcererModules.test.ts` 由来の型エラーは 0 件
+
+**Player 未完了の不足:**
+- 出撃前・Wave 間で「収束」「連鎖」の説明差を手元確認していない
+- 実戦で収束が単体のみ、連鎖が近接した 2 体へ減衰波及することを画面確認していない
+- 戻し先: **R12g-e4 Player 確認**（既存 R9.5c SkillMenuPanel / WavePrep 配線は利用可能）
+- 正式 VFX・専用アイコンは不要
+
+**次:** **R12g-e5** — Kill 4 兵科 CombatModule 共通統合確認

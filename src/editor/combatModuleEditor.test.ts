@@ -83,7 +83,7 @@ describe('combat module authoring helpers (R9g)', () => {
     const modules = loadCombatModules();
     const source = findCombatModuleDraft(
       modules,
-      'at_sorcerer_mod_twin_bolt',
+      'df_guardian_mod_nearest_strike',
     );
     expect(source).toBeDefined();
     const edited: CombatModuleDef = {

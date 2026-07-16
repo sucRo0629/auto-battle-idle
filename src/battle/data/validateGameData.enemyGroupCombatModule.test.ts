@@ -98,7 +98,7 @@ describe('StageEnemyGroup selectedCombatModuleId validate (R5e)', () => {
           {
             classId: 'at_sorcerer',
             count: 2,
-            selectedCombatModuleId: 'at_sorcerer_mod_twin_bolt',
+            selectedCombatModuleId: 'at_sorcerer_mod_chain',
           },
         ]),
       }),
@@ -130,12 +130,12 @@ describe('StageEnemyGroup selectedCombatModuleId validate (R5e)', () => {
           {
             classId: 'df_guardian',
             count: 1,
-            selectedCombatModuleId: 'at_sorcerer_mod_twin_bolt',
+            selectedCombatModuleId: 'at_sorcerer_mod_chain',
           },
         ]),
       }),
     ).toThrow(
-      /selectedCombatModuleId "at_sorcerer_mod_twin_bolt" belongs to class "at_sorcerer", not "df_guardian"/,
+      /selectedCombatModuleId "at_sorcerer_mod_chain" belongs to class "at_sorcerer", not "df_guardian"/,
     );
   });
 

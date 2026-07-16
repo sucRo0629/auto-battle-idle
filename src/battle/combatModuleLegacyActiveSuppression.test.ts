@@ -344,7 +344,7 @@ describe('R9.5a combat module legacy active suppression', () => {
     }
 
     expect(basicExecutions.length).toBeGreaterThan(0);
-    expect(basicExecutions.every((id) => id === 'at_sorcerer_mod_single_bolt')).toBe(
+    expect(basicExecutions.every((id) => id === 'at_sorcerer_mod_focus')).toBe(
       true,
     );
     expect(activeExecutions).toEqual([]);

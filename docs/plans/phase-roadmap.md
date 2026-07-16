@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** システム縦切り（R5〜R11）の上に、**データ再設計で「ゲームとして遊べる試作」を成立**させる（R12）。その後に初めて「繰り返し遊びたいか」を評価する（R13）。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R13 完了後**に再開する。
 
-**現在地:** **R12g-e3 Backend 完了**（弓術士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: 本 Phase の Player 確認）。**次:** **R12g-e4**（魔術師 CombatModule データ再設計）。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
+**現在地:** **R12g-e4 Backend 完了**（魔術師 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: 本 Phase の Player 確認）。**次:** **R12g-e5**（Kill 4 兵科 CombatModule 共通統合確認）。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
 
 ---
 
@@ -1282,9 +1282,9 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | **R12g-e1** | 剣術士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
 | **R12g-e2** | 双刃士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
 | **R12g-e3** | 弓術士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
-| **R12g-e4** | 魔術師 M1/M2 CombatModule データ再設計 | 未着手（**次タスク**） |
-| **R12g-e5** | Kill 4 兵科 CombatModule 共通統合確認 | 未着手 |
-| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | R12g-e3 完了。次 e4 |
+| **R12g-e4** | 魔術師 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
+| **R12g-e5** | Kill 4 兵科 CombatModule 共通統合確認 | 未着手（**次タスク**） |
+| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | R12g-e4 Backend 完了。次は e5 |
 
 正本: [current-task.md §105](../ai-handoff/current-task.md)、[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)、[combat.md §Danger Targeting](../spec/combat.md#danger-targetingr12g-c)、[classes-and-skills.md §df_paladin 護法士](../spec/classes-and-skills.md#df_paladin-護法士)。
 
@@ -1440,7 +1440,7 @@ R13 反復評価「繰り返し遊びたいか」
 - **R9.6**・**R9b〜h / R9f** は完了（成立済み）
 - R10 は構造のみ。**遊べる試作と反復評価は R12 / R13**
 - **R11** はシステム縦切り完了。**プレイアビリティ Player は R12j**
-- **公式次は R12g（class / module / passive データ再設計）**。その後 R12h〜j → R13
+- **公式次は R12g-e5**（Kill 4 兵科 CombatModule 共通統合確認）。R12g 本流の後に R12h〜j → R13
 - R12j まではゲームとしての成立未達。R13 までは反復評価しない
 - **戦場移動 legacy cleanup** は R13 完了後を推奨 — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 

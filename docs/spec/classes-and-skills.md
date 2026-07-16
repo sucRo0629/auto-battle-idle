@@ -76,7 +76,7 @@
 - **2 戦闘方式** で攻撃形状を変える（方式名・倍率・Hit 数は **未確定** → R12g）
 - **RES の影響を通常どおり受ける**
 
-**未確定（R12g 以降）:** MultiLock の具体、方式名、倍率、攻撃間隔。種火 / 熾火は廃止方向を維持。
+**R12g-e4 Backend 完了（Module 形状）:** M1/M2 とも既存 `targetShape: chain`（新形状・`multiLock` なし）。M1「収束」は `chainCount: 1`、M2「連鎖」は `chainCount: 2`（単体即応型と少数分散型を分ける攻撃構造。強度値ではない。R12i へ送らない）。方式名・ID は [§R12f 魔術師](#at_sorcerer-魔術師)。構造成立用の暫定値（`attackIntervalSec` / `atkScale` / `chainMaxDistancePx` / `chainPowerStepMultiplier` 等）は同節に記載。正式バランスはすべて **R12i**。種火 / 熾火の Passive 再設計は同節の後続メモ（e4 Module 実装範囲外・未着手）。**Player 未完了**。
 
 ### 双刃士（`at_assassin`）— 新仕様候補（R2 記録）
 
@@ -120,7 +120,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | `at_assassin` | 双刃士 | 低 HP 処刑 | **低 HP 敵（現在 HP）** | 物理 | **背後回り込み** — 実移動で対象背後、単体処理（§方式候補 A） | **投げナイフ** — 中距離、低 HP 優先、前線非侵入（§方式候補 B） | 薄命狩り（優先ターゲット）、影の刃 move 思想、出血 DoT **候補** | 固定 2 Hit basic、bonusBasicAttackOnHit gauge、DEF 100% 無視 P3 | 方式名、移動詳細、Hit 数、射程 |
 | `at_ranger` | 弓術士 | 遠隔物理 DPS | **遠隔敵** | 物理 | **連射** — 単体または少数への高頻度 Hit | **連ね矢** — 複数対象への分配 Hit（multiLock 等 **候補**） | 遠隔優先、連射 / 連ね矢 active の形状 | attackSpeed buff 前提、Lv 解放連射 | 方式名、Hit 数、対象数、攻撃間隔 |
 | `at_ballista` | 弩砲士 | 高 Max HP 処理 | **高 Max HP 敵** | 物理 | **重矢単体** — 溜め or 高係数単体（破城矢思想） | **砲撃標的 splash** — マーク対象中心の副次 Hit（ballistaMark 思想） | idleAtkRamp 溜め、ballistaMark splash、targetHpRatioDamageScale | gauge 待機蓄積、nextOutgoingDamage 武装 | 方式名、溜めを方式に含めるか、Hit 数 |
-| `at_sorcerer` | 魔術師 | 安定魔法火力 | **最近傍候補** | 魔法 | **単体魔法** — 単体 high 係数 magic Hit | **拡散魔法** — 複数対象 or 小 AoE magic Hit | 炎術 / 双炎 / 散火の **形状差** のみ素材 | RES 無視、種火 / 熾火、active 連鎖、Lv 完成 | 種火廃止可否、MultiLock、方式名、倍率 |
+| `at_sorcerer` | 魔術師 | 安定魔法火力 | **最近傍候補** | 魔法 | **単体魔法** — 単体 high 係数 magic Hit | **拡散魔法** — 複数対象 or 小 AoE magic Hit | 炎術 / 双炎 / 散火の **形状差** のみ素材 | RES 無視、種火 / 熾火、active 連鎖、Lv 完成 | **R12g-e4 Backend 完了 / Player 未完了**（`targetShape: chain`。M1 `chainCount: 1` / M2 `chainCount: 2`。MultiLock 不採用）。構造成立用の暫定値あり（正式バランスは R12i）。種火 Passive は後続 |
 | `sp_cleric` | 療養師 | 回復・欠損復元 | **PHT**（負傷者 HP 割合最小） | 回復（行動属性） | **単体回復** — PHT へ concentrated heal / 短 HoT | **複数回復** — 半径内複数負傷者 or 全体小 heal | 低 HP heal 特化、excessHealToBarrier、smart heal withhold | Lv10/20 回復精度段階、healReservation gauge | 方式名、対象数、HoT 要否 |
 | `sp_wardweaver` | 結界師 | 事前 barrier・猶予 | **PHT**（barrier 付与時 stat ratio） | 回復 / 防護 | **厚い Barrier** — 単体 PHT へ大 barrier | **広い Barrier** — 半径内複数 or 全体 thin barrier | 低 HP 特効 barrier、barrierDepletionHeal 思想 | Wave 開始全体 barrier の Lv 前提 | 方式名、barrier 量、対象数 |
 
@@ -275,10 +275,26 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 主担当 | C |
 | 副担当 | A の属性上の代替出力、前線突破後・対象露出後の F、G |
 | B2 | **担当しない** |
-| M1 単体即応型 | 最近傍一体へ重い魔法処理。侵入双刃士への C 主担当 |
-| M2 少数分散型 | 最近傍を起点に少数対象へ MultiLock。前線区域・密集全体を覆う広域攻撃にはしない |
-| Passive | 初動処理、同一対象への継続、分散時の主対象維持 |
-| 持たせない | RES 無視、支援役優先、遠隔攻撃役優先、前線区域への広域魔法、単体と分散の同時完成 |
+| M1 単体即応型「収束」 | 正式 ID `at_sorcerer_mod_focus`。最近傍の敵を主対象。既存 `targetShape: chain`・確定構造値 `chainCount: 1`（実質単体）。最近傍一体への魔法処理に威力を集中。侵入してきた双刃士への **C 主担当**を維持する。構造成立用の暫定値: `attackIntervalSec: 3`、`atkScale: 1`、`targetShape: chain`、`chainCount: 1`、`chainMaxDistancePx: 80`、`chainPowerStepMultiplier: 0.8`、`chainPowerStepMode: multiply` |
+| M2 少数分散型「連鎖」 | 正式 ID `at_sorcerer_mod_chain`。最近傍の敵を anchor。既存 `targetShape: chain`・確定構造値 `chainCount: 2`（距離内の別の敵一体へ連鎖）。波及 Hit は主対象より減衰。既存 chain の未命中優先・再訪・距離不足時終了の規則は変更しない。前線区域や密集全体を覆う広域攻撃にはしない。構造成立用の暫定値: `attackIntervalSec: 3.5`、`atkScale: 0.65`、`targetShape: chain`、`chainCount: 2`、`chainMaxDistancePx: 80`、`chainPowerStepMultiplier: 0.8`、`chainPowerStepMode: multiply`。主対象倍率 0.65・波及対象倍率 0.52（`0.65 × 0.8`）・2 体合計 1.17 |
+| Module 共通 | 新しい攻撃形状は追加しない。`multiLock` は使わない。対象選定に乱数を導入しない。`chainCount: 1 / 2` は引き続き確定済みの構造値であり、R12i へ送らない（単体即応型と少数分散型を分ける攻撃構造）。M1 は単体で M2 を上回り、M2 は 2 体へ連鎖した場合に総出力の価値を持つ。`attackIntervalSec` と `atkScale` は現行 R5b プレースホルダー値を維持した仮値。`chainMaxDistancePx` と `chainPowerStepMultiplier` は既存 chain を成立させるための仮値。これらは正式なバランス値ではなく、すべて **R12i** で再調整する。追加 Passive による `chainCount` 増加は導入しない |
+| Passive（兵科方向） | 初動処理、同一対象への継続、分散時の主対象維持 |
+| 持たせない | RES 無視、支援役優先、遠隔攻撃役優先、前線区域への広域魔法、単体と分散の同時完成。これらを Module へ持たせない |
+| 旧プレースホルダー | `at_sorcerer_mod_single_bolt` / `at_sorcerer_mod_twin_bolt`（R5b）は R12g-e4 で上記正式 ID へ置換済み |
+| R12g-e4 data | `data/combat-modules/at_sorcerer.json` — M1 `at_sorcerer_mod_focus`（収束・`chain`・`chainCount: 1`）、M2 `at_sorcerer_mod_chain`（連鎖・`chain`・`chainCount: 2`・波及 0.8）。既存 chain runtime 再利用。`validateAtSorcererCombatModule`。`src/battle/atSorcererModules.test.ts`。数値は仮（R12i）。**Backend 完了 / Player 未完了** |
+
+**後続 Passive 設計向け確定メモ（R12g-e4 Module 実装範囲外・未着手）:**
+
+- 初期取得 Passive の仮名称は **爆ぜる種火**
+- 種火自体は DoT・被ダメージ増加・能力低下を持たない **stack 状態**
+- 種火は時間経過で消滅せず、**起爆・対象死亡・Wave 終了**で消える
+- 魔術師の CombatModule damage Hit 後、対象が生存していれば種火を付与する
+- 規定 stack 到達時、種火を全消費して対象単体へ魔法起爆ダメージを与える
+- 起爆から種火付与や再帰起爆は発生しない
+- 種火最大 stack から熾火へ変換する現行挙動は **廃止**
+- P4「花開く炎」の現行 `blazingFlameDetonate`・熾火消費爆発・周囲への種火拡散は **廃止**。P4 の代替効果は **未確定**（今回補完しない）
+- 起爆に必要な stack 数・起爆倍率などの数値は **未確定**
+- 上記 Passive 変更を Module JSON・runtime へ混ぜない（e4 Backend でも未着手）
 
 #### `df_guardian` 鉄衛士
 
@@ -343,14 +359,15 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | R12g-d5 統合 | Survival 4 兵科（鉄衛士・護法士・療養師・結界師）を同一実戦経路で確認。`src/battle/survivalCombatModules.integration.test.ts`。**R12g-d 本流 Backend 完了 / Player 未完了**。次は Kill 兵科（R12g-e1〜） |
 | R12g-e1 data | 剣術士 M1/M2 — 上記 `at_swordsman` 節。`src/battle/atSwordsmanModules.test.ts`。**Backend 完了 / Player 未完了** |
 | R12g-e2 data | 双刃士 M1/M2 — 上記 `at_assassin` 節。`src/battle/atAssassinModules.test.ts`。**Backend 完了 / Player 未完了** |
-| R12g-e3 data | 弓術士 M1/M2 — 上記 `at_ranger` 節。`src/battle/atRangerModules.test.ts`。**Backend 完了 / Player 未完了**。次は R12g-e4（魔術師） |
+| R12g-e3 data | 弓術士 M1/M2 — 上記 `at_ranger` 節。`src/battle/atRangerModules.test.ts`。**Backend 完了 / Player 未完了** |
+| R12g-e4 data | 魔術師 M1/M2 — 上記 `at_sorcerer` 節。`src/battle/atSorcererModules.test.ts`。**Backend 完了 / Player 未完了**。次タスクは **R12g-e5** |
 
 ### R12f → R12g 未接続事項
 
 | 項目 | 扱い |
 | ---- | ---- |
-| 方式名・Passive 名・ID | R12g 以降 |
-| 数値・倍率・秒数・コスト | R12i 中心（形状は R12g） |
+| 方式名・Passive 名・ID | 魔術師 Module の方式名・正式 ID は **R12g-e4 で確定・データ接続済み**。他兵科・Passive 名・作戦内 Passive ID は R12g 以降 |
+| 数値・倍率・秒数・コスト | R12i 中心（形状は R12g。魔術師は構造成立用の暫定値のみ正本記載。正式バランスは R12i。`chainCount` は確定構造値のため R12i 非送付） |
 | 危険対象判定規則（護法士 M2 等） | **R12g-c Backend 完了**（c1〜c5）。Survival Module JSON は **R12g-d1〜d5 Backend 完了**。Player 手元確認は R12g-d5 Player 層 |
 | 鉄衛士 M2 の effect schema / 直接ダメージ型 | R12g-b で **DamageAppliedEvent** 契約確定（[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)）。runtime 実装は R12g-b1〜b2。JSON 数値入力は R12g 本流 |
 | R11b 現行 Passive 効果 | 維持義務なし。R12f 方向に合わせて再設計 |

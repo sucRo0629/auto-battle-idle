@@ -91,14 +91,12 @@ describe('combatModulePrepDisplay (R9.6-A)', () => {
   it('merges range and attack method without duplicating shape already in effect text', () => {
     const loaded = tryLoadGameData();
     if (!loaded.ok) throw new Error(loaded.error);
-    const twin = loaded.data.combatModuleRegistry.at_sorcerer_mod_twin_bolt;
-    const twinSummary = buildCombatModuleDiffSummary(twin);
-    expect(twinSummary.effectSummary).toContain('遠隔');
-    expect(twinSummary.effectSummary).toContain('マルチロック 2');
-    expect(twinSummary.effectSummary).not.toContain(
-      'マルチロック（複数対象・同一可）',
-    );
-    expect(twinSummary.effectSummary).not.toMatch(/Hit 2/);
+    const chain = loaded.data.combatModuleRegistry.at_sorcerer_mod_chain;
+    const chainSummary = buildCombatModuleDiffSummary(chain);
+    expect(chainSummary.effectSummary).toContain('遠隔');
+    expect(chainSummary.effectSummary).toContain('連鎖');
+    expect(chainSummary.effectSummary).not.toContain('マルチロック');
+    expect(chainSummary.effectSummary).not.toMatch(/Hit 2/);
   });
 });
 

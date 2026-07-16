@@ -44,7 +44,7 @@ describe('resolveCombatModuleBasic (R5d fallback)', () => {
       resolveSelectedCombatModuleId(
         preset,
         gameData.combatModuleRegistry,
-        'at_sorcerer_mod_twin_bolt',
+        'at_sorcerer_mod_chain',
       ),
     ).toBe('sp_cleric_mod_single_mend');
   });
@@ -57,7 +57,7 @@ describe('resolveCombatModuleBasic (R5d fallback)', () => {
         gameData.combatModuleRegistry,
         'missing_module_id',
       ),
-    ).toBe('at_sorcerer_mod_single_bolt');
+    ).toBe('at_sorcerer_mod_focus');
   });
 
   it('uses valid selectedCombatModuleId when it matches class candidates', () => {
@@ -116,7 +116,7 @@ describe('resolveCombatModuleBasic (R5d fallback)', () => {
     const moduleBByClass: Record<string, string> = {
       df_guardian: 'df_guardian_mod_guard_focus',
       at_swordsman: 'at_swordsman_mod_pierce_slash',
-      at_sorcerer: 'at_sorcerer_mod_twin_bolt',
+      at_sorcerer: 'at_sorcerer_mod_chain',
       sp_cleric: 'sp_cleric_mod_party_mend',
     };
 

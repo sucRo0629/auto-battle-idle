@@ -158,7 +158,7 @@ describe('combat module basic attack (R5c)', () => {
       preset,
       gameData.combatModuleRegistry,
     );
-    expect(expectedModuleId).toBe('at_sorcerer_mod_single_bolt');
+    expect(expectedModuleId).toBe('at_sorcerer_mod_focus');
 
     const basicCd = enemy.cooldowns.find((cd) => cd.slotKind === 'basic');
     expect(basicCd?.skillId).toBe(expectedModuleId);
@@ -407,7 +407,7 @@ describe('combat module basic attack (R5c)', () => {
       },
       {
         classId: 'at_sorcerer' as const,
-        moduleId: 'at_sorcerer_mod_single_bolt',
+        moduleId: 'at_sorcerer_mod_focus',
         expectEffect: 'damage' as const,
         expectDamageType: 'magic' as const,
       },
@@ -600,11 +600,11 @@ describe('combat module basic attack (R5c)', () => {
 
   it('resetCooldownAfterFire uses attackIntervalSec for module skills', () => {
     const gameData = loadGameData();
-    const skill = gameData.skillRegistry.actives.at_sorcerer_mod_single_bolt!;
+    const skill = gameData.skillRegistry.actives.at_sorcerer_mod_focus!;
     const cd = { skillId: skill.id, remaining: 0, slotKind: 'basic' as const };
     resetCooldownAfterFire(cd, skill);
     expect(cd.remaining).toBe(
-      gameData.combatModuleRegistry.at_sorcerer_mod_single_bolt.attackIntervalSec,
+      gameData.combatModuleRegistry.at_sorcerer_mod_focus.attackIntervalSec,
     );
   });
 });

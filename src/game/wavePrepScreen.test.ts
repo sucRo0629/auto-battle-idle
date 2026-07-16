@@ -191,13 +191,13 @@ describe('Wave prep screen (R6e)', () => {
     session = bootVerifySession();
     const member = createMemberFromClass('at_sorcerer', gameData);
     expect(session.tryUpdateOperationPartySlot(0, member).ok).toBe(false);
-    expect(session.trySetOperationSlotCombatModule(0, 'at_sorcerer_mod_twin_bolt')).toBe(
+    expect(session.trySetOperationSlotCombatModule(0, 'at_sorcerer_mod_chain')).toBe(
       false,
     );
 
     waitForEngaged(getEngine(session));
     expect(session.tryUpdateOperationPartySlot(0, member).ok).toBe(false);
-    expect(session.trySetOperationSlotCombatModule(0, 'at_sorcerer_mod_twin_bolt')).toBe(
+    expect(session.trySetOperationSlotCombatModule(0, 'at_sorcerer_mod_chain')).toBe(
       false,
     );
   });
@@ -336,7 +336,7 @@ describe('OperationState wave prep API (R6e unit)', () => {
     })!;
     const member = createMemberFromClass('at_sorcerer', gameData);
     expect(op.tryUpdatePartySlot(0, member, gameData).ok).toBe(false);
-    expect(op.trySetCombatModuleForSlot(0, 'at_sorcerer_mod_twin_bolt', gameData)).toBe(
+    expect(op.trySetCombatModuleForSlot(0, 'at_sorcerer_mod_chain', gameData)).toBe(
       false,
     );
   });

@@ -202,7 +202,7 @@ describe('ironGuardianM2 integration (R12g-b3)', () => {
       sorcererPreset,
       levelCurves,
       gameData,
-      'at_sorcerer_mod_twin_bolt',
+      'at_sorcerer_mod_chain',
     );
     enemySorcerer.id = 'enemy_sorcerer';
     enemySorcerer.isEnemy = true;

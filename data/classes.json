@@ -686,8 +686,8 @@
       ]
     },
     "combatModuleIds": [
-      "at_sorcerer_mod_single_bolt",
-      "at_sorcerer_mod_twin_bolt"
+      "at_sorcerer_mod_focus",
+      "at_sorcerer_mod_chain"
     ]
   },
   {

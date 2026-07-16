@@ -87,7 +87,7 @@ describe('authoringValidationPreview (R9e)', () => {
           {
             classId: 'df_guardian',
             count: 1,
-            selectedCombatModuleId: 'at_sorcerer_mod_twin_bolt',
+            selectedCombatModuleId: 'at_sorcerer_mod_chain',
           },
         ],
       },

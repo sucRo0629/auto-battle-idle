@@ -387,11 +387,7 @@ describe('at_swordsman CombatModule data (R12g-e1)', () => {
     );
   });
 
-  it('damage multiLock default refill still re-hits for non-swordsman modules', () => {
-    const sorcererM2 = gameData.combatModuleRegistry.at_sorcerer_mod_twin_bolt!;
-    expect(sorcererM2.action.effectRange?.refillSameTargetOnShortfall).not.toBe(
-      false,
-    );
+  it('damage multiLock default refill still re-hits when refill is not forced false', () => {
     const actor = mockUnit('sorc', 100);
     const only = mockUnit('only', 140, { isEnemy: true });
     const resolution = resolveEffectResolution(

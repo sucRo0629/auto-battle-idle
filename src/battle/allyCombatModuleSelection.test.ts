@@ -160,7 +160,7 @@ describe('ally combat module selection (R5d)', () => {
   it('4. post-fire cooldown cycle uses module B interval', () => {
     const gameData = loadGameData();
     const preset = gameData.classRegistry.at_sorcerer!;
-    const moduleBId = 'at_sorcerer_mod_twin_bolt';
+    const moduleBId = 'at_sorcerer_mod_chain';
     const interval =
       gameData.combatModuleRegistry[moduleBId].attackIntervalSec;
 
@@ -418,10 +418,10 @@ describe('ally combat module selection (R5d)', () => {
     );
 
     expect(enemy.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).toBe(
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     expect(enemy.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId).not.toBe(
-      'at_sorcerer_mod_twin_bolt',
+      'at_sorcerer_mod_chain',
     );
   });
 
@@ -430,7 +430,7 @@ describe('ally combat module selection (R5d)', () => {
     const moduleBByClass: Record<string, string> = {
       df_guardian: 'df_guardian_mod_guard_focus',
       at_swordsman: 'at_swordsman_mod_pierce_slash',
-      at_sorcerer: 'at_sorcerer_mod_twin_bolt',
+      at_sorcerer: 'at_sorcerer_mod_chain',
       sp_cleric: 'sp_cleric_mod_party_mend',
     };
 
@@ -476,13 +476,13 @@ describe('ally combat module selection (R5d)', () => {
 
   it('PartyCombatModuleSelection API clears to default', () => {
     const selection = new PartyCombatModuleSelection();
-    selection.setSelectedCombatModuleId(0, 'at_sorcerer_mod_twin_bolt');
-    expect(selection.getSelectedCombatModuleId(0)).toBe('at_sorcerer_mod_twin_bolt');
+    selection.setSelectedCombatModuleId(0, 'at_sorcerer_mod_chain');
+    expect(selection.getSelectedCombatModuleId(0)).toBe('at_sorcerer_mod_chain');
 
     selection.clearSelectedCombatModuleId(0);
     expect(selection.getSelectedCombatModuleId(0)).toBeUndefined();
 
-    selection.setSelectedCombatModuleId(0, 'at_sorcerer_mod_twin_bolt');
+    selection.setSelectedCombatModuleId(0, 'at_sorcerer_mod_chain');
     selection.resetToDefault(0);
     expect(selection.getSelectedCombatModuleId(0)).toBeUndefined();
   });

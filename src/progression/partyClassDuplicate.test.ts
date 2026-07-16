@@ -472,7 +472,7 @@ describe('party classId duplicate prohibition (R5f)', () => {
       ).toBe('sp_cleric_mod_single_mend');
       expect(
         allies[3]?.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId,
-      ).toBe('at_sorcerer_mod_single_bolt');
+      ).toBe('at_sorcerer_mod_focus');
     });
   });
 });

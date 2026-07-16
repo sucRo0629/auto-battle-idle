@@ -225,7 +225,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     cleric.role = 'supporter';
     const core = withBasicSkill(
       mockUnit('core', 300, { formationRow: 'back', rangePx: 300 }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const resolution = resolveModuleDamage(
       M1_ID,
@@ -272,7 +272,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     );
     const b = withBasicSkill(
       mockUnit('b', 280, { formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const c = withBasicSkill(
       mockUnit('c', 310, { formationRow: 'back' }),
@@ -312,7 +312,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     const rangerM2 = makeRanger(M2_ID, { battleX: 80 });
     const core = withBasicSkill(
       mockUnit('core', 300, { formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const front = withBasicSkill(
       mockUnit('front', 200, { formationRow: 'front' }),
@@ -340,7 +340,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
         isEnemy: false,
         formationRow: 'back',
       }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const allyFront = withBasicSkill(
       mockUnit('ally_front', 140, { isEnemy: false, formationRow: 'front' }),
@@ -348,7 +348,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     );
     const enemyCore = withBasicSkill(
       mockUnit('enemy_core', 300, { formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const enemyFront = withBasicSkill(
       mockUnit('enemy_front', 220, { formationRow: 'front' }),
@@ -378,7 +378,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     const ranger = makeRanger(M1_ID, { battleX: 80 });
     const core = withBasicSkill(
       mockUnit('core', 300, { formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const other = withBasicSkill(
       mockUnit('other', 280, { formationRow: 'back' }),
@@ -427,7 +427,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     );
     const b = withBasicSkill(
       mockUnit('b', 280, { formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const c = withBasicSkill(
       mockUnit('c', 310, { formationRow: 'back' }),
@@ -453,7 +453,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     const ranger = makeRanger(M2_ID, { battleX: 80 });
     const only = withBasicSkill(
       mockUnit('only', 300, { formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const resolution = resolveModuleDamage(
       M2_ID,
@@ -470,7 +470,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     const ranger = makeRanger(M2_ID, { battleX: 80 });
     const core = withBasicSkill(
       mockUnit('core', 300, { formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const cleric = withBasicSkill(
       mockUnit('cleric', 280, { formationRow: 'back', rangePx: 200 }),
@@ -505,7 +505,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     );
     const b = withBasicSkill(
       mockUnit('b', 280, { formationRow: 'back', def: 0, hp: 200, maxHp: 200 }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const c = withBasicSkill(
       mockUnit('c', 310, { formationRow: 'back', def: 0, hp: 200, maxHp: 200 }),
@@ -631,7 +631,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     );
     const core = withBasicSkill(
       mockUnit('core', 300, { formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     expect(
       resolvePlayerAttackTargetEnemy(
@@ -661,7 +661,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     });
     const allyCore = withBasicSkill(
       mockUnit('ally_core', 90, { isEnemy: false, formationRow: 'back' }),
-      'at_sorcerer_mod_single_bolt',
+      'at_sorcerer_mod_focus',
     );
     const allyFront = withBasicSkill(
       mockUnit('ally_front', 150, { isEnemy: false, formationRow: 'front' }),

@@ -201,7 +201,7 @@
           {
             "classId": "at_sorcerer",
             "count": 2,
-            "selectedCombatModuleId": "at_sorcerer_mod_twin_bolt",
+            "selectedCombatModuleId": "at_sorcerer_mod_chain",
             "hpScale": 1.1,
             "atkScale": 1.25,
             "defScale": 1.0,

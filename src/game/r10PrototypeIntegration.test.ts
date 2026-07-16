@@ -196,7 +196,7 @@ describe('R10 prototype stage', () => {
       'df_guardian_mod_nearest_strike',
     ]);
     expect(stage!.waves[1]?.enemyGroups?.map((g) => g.selectedCombatModuleId)).toEqual([
-      'at_sorcerer_mod_twin_bolt',
+      'at_sorcerer_mod_chain',
       'at_swordsman_mod_pierce_slash',
     ]);
 

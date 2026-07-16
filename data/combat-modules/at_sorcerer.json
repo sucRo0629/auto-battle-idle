@@ -1,9 +1,9 @@
 [
   {
-    "id": "at_sorcerer_mod_single_bolt",
+    "id": "at_sorcerer_mod_focus",
     "classId": "at_sorcerer",
-    "displayName": "単体魔弾（仮）",
-    "description": "最近傍の敵へ単体魔法攻撃。R5b プレースホルダー。",
+    "displayName": "収束",
+    "description": "最近傍の敵へ魔法を収束させる。連鎖1段により実質単体攻撃となる。",
     "attackIntervalSec": 3,
     "action": {
       "effect": [
@@ -21,19 +21,19 @@
           }
         }
       ],
-      "effectRange": {
-        "form": "single",
-        "applyMode": "instant"
-      },
-      "targetShape": "single",
+      "targetShape": "chain",
+      "chainCount": 1,
+      "chainMaxDistancePx": 80,
+      "chainPowerStepMultiplier": 0.8,
+      "chainPowerStepMode": "multiply",
       "attackMethod": "ranged"
     }
   },
   {
-    "id": "at_sorcerer_mod_twin_bolt",
+    "id": "at_sorcerer_mod_chain",
     "classId": "at_sorcerer",
-    "displayName": "双弾（仮）",
-    "description": "単体・2 Hit（不足分は同一対象へ再命中）の魔法攻撃。R5b プレースホルダー。",
+    "displayName": "連鎖",
+    "description": "最近傍の敵を起点に、距離内の別の敵へ魔法を連鎖させる。波及は減衰する。",
     "attackIntervalSec": 3.5,
     "action": {
       "effect": [
@@ -51,14 +51,11 @@
           }
         }
       ],
-      "effectRange": {
-        "form": "single",
-        "applyMode": "instant",
-        "hitCount": 2,
-        "refillSameTargetOnShortfall": true
-      },
-      "targetShape": "multiLock",
-      "hitCount": 2,
+      "targetShape": "chain",
+      "chainCount": 2,
+      "chainMaxDistancePx": 80,
+      "chainPowerStepMultiplier": 0.8,
+      "chainPowerStepMode": "multiply",
       "attackMethod": "ranged"
     }
   }

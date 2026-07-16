@@ -6931,6 +6931,77 @@ function validateAtRangerCombatModule(module: CombatModuleDef): void {
   }
 }
 
+const AT_SORCERER_M1_ID = 'at_sorcerer_mod_focus';
+const AT_SORCERER_M2_ID = 'at_sorcerer_mod_chain';
+
+/** R12g-e4: 魔術師 CombatModule。M1/M2 とも既存 chain（multiLock 不採用） */
+function validateAtSorcererCombatModule(module: CombatModuleDef): void {
+  if (module.classId !== 'at_sorcerer') return;
+
+  for (const [index, effect] of module.action.effect.entries()) {
+    const effectContext = `combat module "${module.id}" effect[${index}]`;
+    if (effect.type !== 'damage') {
+      throw new Error(
+        `${effectContext}: at_sorcerer modules must use damage effects only (got ${effect.type})`,
+      );
+    }
+    if (effect.damageType !== 'magic') {
+      throw new Error(
+        `${effectContext}: at_sorcerer modules must be magic damage`,
+      );
+    }
+    assertPositiveHealResourceAmount(effect.amount, `${effectContext}.amount`);
+    const target = effect.target ?? module.action.target;
+    if (!isNearestEnemyFallbackTarget(target)) {
+      throw new Error(
+        `${effectContext}: target must be enemy nearest`,
+      );
+    }
+  }
+
+  if (module.action.attackMethod !== 'ranged') {
+    throw new Error(
+      `combat module "${module.id}": at_sorcerer modules must be ranged`,
+    );
+  }
+
+  if (module.action.targetShape !== 'chain') {
+    throw new Error(
+      `combat module "${module.id}": at_sorcerer modules must use targetShape chain`,
+    );
+  }
+
+  const chainCount = module.action.chainCount ?? 0;
+  const chainMaxDistancePx = module.action.chainMaxDistancePx ?? 0;
+  if (chainMaxDistancePx <= 0) {
+    throw new Error(
+      `combat module "${module.id}": chainMaxDistancePx must be positive`,
+    );
+  }
+
+  if (module.id === AT_SORCERER_M1_ID) {
+    if (chainCount !== 1) {
+      throw new Error(
+        `combat module "${module.id}": M1 must use chainCount 1`,
+      );
+    }
+  }
+
+  if (module.id === AT_SORCERER_M2_ID) {
+    if (chainCount !== 2) {
+      throw new Error(
+        `combat module "${module.id}": M2 must use chainCount 2`,
+      );
+    }
+  }
+
+  if (module.id !== AT_SORCERER_M1_ID && module.id !== AT_SORCERER_M2_ID) {
+    throw new Error(
+      `combat module "${module.id}": unknown at_sorcerer module id`,
+    );
+  }
+}
+
 function validateCombatModuleData(
   combatModules: CombatModuleDef[],
   classById: Map<string, ClassPreset>,
@@ -6951,6 +7022,7 @@ function validateCombatModuleData(
     validateAtSwordsmanCombatModule(module);
     validateAtAssassinCombatModule(module);
     validateAtRangerCombatModule(module);
+    validateAtSorcererCombatModule(module);
   }
 }
 
