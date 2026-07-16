@@ -361,8 +361,9 @@ describe('enemy group selectedCombatModuleId runtime (R5e)', () => {
 
   it('15. legacy group keeps synthesized legacy basic', () => {
     const gameData = loadGameData();
-    const preset = gameData.classRegistry.df_paladin!;
-    const stage = stageWithGroups([{ classId: 'df_paladin', count: 1 }]);
+    const preset = gameData.classRegistry.at_assassin!;
+    expect(preset.combatModuleIds).toBeUndefined();
+    const stage = stageWithGroups([{ classId: 'at_assassin', count: 1 }]);
     const [enemy] = createEnemiesForStage(
       gameDataWithStage(stage),
       stage.id,

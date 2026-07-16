@@ -337,6 +337,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | Passive | Barrier 消費後の小規模回復、再付与安定、方式間の最低限補完。Barrier 消費後回復は **兵科本体に置かない** |
 | 持たせない | 本体回復、無限 Barrier、全体完全防護、療養師と同等の HP 復元 |
 | R12g-d4 data | `data/combat-modules/sp_wardweaver.json` — M1 `sp_wardweaver_mod_focus_barrier`（danger 味方1体・厚い Barrier・`barrierStack: true`）、M2 `sp_wardweaver_mod_spread_barrier`（ally Barrier 不足複数・薄い Barrier・`requireBelow`・`refillSameTargetOnShortfall: false`）。数値は仮。**Backend 完了 / Player 未完了** |
+| R12g-d5 統合 | Survival 4 兵科（鉄衛士・護法士・療養師・結界師）を同一実戦経路で確認。`src/battle/survivalCombatModules.integration.test.ts`。**R12g-d 本流 Backend 完了 / Player 未完了**。次は Kill 兵科（R12g-d6〜） |
 
 ### R12f → R12g 未接続事項
 
@@ -344,7 +345,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | ---- | ---- |
 | 方式名・Passive 名・ID | R12g 以降 |
 | 数値・倍率・秒数・コスト | R12i 中心（形状は R12g） |
-| 危険対象判定規則（護法士 M2 等） | **R12g-c Backend 完了**（c1〜c5）。Player / JSON 接続は Survival Module data 後続 |
+| 危険対象判定規則（護法士 M2 等） | **R12g-c Backend 完了**（c1〜c5）。Survival Module JSON は **R12g-d1〜d5 Backend 完了**。Player 手元確認は R12g-d5 Player 層 |
 | 鉄衛士 M2 の effect schema / 直接ダメージ型 | R12g-b で **DamageAppliedEvent** 契約確定（[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)）。runtime 実装は R12g-b1〜b2。JSON 数値入力は R12g 本流 |
 | R11b 現行 Passive 効果 | 維持義務なし。R12f 方向に合わせて再設計 |
 | R2 候補表の方式 A/B | 本節の M1/M2 方向が正。旧案は素材のみ |

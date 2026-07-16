@@ -35,7 +35,16 @@ describe('game class selection list', () => {
     for (const classId of R5_COMBAT_MODULE_CLASS_IDS) {
       expect(visible).toContain(classId);
     }
-    expect(gameData.classRegistry.df_paladin?.combatModuleIds).toBeUndefined();
+    // Survival Module data 済み（R12g-d2 / d4）
+    expect(gameData.classRegistry.df_paladin?.combatModuleIds).toEqual([
+      'df_paladin_mod_frontline_ward',
+      'df_paladin_mod_danger_guard',
+    ]);
+    expect(gameData.classRegistry.sp_wardweaver?.combatModuleIds).toEqual([
+      'sp_wardweaver_mod_focus_barrier',
+      'sp_wardweaver_mod_spread_barrier',
+    ]);
+    // 未入力の legacy（Kill 兵科など）
     expect(gameData.classRegistry.at_assassin?.combatModuleIds).toBeUndefined();
     expect(gameData.classRegistry.at_sigilist?.combatModuleIds).toBeUndefined();
   });
