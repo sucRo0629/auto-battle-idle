@@ -184,6 +184,7 @@ import {
   DF_PALADIN_M2_COMBAT_MODULE_ID,
   executeDfPaladinM2DangerProtection,
   isDfPaladinM2Selected,
+  type DfPaladinM2ProtectionResult,
 } from "../dfPaladinM2.ts";
 
 interface ApplyResolvedEffectStepResult {
@@ -238,6 +239,10 @@ export interface SkillExecutorDeps {
     reason: "knockback" | "enemyReelIn"
   ) => void;
   getTargetingRuntimeContext?: () => TargetingRuntimeContext | undefined;
+  /** R12g-c5 test/debug: M2 danger protection outcome (no production UI). */
+  onDfPaladinM2ProtectionResult?: (
+    result: DfPaladinM2ProtectionResult,
+  ) => void;
 }
 
 function shouldDeferUntilHostileToAnchorInRange(
@@ -315,6 +320,7 @@ export class SkillExecutor {
       enemies,
       this.getTargetingRuntimeContext(),
     );
+    this.deps.onDfPaladinM2ProtectionResult?.(result);
     cd.remaining = DF_PALADIN_M2_ATTACK_INTERVAL_SEC;
     this.deps.onBasicAttackExecuted?.(actor.id);
     this.deps.onCombatActionExecuted?.(actor, {

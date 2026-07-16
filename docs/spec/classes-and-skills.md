@@ -308,8 +308,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 基本対象数 | **1 体**。常時複数保護を標準にしない |
 | tie-break | pending 中の異なる敵数 → 最短 apply 時刻 → pending Hit 数 → HP 割合 → 決定的 ID 順 |
 | 魔法特化 | 対象選定と effect 強度を分離。魔法は同値時の補助加点候補に留める |
-| 未接続 | editor `danger` kind 入力は **R12g-g**。仮 Module ID / 仮数値の data 移管は **R12g Survival Module data** |
-| R12g-c4 runtime | `src/battle/dfPaladinM2.ts` — 暫定 ID `df_paladin_mod_danger_guard`、全属性 `damageTaken` 軽減 + 魔法追加倍率、`TargetingRuntimeContext` は `BattleEngine` → `SkillExecutor` 注入 |
+| 未接続 | editor `danger` kind 入力は **R12g-g**。仮 Module ID / 仮数値の data 移管は **R12g Survival Module data**。Player 手元確認も同接続後 |
+| R12g-c4〜c5 runtime | `src/battle/dfPaladinM2.ts` — 暫定 ID `df_paladin_mod_danger_guard`、全属性 `damageTaken` 軽減 + 魔法追加倍率、`TargetingRuntimeContext` 注入、統合 test / `onDfPaladinM2ProtectionResult`。**Backend 完了 / Player 未完了** |
 
 #### `sp_cleric` 療養師
 
@@ -339,7 +339,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | ---- | ---- |
 | 方式名・Passive 名・ID | R12g 以降 |
 | 数値・倍率・秒数・コスト | R12i 中心（形状は R12g） |
-| 危険対象判定規則（護法士 M2 等） | **R12g-c で設計確定**。runtime / test / debug 実装は後続 |
+| 危険対象判定規則（護法士 M2 等） | **R12g-c Backend 完了**（c1〜c5）。Player / JSON 接続は Survival Module data 後続 |
 | 鉄衛士 M2 の effect schema / 直接ダメージ型 | R12g-b で **DamageAppliedEvent** 契約確定（[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)）。runtime 実装は R12g-b1〜b2。JSON 数値入力は R12g 本流 |
 | R11b 現行 Passive 効果 | 維持義務なし。R12f 方向に合わせて再設計 |
 | R2 候補表の方式 A/B | 本節の M1/M2 方向が正。旧案は素材のみ |

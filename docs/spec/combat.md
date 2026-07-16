@@ -525,7 +525,7 @@ danger targeting の主判定は **集中攻撃** とする。
 - pending 除外: 死者、同陣営、候補 pool 外、`effectDef.type !== 'damage'`、`suppressBonus*` 等の derived pending。DoT tick / delayed pool / counter は `pendingHitQueue` に入らない前提
 - `hpRatio` = `currentHpRatio()`（`hp / effectiveMaxHp`。Barrier 不含）
 
-**未接続（R12g-c4 以降）:** 護法士 M2 Module action / 防護 effect、BattleEngine への `TargetingRuntimeContext` 注入、debug 理由表示。
+**接続済み（R12g-c4〜c5）:** 護法士 M2 Module action / 防護 effect（`dfPaladinM2.ts`）、`BattleEngine` → `SkillExecutor` への `TargetingRuntimeContext` 注入、`onDfPaladinM2ProtectionResult` debug hook + `dangerSnapshots`。editor UI / production JSON は未接続。
 
 #### TargetSpec `kind: danger`（R12g-c3）
 
@@ -542,6 +542,16 @@ danger targeting の主判定は **集中攻撃** とする。
 - 射程・距離・row による候補除外なし
 - `TargetingRuntimeContext` — `battleSec` / `pendingHits` / `gameData` / 任意 `resolveCurrentAttackTarget`。省略時は `createResolveCurrentAttackTarget()` が既存 Attack target resolver を再利用
 - editor UI 未接続（戻し先 **R12g-g**）。JSON 入力は editor 対応前に禁止
+
+#### 護法士 M2 防護 runtime（R12g-c4〜c5）
+
+実装: `src/battle/dfPaladinM2.ts`、統合 test: `src/battle/dfPaladinM2.integration.test.ts`
+
+- 暫定 Module ID: `df_paladin_mod_danger_guard`（R12g Survival Module data へ移管。displayName / 配列順に非依存）
+- 仮数値（R12i / CombatModule data へ移管）: 全属性 taken `0.85`、魔法追加 taken `0.85`（乗算）、duration `4` sec
+- 対象 1 体・後衛距離制限なし・signal 0 で fallback なし・Wave reset で runtime state / overlay 消去
+- debug: `DfPaladinM2ProtectionResult`（outcome / multipliers / `dangerSnapshots`）。本番 UI なし
+- **R12g-c:** Backend 完了 / Player 未完了（手元確認は Survival Module JSON 接続後）
 
 **`fireConditionMatch`** — `all`（省略時 AND）または `any`（OR）。三重の障壁は `any`。
 

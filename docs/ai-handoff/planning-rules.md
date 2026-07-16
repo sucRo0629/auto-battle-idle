@@ -123,7 +123,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-16・R12g-b3 完了）
+## 8. 現在地メモ（更新: 2026-07-16・R12g-c5 完了）
 
 | 項目 | 状態 |
 | ---- | ---- |
@@ -137,11 +137,12 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12g-b1** | **Backend 完了** — `DamageAppliedEvent` 型・emission 統一 |
 | **R12g-b2** | **Backend 完了** — 鉄衛士 M2 runtime（固定自己回復本体） |
 | **R12g-b3** | **Backend 完了** — 実経路統合テスト・M2 検証経路・module 選択安定性確認 |
-| **R12g-c** | **Backend 完了**（設計）— 護法士 M2 danger targeting 契約 |
+| **R12g-c** | **Backend 完了 / Player 未完了** — 護法士 M2 danger targeting（c1〜c5） |
 | **R12g-c2** | **Backend 完了** — danger 集計 runtime API（`dangerTargeting.ts`） |
 | **R12g-c3** | **Backend 完了** — 最小 `TargetSpec` `kind: danger` + resolver 接続 |
-| **R12g-c4** | **Backend 完了** — 護法士 M2 防護 runtime / `TargetingRuntimeContext` 実戦注入。Player 未達 |
-| **公式次タスク** | **R12g-c5** — M2 統合 test / debug 検証 |
+| **R12g-c4** | **Backend 完了** — 護法士 M2 防護 runtime / `TargetingRuntimeContext` 実戦注入 |
+| **R12g-c5** | **Backend 完了** — 統合 test / debug 検証。Player 手元確認は Survival Module JSON 接続後 |
+| **公式次タスク** | **R12g 本流** — 8 兵科 JSON データ入力（数値は最小） |
 
 **R12f で確定した主要境界（短縮）:**
 

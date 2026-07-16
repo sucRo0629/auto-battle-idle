@@ -36,7 +36,10 @@ import {
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveBasicAttackSkillIdFromGameData } from "./data/resolveCombatModuleBasic.ts";
 import { tryIronGuardianM2SelfHeal } from "./ironGuardianM2.ts";
-import { clearDfPaladinM2RuntimeState } from "./dfPaladinM2.ts";
+import {
+  clearDfPaladinM2RuntimeState,
+  type DfPaladinM2ProtectionResult,
+} from "./dfPaladinM2.ts";
 import { buildDangerTargetingRuntime } from "./skills/targeting.ts";
 import { resolveUnitAttackMethod } from "./data/resolveUnitAttackMethod.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
@@ -241,6 +244,10 @@ export interface BattleEngineOptions {
   getAcquiredOperationPassiveIds?: (slotIndex: number) => readonly string[];
   /** R6c: battlefield 再読込（restart / respawn）通知。OperationState 同期用。 */
   onBattlefieldReload?: () => void;
+  /** R12g-c5 test/debug: 護法士 M2 防護結果（本番 UI なし）。 */
+  onDfPaladinM2ProtectionResult?: (
+    result: DfPaladinM2ProtectionResult,
+  ) => void;
 }
 
 export type BattleEngineAcquiredOperationPassiveIdsResolver = (
@@ -317,6 +324,9 @@ export class BattleEngine {
     slotIndex: number,
   ) => readonly string[];
   private readonly onBattlefieldReload?: () => void;
+  private readonly onDfPaladinM2ProtectionResult?: (
+    result: DfPaladinM2ProtectionResult,
+  ) => void;
 
   constructor(
     private readonly gameData: GameData,
@@ -334,6 +344,7 @@ export class BattleEngine {
     this.getSelectedCombatModuleId = options.getSelectedCombatModuleId;
     this.getAcquiredOperationPassiveIds = options.getAcquiredOperationPassiveIds;
     this.onBattlefieldReload = options.onBattlefieldReload;
+    this.onDfPaladinM2ProtectionResult = options.onDfPaladinM2ProtectionResult;
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
       getBattleTimeSec: () => this.battleTimeSec,
       enqueuePendingHits: (hits) => {
@@ -377,6 +388,9 @@ export class BattleEngine {
             pendingHits: this.pendingHitQueue,
           },
         ),
+      onDfPaladinM2ProtectionResult: (result) => {
+        this.onDfPaladinM2ProtectionResult?.(result);
+      },
     });
     this.reloadBattlefield();
   }

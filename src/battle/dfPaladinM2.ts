@@ -195,6 +195,21 @@ function resolveDangerProtectionTarget(
   }
 
   const spec = protectedSideForActor(protector);
+  const candidates = (protector.isEnemy ? enemies : allies).filter(
+    (unit) => unit.isAlive,
+  );
+  const opponents = (protector.isEnemy ? allies : enemies).filter(
+    (unit) => unit.isAlive,
+  );
+  const snapshots = collectDangerTargetSnapshots({
+    candidates,
+    opponents,
+    pendingHits: runtime.pendingHits,
+    battleSec: runtime.battleSec,
+    windowSec: spec.windowSec,
+    resolveCurrentAttackTarget: runtime.resolveCurrentAttackTarget,
+  });
+
   const targets = resolveDangerTargets(
     spec,
     protector,
@@ -207,28 +222,14 @@ function resolveDangerProtectionTarget(
     },
   );
   if (targets.length === 0) {
-    const candidates = (protector.isEnemy ? enemies : allies).filter(
-      (unit) => unit.isAlive,
-    );
-    const opponents = (protector.isEnemy ? allies : enemies).filter(
-      (unit) => unit.isAlive,
-    );
-    const snapshots = collectDangerTargetSnapshots({
-      candidates,
-      opponents,
-      pendingHits: runtime.pendingHits,
-      battleSec: runtime.battleSec,
-      windowSec: spec.windowSec,
-      resolveCurrentAttackTarget: runtime.resolveCurrentAttackTarget,
-    });
     return { target: null, snapshots };
   }
 
   const selected = targets[0] ?? null;
   if (!selected || selected.id === protector.id) {
-    return { target: null };
+    return { target: null, snapshots };
   }
-  return { target: selected };
+  return { target: selected, snapshots };
 }
 
 export function executeDfPaladinM2DangerProtection(

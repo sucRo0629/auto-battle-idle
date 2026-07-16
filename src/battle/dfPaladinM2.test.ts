@@ -175,6 +175,11 @@ describe('dfPaladinM2 runtime (R12g-c4)', () => {
     expect(result.outcome).toBe('applied');
     expect(result.selectedTargetId).toBe('back');
     expect(hasDfPaladinM2ProtectionFrom(back, 'paladin')).toBe(true);
+    const selectedSnap = result.dangerSnapshots?.find(
+      (snap) => snap.targetId === 'back',
+    );
+    expect(selectedSnap?.currentAttackerCount).toBe(2);
+    expect(selectedSnap?.pendingHitCount).toBe(2);
     expect(back.statusEffects.some((fx) => fx.overlay === 'barrier')).toBe(false);
     expect(back.hp).toBe(back.maxHp);
   });
