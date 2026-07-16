@@ -140,7 +140,7 @@ describe('SkillMenuPanel combat module selection (R9.6-A)', () => {
     session.start();
     sortieToStage(session, '1');
 
-    const legacyClassId = 'at_ranger';
+    const legacyClassId = 'at_lancer';
     const listItem = [...document.querySelectorAll<HTMLElement>(
       '.skill-menu-picker-list-item',
     )].find((item) => item.dataset.pickerClassId === legacyClassId);

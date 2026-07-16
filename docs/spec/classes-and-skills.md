@@ -264,6 +264,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | M2 中核分担型 | 複数の遠隔攻撃役へ処理を分配。一体への決定力は M1 より低い |
 | Passive | 同一中核への集中維持、撃破後移行、最低限の自衛 |
 | 持たせない | 支援役優先、高 DEF 突破、前衛万能処理、双刃士への完全な自衛 |
+| R12g-e3 data | `data/combat-modules/at_ranger.json` — M1 `at_ranger_mod_core_focus`（中核集中・単体物理・atkScale 1.0）、M2 `at_ranger_mod_core_split`（中核分担・multiLock hitCount 3・`refillSameTargetOnShortfall: false`・atkScale 0.55）。固定優先は Lv0 passive `at_ranger_passive_1`（`attackType.ranged` + `excludeRoles: ["supporter"]`）。Module effect は nearest fallback のみ（優先条件の二重定義なし）。数値は仮。**Backend 完了 / Player 未完了** |
 
 #### `at_sorcerer` 魔術師
 
@@ -341,7 +342,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | R12g-d4 data | `data/combat-modules/sp_wardweaver.json` — M1 `sp_wardweaver_mod_focus_barrier`（danger 味方1体・厚い Barrier・`barrierStack: true`）、M2 `sp_wardweaver_mod_spread_barrier`（ally Barrier 不足複数・薄い Barrier・`requireBelow`・`refillSameTargetOnShortfall: false`）。数値は仮。**Backend 完了 / Player 未完了** |
 | R12g-d5 統合 | Survival 4 兵科（鉄衛士・護法士・療養師・結界師）を同一実戦経路で確認。`src/battle/survivalCombatModules.integration.test.ts`。**R12g-d 本流 Backend 完了 / Player 未完了**。次は Kill 兵科（R12g-e1〜） |
 | R12g-e1 data | 剣術士 M1/M2 — 上記 `at_swordsman` 節。`src/battle/atSwordsmanModules.test.ts`。**Backend 完了 / Player 未完了** |
-| R12g-e2 data | 双刃士 M1/M2 — 上記 `at_assassin` 節。`src/battle/atAssassinModules.test.ts`。**Backend 完了 / Player 未完了**。次は R12g-e3（弓術士） |
+| R12g-e2 data | 双刃士 M1/M2 — 上記 `at_assassin` 節。`src/battle/atAssassinModules.test.ts`。**Backend 完了 / Player 未完了** |
+| R12g-e3 data | 弓術士 M1/M2 — 上記 `at_ranger` 節。`src/battle/atRangerModules.test.ts`。**Backend 完了 / Player 未完了**。次は R12g-e4（魔術師） |
 
 ### R12f → R12g 未接続事項
 
@@ -605,7 +607,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_swordsman` / `sp_cleric` テスト
 - `targetRuleOverride`（stat 最高値）— `最も{stat}が高い敵を優先して攻撃する`
 - `targetRuleOverride`（`stat: hp` + `order: lowest`）— `最もHPが低い敵を優先して攻撃する`（現在 HP 絶対値。例: 双刃士 P1）
-- `targetRuleOverride`（`attackType.ranged`）— `遠隔攻撃の敵を優先して攻撃する`
+- `targetRuleOverride`（`attackType.ranged`、任意 `excludeRoles`）— `遠隔攻撃の敵を優先して攻撃する`（支援役除外時も同文案。詳細は JSON）
 - 常時 self evasion buff — `回避+20%` 等（対象・常時の冗長表記は省略）
 - active `damageIncrease`（単一条件）— `対象に{状態}が付与されているなら、このダメージは+{scale%}される` / `対象のHPがN%以下なら、このダメージは+{scale%}される`
 - bleed DoT 付与 — `その後攻撃した対象に{N}秒間毎秒攻撃力の{scale%}の物理ダメージを与える出血を付与する`
@@ -1641,8 +1643,8 @@ Kill 対象を持たない **Position Flow / 戦線指揮** 職。位置取り�
 | 枠             | ID                       | 名称     | 概要                                                                    |
 | -------------- | ------------------------ | -------- | ----------------------------------------------------------------------- |
 | basic          | `at_ranger_basic_attack` | —        | 標準物理単体                                                            |
-| passive 1 Lv0  | `at_ranger_passive_1`    | 射手排除 | 遠隔敵優先 `targetRuleOverride`（`attackType.ranged`）                  |
-| passive 2 Lv0  | `at_ranger_passive_2`    | 速射の技 | 常時 self `attackSpeed` buff（×1.25）                                   |
+| passive 1 Lv0  | `at_ranger_passive_1`    | 射手優先 | 遠隔攻撃役優先 `targetRuleOverride`（`attackType.ranged` + `excludeRoles: ["supporter"]`） |
+| passive 2 Lv1  | `at_ranger_passive_2`    | 速射の技 | 常時 self `attackSpeed` buff（×1.25）                                   |
 | passive 3 Lv10 | `at_ranger_passive_3`    | 遠隔狩り | 遠隔敵への damage×1.2（`specialEffect` + `attackType` 条件）            |
 | passive 4 Lv20 | `at_ranger_passive_4`    | 二の矢   | 遠隔敵 basic Hit 後 50% で追加 1 Hit（非再帰。HP 条件なし）             |
 | active 1 Lv0   | `at_ranger_active_1`     | 連射     | BAC 5・single 2 Hit 物理ダメ                                            |

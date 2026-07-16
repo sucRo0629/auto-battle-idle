@@ -1,6 +1,16 @@
 [
   {
     "id": "at_ranger_passive_1",
+    "name": "射手優先",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "attackType",
+      "ranged": true,
+      "excludeRoles": ["supporter"]
+    }
+  },
+  {
+    "id": "at_ranger_passive_2",
     "name": "速射の技",
     "effect": "buff",
     "buffSubKind": "stat",
@@ -13,17 +23,8 @@
     }
   },
   {
-    "id": "at_ranger_passive_2",
-    "name": "射手優先",
-    "effect": "targetRuleOverride",
-    "targetRuleOverride": {
-      "kind": "attackType",
-      "ranged": true
-    }
-  },
-  {
     "id": "at_ranger_passive_3",
-    "name": "射手排除",
+    "name": "遠隔狩り",
     "effect": "specialEffect",
     "specialEffectApplyTo": "damage",
     "specialEffect": {
@@ -41,7 +42,6 @@
     "name": "二の矢",
     "effect": "bonusBasicAttackOnHit",
     "chance": 0.5,
-    "bonusBasicAttackHpRatio": 1,
     "bonusBasicAttackConditions": [
       {
         "kind": "attackType",

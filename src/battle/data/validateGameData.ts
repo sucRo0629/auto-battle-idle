@@ -6850,6 +6850,87 @@ function validateAtAssassinCombatModule(module: CombatModuleDef): void {
   }
 }
 
+const AT_RANGER_M1_ID = 'at_ranger_mod_core_focus';
+const AT_RANGER_M2_ID = 'at_ranger_mod_core_split';
+
+function isNearestEnemyFallbackTarget(
+  target: import('../types.ts').TargetSpec | undefined,
+): boolean {
+  return (
+    target !== undefined &&
+    target.kind === 'distance' &&
+    target.side === 'enemy' &&
+    target.order === 'nearest'
+  );
+}
+
+/** R12g-e3: 弓術士 CombatModule。固定優先は class passive 所有（Module へ二重定義しない） */
+function validateAtRangerCombatModule(module: CombatModuleDef): void {
+  if (module.classId !== 'at_ranger') return;
+
+  for (const [index, effect] of module.action.effect.entries()) {
+    const effectContext = `combat module "${module.id}" effect[${index}]`;
+    if (effect.type !== 'damage') {
+      throw new Error(
+        `${effectContext}: at_ranger modules must use damage effects only (got ${effect.type})`,
+      );
+    }
+    if (effect.damageType !== 'physical') {
+      throw new Error(
+        `${effectContext}: at_ranger modules must be physical damage`,
+      );
+    }
+    assertPositiveHealResourceAmount(effect.amount, `${effectContext}.amount`);
+    const target = effect.target ?? module.action.target;
+    if (target?.kind === 'attackType') {
+      throw new Error(
+        `${effectContext}: must not embed attackType priority in module (owned by class passive)`,
+      );
+    }
+    if (!isNearestEnemyFallbackTarget(target)) {
+      throw new Error(
+        `${effectContext}: target must be enemy nearest (class passive owns ranged-attacker priority)`,
+      );
+    }
+  }
+
+  if (module.action.attackMethod !== 'ranged') {
+    throw new Error(
+      `combat module "${module.id}": at_ranger modules must be ranged`,
+    );
+  }
+
+  if (module.id === AT_RANGER_M1_ID) {
+    const shape = module.action.targetShape ?? 'single';
+    const hitCount = module.action.hitCount ?? 1;
+    if (shape !== 'single' || hitCount >= 2) {
+      throw new Error(
+        `combat module "${module.id}": M1 must be single-target`,
+      );
+    }
+  }
+
+  if (module.id === AT_RANGER_M2_ID) {
+    const hitCount = module.action.hitCount ?? 0;
+    if (module.action.targetShape !== 'multiLock' || hitCount < 2) {
+      throw new Error(
+        `combat module "${module.id}": M2 must be multiLock with hitCount >= 2`,
+      );
+    }
+    if (module.action.effectRange?.refillSameTargetOnShortfall !== false) {
+      throw new Error(
+        `combat module "${module.id}": M2 must set refillSameTargetOnShortfall false (no same-target re-hit)`,
+      );
+    }
+  }
+
+  if (module.id !== AT_RANGER_M1_ID && module.id !== AT_RANGER_M2_ID) {
+    throw new Error(
+      `combat module "${module.id}": unknown at_ranger module id`,
+    );
+  }
+}
+
 function validateCombatModuleData(
   combatModules: CombatModuleDef[],
   classById: Map<string, ClassPreset>,
@@ -6869,6 +6950,7 @@ function validateCombatModuleData(
     validateSpWardweaverCombatModule(module);
     validateAtSwordsmanCombatModule(module);
     validateAtAssassinCombatModule(module);
+    validateAtRangerCombatModule(module);
   }
 }
 

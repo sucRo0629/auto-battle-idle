@@ -186,14 +186,15 @@ describe('collectSkillsFromDrafts passive sanitize', () => {
   it('preserves priority targetRuleOverride attackType.ranged on save', () => {
     const entries: SkillDraftEntry[] = [
       {
-        ref: { skillId: 'at_ranger_passive_2', kind: 'passive' },
+        ref: { skillId: 'at_ranger_passive_1', kind: 'passive' },
         passive: {
-          id: 'at_ranger_passive_2',
-          name: 'at_ranger_passive_2',
+          id: 'at_ranger_passive_1',
+          name: 'at_ranger_passive_1',
           effect: 'targetRuleOverride',
           targetRuleOverride: {
             kind: 'attackType',
             ranged: true,
+            excludeRoles: ['supporter'],
           },
         },
       },
@@ -203,6 +204,7 @@ describe('collectSkillsFromDrafts passive sanitize', () => {
     expect(passives[0]?.targetRuleOverride).toEqual({
       kind: 'attackType',
       ranged: true,
+      excludeRoles: ['supporter'],
     });
   });
 

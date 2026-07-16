@@ -48,6 +48,10 @@ describe('game class selection list', () => {
       'at_assassin_mod_rear_intrude',
       'at_assassin_mod_frontline_finish',
     ]);
+    expect(gameData.classRegistry.at_ranger?.combatModuleIds).toEqual([
+      'at_ranger_mod_core_focus',
+      'at_ranger_mod_core_split',
+    ]);
     // 未入力の legacy
     expect(gameData.classRegistry.at_sigilist?.combatModuleIds).toBeUndefined();
   });

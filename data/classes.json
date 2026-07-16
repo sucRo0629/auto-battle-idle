@@ -488,7 +488,11 @@
         "連射",
         "攻撃速度"
       ]
-    }
+    },
+    "combatModuleIds": [
+      "at_ranger_mod_core_focus",
+      "at_ranger_mod_core_split"
+    ]
   },
   {
     "id": "at_ballista",

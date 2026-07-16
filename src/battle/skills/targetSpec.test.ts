@@ -316,6 +316,27 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(pool.map((u) => u.id)).toEqual([]);
   });
 
+  it('attackType filter applies for enemy actors (ally/enemy symmetry)', () => {
+    const enemyActor = mockUnit('enemy_actor', 200, { isEnemy: true });
+    const allyRanged = withBasicSkill(
+      mockUnit('ally_ranged', 100, { isEnemy: false, rangePx: 200 }),
+      'at_ranger_basic_attack',
+    );
+    const allyMelee = withBasicSkill(
+      mockUnit('ally_melee', 120, { isEnemy: false }),
+      'at_swordsman_basic_attack',
+    );
+    const spec = { kind: 'attackType', ranged: true } as const;
+    const pool = getTargetPool(
+      spec,
+      enemyActor,
+      [allyRanged, allyMelee],
+      [enemyActor],
+      gameData,
+    );
+    expect(pool.map((u) => u.id)).toEqual(['ally_ranged']);
+  });
+
   it('pickDefaultHostileSingleTarget prefers front defender by battleX not actor distance', () => {
     const enemyActor = mockUnit('e1', 180, { isEnemy: true });
     const frontDefender = mockUnit('front-def', 220);

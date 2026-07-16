@@ -81,10 +81,10 @@ function presetAsCombatantProbe(
 export function getRangerRangedTargetSpec(
   gameData: GameData,
 ): Extract<TargetSpec, { kind: 'attackType' }> {
-  const passive = gameData.skillRegistry.passives.at_ranger_passive_2;
+  const passive = gameData.skillRegistry.passives.at_ranger_passive_1;
   const spec = passive?.targetRuleOverride;
   if (!spec || spec.kind !== 'attackType') {
-    throw new Error('at_ranger_passive_2 attackType targetRuleOverride missing');
+    throw new Error('at_ranger_passive_1 attackType targetRuleOverride missing');
   }
   return spec;
 }
@@ -156,10 +156,13 @@ export function buildM1TargetClassificationRows(
 export function logM1TargetClassificationReport(gameData: GameData): void {
   const rows = buildM1TargetClassificationRows(gameData);
   const rangerSpec = getRangerRangedTargetSpec(gameData);
-  const excludeNote = '';
+  const excludeNote =
+    rangerSpec.excludeRoles && rangerSpec.excludeRoles.length > 0
+      ? ` excludeRoles=[${rangerSpec.excludeRoles.join(',')}]`
+      : '';
   console.info('[demo-m1-target-classification] M1 target priority bands (implementation + diagnostics):');
   console.info(
-    `  ranger P2 (at_ranger_passive_2): targetRuleOverride attackType.ranged — pool = enemies with basic attackMethod=ranged${excludeNote}; fallback nearest if empty`,
+    `  ranger P1 (at_ranger_passive_1): targetRuleOverride attackType.ranged${excludeNote} — pool = enemies with basic attackMethod=ranged; fallback nearest if empty`,
   );
   console.info(
     '  assassin P2 (at_assassin_passive_2): targetRuleOverride stat.hp order lowest — all living enemies; P3 bonus when targetHp<=25% maxHp',

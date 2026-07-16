@@ -1837,6 +1837,36 @@ function appendTargetSpecFieldsCore(
     parent.appendChild(
       createEl("p", "editor-hint", attackTypeRangedBandEditorHintJa())
     );
+    const roleRow = createEl("div", "editor-debuff-tag-checkboxes");
+    for (const [role, label] of [
+      ["defender", "defender 除外"],
+      ["attacker", "attacker 除外"],
+      ["supporter", "supporter 除外"],
+    ] as const) {
+      const row = createEl("div", "editor-field editor-field-checkbox");
+      const input = createEl("input") as HTMLInputElement;
+      input.type = "checkbox";
+      input.checked = normalized.excludeRoles?.includes(role) === true;
+      input.addEventListener("change", () => {
+        const current = new Set(normalized.excludeRoles ?? []);
+        if (input.checked) current.add(role);
+        else current.delete(role);
+        const excludeRoles =
+          current.size > 0 ? ([...current] as typeof normalized.excludeRoles) : undefined;
+        onChange({ ...normalized, excludeRoles });
+      });
+      row.appendChild(createEl("label", undefined, label));
+      row.appendChild(input);
+      roleRow.appendChild(row);
+    }
+    parent.appendChild(roleRow);
+    parent.appendChild(
+      createEl(
+        "p",
+        "editor-hint",
+        "excludeRoles: 指定 role を優先プールから除外（例: 弓術士の支援役除外）",
+      ),
+    );
   }
 
   if (normalized.kind === "status") {

@@ -37,7 +37,7 @@ describe('stageEnemyCombatModuleEditor', () => {
 
   it('does not list legacy classes without combatModuleIds', () => {
     const context = editorContext();
-    expect(listStageEnemyCombatModuleOptions('df_paladin', context)).toEqual([]);
+    expect(listStageEnemyCombatModuleOptions('at_lancer', context)).toEqual([]);
     expect(listStageEnemyCombatModuleOptions('at_hunter', context)).toEqual([]);
   });
 

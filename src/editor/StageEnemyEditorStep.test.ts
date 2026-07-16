@@ -276,7 +276,7 @@ describe('StageEnemyEditorStep', () => {
         id: 'legacy_class_stage',
         displayName: 'Legacy Class Stage',
         recommendedLevel: 10,
-        enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+        enemyGroups: [{ classId: 'at_lancer', count: 1 }],
         waves: [{ enemies: [] }],
       };
 

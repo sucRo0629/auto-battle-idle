@@ -76,10 +76,12 @@ describe('combat module data (R5b)', () => {
     if (!loaded.ok) return;
 
     const registry = loaded.data.combatModuleRegistry;
-    // Survival4×2 + 剣術士×2 + 双刃士×2 + 魔術師×2 = 14
-    expect(Object.keys(registry).length).toBe(14);
+    // Survival4×2 + 剣術士×2 + 双刃士×2 + 弓術士×2 + 魔術師×2 = 16
+    expect(Object.keys(registry).length).toBe(16);
     expect(registry.df_guardian_mod_nearest_strike.classId).toBe('df_guardian');
     expect(registry.at_assassin_mod_rear_intrude.classId).toBe('at_assassin');
+    expect(registry.at_ranger_mod_core_focus.classId).toBe('at_ranger');
+    expect(registry.at_ranger_mod_core_split.classId).toBe('at_ranger');
   });
 
   it('R5 target classes each reference exactly 2 combat modules', () => {
@@ -356,6 +358,34 @@ describe('combat module data (R5b)', () => {
     expect(cls?.combatModuleIds).toEqual([
       'at_assassin_mod_rear_intrude',
       'at_assassin_mod_frontline_finish',
+    ]);
+  });
+
+  it('R12g-e3: parses ranger M1/M2 core-focus / core-split CombatModule data', () => {
+    const parsed = parseAndValidateGameDataJson(loadRealBundle());
+    const m1 = parsed.combatModules.find(
+      (module) => module.id === 'at_ranger_mod_core_focus',
+    );
+    const m2 = parsed.combatModules.find(
+      (module) => module.id === 'at_ranger_mod_core_split',
+    );
+    expect(m1?.action.effect[0]?.type).toBe('damage');
+    expect(m1?.action.effect[0]?.damageType).toBe('physical');
+    expect(m1?.action.effect[0]?.target).toEqual({
+      kind: 'distance',
+      side: 'enemy',
+      order: 'nearest',
+    });
+    expect(m1?.action.attackMethod).toBe('ranged');
+    expect(m1?.action.targetShape ?? 'single').toBe('single');
+    expect(m2?.action.targetShape).toBe('multiLock');
+    expect(m2?.action.hitCount).toBe(3);
+    expect(m2?.action.effectRange?.refillSameTargetOnShortfall).toBe(false);
+    expect(m2?.action.attackMethod).toBe('ranged');
+    const cls = parsed.classes.find((entry) => entry.id === 'at_ranger');
+    expect(cls?.combatModuleIds).toEqual([
+      'at_ranger_mod_core_focus',
+      'at_ranger_mod_core_split',
     ]);
   });
 

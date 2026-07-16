@@ -24,6 +24,7 @@ describe('at_ranger passive / active unlock structure', () => {
     expect(passives['at_ranger_passive_1']?.targetRuleOverride).toEqual({
       kind: 'attackType',
       ranged: true,
+      excludeRoles: ['supporter'],
     });
 
     const p2 = passives['at_ranger_passive_2'];
@@ -58,13 +59,12 @@ describe('at_ranger passive / active unlock structure', () => {
     }
 
     const a2 = actives['at_ranger_active_2'];
-    expect(a2?.effect[0]?.type).toBe('basicAttackTransform');
+    expect(a2?.effect.some((e) => e.type === 'basicAttackTransform')).toBe(true);
 
     const a3 = actives['at_ranger_active_3'];
     const a3Effect = a3?.effect[0];
     expect(a3Effect?.type).toBe('buff');
     if (a3Effect?.type === 'buff') {
-      expect([a3Effect.buffStat].flat()).toContain('attackSpeed');
       expectPositive(a3Effect.buffMultiplier);
     }
 

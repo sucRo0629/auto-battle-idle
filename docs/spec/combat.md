@@ -117,7 +117,7 @@ Wave ごとに各兵科へ **2 方式** を選択する。全兵科を「単体 
 | ---- | ------- | ------------------ |
 | 剣術士 | `at_swordsman` | 高 DEF 敵 |
 | 双刃士 | `at_assassin` | 低 HP 敵（現在 HP） |
-| 弓術士 | `at_ranger` | 遠隔敵 |
+| 弓術士 | `at_ranger` | 遠隔攻撃役（支援役除外） |
 | 弩砲士 | `at_ballista` | 高 Max HP 敵 |
 | 魔術師 | `at_sorcerer` | 最近傍候補 |
 | その他 M1 | — | [classes-and-skills.md §M1 表](classes-and-skills.md#m1-兵科--新仕様候補r2) 参照 |
@@ -1019,7 +1019,7 @@ multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発�
 
 ## ターゲット解決
 
-1. effect のターゲット陣営（`spec.side` 等）と一致する `targetRuleOverrideApplyTo` を持つパッシブのみ `targetRuleOverride` を適用（`kind: self` は除外。配列の後ろが優先）。通常攻撃・接近は敵向けスコープ
+1. effect のターゲット陣営（`spec.side` 等）と一致する `targetRuleOverrideApplyTo` を持つパッシブのみ `targetRuleOverride` を適用（`kind: self` は除外。配列の後ろが優先）。通常攻撃・接近は敵向けスコープ。`attackType` フィルタは **味方 actor・敵 actor とも** `matchesAttackType` を適用する（弓術士固定優先の対称性。R12g-e3）
 2. スキル `range`（未指定 = 使用者射程）で **攻撃可能プール** を絞り込み
 3. 各 effect の `targetShape` に従い **発動 tick で全 hit を一括解決**（`resolveEffectResolution`）
 4. **スキル共通ターゲット:** `ActiveSkillDef` 直下の target / 形状を継承する effect は、merged targeting key ごとに発動 tick で命中集合を 1 回ロックし、同一キーの effect 間で再抽選しない（[classes-and-skills.md](classes-and-skills.md) §アクティブスキル共通ターゲット）

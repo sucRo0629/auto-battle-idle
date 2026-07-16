@@ -186,14 +186,14 @@ describe('StageEnemyGroup selectedCombatModuleId validate (R5e)', () => {
         ...bundle,
         stages: stageWithEnemyGroup([
           {
-            classId: 'df_paladin',
+            classId: 'at_lancer',
             count: 1,
             selectedCombatModuleId: 'df_guardian_mod_nearest_strike',
           },
         ]),
       }),
     ).toThrow(
-      /selectedCombatModuleId is not allowed for legacy class "df_paladin"/,
+      /selectedCombatModuleId is not allowed for legacy class "at_lancer"/,
     );
   });
 });

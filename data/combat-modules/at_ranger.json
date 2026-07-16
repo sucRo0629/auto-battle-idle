@@ -1,0 +1,65 @@
+[
+  {
+    "id": "at_ranger_mod_core_focus",
+    "classId": "at_ranger",
+    "displayName": "中核集中",
+    "description": "遠隔攻撃役1体へ単体物理攻撃を維持する。単体への決定力は中核分担より高い。固定優先は兵科 Passive が所有する。",
+    "attackIntervalSec": 2,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant"
+      },
+      "targetShape": "single",
+      "attackMethod": "ranged"
+    }
+  },
+  {
+    "id": "at_ranger_mod_core_split",
+    "classId": "at_ranger",
+    "displayName": "中核分担",
+    "description": "遠隔攻撃役へ物理攻撃を分配する。1体あたりの決定力は中核集中より低い。対象が足りない場合は同一対象へ再命中しない。",
+    "attackIntervalSec": 2,
+    "action": {
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.55
+          }
+        }
+      ],
+      "effectRange": {
+        "form": "single",
+        "applyMode": "instant",
+        "hitCount": 3,
+        "refillSameTargetOnShortfall": false
+      },
+      "targetShape": "multiLock",
+      "hitCount": 3,
+      "attackMethod": "ranged"
+    }
+  }
+]

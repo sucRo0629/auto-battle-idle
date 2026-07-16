@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-e2 Backend 完了**（双刃士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e2 Player 確認）。**次:** **R12g-e3**（弓術士 Module data）。
+- **新ロードマップ現在地:** **R12g-e3 Backend 完了**（弓術士 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e3 Player 確認）。**次:** **R12g-e4**（魔術師 Module data）。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12g-e3**（弓術士）→ e4〜e5 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
+- **次の再開タスク:** **R12g-e4**（魔術師）→ e5 → R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8684,3 +8684,24 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 - 戻し先: **R12g-e2 Player 確認**（既存 R9.5c SkillMenuPanel / WavePrep 配線は利用可能）
 
 **次:** **R12g-e3** — 弓術士 M1/M2 CombatModule データ再設計
+
+### 105.12 R12g-e3 — 弓術士 M1/M2 CombatModule データ再設計（完了・Backend）
+
+**状態:** Backend 完了 / Player 未完了（手元画面確認なし）
+
+**実施内容（要約）:**
+- M1 `at_ranger_mod_core_focus`（中核集中）: 単体物理 ranged。atkScale 1.0。attackIntervalSec 2。Module target は nearest fallback
+- M2 `at_ranger_mod_core_split`（中核分担）: multiLock hitCount 3。`refillSameTargetOnShortfall: false`。atkScale 0.55。attackIntervalSec 2
+- 固定優先: Lv0 passive `at_ranger_passive_1`（`attackType.ranged` + `excludeRoles: ["supporter"]`）。Module へ優先条件を二重定義しない
+- runtime: `getTargetPool(attackType)` を敵 actor でもフィルタ適用（味方・敵対称）
+- validation: `validateAtRangerCombatModule`。editor に `excludeRoles` チェックを追加（既存 attackType UI 拡張）
+- 新規 test: `src/battle/atRangerModules.test.ts`
+- Survival / 剣術士 / 双刃士 / 魔術師 / Stage / Wave / 数値本調整は未変更
+
+**Player 未完了の不足:**
+- 出撃前 / Wave 間で弓術士 M1/M2 の説明差が読めること
+- 実戦で単一中核への集中と複数中核への分担を確認すること
+- 戻し先: **R12g-e3 Player 確認**（既存 R9.5c SkillMenuPanel / WavePrep 配線は利用可能）
+- 正式 VFX / 専用アイコンは不要
+
+**次:** **R12g-e4** — 魔術師 M1/M2 CombatModule データ再設計

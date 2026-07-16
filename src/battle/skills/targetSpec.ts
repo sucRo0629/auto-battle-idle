@@ -488,7 +488,7 @@ export function getTargetPool(
 
   if (spec.kind === "attackType") {
     const pool = factionPool("enemy", actor, allies, enemies);
-    if (actor.isEnemy) return pool;
+    // 味方・敵 actor とも同じ attackType フィルタ（弓術士固定優先の対称性）
     return pool.filter((unit) => matchesAttackType(unit, spec, gameData));
   }
 
@@ -1105,7 +1105,11 @@ export function formatTargetLabel(spec: TargetSpec): string {
       if (spec.magic) parts.push("魔法");
       if (spec.melee) parts.push("近接");
       if (spec.ranged) parts.push("遠隔");
-      return `攻撃種別: ${parts.join("・")}`;
+      const exclude =
+        spec.excludeRoles && spec.excludeRoles.length > 0
+          ? `（除外: ${spec.excludeRoles.join("・")}）`
+          : "";
+      return `攻撃種別: ${parts.join("・")}${exclude}`;
     }
     case "status":
       return `${SIDE_LABELS[spec.side ?? "enemy"]}・状態`;

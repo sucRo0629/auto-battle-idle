@@ -119,7 +119,7 @@ describe('R9.5b party HUD legacy active gauge visibility (view model)', () => {
   );
 
   it('keeps hasCombatModuleBasic=false for a legacy class (retains legacy gauge)', () => {
-    const preset = gameData.classRegistry.at_ranger!;
+    const preset = gameData.classRegistry.at_lancer!;
     const entries = buildPartyHudEntries(
       mockSnapshot([mockAlly(0, preset.basicAttackSkillId)]),
       [meta(preset.displayName), null, null, null],
@@ -130,15 +130,15 @@ describe('R9.5b party HUD legacy active gauge visibility (view model)', () => {
 
   it('gives module and legacy units different gauge modes in a mixed party', () => {
     const guardian = gameData.classRegistry.df_guardian!;
-    const ranger = gameData.classRegistry.at_ranger!;
+    const lancer = gameData.classRegistry.at_lancer!;
     const entries = buildPartyHudEntries(
       mockSnapshot([
         mockAlly(0, resolveBasicAttackSkillIdFromGameData(guardian, gameData), {
           rangePx: 30,
         }),
-        mockAlly(1, ranger.basicAttackSkillId, { rangePx: 200 }),
+        mockAlly(1, lancer.basicAttackSkillId, { rangePx: 60 }),
       ]),
-      [meta(guardian.displayName), meta(ranger.displayName), null, null],
+      [meta(guardian.displayName), meta(lancer.displayName), null, null],
       gameData.combatModuleRegistry,
     );
     const byName = new Map(
@@ -147,7 +147,7 @@ describe('R9.5b party HUD legacy active gauge visibility (view model)', () => {
         .map((e) => [e.displayName, e]),
     );
     expect(byName.get(guardian.displayName)?.hasCombatModuleBasic).toBe(true);
-    expect(byName.get(ranger.displayName)?.hasCombatModuleBasic).toBe(false);
+    expect(byName.get(lancer.displayName)?.hasCombatModuleBasic).toBe(false);
   });
 
   it('defaults hasCombatModuleBasic=false when no registry is provided', () => {

@@ -4,13 +4,24 @@ import { loadGameData } from './data/loadGameData.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
+import { createMemberFromClass } from '../progression/partyCompose.ts';
 import type { CombatantState } from './types.ts';
 import { SkillSequenceRunner } from './skills/skillSequence.ts';
 
-function createEngine() {
+function createEngine(options?: { replaceRangerWithLancer?: boolean }) {
   const gameData = loadGameData();
   const levelCurves = loadLevelCurves(levelCurvesJson);
   const save = createDefaultSave(gameData, 'demo');
+  if (options?.replaceRangerWithLancer) {
+    const lancer = createMemberFromClass('at_lancer', gameData);
+    save.party = save.party.map((member) => {
+      if (!member || member.classId !== 'at_ranger') return member;
+      return {
+        ...lancer,
+        progress: { ...member.progress },
+      };
+    });
+  }
   const engine = new BattleEngine(
     gameData,
     levelCurves,
@@ -37,10 +48,10 @@ describe('BattleEngine out-of-combat ticking', () => {
   });
 
   it('starts legacy class skill cooldowns unfilled at stage start', () => {
-    const engine = createEngine();
-    const ranger = getAllies(engine).find((a) => a.classId === 'at_ranger')!;
-    const basicCd = ranger.cooldowns.find((cd) => cd.slotKind === 'basic')!;
-    const activeCd = ranger.cooldowns.find((cd) => cd.slotKind === 'active')!;
+    const engine = createEngine({ replaceRangerWithLancer: true });
+    const lancer = getAllies(engine).find((a) => a.classId === 'at_lancer')!;
+    const basicCd = lancer.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    const activeCd = lancer.cooldowns.find((cd) => cd.slotKind === 'active')!;
 
     expect(basicCd.remaining).toBeGreaterThan(0);
     expect(activeCd.remaining).toBeGreaterThan(0);
@@ -117,31 +128,35 @@ describe('BattleEngine out-of-combat ticking', () => {
   });
 
   it('pauses basic and active cooldowns while an actor is use-locked', () => {
-    const engine = createEngine();
-    const ranger = getAllies(engine).find((a) => a.classId === 'at_ranger')!;
-    const basicCd = ranger.cooldowns.find((cd) => cd.slotKind === 'basic')!;
-    const activeCd = ranger.cooldowns.find((cd) => cd.slotKind === 'active')!;
+    const engine = createEngine({ replaceRangerWithLancer: true });
+    const lancer = getAllies(engine).find((a) => a.classId === 'at_lancer')!;
+    const basicCd = lancer.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    const activeCd = lancer.cooldowns.find((cd) => cd.slotKind === 'active')!;
     basicCd.remaining = 2;
     activeCd.remaining = 5;
     const runner = (engine as unknown as {
       skillSequenceRunner: SkillSequenceRunner;
     }).skillSequenceRunner;
 
-    runner.beginUse(ranger.id, 1);
+    runner.beginUse(lancer.id, 1);
     engine.tick(0.5);
 
     expect(basicCd.remaining).toBeCloseTo(2, 5);
     expect(activeCd.remaining).toBeCloseTo(5, 5);
-    expect(runner.isActorUseLocked(ranger.id)).toBe(true);
+    expect(runner.isActorUseLocked(lancer.id)).toBe(true);
   });
 
   it('pauses hitsTaken charge progression while an actor is use-locked', () => {
-    const engine = createEngine();
-    const ranger = getAllies(engine).find((a) => a.classId === 'at_ranger')!;
-    const hitsTakenCd = ranger.cooldowns.find(
-      (cd) => cd.skillId === 'at_ranger_active_2',
-    )!;
-    hitsTakenCd.remaining = 2;
+    const engine = createEngine({ replaceRangerWithLancer: true });
+    const lancer = getAllies(engine).find((a) => a.classId === 'at_lancer')!;
+    const hitsTakenCd = {
+      skillId: 'at_lancer_active_2',
+      remaining: 2,
+      slotKind: 'active' as const,
+      slotIndex: 0,
+      storedCharges: 0,
+    };
+    lancer.cooldowns.push(hitsTakenCd);
     const runner = (engine as unknown as {
       skillSequenceRunner: SkillSequenceRunner;
     }).skillSequenceRunner;
@@ -151,10 +166,10 @@ describe('BattleEngine out-of-combat ticking', () => {
       }
     ).tickCountTriggers.bind(engine);
 
-    runner.beginUse(ranger.id, 1);
-    tickCountTriggers(ranger.id, 'hitsTaken');
+    runner.beginUse(lancer.id, 1);
+    tickCountTriggers(lancer.id, 'hitsTaken');
 
     expect(hitsTakenCd.remaining).toBe(2);
-    expect(runner.isActorUseLocked(ranger.id)).toBe(true);
+    expect(runner.isActorUseLocked(lancer.id)).toBe(true);
   });
 });
