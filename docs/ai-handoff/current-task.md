@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12c Backend（設計）完了**（§102）。Stage 先行順へサブフェーズ再編済（R12a〜j）。
-- **次の再開タスク:** **R12d** — **試作 Stage の敵問題設計**（JSON 入力なし。能力導出は R12e）。その後 R12e〜j → R13（反復評価。開始条件は R12j 手元成立後）。
+- **新ロードマップ現在地:** **R12f Backend（設計）完了 / Player 完了**（§104）。公式次は **R12g**。
+- **次の再開タスク:** **R12g** — class / module / passive データ再設計。その後 R12h〜j → R13（反復評価。開始条件は R12j 手元成立後）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -8013,4 +8013,70 @@ ChatGPT 側で確定した R12d（試作 Stage の敵問題）と R12e（必要�
 
 ### 103.8 次タスク
 
-**R12f — 必要能力を兵科・CombatModule・作戦内パッシブへ分配（設計）**
+**R12f — 必要能力を兵科・CombatModule・作戦内パッシブへ分配（設計）** → **§104 で完了**
+
+
+## 104. R12f — 必要能力の兵科・CombatModule・作戦内パッシブ分配の正本化（2026-07-16・Backend 完了 / Player 完了）
+
+### 104.1 目的
+
+ユーザー確定の R12f 設計を、新規創作せず [operation-loop.md §20](../spec/operation-loop.md#20-必要能力の兵科combatmodule作戦内パッシブ分配r12f) / [classes-and-skills.md §R12f](../spec/classes-and-skills.md#r12f--必要能力の分配確定) へ正本化した。production code / JSON / test / editor / UI は変更していない。
+
+### 104.2 読んだファイル
+
+- [current-task.md](current-task.md)（§103）
+- [phase-roadmap.md §R12](../plans/phase-roadmap.md#r12--試作をゲームにするデータ再設計)
+- [planning-rules.md](planning-rules.md)
+- [operation-loop.md](../spec/operation-loop.md)（§19 中心）
+- [classes-and-skills.md](../spec/classes-and-skills.md)（R2 / R11b 候補）
+- [class-philosophy.md](../class-philosophy.md)（矛盾確認）
+
+### 104.3 変更したファイル
+
+| 箇所 | 内容 |
+| ---- | ---- |
+| [operation-loop.md §20](../spec/operation-loop.md#20-必要能力の兵科combatmodule作戦内パッシブ分配r12f) | A〜G 主担当、代替関係、能力セット成立、複数解、直接ダメージ |
+| [classes-and-skills.md §R12f](../spec/classes-and-skills.md#r12f--必要能力の分配確定) | 8 兵科の固定役割・2 Module・Passive・将来境界 |
+| [phase-roadmap.md §R12f](../plans/phase-roadmap.md#r12f--必要能力を兵科combatmodule作戦内パッシブへ分配完了) | R12f 完了・次 R12g |
+| [planning-rules.md §8 / §8c](planning-rules.md) | 現在地・主要境界 |
+
+### 104.4 A〜G 担当（要約）
+
+| 能力 | 主担当 |
+| ---- | ------ |
+| A | 剣術士（魔術師は属性代替） |
+| B1 | 双刃士 M1 |
+| B2 / F | 弓術士（F は M1 主。剣術士は突破後、魔術師は露出後） |
+| C | 魔術師 M1 |
+| D | 護法士 M2 / 療養師 M1 / 結界師 M1 |
+| E | 護法士 M1 / 療養師 M2 / 結界師 M2（鉄衛士は直接担当外） |
+| G | 編成全体 |
+
+代替: A または B1 / C または D。B1/B2 分離維持。
+
+### 104.5 8 兵科・Module・Passive（要約）
+
+固定優先ターゲットと M1/M2 方向は classes-and-skills §R12f を正とする。Passive は深掘り＋隣接補完。禁止: 優先ターゲット変更、分類反転、M1/M2 同時完成。
+
+### 104.6 直接ダメージ
+
+[operation-loop.md §20.5](../spec/operation-loop.md#205-直接ダメージ上位概念)。鉄衛士 M2 = 敵 Attack Hit の実 HP ダメージ各 Hit。schema / combat.md 編入は R12g 以降。
+
+### 104.7 3 能力セット・万能化防止
+
+正面突破型 / 後方攻略型 / 分担安定型いずれも成立。万能化防止を確認済み。
+
+### 104.8 完了判定
+
+| 層 | 結果 |
+| -- | ---- |
+| Backend | **完了**（設計 Phase）— §20 / §R12f 正本化。R12g へ渡せる |
+| Player | **完了**（設計 Phase）— 画面・データ・手元プレイ確認なし |
+
+### 104.9 production code / JSON / test
+
+**未変更。**
+
+### 104.10 次タスク
+
+**R12g — class / module / passive データ再設計**
