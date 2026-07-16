@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-c2 Backend 完了**。護法士 M2 danger 集計 runtime API（`dangerTargeting.ts`）を実装。TargetSpec / 護法士 M2 runtime は未接続。Player は未達。
-- **次の再開タスク:** **R12g-c3**（最小 `TargetSpec` 拡張と resolver 接続）→ c4 護法士 M2 接続 → c5 test/debug。8兵科データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
+- **新ロードマップ現在地:** **R12g-c3 Backend 完了**。`TargetSpec` に `kind: danger` を追加し、`targeting.ts` resolver 経由で `dangerTargeting.ts` を接続。護法士 M2 Module / 防護 effect は未接続。Player は未達。
+- **次の再開タスク:** **R12g-c4**（護法士 M2 防護 runtime / Module action 接続）→ c5 統合 test / debug。8兵科データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8434,7 +8434,7 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 | -- | ---- |
 | **R12g-c1** | docs 正本化（本節 / `combat.md` / `classes-and-skills.md` / `phase-roadmap.md`） |
 | **R12g-c2** | danger 集計 runtime API（現在 target 数 / pending 異敵数 / 最短 apply） |
-| **R12g-c3** | 最小 `TargetSpec` 拡張と resolver 実装 |
+| **R12g-c3** | 最小 `TargetSpec` 拡張と resolver 実装 — **Backend 完了** |
 | **R12g-c4** | 護法士 M2 runtime 接続 |
 | **R12g-c5** | test / debug 理由表示 |
 
@@ -8500,3 +8500,54 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 
 **R12g-c3** — 最小 `TargetSpec` 拡張と `targeting.ts` resolver 接続。
 
+### 105.5 R12g-c3 — 最小 TargetSpec 拡張と resolver 接続（Backend 完了）
+
+**目的:** CombatModule action から danger targeting をデータ指定できるよう、`TargetSpec` に `kind: danger` を追加し、既存 target resolver から `dangerTargeting.ts` を呼び出す。護法士 M2 Module / 防護 effect は未接続。
+
+#### 105.5.1 変更ファイル
+
+- `src/battle/types.ts` — `TargetSpec` に `kind: danger`
+- `src/battle/data/validateGameData.ts` — parse / validation
+- `src/battle/data/gameDataSchema.ts` — `TARGET_SPEC_KINDS`（editor ラベル予約）
+- `src/battle/dangerTargeting.ts` — `resolveDangerTargets()` 等
+- `src/battle/skills/targetSpec.ts` — parse / pool / pick
+- `src/battle/skills/targeting.ts` — `TargetingRuntimeContext` / resolver 接続
+- `src/battle/skills/rangeUtils.ts` — danger は射程フィルタ除外
+- `src/battle/resolveApproachBattleX.ts` — `createResolveCurrentAttackTarget()`
+- `src/battle/skills/dangerTargetSpec.test.ts`（新規）
+- `docs/spec/combat.md`、`classes-and-skills.md`、`phase-roadmap.md`、`current-task.md`、`planning-rules.md`
+
+#### 105.5.2 TargetSpec
+
+```ts
+{ kind: "danger"; side: TargetSide; maxTargets: number; windowSec: number }
+```
+
+- `maxTargets >= 1`（整数）、`windowSec >= 0`（有限数）。default 値なし
+- danger signal が全候補 0 のとき **空配列**（HP 割合代替なし）
+- `maxTargets` 件まで danger 順位上位を返却。danger signal 0 の候補は選ばない
+
+#### 105.5.3 runtime 接続
+
+| 項目 | 内容 |
+| ---- | ---- |
+| context | `TargetingRuntimeContext`（`battleSec` / `pendingHits` / `gameData` / 任意 `resolveCurrentAttackTarget`） |
+| current target | `createResolveCurrentAttackTarget()` → `resolveEnemyAttackTargetPlayer` / `resolvePlayerAttackTargetEnemy` |
+| 所有者 | danger 集計 `dangerTargeting.ts`、resolver 接続 `targeting.ts` |
+| SkillExecutor | 対象 0 時は既存 `resolutionHasTargets` で no-op（runtime 未注入時も danger は null） |
+
+#### 105.5.4 editor 同期
+
+- **今回:** runtime / validation のみ。editor UI は未変更
+- **戻し先:** R12g-g（validation / authoring 統合）で `SkillEditorStep` に `danger` kind 入力を追加
+- JSON 入力は editor 対応前に禁止（既存ルールと矛盾なし — 内部 schema 追加のみ）
+
+#### 105.5.5 完了判定
+
+**Backend 完了:** 型・validation・resolver・test 22 件 pass・既存 TargetSpec 退行なし。
+
+**Player 完了:** なし（R12g-c 全体は c4〜c5 後）。
+
+#### 105.5.6 次タスク
+
+**R12g-c4** — 護法士 M2 防護 runtime / Module action 接続（`TargetingRuntimeContext` を BattleEngine / SkillExecutor へ注入）。

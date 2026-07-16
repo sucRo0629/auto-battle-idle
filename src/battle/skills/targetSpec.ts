@@ -32,6 +32,8 @@ import type {
 } from "../types.ts";
 import { TARGET_RULES } from "../data/gameDataSchema.ts";
 import { DEBUFF_FILTER_TAG_OPTIONS } from "../data/gameDataSchema.ts";
+import type { DangerTargetingRuntime } from "../dangerTargeting.ts";
+import { resolveDangerTargets } from "../dangerTargeting.ts";
 
 const TARGET_RULES_SET = new Set<string>(TARGET_RULES);
 
@@ -212,6 +214,29 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
     }
     return { kind: "clusterCenter", side };
   }
+  if (kind === "danger") {
+    const side = raw.side;
+    if (side !== "ally" && side !== "enemy") {
+      throw new Error("Invalid target.danger side");
+    }
+    const maxTargets = raw.maxTargets;
+    if (
+      typeof maxTargets !== "number" ||
+      !Number.isInteger(maxTargets) ||
+      maxTargets < 1
+    ) {
+      throw new Error("Invalid target.danger maxTargets");
+    }
+    const windowSec = raw.windowSec;
+    if (
+      typeof windowSec !== "number" ||
+      !Number.isFinite(windowSec) ||
+      windowSec < 0
+    ) {
+      throw new Error("Invalid target.danger windowSec");
+    }
+    return { kind: "danger", side, maxTargets, windowSec };
+  }
   throw new Error(`Unknown target.kind: ${String(kind)}`);
 }
 
@@ -270,6 +295,9 @@ export function targetSpecFaction(
   }
   if (spec.kind === "status" || spec.kind === "clusterCenter") {
     return spec.side ?? "enemy";
+  }
+  if (spec.kind === "danger") {
+    return spec.side;
   }
   return "enemy";
 }
@@ -404,6 +432,10 @@ export function getTargetPool(
     return factionPool(spec.side, actor, allies, enemies);
   }
 
+  if (spec.kind === "danger") {
+    return factionPool(spec.side, actor, allies, enemies);
+  }
+
   if (spec.kind === "attackType") {
     const pool = factionPool("enemy", actor, allies, enemies);
     if (actor.isEnemy) return pool;
@@ -484,6 +516,8 @@ export type PickTargetOptions = {
   includeActorInAllyPool?: boolean;
   /** 単体攻撃ターゲット選定（闘技場の掟の強制ターゲット用） */
   singleTargetAttack?: boolean;
+  /** kind: danger 解決に必要な runtime 状態 */
+  dangerRuntime?: DangerTargetingRuntime;
 };
 
 /** 回復 effect は味方対象に使用者自身も含める。単体 damage は闘技場の掟判定用 */
@@ -696,6 +730,23 @@ export function pickTargetFromPool(
   pool: CombatantState[],
   options?: PickTargetOptions
 ): CombatantState | null {
+  if (spec.kind === "danger") {
+    const runtime = options?.dangerRuntime;
+    if (!runtime?.resolveCurrentAttackTarget) return null;
+    const targets = resolveDangerTargets(
+      spec,
+      actor,
+      runtime.allies,
+      runtime.enemies,
+      {
+        pendingHits: runtime.pendingHits,
+        battleSec: runtime.battleSec,
+        resolveCurrentAttackTarget: runtime.resolveCurrentAttackTarget,
+      },
+    );
+    return targets[0] ?? null;
+  }
+
   if (pool.length === 0) return null;
 
   if (spec.kind === "self") {

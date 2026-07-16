@@ -108,8 +108,8 @@ export function getAttackablePool(
   gameData?: Pick<import('../types.ts').GameData, 'skillRegistry' | 'combatModuleRegistry'>,
 ): CombatantState[] {
   const pool = getTargetPool(spec, actor, allies, enemies, gameData);
-  if (spec.kind === 'self' || isMultiTargetSpec(spec)) {
-    return pool;
+  if (spec.kind === 'self' || isMultiTargetSpec(spec) || spec.kind === 'danger') {
+    return pool.filter((unit) => unit.isAlive);
   }
   return pool.filter((unit) => isWithinSkillRange(actor, unit, rangePx));
 }

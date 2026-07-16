@@ -308,7 +308,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 基本対象数 | **1 体**。常時複数保護を標準にしない |
 | tie-break | pending 中の異なる敵数 → 最短 apply 時刻 → pending Hit 数 → HP 割合 → 決定的 ID 順 |
 | 魔法特化 | 対象選定と effect 強度を分離。魔法は同値時の補助加点候補に留める |
-| 未接続 | 具体 TargetSpec / runtime API / debug 表示は **R12g-c 後続実装**。PHT と同一とは限らない |
+| 未接続 | 護法士 M2 Module action / 防護 effect / BattleEngine runtime 注入は **R12g-c4**。editor `danger` kind 入力は **R12g-g** |
 
 #### `sp_cleric` 療養師
 
@@ -2497,6 +2497,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線                                                                                                                                                                                                                                            |
 | `self`       | 自身                                                                                                                                                                                                                                                                                                                                                                         |
 | `all`        | `side` で味方全員 / 敵全員（射程無視）                                                                                                                                                                                                                                                                                                                                       |
+| `danger`     | **R12g-c3** — 集中攻撃 danger targeting。`side` + `maxTargets`（`>= 1`）+ `windowSec`（`>= 0`）。主判定は [combat.md](combat.md) §Danger Targeting。danger signal 全 0 時は対象なし。射程・距離制限なし。runtime 解決に `TargetingRuntimeContext` が必要                                                                                                                      |
 
 **`attackMethod`（通常攻撃 / 戦闘方式）:** `ActiveSkillDef` および `CombatModuleDef.action` の任意フィールド。`"melee"` | `"ranged"`。**primary effect が `damage` のとき必須**。heal-only basic / buff module は未設定。`resolveUnitAttackMethod(unit, gameData)` は basic スロットの `skillId` から解決（CombatModule 差し替え対応）。接近・射程計算は従来どおり `traits.rangePx` / effect `range`。
 

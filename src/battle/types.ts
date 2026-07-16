@@ -197,6 +197,12 @@ export type TargetSpec =
       side?: TargetSide;
       debuffTags?: DebuffFilterTag[];
       buffTags?: BuffFilterTag[];
+    }
+  | {
+      kind: "danger";
+      side: TargetSide;
+      maxTargets: number;
+      windowSec: number;
     };
 
 /** 効果のターゲット形状。未指定は single */

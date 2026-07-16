@@ -12,6 +12,11 @@ import type {
   TargetSpec,
 } from '../types.ts';
 import {
+  createResolveCurrentAttackTarget,
+} from '../resolveApproachBattleX.ts';
+import type { DangerTargetingRuntime } from '../dangerTargeting.ts';
+import { resolveDangerTargets } from '../dangerTargeting.ts';
+import {
   applyPowerStep,
   chainStepFields,
   pierceStepFields,
@@ -59,6 +64,51 @@ export {
 } from './targetSpec.ts';
 
 export type { TargetRuleContext } from './targetSpec.ts';
+
+/** kind: danger 解決に必要な runtime 状態（R12g-c3） */
+export type TargetingRuntimeContext = DangerTargetingRuntime;
+
+export function buildDangerTargetingRuntime(
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  params: {
+    battleSec: number;
+    pendingHits: DangerTargetingRuntime['pendingHits'];
+    resolveCurrentAttackTarget?: DangerTargetingRuntime['resolveCurrentAttackTarget'];
+  },
+): DangerTargetingRuntime {
+  return {
+    allies,
+    enemies,
+    gameData,
+    battleSec: params.battleSec,
+    pendingHits: params.pendingHits,
+    resolveCurrentAttackTarget:
+      params.resolveCurrentAttackTarget ??
+      createResolveCurrentAttackTarget(allies, enemies, gameData),
+  };
+}
+
+function dangerPickOptions(
+  runtime: TargetingRuntimeContext | undefined,
+): PickTargetOptions | undefined {
+  if (!runtime) return undefined;
+  return { dangerRuntime: runtime };
+}
+
+function resolveDangerTargetUnits(
+  spec: Extract<TargetSpec, { kind: 'danger' }>,
+  actor: CombatantState,
+  runtime: TargetingRuntimeContext | undefined,
+): CombatantState[] {
+  if (!runtime?.resolveCurrentAttackTarget) return [];
+  return resolveDangerTargets(spec, actor, runtime.allies, runtime.enemies, {
+    pendingHits: runtime.pendingHits,
+    battleSec: runtime.battleSec,
+    resolveCurrentAttackTarget: runtime.resolveCurrentAttackTarget,
+  });
+}
 
 /** 連鎖デフォルト spread に加算する秒数（跳び間隔を読み取りやすくする） */
 const DEFAULT_CHAIN_SPREAD_EXTRA_SEC = 0.5;
@@ -115,12 +165,21 @@ export function pickTargets(
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
+  targetingRuntime?: TargetingRuntimeContext,
 ): CombatantState[] {
+  if (spec.kind === 'danger') {
+    return resolveDangerTargetUnits(spec, actor, targetingRuntime);
+  }
   const pool = getTargetPool(spec, actor, allies, enemies);
   if (isMultiTargetSpec(spec)) {
     return pool.filter((unit) => unit.isAlive);
   }
-  const target = pickTargetFromPoolSpec(spec, actor, pool);
+  const target = pickTargetFromPoolSpec(
+    spec,
+    actor,
+    pool,
+    dangerPickOptions(targetingRuntime),
+  );
   return target?.isAlive ? [target] : [];
 }
 
@@ -395,6 +454,7 @@ export function resolveEffectResolution(
   priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
   skill?: ActiveSkillDef,
   sharedTargetingLocks?: ReadonlyMap<string, SkillEffectResolution>,
+  targetingRuntime?: TargetingRuntimeContext,
 ): SkillEffectResolution | null {
   const merged = mergeEffectWithSkillTargeting(skill, effect);
   const lockKey =
@@ -415,6 +475,7 @@ export function resolveEffectResolution(
     allSkillEffects ?? skill?.effect,
     priorEffectHitPools,
     skill,
+    targetingRuntime,
   );
 }
 
@@ -430,6 +491,7 @@ function resolveEffectResolutionInternal(
   allSkillEffects?: readonly SkillEffectDef[],
   priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
   skill?: ActiveSkillDef,
+  targetingRuntime?: TargetingRuntimeContext,
 ): SkillEffectResolution | null {
   if (sourceEffect.type === 'conditionalEffect') return null;
   if (sourceEffect.type === 'placedField') return null;
@@ -443,6 +505,16 @@ function resolveEffectResolutionInternal(
     skill,
     _gameData,
   );
+
+  if (specForResolution.kind === 'danger') {
+    const targets = resolveDangerTargetUnits(
+      specForResolution,
+      actor,
+      targetingRuntime,
+    ).map((unit) => ({ unit }));
+    if (targets.length === 0) return null;
+    return { waves: [{ hitIndex: 0, targets }] };
+  }
 
   if (sourceEffect.type === 'move') {
     const pool = getTargetPool(specForResolution, actor, allies, enemies, _gameData);
@@ -540,7 +612,10 @@ function resolveEffectResolutionInternal(
       specForResolution,
       actor,
       attackablePool,
-      pickOptions,
+      {
+        ...pickOptions,
+        ...dangerPickOptions(targetingRuntime),
+      },
     );
     if (!target) return null;
     const hits = merged.hitCount;

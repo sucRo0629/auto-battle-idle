@@ -1,5 +1,12 @@
 import { currentHpRatio } from './combatMath.ts';
-import type { CombatantState, PendingSkillHit, SkillEffectDef } from './types.ts';
+import { getTargetPool } from './skills/targetSpec.ts';
+import type {
+  CombatantState,
+  GameData,
+  PendingSkillHit,
+  SkillEffectDef,
+  TargetSpec,
+} from './types.ts';
 
 /** 護法士 M2 danger targeting 用の read-only 集計スナップショット（R12g-c2） */
 export interface DangerTargetSnapshot {
@@ -14,6 +21,17 @@ export interface DangerTargetSnapshot {
 export type ResolveCurrentAttackTarget = (
   attacker: CombatantState,
 ) => CombatantState | null;
+
+/** kind: danger 解決に必要な runtime 状態（R12g-c3） */
+export interface DangerTargetingRuntime {
+  allies: readonly CombatantState[];
+  enemies: readonly CombatantState[];
+  battleSec: number;
+  pendingHits: readonly PendingSkillHit[];
+  gameData: Pick<GameData, 'skillRegistry' | 'combatModuleRegistry'>;
+  /** 省略時は呼び出し元で createResolveCurrentAttackTarget を使う */
+  resolveCurrentAttackTarget?: ResolveCurrentAttackTarget;
+}
 
 export interface CollectDangerTargetSnapshotsParams {
   /** danger 評価対象（味方護法士なら味方、敵護法士なら敵） */
@@ -204,4 +222,89 @@ export function sortDangerTargetSnapshots(
   snapshots: readonly DangerTargetSnapshot[],
 ): DangerTargetSnapshot[] {
   return [...snapshots].sort(compareDangerTargetSnapshots);
+}
+
+export function snapshotHasDangerSignal(snapshot: DangerTargetSnapshot): boolean {
+  return (
+    snapshot.currentAttackerCount > 0 ||
+    snapshot.pendingAttackerCount > 0 ||
+    snapshot.pendingHitCount > 0
+  );
+}
+
+export function selectDangerTargetsFromSnapshots(
+  snapshots: readonly DangerTargetSnapshot[],
+  candidates: readonly CombatantState[],
+  maxTargets: number,
+): CombatantState[] {
+  const candidateById = new Map(candidates.map((unit) => [unit.id, unit]));
+  const ranked = sortDangerTargetSnapshots(snapshots).filter(snapshotHasDangerSignal);
+  if (ranked.length === 0) return [];
+
+  const result: CombatantState[] = [];
+  const seen = new Set<string>();
+  for (const snapshot of ranked) {
+    if (result.length >= maxTargets) break;
+    if (seen.has(snapshot.targetId)) continue;
+    const unit = candidateById.get(snapshot.targetId);
+    if (!unit?.isAlive) continue;
+    seen.add(snapshot.targetId);
+    result.push(unit);
+  }
+  return result;
+}
+
+function opponentsForDangerSide(
+  side: Extract<TargetSpec, { kind: 'danger' }>['side'],
+  actor: CombatantState,
+  allies: readonly CombatantState[],
+  enemies: readonly CombatantState[],
+): CombatantState[] {
+  const candidateSide = side;
+  const opponentSide = candidateSide === 'ally' ? 'enemy' : 'ally';
+  const pool = getTargetPool(
+    { kind: 'all', side: opponentSide },
+    actor,
+    [...allies],
+    [...enemies],
+  );
+  return pool.filter((unit) => unit.isAlive);
+}
+
+/** `kind: "danger"` TargetSpec を生存候補へ解決。danger signal 全 0 なら空配列。 */
+export function resolveDangerTargets(
+  spec: Extract<TargetSpec, { kind: 'danger' }>,
+  actor: CombatantState,
+  allies: readonly CombatantState[],
+  enemies: readonly CombatantState[],
+  params: {
+    pendingHits: readonly PendingSkillHit[];
+    battleSec: number;
+    resolveCurrentAttackTarget: ResolveCurrentAttackTarget;
+  },
+): CombatantState[] {
+  const candidates = getTargetPool(
+    { kind: 'all', side: spec.side },
+    actor,
+    [...allies],
+    [...enemies],
+  ).filter((unit) => unit.isAlive);
+
+  if (candidates.length === 0) return [];
+
+  const opponents = opponentsForDangerSide(spec.side, actor, allies, enemies);
+  const snapshots = collectDangerTargetSnapshots({
+    candidates,
+    opponents,
+    pendingHits: params.pendingHits,
+    battleSec: params.battleSec,
+    windowSec: spec.windowSec,
+    resolveCurrentAttackTarget: params.resolveCurrentAttackTarget,
+  });
+
+  return selectDangerTargetsFromSnapshots(
+    snapshots,
+    candidates,
+    spec.maxTargets,
+  );
 }

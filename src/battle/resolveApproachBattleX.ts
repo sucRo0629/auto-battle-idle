@@ -260,6 +260,31 @@ export function resolveEnemyAttackTargetPlayer(
   return isWithinSkillRange(enemy, chase, range) ? chase : null;
 }
 
+/** danger 集計用: 攻撃側ごとに既存 Attack target resolver を再利用（R12g-c3） */
+export function createResolveCurrentAttackTarget(
+  players: readonly CombatantState[],
+  enemies: readonly CombatantState[],
+  gameData: GameData,
+): (attacker: CombatantState) => CombatantState | null {
+  return (attacker) => {
+    if (!attacker.isAlive) return null;
+    if (attacker.isEnemy) {
+      return resolveEnemyAttackTargetPlayer(
+        attacker,
+        [...players],
+        [...enemies],
+        gameData,
+      );
+    }
+    return resolvePlayerAttackTargetEnemy(
+      attacker,
+      [...players],
+      [...enemies],
+      gameData,
+    );
+  };
+}
+
 /** @deprecated resolveEnemyAttackTargetPlayer を使用 */
 export function resolveEnemyBasicAttackTarget(
   enemy: CombatantState,

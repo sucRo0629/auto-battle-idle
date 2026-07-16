@@ -2012,6 +2012,34 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
       ...(buffTags && buffTags.length > 0 ? { buffTags } : {}),
     };
   }
+  if (kind === 'danger') {
+    const side = normalizeTargetSide(
+      requireEnum(obj, 'side', context, new Set(['ally', 'enemy', 'player'])),
+      context,
+    );
+    const maxTargets = obj.maxTargets;
+    if (
+      typeof maxTargets !== 'number' ||
+      !Number.isInteger(maxTargets) ||
+      maxTargets < 1
+    ) {
+      invalidField(context, 'maxTargets', 'must be an integer >= 1');
+    }
+    const windowSec = obj.windowSec;
+    if (
+      typeof windowSec !== 'number' ||
+      !Number.isFinite(windowSec) ||
+      windowSec < 0
+    ) {
+      invalidField(context, 'windowSec', 'must be a finite number >= 0');
+    }
+    return {
+      kind: 'danger',
+      side,
+      maxTargets,
+      windowSec,
+    };
+  }
   invalidField(context, 'kind', `must be a valid target kind`);
 }
 

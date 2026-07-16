@@ -525,7 +525,23 @@ danger targeting の主判定は **集中攻撃** とする。
 - pending 除外: 死者、同陣営、候補 pool 外、`effectDef.type !== 'damage'`、`suppressBonus*` 等の derived pending。DoT tick / delayed pool / counter は `pendingHitQueue` に入らない前提
 - `hpRatio` = `currentHpRatio()`（`hp / effectiveMaxHp`。Barrier 不含）
 
-**未接続（R12g-c3 以降）:** `TargetSpec` 拡張、護法士 M2 runtime、debug 理由表示。
+**未接続（R12g-c4 以降）:** 護法士 M2 Module action / 防護 effect、BattleEngine への `TargetingRuntimeContext` 注入、debug 理由表示。
+
+#### TargetSpec `kind: danger`（R12g-c3）
+
+実装: `src/battle/types.ts`、`src/battle/data/validateGameData.ts`、`src/battle/skills/targeting.ts`
+
+```ts
+{ kind: "danger"; side: TargetSide; maxTargets: number; windowSec: number }
+```
+
+- `side` — actor 視点の評価候補側（味方護法士は `ally`、敵護法士も同陣営保護は `ally`）
+- `maxTargets` — danger 順位上位から選ぶ最大数（`>= 1` 整数）。`all` / 無制限は不可
+- `windowSec` — pending Hit 集計時間窓（`>= 0`）
+- resolver は `collectDangerTargetSnapshots()` を呼び、danger signal が全候補 0 なら **空配列**（HP 割合代替なし）
+- 射程・距離・row による候補除外なし
+- `TargetingRuntimeContext` — `battleSec` / `pendingHits` / `gameData` / 任意 `resolveCurrentAttackTarget`。省略時は `createResolveCurrentAttackTarget()` が既存 Attack target resolver を再利用
+- editor UI 未接続（戻し先 **R12g-g**）。JSON 入力は editor 対応前に禁止
 
 **`fireConditionMatch`** — `all`（省略時 AND）または `any`（OR）。三重の障壁は `any`。
 
