@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** システム縦切り（R5〜R11）の上に、**データ再設計で「ゲームとして遊べる試作」を成立**させる（R12）。その後に初めて「繰り返し遊びたいか」を評価する（R13）。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R13 完了後**に再開する。
 
-**現在地:** **R12g-a Backend（調査）完了 / R12g-b Backend（設計）完了 / R12g-b1〜b2 Backend 完了**（`DamageAppliedEvent` emission 統一 + 鉄衛士 M2 runtime。handoff: [current-task.md §105](../ai-handoff/current-task.md)）。公式次は **R12g-b3**（M2 統合テスト・デバッグ検証）。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
+**現在地:** **R12g-a Backend（調査）完了 / R12g-b Backend（設計）完了 / R12g-b1〜b3 Backend 完了**（`DamageAppliedEvent` emission 統一 + 鉄衛士 M2 runtime + 統合テスト/検証経路）。公式次は **R12g-c**（護法士 M2 danger targeting）。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
 
 ---
 
@@ -40,7 +40,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の選択（**試作・Player 完了用**。製品 polish ではない） | 完了（表示 metadata + 回帰） | **完了** | R9.5c Backend |
 | **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | **完了**（`r10_prototype` + 統合） | **構造のみ**（§95）。**遊べる試作 / 反復評価は未達** | 再判定 |
 | **R11** | システム縦切り — 効果範囲新仕様・作戦専用パッシブ枠・資源/積み上げコスト・基礎ステ極端化 | **完了**（a〜d） | **システム Player のみ**。**ゲームとしてのプレイアビリティは未達** | 再判定 |
-| **R12** | 試作をゲームにする — Stage 先行の敵問題設計 → 能力導出・分配 → データ実装 → 手元成立 | R12a〜f 設計完了 / R12g-a〜b2 完了 | R12a〜f 設計 Phase 完了。ゲーム成立は **R12j** | **R12g-b3 へ** |
+| **R12** | 試作をゲームにする — Stage 先行の敵問題設計 → 能力導出・分配 → データ実装 → 手元成立 | R12a〜f 設計完了 / R12g-a〜b3 完了 | R12a〜f 設計 Phase 完了。ゲーム成立は **R12j** | **R12g-c へ** |
 | **R13** | 反復評価 — 「繰り返し遊びたいか」を判断（本来の R10 評価） | **R12j 後** | **R12j 後** | 未着手 |
 
 | R11 分割 | ゴール | 状態 |
@@ -1268,7 +1268,7 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | **R12g-b** | Attack Hit / HP damage event 契約・鉄衛士 M2 差し込み設計 | **Backend 完了**（設計） |
 | **R12g-b1** | `DamageAppliedEvent` 型・全 emission 統一（`lethal` / `hitIndex` / `sourceKind`） | **Backend 完了** |
 | **R12g-b2** | 鉄衛士 M2 runtime（固定自己回復・module ゲート） | **Backend 完了** |
-| **R12g-b3** | M2 統合テスト・デバッグ検証 | 次タスク |
+| **R12g-b3** | M2 統合テスト・デバッグ検証 | **Backend 完了** |
 | **R12g-c** | 護法士 M2 danger targeting | 未着手（b とは分離） |
 | **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | 未着手 |
 

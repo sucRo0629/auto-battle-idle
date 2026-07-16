@@ -292,7 +292,11 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 
 **`lethal`:** `DamageApplicationResult.lethal` を正とする。callback 時点の `target.isAlive` には依存しない。
 
-**鉄衛士 M2（R12g-b2 実装済）:** `sourceKind === skillHit` && `attackKind === damage` && `hpDamage > 0` && `!lethal` && 対象が鉄衛士 M2 module && 攻撃者が敵 && 非自傷。Barrier のみ・DoT・counter・derived・致死は対象外。回復量は runtime 仮定数（R12i 調整・R12g Survival Module データ実装で module データへ移管予定）。
+**鉄衛士 M2（R12g-b3 検証済）:** `sourceKind === skillHit` && `attackKind === damage` && `hpDamage > 0` && `!lethal` && 対象が鉄衛士 M2 module && 攻撃者が敵 && 非自傷。Barrier のみ・DoT・counter・derived・致死は対象外。MultiHit は Hit ごとに 1 回判定し、同一 Hit 二重発火はしない。
+
+**module 判定経路（暫定）:** 解決済み Combatant の basic cooldown (`slotKind === basic`) の `skillId` を参照する。表示名や module 配列順には依存しない。
+
+**暫定 module ID と回復量:** 現行 runtime 接続は `df_guardian_mod_guard_focus`、固定回復量は `IRON_GUARDIAN_M2_SELF_HEAL_FLAT_AMOUNT = 20`。どちらも R12g の縦切り用仮置きであり、最終所有者は鉄衛士 M2 CombatModule data。JSON/schema 接続は R12g Survival Module データ実装で行い、runtime 定数は接続後に削除する（値調整は R12i）。
 
 `effectiveAtk = max(0, (atk + atkFlatSum) × atkMulProduct)`  
 `effectiveDef = max(0, (def + defFlatSum) × defMulProduct)`  
