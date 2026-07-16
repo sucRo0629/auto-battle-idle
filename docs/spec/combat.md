@@ -395,9 +395,9 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 | 味方 `stat` + `order: ratio` 単体 heal / hot | PHT を選ぶ（従来 spec と同一意味を PHT 名で正本化） |
 | ally-heal 自動接近 | PHT が射程外なら PHT 方向へ接近（**後方の負傷味方へは左へ後退**。前方前提の `resolveApproachAttackBattleX` は使わない）。それ以外は味方最前線（`getPlayerFrontlineContactX`）を heal 射程内に入れるまで前進。**前衛が敵接触線を越えた一時侵入は FrontlineOwner から除外されるが、接近 anchor は生存味方の最大 `battleX` を採用**（後方だけ届いて前衛未達にならない）。敵接触 cap は ally-heal には適用しない。全員満タンでも同じ（敵 chase しない） |
 | ally-heal 接近停止 | 上記 anchor が heal 射程内なら停止（PHT 不在でも可）。回復発動対象は引き続き PHT |
-| heal / hot withhold — 単体・`stat` | PHT が射程内にいなければ保留（CD 進行なし） |
+| heal / hot withhold — 単体・`stat` | **actor 視点の同陣営**に PHT（負傷者）がいなければ保留。PHT が射程内にいなければ保留（CD 進行なし）。敵ヒーラーは敵陣を見る |
 | heal / hot withhold — `selfOrigin` + `aoe` | **PHT が aoe 半径内**（使用者足元）にいなければ保留 |
-| heal / hot withhold — `kind: all` + ally | パーティに負傷者（≡ PHT が存在）がいなければ保留。位置制約なし |
+| heal / hot withhold — `kind: all` + ally | actor 視点の同陣営に負傷者（≡ PHT）がいなければ保留。位置制約なし |
 | パッシブ aura HoT | withhold 対象外（既存） |
 | 同一スキルに barrier effect | 満タンでも heal / hot を解決（既存例外） |
 
@@ -1024,7 +1024,7 @@ multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発�
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `single`    | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散）                                                                                                                                                                                                    |
 | `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）。`selfOrigin` + ally heal / hot の **発動保留** は PHT が半径内かで判定（§回復 PHT）。命中は足元半径内の全負傷味方（形状は JSON どおり） |
-| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）。味方 HP 割合最低（`order: ratio`）のとき満タン味方はプールから除外                                                                                                                |
+| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回。`effectRange.refillSameTargetOnShortfall` 未指定 / `true` = 不足分を同一対象へ再命中（ラウンドロビン）。**`false` = 再命中しない**（対象数は `min(hitCount, プール長)`。療養師 M2 分散回復）。味方 HP 割合最低（`order: ratio`）のとき満タン味方はプールから除外 |
 | `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X、**背後 AttackTarget 時は反転** — [battle-field.md](battle-field.md) §2.5.1）へ `range` px の前方セグメント内を手前 → 奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可。敵向け pierce 通常攻撃の接近停止は [battle-field.md](battle-field.md) §4.4 を正本とする                                                                                                   |
 | `chain`     | anchor から同陣営へ距離内で連鎖。直前 hop と同じユニットには飛ばない。範囲内に未命中がいれば最も近い未命中を優先（全員命中済みなら再訪問可）。`chainPowerStepMultiplier` で威力減衰、`chainDurationSec`（未指定時 `0.15×chainCount+0.5` 秒）で **スキル発動から最終命中まで** の総時間分散 |
 

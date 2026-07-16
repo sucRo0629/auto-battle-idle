@@ -243,6 +243,8 @@ export function summarizeEffectRangeSpec(spec: EffectRangeSpec): string {
   }
   if (spec.refillSameTargetOnShortfall === true) {
     bits.push('不足時同一再命中');
+  } else if (spec.refillSameTargetOnShortfall === false) {
+    bits.push('不足時再命中なし');
   }
   return bits.join(' · ');
 }

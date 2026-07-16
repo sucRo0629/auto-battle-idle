@@ -241,6 +241,58 @@ describe('CombatModuleEditorStep (R9g UI)', () => {
     expect(validateCombatModulesDraftForSave(draft)).toBeNull();
   });
 
+  it('R12g-d3: cleric M2 heal amount and refill flag editable in draft', () => {
+    const gameData = loadGameData();
+    let draft = combatModulesDraftFromModules(
+      Object.values(gameData.combatModuleRegistry),
+    );
+    const onDraftChange = vi.fn((next: CombatModuleDef[]) => {
+      draft = next;
+    });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const step = new CombatModuleEditorStep(host, {
+      getDraft: () => draft,
+      classRegistry: gameData.classRegistry,
+      onDraftChange,
+      onSave: vi.fn(),
+      saving: false,
+    });
+
+    const classSelect = host.querySelectorAll('select')[0];
+    classSelect!.value = 'sp_cleric';
+    classSelect!.dispatchEvent(new Event('change'));
+    step.refresh();
+
+    const moduleSelect = host.querySelectorAll('select')[1];
+    moduleSelect!.value = 'sp_cleric_mod_party_mend';
+    moduleSelect!.dispatchEvent(new Event('change'));
+    step.refresh();
+
+    expect(host.textContent).toContain('主効果（effect[0] heal）');
+    expect(host.textContent).toContain('不足時の再命中');
+    const atkInput = [...host.querySelectorAll('input')].find((input) =>
+      input
+        .closest('.editor-field')
+        ?.textContent?.includes('atkScale（回復量倍率・仮）'),
+    );
+    expect(atkInput).toBeTruthy();
+    atkInput!.value = '0.6';
+    atkInput!.dispatchEvent(new Event('change'));
+
+    const m2 = findCombatModuleDraft(draft, 'sp_cleric_mod_party_mend');
+    expect(m2?.action.effectRange?.refillSameTargetOnShortfall).toBe(false);
+    expect(m2?.action.effect[0]?.type).toBe('heal');
+    if (m2?.action.effect[0]?.type === 'heal') {
+      expect(m2.action.effect[0].amount).toEqual({
+        kind: 'atkBased',
+        atkScale: 0.6,
+      });
+    }
+    expect(validateCombatModulesDraftForSave(draft)).toBeNull();
+  });
+
   it('updates draft when aoe radius changes', () => {
     const gameData = loadGameData();
     let draft = combatModulesDraftFromModules(

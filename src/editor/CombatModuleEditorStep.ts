@@ -201,6 +201,7 @@ export class CombatModuleEditorStep {
     root.appendChild(this.buildMetaSection(selected));
     root.appendChild(this.buildRuntimeEffectSection(selected));
     root.appendChild(this.buildPrimaryBuffSection(selected));
+    root.appendChild(this.buildPrimaryHealSection(selected));
     root.appendChild(this.buildEffectRangeSection(selected));
     root.appendChild(this.buildPreviewSection(selected));
 
@@ -802,6 +803,75 @@ export class CombatModuleEditorStep {
         ),
       );
     }
+
+    return section;
+  }
+
+  private buildPrimaryHealSection(module: CombatModuleDef): HTMLElement {
+    const section = createSection('主効果（effect[0] heal）');
+    section.appendChild(
+      createEl(
+        'p',
+        'editor-hint',
+        '療養師 M1/M2 など instant heal の回復量（atkScale）を編集します。数値の本調整は R12i。',
+      ),
+    );
+    const primary = module.action.effect[0];
+    if (
+      !primary ||
+      primary.type !== 'heal' ||
+      (primary.healSubKind ?? 'instant') !== 'instant'
+    ) {
+      section.appendChild(
+        createEl(
+          'p',
+          'editor-help',
+          'effect[0] が instant heal ではないため、この欄は非表示相当です。',
+        ),
+      );
+      return section;
+    }
+
+    const grid = appendGrid(section);
+    const readonly = this.options.saving;
+    const amount = primary.amount;
+    const atkScale =
+      amount?.kind === 'atkBased' ? (amount.atkScale ?? 1) : 1;
+
+    grid.appendChild(
+      createFieldRow(
+        'amount.kind（読取）',
+        createTextInput(amount?.kind ?? 'atkBased', () => undefined, {
+          readonly: true,
+          field: 'combat-module-heal-amount-kind',
+        }),
+      ),
+    );
+    grid.appendChild(
+      createFieldRow(
+        'atkScale（回復量倍率・仮）',
+        createNumberInput(
+          atkScale,
+          (nextScale) => {
+            if (!(nextScale > 0) || !Number.isFinite(nextScale)) return;
+            this.updateModule((current) =>
+              patchCombatModuleAction(current, (action) => {
+                const effect = action.effect[0];
+                if (!effect || effect.type !== 'heal') return;
+                effect.amount = { kind: 'atkBased', atkScale: nextScale };
+              }),
+              { rerender: false },
+            );
+          },
+          {
+            min: 0.01,
+            step: 0.05,
+            readonly,
+            field: 'combat-module-heal-atk-scale',
+          },
+        ),
+      ),
+    );
 
     return section;
   }

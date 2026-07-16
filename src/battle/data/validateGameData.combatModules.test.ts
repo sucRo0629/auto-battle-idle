@@ -235,6 +235,28 @@ describe('combat module data (R5b)', () => {
     ]);
   });
 
+  it('R12g-d3: parses cleric M1/M2 heal CombatModule data', () => {
+    const parsed = parseAndValidateGameDataJson(loadRealBundle());
+    const m1 = parsed.combatModules.find(
+      (module) => module.id === 'sp_cleric_mod_single_mend',
+    );
+    const m2 = parsed.combatModules.find(
+      (module) => module.id === 'sp_cleric_mod_party_mend',
+    );
+    expect(m1?.action.effect[0]?.type).toBe('heal');
+    expect(m1?.action.targetShape ?? 'single').toBe('single');
+    expect(m2?.action.targetShape).toBe('multiLock');
+    expect(m2?.action.hitCount).toBeGreaterThanOrEqual(2);
+    expect(m2?.action.effectRange?.refillSameTargetOnShortfall).toBe(false);
+    expect(m1?.runtimeEffect).toBeUndefined();
+    expect(m2?.runtimeEffect).toBeUndefined();
+    const cls = parsed.classes.find((entry) => entry.id === 'sp_cleric');
+    expect(cls?.combatModuleIds).toEqual([
+      'sp_cleric_mod_single_mend',
+      'sp_cleric_mod_party_mend',
+    ]);
+  });
+
   it('rejects protectFrontlineAllies invalid multipliers / maxTargets', () => {
     const bundle = loadRealBundle();
     for (const magicDamageTakenMultiplier of [0, -0.1, 1.1, Number.NaN]) {

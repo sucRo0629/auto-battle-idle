@@ -275,20 +275,25 @@ export function evaluateHealWithholdReason(
       : 'all_full_hp';
   }
 
+  /** actor 視点の同陣営（敵ヒーラーは enemies 側） */
+  const factionAllies = actor.isEnemy
+    ? livingEnemies(enemies)
+    : livingAllies(allies);
+
   if (spec.kind === 'all' && spec.side === 'ally') {
-    return resolvePriorityHealTarget(livingAllies(allies)) !== null
+    return resolvePriorityHealTarget(factionAllies) !== null
       ? null
       : 'all_full_hp';
   }
 
-  const pht = resolvePriorityHealTarget(livingAllies(allies));
+  const pht = resolvePriorityHealTarget(factionAllies);
   if (!pht) return 'all_full_hp';
 
   const merged = mergeEffectWithSkillTargeting(skill, effect);
   const rangePx = resolveSkillRangePx(
     actor,
     merged,
-    livingAllies(allies).length,
+    factionAllies.length,
   );
   const attackablePool = getAttackablePool(
     spec,
@@ -661,6 +666,10 @@ function resolveEffectResolutionInternal(
       attackablePool,
       hits,
       pickOptions,
+      {
+        refillSameTargetOnShortfall:
+          merged.effectRange?.refillSameTargetOnShortfall,
+      },
     );
     if (targets.length === 0) return null;
     return { waves: [{ hitIndex: 0, targets }] };
@@ -778,12 +787,22 @@ function resolveMultiLockHitTargets(
   attackablePool: CombatantState[],
   hitCount: number,
   pickOptions?: PickTargetOptions,
+  options?: { refillSameTargetOnShortfall?: boolean },
 ): SkillHitTarget[] {
   const selectable = filterSelectablePool(spec, attackablePool);
   if (selectable.length === 0) return [];
 
   const ordered = orderPoolByTarget(spec, actor, selectable, pickOptions);
   const targets: SkillHitTarget[] = [];
+  /** 未指定・true = 不足分を同一対象へ再命中（damage multiLock 既定）。false = 再命中しない */
+  const refill = options?.refillSameTargetOnShortfall !== false;
+  if (!refill) {
+    const limit = Math.min(hitCount, ordered.length);
+    for (let i = 0; i < limit; i++) {
+      targets.push({ unit: ordered[i]! });
+    }
+    return targets;
+  }
   for (let i = 0; i < hitCount; i++) {
     targets.push({ unit: ordered[i % ordered.length]! });
   }

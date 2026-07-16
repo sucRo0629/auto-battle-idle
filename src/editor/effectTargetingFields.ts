@@ -31,6 +31,7 @@ type TargetingEffect = Pick<
   | 'scatterHitCount'
   | 'scatterDurationSec'
   | 'scatterSpreadRate'
+  | 'effectRange'
 > & {
   target?: TargetSpec;
   targetRule?: import('../battle/types.ts').TargetRule;
@@ -77,6 +78,12 @@ export function appendSkillEffectTargetingFields(
           next.aoeRadiusPx = 70;
         } else if (shape === 'multiLock') {
           next.hitCount = 3;
+          next.effectRange = {
+            form: 'single',
+            applyMode: 'instant',
+            hitCount: 3,
+            refillSameTargetOnShortfall: true,
+          };
         } else if (shape === 'chain') {
           next.chainCount = 3;
           next.chainMaxDistancePx = 80;
@@ -163,14 +170,70 @@ export function appendSkillEffectTargetingFields(
         createNumberInput(
           effect.hitCount ?? 3,
           (hitCount) =>
-            patchEffect((prev) => ({
-              ...prev,
-              targetShape: 'multiLock',
-              hitCount,
-            })),
+            patchEffect((prev) => {
+              const next: TargetingEffect = {
+                ...prev,
+                targetShape: 'multiLock',
+                hitCount,
+              };
+              const prevRange = prev.effectRange;
+              next.effectRange = {
+                form: prevRange?.form ?? 'single',
+                applyMode: prevRange?.applyMode ?? 'instant',
+                ...(prevRange?.distancePx !== undefined
+                  ? { distancePx: prevRange.distancePx }
+                  : {}),
+                ...(prevRange?.maxTargets !== undefined
+                  ? { maxTargets: prevRange.maxTargets }
+                  : {}),
+                hitCount,
+                refillSameTargetOnShortfall:
+                  prevRange?.refillSameTargetOnShortfall ?? true,
+              };
+              return next;
+            }),
           { min: 2, step: 1 },
         ),
       ),
+    );
+    const refillRow = createEl('div', 'editor-field editor-field-checkbox');
+    const refillInput = createEl('input') as HTMLInputElement;
+    refillInput.type = 'checkbox';
+    refillInput.className = 'editor-input';
+    refillInput.checked =
+      effect.effectRange?.refillSameTargetOnShortfall !== false;
+    refillInput.addEventListener('change', () => {
+      const refill = refillInput.checked;
+      patchEffect((prev) => {
+        const hitCount = prev.hitCount ?? 3;
+        const prevRange = prev.effectRange;
+        return {
+          ...prev,
+          targetShape: 'multiLock',
+          hitCount,
+          effectRange: {
+            form: prevRange?.form ?? 'single',
+            applyMode: prevRange?.applyMode ?? 'instant',
+            ...(prevRange?.distancePx !== undefined
+              ? { distancePx: prevRange.distancePx }
+              : {}),
+            ...(prevRange?.maxTargets !== undefined
+              ? { maxTargets: prevRange.maxTargets }
+              : {}),
+            hitCount,
+            refillSameTargetOnShortfall: refill,
+          },
+        };
+      }, { rerender: true });
+    });
+    const refillLabel = createEl('label');
+    refillLabel.appendChild(refillInput);
+    refillLabel.appendChild(
+      document.createTextNode(' 不足対象数を同一対象へ再命中する'),
+    );
+    refillRow.appendChild(refillLabel);
+    parent.appendChild(
+      createFieldRow('不足時の再命中', refillRow),
     );
   }
 

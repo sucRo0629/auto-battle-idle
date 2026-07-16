@@ -324,6 +324,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | M2 分散復元型 | 複数人の欠損を並行して戻す。**E 寄り** |
 | Passive | 余剰回復 Barrier、対象切替、方式間の最低限補完。余剰回復 Barrier は **兵科本体に置かない** |
 | 持たせない | 本体 Barrier、広域軽減、事前防護、単体と分散の同時完成 |
+| R12g-d3 data | `data/combat-modules/sp_cleric.json` — M1 `sp_cleric_mod_single_mend`（緊急単体・HP割合最低負傷者1体・高 atkScale）、M2 `sp_cleric_mod_party_mend`（分散・上位 N 体へ同量低 heal・`refillSameTargetOnShortfall: false`）。数値は仮。**Backend 完了 / Player 未完了** |
 
 #### `sp_wardweaver` 結界師
 

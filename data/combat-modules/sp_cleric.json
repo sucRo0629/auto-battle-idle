@@ -2,8 +2,8 @@
   {
     "id": "sp_cleric_mod_single_mend",
     "classId": "sp_cleric",
-    "displayName": "単体癒し（仮）",
-    "description": "HP 比率が最も低い味方へ単体回復。R5b プレースホルダー。",
+    "displayName": "緊急単体回復",
+    "description": "HP割合が最も低い負傷味方1体を大きく回復する。危険な単体崩壊を止める緊急回復。複数対象へ分散しない。",
     "attackIntervalSec": 3,
     "action": {
       "effect": [
@@ -18,8 +18,9 @@
           "healSubKind": "instant",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1
-          }
+            "atkScale": 1.25
+          },
+          "range": 1136
         }
       ],
       "effectRange": {
@@ -32,29 +33,35 @@
   {
     "id": "sp_cleric_mod_party_mend",
     "classId": "sp_cleric",
-    "displayName": "全体癒し（仮）",
-    "description": "全味方へ回復。R5b プレースホルダー。",
+    "displayName": "分散回復",
+    "description": "HP割合が低い負傷味方へ、複数対象に同じ低量の回復を分配する。1体あたりの回復量は緊急単体回復より低い。味方全員への一律回復ではない。",
     "attackIntervalSec": 4,
     "action": {
       "effect": [
         {
           "target": {
-            "kind": "all",
-            "side": "ally"
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
           },
           "type": "heal",
           "healSubKind": "instant",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.75
-          }
+            "atkScale": 0.55
+          },
+          "range": 1136
         }
       ],
       "effectRange": {
         "form": "single",
-        "applyMode": "instant"
+        "applyMode": "instant",
+        "hitCount": 3,
+        "refillSameTargetOnShortfall": false
       },
-      "targetShape": "single"
+      "targetShape": "multiLock",
+      "hitCount": 3
     }
   }
 ]

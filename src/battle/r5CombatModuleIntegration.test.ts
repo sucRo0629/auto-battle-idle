@@ -267,7 +267,8 @@ describe('R5 combat module integration (R5g)', () => {
   it('1-7: load, registry, party generation, ally/enemy module resolution', () => {
     const gameData = loadGameData();
     const moduleIds = Object.keys(gameData.combatModuleRegistry);
-    expect(moduleIds).toHaveLength(8);
+    // R5 4兵科×2 + 護法士 M1/M2（R12g-d2）
+    expect(moduleIds).toHaveLength(10);
 
     for (const classId of R5_COMBAT_MODULE_CLASS_IDS) {
       const preset = gameData.classRegistry[classId]!;
@@ -333,7 +334,8 @@ describe('R5 combat module integration (R5g)', () => {
     expect(byBasicSkill(sorcererB!)).toBe('at_sorcerer_mod_twin_bolt');
     expect(byBasicSkill(swordsmanDefault!)).toBe('at_swordsman_mod_single_slash');
     expect(swordsmanPierce).toHaveLength(2);
-    expect(byBasicSkill(legacyPaladin!)).toBe('df_paladin_basic_attack');
+    // 未指定 selectedCombatModuleId → combatModuleIds[0]（R12g-d2 以降）
+    expect(byBasicSkill(legacyPaladin!)).toBe('df_paladin_mod_frontline_ward');
 
     const specs = expandEnemyGroups(stage);
     const pierceSpecs = specs.filter(
@@ -407,10 +409,12 @@ describe('R5 combat module integration (R5g)', () => {
     );
     expect(partyMendHeals.length).toBeGreaterThanOrEqual(2);
 
-    const legacyBasic = basicSkillEvents.filter(
-      (e) => e.skillId === 'df_paladin_basic_attack',
+    const paladinModuleBasic = basicSkillEvents.filter(
+      (e) =>
+        e.skillId === 'df_paladin_mod_frontline_ward' ||
+        e.skillId === 'df_paladin_mod_danger_guard',
     );
-    expect(legacyBasic.length).toBeGreaterThan(0);
+    expect(paladinModuleBasic.length).toBeGreaterThan(0);
 
     const swordsmanFirstTime = [...basicFireTimes.entries()].find(([key]) =>
       key.startsWith(`${allySwordsmanId}:`),
@@ -467,7 +471,7 @@ describe('R5 combat module integration (R5g)', () => {
     ).toBe('at_sorcerer_mod_twin_bolt');
     expect(
       enemyPaladin?.cooldowns.find((cd) => cd.slotKind === 'basic')?.skillId,
-    ).toBe('df_paladin_basic_attack');
+    ).toBe('df_paladin_mod_frontline_ward');
     expect(
       internals.enemies.some((e) => e.classId === 'df_guardian') &&
         internals.players.some((p) => p.classId === 'df_guardian'),

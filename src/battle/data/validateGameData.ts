@@ -6501,6 +6501,99 @@ function parseParties(raw: unknown): Record<string, PartyDef> {
   return parties;
 }
 
+function assertPositiveHealResourceAmount(
+  amount: ResourceAmountSpec | undefined,
+  context: string,
+): void {
+  if (amount === undefined) {
+    throw new Error(`${context}: heal amount is required`);
+  }
+  if (amount.kind === 'atkBased') {
+    const scale = amount.atkScale;
+    if (scale === undefined || !Number.isFinite(scale) || !(scale > 0)) {
+      throw new Error(`${context}: atkScale must be a finite number greater than 0`);
+    }
+    return;
+  }
+  if (amount.kind === 'defBased') {
+    const scale = amount.defScale;
+    if (scale === undefined || !Number.isFinite(scale) || !(scale > 0)) {
+      throw new Error(`${context}: defScale must be a finite number greater than 0`);
+    }
+    return;
+  }
+  if (amount.kind === 'flat') {
+    if (!Number.isFinite(amount.flatAmount) || !(amount.flatAmount > 0)) {
+      throw new Error(`${context}: flatAmount must be a finite number greater than 0`);
+    }
+    return;
+  }
+  if (
+    !Number.isFinite(amount.percentOfMaxHp) ||
+    !(amount.percentOfMaxHp > 0)
+  ) {
+    throw new Error(
+      `${context}: percentOfMaxHp must be a finite number greater than 0`,
+    );
+  }
+}
+
+/** R12g-d3: 療養師 CombatModule の役割境界（汎用 schema にハードコードしすぎない最小チェック） */
+function validateSpClericCombatModule(module: CombatModuleDef): void {
+  if (module.classId !== 'sp_cleric') return;
+
+  for (const [index, effect] of module.action.effect.entries()) {
+    const effectContext = `combat module "${module.id}" effect[${index}]`;
+    if (effect.type !== 'heal') {
+      throw new Error(
+        `${effectContext}: sp_cleric modules must use heal effects only (got ${effect.type})`,
+      );
+    }
+    if ((effect.healSubKind ?? 'instant') !== 'instant') {
+      throw new Error(
+        `${effectContext}: sp_cleric modules must use instant heal (HoT is not the primary module effect)`,
+      );
+    }
+    assertPositiveHealResourceAmount(effect.amount, `${effectContext}.amount`);
+    const target = effect.target;
+    if (
+      target === undefined ||
+      target.kind !== 'stat' ||
+      target.side !== 'ally' ||
+      target.stat !== 'hp' ||
+      target.order !== 'ratio'
+    ) {
+      throw new Error(
+        `${effectContext}: target must be ally hp ratio (damaged-priority)`,
+      );
+    }
+  }
+
+  if (module.id === 'sp_cleric_mod_single_mend') {
+    const shape = module.action.targetShape ?? 'single';
+    const hitCount = module.action.hitCount ?? 1;
+    if (shape !== 'single' || hitCount >= 2) {
+      throw new Error(
+        `combat module "${module.id}": M1 must be single-target (maxTargets === 1)`,
+      );
+    }
+  }
+
+  if (module.id === 'sp_cleric_mod_party_mend') {
+    const hitCount = module.action.hitCount ?? 0;
+    if (module.action.targetShape !== 'multiLock' || hitCount < 2) {
+      throw new Error(
+        `combat module "${module.id}": M2 must be multiLock with hitCount >= 2`,
+      );
+    }
+    if (module.action.effectRange?.refillSameTargetOnShortfall !== false) {
+      throw new Error(
+        `combat module "${module.id}": M2 must set refillSameTargetOnShortfall false (no same-target re-hit)`,
+      );
+    }
+  }
+}
+
 function validateCombatModuleData(
   combatModules: CombatModuleDef[],
   classById: Map<string, ClassPreset>,
@@ -6516,6 +6609,7 @@ function validateCombatModuleData(
         `Unknown classId "${module.classId}" for combat module "${module.id}"`,
       );
     }
+    validateSpClericCombatModule(module);
   }
 }
 
