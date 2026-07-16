@@ -333,8 +333,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | ---- | ---- |
 | 方式名・Passive 名・ID | R12g 以降 |
 | 数値・倍率・秒数・コスト | R12i 中心（形状は R12g） |
-| 危険対象判定規則（護法士 M2 等） | R12g |
-| 鉄衛士 M2 の effect schema / 直接ダメージ型 | R12g でデータ形状と実装先を判断。combat.md 編入も同判断 |
+| 危険対象判定規則（護法士 M2 等） | R12g-c |
+| 鉄衛士 M2 の effect schema / 直接ダメージ型 | R12g-b で **DamageAppliedEvent** 契約確定（[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)）。runtime 実装は R12g-b1〜b2。JSON 数値入力は R12g 本流 |
 | R11b 現行 Passive 効果 | 維持義務なし。R12f 方向に合わせて再設計 |
 | R2 候補表の方式 A/B | 本節の M1/M2 方向が正。旧案は素材のみ |
 

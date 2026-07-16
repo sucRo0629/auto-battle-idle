@@ -123,7 +123,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-16・R12f 完了）
+## 8. 現在地メモ（更新: 2026-07-16・R12g-b 完了）
 
 | 項目 | 状態 |
 | ---- | ---- |
@@ -131,13 +131,10 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | R9 系列 | R9b〜h / R9f / R9.6 完了 |
 | **R10** | Backend + **構造** Player のみ。遊べる試作 / 反復評価は **未達** |
 | **R11** | a〜d **システム縦切り完了**。ゲームとしてのプレイアビリティは **未達** |
-| **R12a** | **完了** — [operation-loop.md §15](../spec/operation-loop.md#15-敵問題と戦術目標r12a) |
-| **R12b** | **Backend 完了**（設計 Phase）/ **Player 未達** — [operation-loop.md §16](../spec/operation-loop.md#16-1-wave-単位の敵問題r12b) |
-| **R12c** | **Backend 完了**（設計 Phase）/ **Player 完了** — [operation-loop.md §17](../spec/operation-loop.md#17-作戦全体の敵問題r12c) |
-| **R12d** | **完了**（設計 Phase）— [operation-loop.md §18](../spec/operation-loop.md#18-試作stageの敵問題r12d) |
-| **R12e** | **完了**（設計 Phase）— [operation-loop.md §19](../spec/operation-loop.md#19-必要能力対処能力r12e) |
-| **R12f** | **完了**（設計 Phase）— [operation-loop.md §20](../spec/operation-loop.md#20-必要能力の兵科combatmodule作戦内パッシブ分配r12f) / [classes-and-skills.md §R12f](../spec/classes-and-skills.md#r12f--必要能力の分配確定) |
-| **公式次タスク** | **R12g** — class / module / passive データ再設計 |
+| **R12a〜f** | **完了**（設計 Phase） |
+| **R12g-a** | **完了** — schema / damage 初回調査 |
+| **R12g-b** | **Backend 完了**（設計 Phase）— Attack Hit / HP damage event 契約。Player 未達 |
+| **公式次タスク** | **R12g-b1** — `DamageAppliedEvent` 導入 |
 
 **R12f で確定した主要境界（短縮）:**
 
@@ -176,7 +173,7 @@ R11 は仕組み（範囲・専用パッシブ枠・資源式・基礎ステ極�
 | **R12d** | 試作 Stage の敵問題設計（JSON 入力なし） | **完了**（設計 Phase） |
 | **R12e** | 必要能力・対処能力の導出 | **完了**（設計 Phase） |
 | **R12f** | 兵科・CombatModule・作戦内パッシブへの分配（設計） | **完了**（設計 Phase） |
-| **R12g** | class / module / passive データ再設計 | 未着手 |
+| **R12g** | class / module / passive データ再設計 | R12g-a〜b 設計完了 / 本流未着手 |
 | **R12h** | Stage / Wave データ実装 | 未着手 |
 | **R12i** | 数値強度調整 | 未着手 |
 | **R12j** | 手元成立ゲート | 未着手 |

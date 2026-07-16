@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12f Backend（設計）完了 / Player 完了**（§104）。公式次は **R12g**。
-- **次の再開タスク:** **R12g** — class / module / passive データ再設計。その後 R12h〜j → R13（反復評価。開始条件は R12j 手元成立後）。
+- **新ロードマップ現在地:** **R12g-a Backend（調査）完了**（§105.1 参照）。公式次は **R12g-b**（Attack Hit / HP damage event 基盤の詳細設計）。
+- **次の再開タスク:** **R12g-b Backend 完了後 → R12g-b1〜**（event 型導入・鉄衛士 M2 runtime）。データ入力・数値は R12g 本流 / R12i へ。R12h〜j → R13。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -8079,4 +8079,247 @@ ChatGPT 側で確定した R12d（試作 Stage の敵問題）と R12e（必要�
 
 ### 104.10 次タスク
 
-**R12g — class / module / passive データ再設計**
+**R12g** — §105 へ分割。当時点の次は **R12g-a**（schema 初回調査）。
+
+---
+
+## 105. R12g — class / module / passive データ再設計（分割 handoff）
+
+### 105.1 R12g-a — schema / effect / targeting / damage event 初回調査（完了）
+
+**状態:** Backend 完了（調査のみ）。production / JSON / test / editor / UI **未変更**。
+
+**確認済み（短縮）:**
+
+| 項目 | 正本 |
+| ---- | ---- |
+| class | `ClassPreset` — `src/battle/types.ts` |
+| CombatModule | `CombatModuleDef` / `CombatModuleActionDef` |
+| module effect | `SkillEffectDef` |
+| passive | `PassiveSkillDef` |
+| operation passive catalog | `OperationPassiveCatalogDef` |
+| targeting | `TargetSpec` |
+| Hit 単位 | `PendingSkillHit.hitIndex` / `SkillHitWave.hitIndex` は型に存在 |
+| Barrier 優先消費 | `DamageApplicationResult`（`combatMath.ts`） |
+| 正式 damage event 型 | **未存在** |
+| HP / Barrier 分離 callback | **部分的**（`hpDamage` / `barrierDamage` meta のみ） |
+
+**次:** R12g-b（本節 §105.2）。
+
+### 105.2 R12g-b — Attack Hit / HP damage event 基盤の詳細調査・設計
+
+**テーマ:** 鉄衛士 M2（敵 Attack Hit の実 HP ダメージ各 Hit ごと固定自己回復）を仕様どおり実装するための **正式 event 契約**を一次ソース根拠で確定する。
+
+**鉄衛士 M2 確定仕様（再掲）:** 敵 Attack Hit で実 HP ダメージが発生した Hit ごとに鉄衛士自身を固定量回復。Barrier のみ削れは対象外。HP 0 は対象外。DoT / 反射 / 自傷 / 環境 / 遅延状態ダメージ / 作戦ルール独立ダメージ / 致死 Hit は対象外。割合回復・Barrier 変換・反撃化は禁止。
+
+**読んだ production source（作業前 6 件）:**
+
+1. `docs/ai-handoff/current-task.md`（本節追記対象）
+2. `docs/plans/phase-roadmap.md`（R12g 節）
+3. `docs/ai-handoff/planning-rules.md`
+4. `src/battle/types.ts`（`PendingSkillHit` / `DamageApplicationResult` 周辺）
+5. `src/battle/combatMath.ts` — `applyDamageToTarget` / `applyConfirmedHpDamage`
+6. `src/battle/damageDelay.ts` — `applyIncomingDamage`（Barrier→HP の入口）
+
+**追加で grep / 部分参照した production（設計根拠）:** `BattleEngine.ts`（`handleDamageApplied` / DoT tick / delayed pool）、`SkillExecutor.ts`（`applyEffect` damage 枝）、`counterEffects.ts`、`incomingDamageMitigation.ts`、`stageDamageStats.ts`、`placedField.ts`。
+
+#### 105.2.1 damage 適用の収束点
+
+| 経路 | 入口 | 収束関数 | `onDamageApplied` |
+| ---- | ---- | -------- | ----------------- |
+| 通常 Attack / CombatModule（`slotKind: basic`） | `BattleEngine.runUnitSkills` → `SkillExecutor.tryExecute` | `SkillExecutor.applyEffect`（`type: damage`） | **あり** |
+| Module / legacy active（`slotKind: active`） | 同上 | 同上 | **あり** |
+| MultiHit / MultiLock / single / aoe | `applyResolvedEffectStep` → `resolveEffectResolution` の各 `wave.hitIndex` | 同上（Hit ごと `applyEffect`） | **あり**（Hit ごと） |
+| pierce / chain / scatter 等 | 同上 + `vfxSourceId` セグメント | 同上 | **あり** |
+| projectile / spread 遅延 Hit | `buildPendingHitsFromResolution` → `pendingHitQueue` → `applyPendingHit` | `applyEffect` | **あり**（`hit.hitIndex` 保持） |
+| DoT tick | `BattleEngine.applyOverlayTick`（`overlay: dot`） | `applyDamageToTarget`（**`applyIncomingDamage` 非経由**） | **あり**（`attackKind: dot`） |
+| damageDelay プール tick | `BattleEngine.applyConfirmedDelayedDamage` | `applyDelayedDamageTick` → `applyConfirmedHpDamage` | **なし** |
+| counter / block resonance 反撃 | `counterEffects` / `SkillExecutor` block 内 | `applyIncomingDamage` | **あり**（`isCounterDamage: true`） |
+| 派生二次ダメージ（炎爆発・弓 splash 等） | `SkillExecutor` 内 primary hit 後 | `applyIncomingDamage` または `applyConfirmedHpDamage` | **あり**（`attackKind: damage`、`isCounterDamage` なし） |
+| dotHarvest | `SkillExecutor.applyEffect` | `applyConfirmedHpDamage` | **あり**（`attackKind: damage` — **DoT ではない**） |
+| 反射（reflect） | — | **production 未実装** | — |
+| 環境直接ダメージ | `placedField` は dot debuff 付与のみ | DoT 経路へ委譲 | 間接的に DoT のみ |
+| 作戦ルール独立ダメージ | battle 内に damage 適用経路 **未確認** | — | — |
+| 自傷 | `applyEffect` damage で `actor === target` | 通常 skill hit 経路 | **あり**（区別フラグなし） |
+
+**CombatModule:** 合成 basic スキルとして `slotKind: basic` で `SkillExecutor` に入る（`runUnitSkills`）。MultiHit / MultiLock も active / module の `SkillEffectDef` として同一 `applyEffect` へ収束。
+
+#### 105.2.2 Barrier / HP 適用順（skill hit 正本経路）
+
+`SkillExecutor.applyEffect`（damage）内の確定順:
+
+1. 回避 → `resolveDamage`（DEF/REG・damageTaken 等の**計算上**軽減）
+2. block（物理/魔法）→ wardBarrier → arena mark 軽減
+3. `mitigateIncomingDamage`（無敵 / lastStand 無敵 / recovery 完全 negation / **guts 初回致死 negation** / guts 中 HP floor）
+4. `applyIncomingDamage(finalDamage, { skipBarrier: pierceBarrier })`
+   - damageDelay ratio で即時/遅延分割
+   - 即時: `applyDamageToTarget`（**barrierHp 吸収 → 残り HP**）または `applyConfirmedHpDamage`（barrier スキップ）
+   - 遅延分: `delayedDamagePool` に加算（この時点では HP 未適用）
+5. `onDamageApplied`（`hpDamage` / `barrierDamage` は即時分のみ。`amount` は遅延プール加算込みの総量）
+6. `lethal` 時 `isAlive = false`（callback 時点では `isAlive` はまだ true のことがある）
+
+`combatMath.applyDamageToTarget`: `barrierHp` を先に消費 → 残りを `hp` から減算 → `{ hpDamage, barrierDamage, lethal }`。
+
+DoT tick（`BattleEngine`）: ward → `mitigateIncomingDamage` → **`applyDamageToTarget` のみ**（delay 分割なし）→ `handleDamageApplied`。
+
+#### 105.2.3 致死判定と guts 順序
+
+| 段階 | 処理 | M2 への意味 |
+| ---- | ---- | ----------- |
+| 前処理 | `tryLastStandGuts` が致死を negation（HP を 1 に固定しダメージ 0） | `hpDamage === 0` → **発動しない** |
+| 適用 | `applyDamageToTarget` / `applyConfirmedHpDamage` | `lethal` フラグ確定 |
+| callback 時 | `target.hp` は既に減算済み。`isAlive` は未更新のことがある | **`lethal` meta 必須** |
+| 後処理 | `isAlive = false`、death event | 致死 Hit 後に回復しない |
+
+guts 活性中の `applyLastStandGutsHpFloor` は適用**前**にダメージ上限。`hpDamage > 0` かつ `lethal === false` なら M2 対象になり得る。
+
+#### 105.2.4 現行 callback / meta
+
+**ゲームロジック用:** `BattleEngine.handleDamageApplied` ← `SkillExecutor` / DoT / counter の `onDamageApplied`。
+
+**診断用:** `BattleEngineOptions.onDamageApplied` → `stageDamageStats`（`DamageAppliedMeta` + `resolveDamageSourceKind`）。
+
+**渡る meta（現行）:** `attackKind`（`damage` \| `dot`）、`slotKind`（`basic` \| `active`）、`skillId`、`statusId`（DoT）、`isCounterDamage`、`hpDamage`、`barrierHpBefore`、`barrierDamage`、`attackMethod`、`didBlock`。
+
+**渡らない:** `effectIndex`、`hitIndex`、`lethal`、`damageType`（physical/magic）、`sourceKind`（counter 以外の分類）、`targetAliveAfter`、軽減前後の raw/mitigated 分離。
+
+**反撃と反射:** production に reflect は無い。反撃は `isCounterDamage: true` で区別。通常 Attack としての counter 実行経路は無く、鉄衛士 M2 へ既存 counter effect を流用しない。
+
+#### 105.2.5 鉄衛士 M2 を現行情報だけで判定できるか
+
+**不可。** 最低限不足:
+
+- Hit 単位: `hitIndex` / `effectIndex` が callback に無い（event ログ・二重発火防止に必要）
+- 致死除外: `lethal` が meta に無い
+- ソース分類: `isCounterDamage` と `attackKind` だけでは **派生ダメージ**（炎爆発・splash・dotHarvest）と **本来の Attack Hit** を分離できない
+- 遅延プール tick は callback 無し（除外は暗黙的に成立するが、診断上は未観測）
+- 自傷: `attackerId === targetId` の明示なし（event 本体から導出は可能）
+
+#### 105.2.6 推奨 `DamagePipelineSourceKind`（最小 union）
+
+現行実装に合わせた名称（ユーザー提示の `attackHit` 等はそのまま採用しない）:
+
+| `sourceKind` | 意味 | 鉄衛士 M2 |
+| ------------ | ---- | --------- |
+| `skillHit` | `SkillExecutor` の `damage` effect 1 Hit（pending 含む） | **対象**（敵→鉄衛士・実 HP 損失時） |
+| `dotTick` | `BattleEngine` overlay dot | 除外 |
+| `delayedPoolTick` | damageDelay プール HP tick | 除外（現状 callback 無し。将来 event 化する場合もこの kind） |
+| `counter` | `isCounterDamage` 反撃 | 除外 |
+| `derived` | 同一行動由来の二次ダメージ（炎爆発・弓 splash・dotHarvest 等） | 除外 |
+| `other` | 未分類・将来用 | 除外 |
+
+**M2 条件（実装時）:** `sourceKind === 'skillHit'` && `attackKind === 'damage'` && `hpDamage > 0` && `!lethal` && `target` が鉄衛士かつ M2 module && `attacker.isEnemy` && `attacker.id !== target.id`。
+
+#### 105.2.7 推奨 `DamageAppliedEvent` 最小フィールド
+
+```typescript
+interface DamageAppliedEvent {
+  attackerId: string;
+  targetId: string;
+  sourceKind: DamagePipelineSourceKind;
+  attackKind: 'damage' | 'dot';
+  hpDamage: number;
+  barrierDamage: number;
+  lethal: boolean;
+  slotKind?: 'basic' | 'active';
+  skillId?: string;
+  effectIndex?: number;
+  hitIndex?: number;
+  attackMethod?: AttackMethod;
+  statusId?: string;
+}
+```
+
+**意図的に入れない（今回）:** `rawDamage` / `mitigatedDamage`（診断は battle log 既存 `amount` で足りる）、`targetHpBefore/After`（`lethal` + 既存 state で足りる）、一意 `attackId`（`skillId` + `effectIndex` + `hitIndex` + `targetId` + tick 内連番で足りる）、`preventedLethal`（guts negation は `hpDamage === 0` で十分）。
+
+#### 105.2.8 event 発火位置（推奨）
+
+**HP 適用直後・`isAlive = false` 確定前・反撃処理前。**
+
+具体的には各適用点で `DamageApplicationResult` を受け取った直後に `DamageAppliedEvent` を組み立て、`BattleEngine.handleDamageApplied` 先頭で正規化 → **鉄衛士 M2 等の被ダメージリアクション** → 既存 counter / heal reservation / barrier break → 外部 `onDamageApplied`。
+
+**二重発火防止:** 1 回の `applyEffect` damage 適用 = 最大 1 event。派生ダメージは `derived` で別 event（M2 対象外）。
+
+**guts 初回 negation:** 適用前にダメージ 0 → event 自体を発火しないか、`hpDamage: 0` で発火（M2 は不発動）。
+
+#### 105.2.9 汎用 Passive trigger（案 A）vs 専用 runtime（案 B）
+
+| 観点 | 案 A 汎用 `onDamageApplied` passive | 案 B 鉄衛士専用 callback | **推奨（ハイブリッド）** |
+| ---- | ----------------------------------- | ------------------------ | ------------------------ |
+| 再利用性 | 高いが condition DSL が必要 | 低い | **event 契約は共通**、M2 は専用関数 |
+| schema 肥大 | 大 | 無 | **R12g データ入力前は schema 拡張しない** |
+| event 安定性 | DSL と結合 | 不安定になりやすい | **型で固定** |
+| editor | 要 UI | 不要 | M2 実装時は module 選択で十分 |
+| test | condition 組合せ爆発 | 単体テスト容易 | event 単体 + M2 単体 |
+| 敵鉄衛士 | 同じ条件で可 | 同じ | module ID ゲートで対称 |
+| module 切替 | 登録解除が要設計 | 要ハンドラ | `handleDamageApplied` 内で毎回 module 参照 |
+| Wave 再生成 | trigger 登録の寿命管理 | 同左 | engine 寿命に紐づけ不要（stateless 判定） |
+
+**推奨方式:** `DamageAppliedEvent` を battle 正本とし、`tryIronGuardianM2SelfHeal(event, …)` を `handleDamageApplied` から呼ぶ。**大規模汎用 trigger system は導入しない。** 将来 Passive が増えたら同 event にリスナーを追加。
+
+#### 105.2.10 production 実装時の変更候補
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/battle/damageAppliedEvent.ts`（新規） | 型・`sourceKind` 判定ヘルパー |
+| `src/battle/skills/SkillExecutor.ts` | 全 `onDamageApplied` 呼び出しを event 組み立てに統一。`derived` 付与 |
+| `src/battle/BattleEngine.ts` | DoT event、`handleDamageApplied` で M2 フック、必要なら delayed tick |
+| `src/battle/counterEffects.ts` | `sourceKind: counter` |
+| `src/battle/stageDamageStats.ts` | `DamageAppliedMeta` を event に寄せる |
+| `src/battle/ironGuardianM2.ts`（新規・実装フェーズ） | 固定回復ロジック |
+| `docs/spec/combat.md` | event 契約節（§105.2.7 要約） |
+
+#### 105.2.11 必要 test（実装フェーズ）
+
+- 敵 basic / module MultiHit の各 Hit で `hpDamage > 0` のみ回復
+- Barrier のみで `hpDamage === 0` → 不回復
+- DoT / counter / derived / delayed pool → 不回復
+- 致死 Hit（`lethal`）→ 不回復
+- guts 初回 negation → 不回復；guts 中の非致死 HP 損失 → 回復
+- M1 module / 非鉄衛士 → 不回復
+- 敵側鉄衛士 M2 対称
+- `hitIndex` が MultiLock で Hit ごとに増えること（event meta）
+
+#### 105.2.12 後続小タスク分割
+
+| ID | 内容 |
+| -- | ---- |
+| **R12g-b1** | `DamageAppliedEvent` 型導入・全 emission 点統一（`lethal` / `hitIndex` / `sourceKind`） |
+| **R12g-b2** | 鉄衛士 M2 runtime（`ironGuardianM2.ts` + module ゲート + 固定 heal） |
+| **R12g-b3** | 統合テスト・戦闘ログ/デバッグでの発動理由検証 |
+| **R12g-c** | 護法士 M2 danger targeting（**本タスクのスコープ外**） |
+| **R12g 本流** | 8 兵科データ入力（M2 数値・JSON は b2 後） |
+
+delayed pool tick の event 化は **M2 除外が暗黙で成立するため必須にしない**。診断必要時のみ b1 に含める。
+
+#### 105.2.13 完了判定
+
+**Backend（本調査・設計タスク）:**
+
+| 項目 | 状態 |
+| ---- | ---- |
+| damage 適用経路の一次ソース確認 | **完了** |
+| Barrier / HP 損失取得位置 | **完了** — `DamageApplicationResult` / meta `hpDamage` |
+| 致死 Hit 除外位置 | **完了** — `lethal` を event meta に載せる設計 |
+| Attack Hit と除外 source の識別 | **完了** — `DamagePipelineSourceKind` |
+| Hit 単位 event 契約 | **完了** — §105.2.7 |
+| 鉄衛士 M2 差し込み位置 | **完了** — `handleDamageApplied` 先頭付近 |
+| 実装タスク分割 | **完了** — §105.2.12 |
+| docs 反映 | **本節 + combat.md + phase-roadmap** |
+
+**Player（R12g-b 全体・後続実装後）:**
+
+- 鉄衛士 M2 選択時、敵 Attack Hit の実 HP ダメージ Hit ごとに固定回復
+- Barrier のみ / DoT / 反撃 / 自傷 / 環境 / 致死で不回復
+- 小ダメージ多 Hit で HP 黒字になり得る
+- M1 では不発。敵鉄衛士も同ルール
+- 戦闘ログまたはデバッグで発動理由を検証可能
+- 製品 UI / 正式 VFX は含めない
+
+#### 105.2.14 production code / JSON / test
+
+**未変更**（設計 Phase のみ）。
+
+#### 105.2.15 次タスク
+
+**R12g-b1** — `DamageAppliedEvent` 導入と emission 統一（鉄衛士 M2 の前段）。
