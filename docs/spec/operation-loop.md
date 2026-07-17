@@ -209,10 +209,44 @@ Wave 2 以降の各 Wave 開始前に入る **上位状態**。BattlePhase の 1
 | 取得上限なし | 同じスロットへ候補を重複なく追加できる限り、取得回数に hard cap は無い |
 | コスト式 | `cost = base(unlockLevel) + n × sameClassStackStep`（`n` = 取得前の同一スロット取得数） |
 | unlockLevel | **コスト帯のみ**（パーティ Lv ゲートではない）。`costUnlockLevelByPassiveId` → `unlockLevelCostTable` |
-| Wave クリア付与 | `waveClearResourceGrant`（≈ 6 人分 × 1〜2 回の初回帯購入）。中間 Wave クリア時に一度付与 |
+| 新仕様 Stage の準備時付与 | 各 `waves[].prepResourceGrant`。その Wave の準備開始時に一度付与（[§6.4](#64-wave-準備資源r12h)） |
+| legacy 付与 | `waves[].prepResourceGrant` 未指定の既存 Stage では、Wave 2 以降に `waveClearResourceGrant` を fallback として使用 |
 | フォールバック | 候補の unlockLevel 欠損時は `passiveAcquireCost` |
 
 実装: `src/game/operationPassiveAcquireCost.ts` / `GameSession.tryAcquireOperationPassive`。
+
+### 6.4 Wave 準備資源（R12h）
+
+作戦ポイントの付与は「完了した Wave へのクリア報酬」ではなく、**次に開始する Wave の準備資源**として扱う。新仕様 Stage では各 Wave が `prepResourceGrant` を所有する。
+
+```json
+{
+  "waves": [
+    {
+      "prepResourceGrant": 0,
+      "enemyGroups": []
+    }
+  ]
+}
+```
+
+| 項目 | 契約 |
+| ---- | ---- |
+| 型 | `waves[].prepResourceGrant`。0 以上の整数。乱数は使用しない |
+| 所有 | 対象 Wave 自身が固定値を持つ。Stage 直下の別配列には分離しない |
+| 付与時点 | 対象 Wave の準備開始時に一度だけ加算する |
+| Wave 1 | `prepResourceGrant > 0` なら戦闘開始前に Wave 準備画面を開いて付与する。明示的な `0` なら現行どおり出撃前編成から戦闘へ進む |
+| Wave 2 以降 | 付与量が `0` でも Wave 間準備画面を開く。新規付与がなくても持ち越しポイントを使用できる |
+| 最終 Wave 後 | 次 Wave がないため付与しない |
+| 二重付与防止 | retry、画面再表示、formation との往復、checkpoint 復帰で同じ Wave の grant を再加算しない |
+| 持ち越し | 未使用ポイントは次 Wave へ持ち越す |
+| パッシブ取得 UI | 表示可否を `prepResourceGrant > 0` だけで決めない。候補の有無・所持ポイント・取得コストから表示と取得可否を判定する |
+
+`prepResourceGrant` の **未指定** と明示的な `0` は区別する。新仕様 Stage は Wave 値を正とする。未指定の legacy Stage は、Wave 1 では従来どおり付与なし、Wave 2 以降では `operation-passive-catalog.json` の `waveClearResourceGrant` を fallback として使用する。全 Stage 移行後の legacy field と fallback の削除は別 cleanup とし、R12h では先行削除しない。
+
+この構造は、Wave 1 前に構築して挑む高難度 1 Wave Stage、Wave ごとに配分量が異なる Stage、新規付与なしで持ち越しだけを使う Wave、長期 Stage の小刻みな配布を固定データで表現できる。将来のローグライク展開は妨げないが、R12h ではランダム生成・ランダム報酬を導入しない。
+
+**Phase 境界:** R12h は schema、validation、runtime 接続、Wave 1 開始前を含む準備遷移、二重付与防止、legacy fallback、authoring、test、試作 Stage への構造入力を扱う。各 Wave の具体的な付与量、取得コスト、`stackStep`、scale、基礎 stat、CombatModule 数値の本調整は **R12i**。
 
 ---
 
@@ -722,8 +756,8 @@ Wave 間で、前 Wave 向けの最適な準備・資源配分・編成判断が
 
 | 扱い | 内容 |
 | ---- | ---- |
-| 付与タイミング | 原則として **Wave クリア後** に付与 |
-| 高難度 Stage | **初期作戦ポイント** の配布を許容 |
+| 付与タイミング | 各 Wave の準備開始時。新仕様 Stage は `waves[].prepResourceGrant` を使用（[§6.4](#64-wave-準備資源r12h)） |
+| 高難度 Stage | Wave 1 の `prepResourceGrant` による **初期作戦ポイント** の配布を許容 |
 | 本節で定義しないもの | 具体的な付与量、コスト、`stackStep`、数値バランス（→ **R12i**） |
 | 本節で定義しないもの | 具体的なパッシブ内容と能力配分（→ **R12e〜g**） |
 
@@ -1111,7 +1145,7 @@ Wave 1 では、一方へ集中して突破口を作ることが有効だった�
 
 ### 18.8 作戦ポイントの判断構造
 
-具体量・コスト・`grant`・`stackStep` は決めない（→ **R12i**）。
+各 Wave の準備資源は `waves[].prepResourceGrant` で接続する（[§6.4](#64-wave-準備資源r12h)）。具体量・コスト・`grant`・`stackStep` は決めない（→ **R12i**）。
 
 #### Wave 1 クリア後
 
@@ -1156,7 +1190,7 @@ Wave 1 では、一方へ集中して突破口を作ることが有効だった�
 - 必要能力・対処能力の導出 → [§19](#19-必要能力対処能力r12e) / **R12e 完了**
 - 兵科・CombatModule・作戦内パッシブへの分配 → [§20](#20-必要能力の兵科combatmodule作戦内パッシブ分配r12f) / **R12f 完了**
 - class / module / passive データ → **R12g**
-- Stage / Wave JSON → **R12h**
+- Stage / Wave JSON・`waves[].prepResourceGrant` 構造接続 → **R12h**
 - 数値・scale・grant・stackStep → **R12i**
 - 手元プレイ成立 → **R12j**
 

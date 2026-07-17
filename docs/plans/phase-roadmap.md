@@ -1158,7 +1158,7 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | Wave 数 | 2 Wave と 3 Wave 以上で成立基準は分けない。3 Wave 以上は 2 Wave より**高難度**として扱う |
 | 事前開示 | 全 Wave の敵編成を事前開示。戦術目標は表示せず、敵編成から推測させる |
 | 編成変更 | Wave 間では 4 枠すべて変更可。編成変更自体への制限・追加コストは設けない |
-| 資源 | 作戦ポイント配分で集中と分散の代償を作る。原則 Wave クリア後付与。高難度 Stage では初期資源配布を許容 |
+| 資源 | 作戦ポイント配分で集中と分散の代償を作る。各 Wave の準備開始時に `waves[].prepResourceGrant` を一度付与。高難度 Stage では Wave 1 前の初期資源配布を許容 |
 | 最終 Wave | 通常 Stage では原則、過去 Wave で提示した敵側戦術または戦術目標を統合した**複合問題** |
 | 戦術目標の転換 | Wave ごとの完全転換を許容 |
 | 敗因 | どの戦術目標を処理できなかったか識別できればよい |
@@ -1194,7 +1194,7 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | Wave 2 | 分担問題単独。双刃士（前衛）+ 魔術師（後衛）。通常解 A〜C。Wave 1 との関係は転換＋対立 |
 | Wave 3 | Wave 1・2 の複合。鉄衛士・双刃士（前衛）+ 療養師・魔術師（後衛）。同一編成通しは高度な別解 |
 | Wave 間関係 | 1→2: 転換＋対立 / 1・2→3: 複合＋継続＋対立 |
-| 作戦ポイント | Wave クリア後の集中・分散判断と代償のみ。具体量は R12i |
+| 作戦ポイント | 各 Wave の準備資源として接続。`waves[].prepResourceGrant` の構造は R12h、具体量は R12i |
 
 **Backend 完了:** 設計 Phase — §18 正本化。production code / JSON 変更なし。
 
@@ -1302,23 +1302,27 @@ R12a 敵問題・戦術目標の基本定義（完了）
 
 ### R12h — Stage / Wave データ実装
 
-**ゴール:** R12d の敵問題設計を、試作作戦の **`waves[].enemyGroups` + `selectedCombatModuleId` + 構成** として JSON に実装する。数値の本調整は最小限（動く状態）に留め、本調は **R12i**。
+**ゴール:** R12d の敵問題設計を、試作作戦の **`waves[].enemyGroups` + `selectedCombatModuleId` + `waves[].prepResourceGrant` + 構成** として JSON に実装する。数値の本調整は最小限（動く状態）に留め、本調は **R12i**。作戦ポイントは Wave クリア報酬ではなく、対象 Wave の準備開始時に一度付与する資源として接続する。正本: [operation-loop.md §6.4](../spec/operation-loop.md#64-wave-準備資源r12h)。
 
 **Backend 完了:**
 
 - `stages.json`（試作 ID）が R12d の Wave 構造・敵側戦術配置に追従する
+- `waves[].prepResourceGrant` が 0 以上の整数として validate / authoring / runtime に接続される
+- Wave 1 は grant が 0 より大きい場合だけ戦闘前の Wave 準備を開き、Wave 2 以降は grant が 0 でも既存の Wave 間準備を開く
+- 未使用ポイントを持ち越せる。retry、再表示、formation 往復、checkpoint 復帰で同一 Wave の grant を二重付与しない
+- `prepResourceGrant` 未指定の legacy Stage は、Wave 1 では付与なし、Wave 2 以降では catalog の `waveClearResourceGrant` を fallback とする。明示的な `0` と未指定を区別する
 - ステージ詳細で全 Wave の敵編成が事前に要約できる（既存 preview）
 - 統合テストが新データで完走する
 
-**Player 完了:** Wave 間の問題差が敵形から読める（合否ゲートは R12j）。
+**Player 完了:** Wave 間の問題差が敵形から読める。Wave 1 前 grant がある Stage では戦闘前に準備でき、付与 0 の中間 Wave でも持ち越しポイントを使用できる（合否ゲートは R12j）。
 
-**触る候補:** `data/stages.json`、必要なら `formationHintJa`、統合テスト、[stage-selection-ui.md](../spec/stage-selection-ui.md)。
+**触る候補:** `data/stages.json`、Stage/Wave schema・validation、`GameSession` / `OperationState` / WavePrep、authoring、関連 test、必要なら `formationHintJa`、[stage-selection-ui.md](../spec/stage-selection-ui.md)。
 
-**スコープ外:** `stages-demo.json` 移行、多数作戦量産、Stage 削除 UI、強度の本調（→ R12i）。
+**スコープ外:** `stages-demo.json` 移行、多数作戦量産、Stage 削除 UI、全 Stage 移行後の legacy field 削除、ランダム生成・ランダム報酬、付与量・cost・`stackStep`・scale 等の強度本調（→ R12i）。
 
 ### R12i — 数値強度調整
 
-**ゴール:** R12g/h のデータ上で、scale / grant / stackStep / 基礎ステ等を調整し、手元成立の前提強度にする。**問題設計の書き換えはしない**（構造不足なら R12d へ戻す）。
+**ゴール:** R12g/h のデータ上で、各 `waves[].prepResourceGrant`、cost、stackStep、scale、基礎ステ等を調整し、手元成立の前提強度にする。**問題設計の書き換えはしない**（構造不足なら R12d へ戻す）。
 
 **Backend 完了:** 必要パラメータの再調整と回帰。仕組みの新設はしない。
 

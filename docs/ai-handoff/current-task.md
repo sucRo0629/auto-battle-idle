@@ -9,7 +9,7 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-g Backend 完了**（validation / authoring 統合）。**Player 未判定**（本タスクでは Player 完了を判定しない）。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。**次:** **R12h** — Stage / Wave データ実装。handoff 正本は **§105.15**。
+- **新ロードマップ現在地:** **R12g-g Backend 完了**（validation / authoring 統合）。**Player 未判定**（本タスクでは Player 完了を判定しない）。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。**次:** **R12h** — Stage / Wave データ実装。handoff 正本は **§105.16**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
 - **次の再開タスク:** **R12h** → R12i → R12j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
@@ -8839,3 +8839,44 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 **次:** **R12h** — Stage / Wave データ実装。**正式順序:** R12h → R12i → R12j → R13。
 
 **同期先:** [phase-roadmap.md §R12g](../plans/phase-roadmap.md#r12g--class--module--passive-データ再設計)、[planning-rules.md §8 / §8c](planning-rules.md)、[classes-and-skills.md](../spec/classes-and-skills.md)。
+
+### 105.16 R12h — Stage / Waveデータ実装（設計確定・実装前）
+
+**状態:** 構造設計確定 / production code・JSON・test・editor 未変更。公式次タスクは引き続き **R12h**。R12g-d/e Player 未完了を維持する。
+
+**主正本:** [operation-loop.md §6.4](../spec/operation-loop.md#64-wave-準備資源r12h)。同期先: [phase-roadmap.md §R12h](../plans/phase-roadmap.md#r12h--stage--wave-データ実装)。
+
+#### 確定した構造
+
+- 新仕様 Stage の作戦ポイント付与量は、各 `waves[].prepResourceGrant` が所有する
+- 0 以上の整数。対象 Wave の準備開始時に固定値を一度だけ付与する。乱数は使用しない
+- Wave 1 は `prepResourceGrant > 0` の場合に戦闘前の Wave 準備画面を開く。明示的な `0` なら出撃前編成から戦闘へ進む
+- Wave 2 以降は grant が `0` でも Wave 間準備を開く。未使用ポイントは持ち越し、付与 0 の Wave でも取得に使える
+- パッシブ取得メニューの表示可否を grant の正値だけに結び付けない。候補・所持ポイント・costから表示と取得可否を判定する
+- retry、画面再表示、formation 往復、checkpoint 復帰で同一 Wave の grant を二重付与しない
+- 最終 Wave 勝利後は次 Wave がないため付与しない
+
+#### legacy
+
+- `prepResourceGrant` の未指定と明示的な `0` を区別する
+- 未指定の legacy Stageは、Wave 1では従来どおり付与なし、Wave 2以降では `operation-passive-catalog.json` の `waveClearResourceGrant` を fallback として使用する
+- `waveClearResourceGrant` と fallback の削除は全 Stage 移行後の別 cleanup。R12h では削除しない
+- `waves[].enemies[]` も legacy。R12h の正本入力は `waves[].enemyGroups` とし、先行削除しない
+
+#### R12hで実装するもの
+
+- 新規 Stage `r12_prototype`（表示名 `R12 試作作戦`）。既存 `r10_prototype` は上書きしない
+- 確定済み3 Waveの `waves[].enemyGroups`、正式 `selectedCombatModuleId`、全group `count: 1`、全scale `1`
+- `waves[].prepResourceGrant` schema / validation / runtime / authoring / test
+- Wave 1開始前を含む準備遷移、持ち越し、二重付与防止、legacy fallback
+- 既存previewと統合テスト
+
+#### R12iへ送る数値
+
+- `r12_prototype`各Waveの具体的な`prepResourceGrant`
+- passive cost、`stackStep`
+- scale、基礎stat、CombatModule数値
+
+R12hでは具体量を成立値として確定しない。高難度1 Wave Stageの初期配布、Waveごとの異なる配布、付与なしで持ち越しだけを使うWave、長期Stageの小刻みな配布を固定データで表現可能にする。将来のローグライク展開は妨げないが、ランダム生成・ランダム報酬はR12h対象外。
+
+**正式順序:** R12h → R12i → R12j → R13。
