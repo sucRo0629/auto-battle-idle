@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12j 手元プレイ成立ゲートは暫定不合格**。標準Moduleでは合法な12点分散×2と24点温存→20点候補の両経路でクリアした一方、全員B側Module・無取得はWave 3でゲーム内366秒超の膠着を実画面再現し、学べる敗北／再試行へ収束しない。**次はR12iへ最小の数値調整で戻す**。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。handoff 正本は **§105.18**。
+- **新ロードマップ現在地:** **R12k 設計開始**。R12a〜j は固定 `r12_prototype` の技術材料として維持するが、旧 Lv パッシブ未再編とメイン反復構造の欠落により、R12j のゲーム全体成立判定は **無効 / 未完了**。ローグライク主軸を有力案として上位構造を先に設計する。handoff 正本は **§105.19**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12i 再調整** → R12j 再判定 → R13。
+- **次の再開タスク:** **R12k メイン反復構造設計** → R12l 4兵科パッシブ再編 → R12m 反復試作 → R12n 数値調整 → R12o 手元成立 → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -7741,7 +7741,7 @@ R10 時点で機能は存在しても、**ゲームとして楽しめる水準�
 | R10 | 構造完了 + 条件付き前向き評価 | **構造のみ**。遊べる試作・反復評価は未達 |
 | R11 | プレイアビリティ完了 | **システム縦切り完了**。ゲーム成立は未達 |
 
-### 98.3 新順（正本: phase-roadmap R12 / R13）
+### 98.3 当時の新順（§105.19 で再編済み）
 
 | ID | 内容 | 完了の意味 |
 | -- | ---- | ---------- |
@@ -7751,7 +7751,7 @@ R10 時点で機能は存在しても、**ゲームとして楽しめる水準�
 | **R12d** | 手元で「ゲームとして遊べる」ゲート | 反復欲求評価はしない |
 | **R13** | 「繰り返し遊びたいか」評価 | 本来の R10 評価 |
 
-**含めない:** 毎ラン敵ランダム（ローグ凍結）、presentation、公開準備、兵科拡張を R12 より前にやる。
+**当時の境界:** 毎ラン敵ランダム（ローグ凍結）、presentation、公開準備、兵科拡張を R12 より前にやらないとしていた。ローグ凍結は §105.19 で撤回し、R12k で採用範囲を再設計する。
 
 ### 98.4 次の着手
 
@@ -7852,7 +7852,7 @@ R12b で ChatGPT 側が確定した「1 Wave 単位の敵問題・敵側戦術�
 
 確定した敵問題設計順に合わせ、R12 のサブフェーズを再編した。production code / JSON / 詳細 spec 追記は行っていない。
 
-### 101.2 再編後の順序
+### 101.2 当時の再編後の順序（§105.19 で再編済み）
 
 | ID | 内容 | 状態 |
 | -- | ---- | ---- |
@@ -7866,7 +7866,7 @@ R12b で ChatGPT 側が確定した「1 Wave 単位の敵問題・敵側戦術�
 | **R12h** | Stage / Wave データ実装 | 未着手 |
 | **R12i** | 数値強度調整 | 未着手 |
 | **R12j** | 手元プレイ成立ゲート | 未着手 |
-| **R13** | 「繰り返し遊びたいか」 | **R12j 後** |
+| **R13** | 「繰り返し遊びたいか」 | **当時は R12j 後。現行は R12o 後** |
 
 ### 101.3 旧番号からの移動
 
@@ -8836,13 +8836,13 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 | 今回変更範囲の型 | `effectTargetingFields.ts:245` の既存型エラーのみ残存（今回変更は `data-field` 属性追加。型エラー原因の式は既存部分） |
 | `git diff --check` | 問題なし |
 
-**次:** **R12h** — Stage / Wave データ実装。**正式順序:** R12h → R12i → R12j → R13。
+**当時の次:** **R12h** — Stage / Wave データ実装。当時の順序は R12h → R12i → R12j → R13。現行順序は §105.19。
 
 **同期先:** [phase-roadmap.md §R12g](../plans/phase-roadmap.md#r12g--class--module--passive-データ再設計)、[planning-rules.md §8 / §8c](planning-rules.md)、[classes-and-skills.md](../spec/classes-and-skills.md)。
 
 ### 105.16 R12h — Stage / Waveデータ実装（Backend完了）
 
-**状態:** **Backend完了 / Player未判定**。公式次タスクは **R12i**。R12g-d/e Player 未完了を維持する。
+**当時の状態:** **Backend完了 / Player未判定**。当時の次タスクは **R12i**。現行の公式次は §105.19 の **R12k**。R12g-d/e Player 未完了を維持する。
 
 **主正本:** [operation-loop.md §6.4](../spec/operation-loop.md#64-wave-準備資源r12h)。同期先: [phase-roadmap.md §R12h](../plans/phase-roadmap.md#r12h--stage--wave-データ実装)。
 
@@ -8888,7 +8888,7 @@ R12hでは具体量を成立値として確定しない。高難度1 Wave Stage�
 - 仮 grant は `[0, 12, 12]`。成立値としての確定・再調整は R12i
 - schema/editor/production Stage preview/Wave準備経路の対象テストは成功。既存 `operationState.test.ts` の `27. restart resets wave progress` は、変更経路へ入る前の既存Stage自動戦闘で Wave待機へ到達できず失敗し、Vitest worker timeoutを伴う。R12h固有テストは成功
 
-**正式順序:** R12i → R12j → R13。
+**当時の順序:** R12i → R12j → R13。現行順序は §105.19。
 
 ### 105.17 R12i — 数値強度調整（Backend初回完了）
 
@@ -8957,3 +8957,66 @@ R12hでは具体量を成立値として確定しない。高難度1 Wave Stage�
 - **R12i:** 標準Moduleの2経路クリアを壊さず、B側ModuleのWave 3を有限時間の敗北または勝利へ収束させる最小数値調整
 - **R12j再判定:** 調整後のB側Module敗北／再試行導線と、標準Module2経路の再確認
 - 検証モードをOFF→ONした直後はloop Stageだけ復元されOperationStateが再生成されず、再読込までWave準備へ遷移しないdebug導線差。通常Player導線への影響有無を切り分ける
+
+### 105.19 R12k — メイン反復構造の再設計（2026-07-17）
+
+**状態:** ロードマップ不具合を確認し、文書上の順序を修正。**公式次タスクは R12k の詳細設計**。本節では production code / JSON は変更しない。
+
+#### 判明した同根の不具合
+
+- R10 はゲームになっていない固定試作に対して「繰り返し遊びたいか」を評価しようとして再編した
+- R12 も、固定 `r12_prototype` の成立後に R13 で反復評価する一方、反復性を生む仕組みを設計・実装するフェーズが無かった
+- R7 のretry導線や、固定 Stage に複数解があるだけでは、1度クリア後もメインを繰り返す理由にならない
+- 旧 `roguelike-mode.md` は「固定問題のメイン + 独立副モード」、Lv / EXP、旧 Phase 10 前提で、現行方針にそのまま戻せない
+
+#### 新しい有力方針
+
+- **ローグライクをメインにする方向を有力案**として R12k で設計する
+- 固定 Stage はクエスト / チュートリアル / 検証用へ分離する候補
+- メインはプレイごとに異なる問題と構築判断を供給する
+- ランダム性は盲目的な運試しにせず、選択前に必要情報を開示して「敵を読んで編成する」核を維持する
+- 分岐マップ、報酬候補、ショップ、休憩、シード、ラン長、恒久解禁は R12k で個別判断し、旧仕様から自動採用しない
+
+#### 新しい正式順序
+
+1. **R12k:** メイン反復構造、固定クエストとの分離、変動軸、情報開示、1回の境界を設計
+2. **R12l:** R5対象4兵科（鉄衛士・剣術士・魔術師・療養師）の旧 passive / active を再編
+3. **R12m:** 4兵科だけで反復可能なメイン試作を実装
+4. **R12n:** 新しいパッシブと反復構造の後で数値調整
+5. **R12o:** 複数回の手元プレイ成立ゲート
+6. **R13:** 成立後に初めて「繰り返し遊びたいか」を評価
+
+#### R12l 初期パッシブ境界
+
+- 各兵科 cost 1 を3件、cost 10を2件、cost 20を2件（各Moduleの最終形を1件ずつ）、計7件
+- cost 20 は非常に強く、滅多に取れなくてよい
+- 初期試作は全候補を表示し、パッシブ候補自体のランダム非表示は導入しない
+- 方向確認後の拡張目標は cost 1 が5〜10、cost 10が2〜5、cost 20が1〜2
+- 残り11兵科は4兵科の方向承認後
+
+**同期先:** [phase-roadmap.md §R12k〜o](../plans/phase-roadmap.md#r12k--メイン反復構造の設計)、[planning-rules.md §8c](planning-rules.md)、[design-philosophy.md](../design-philosophy.md)、[operation-loop.md §13](../spec/operation-loop.md#13-旧ローグライク仕様との関係)、[classes-and-skills.md](../spec/classes-and-skills.md)。
+
+### 105.20 評価対象先行ゲート — 再発防止（2026-07-17）
+
+R10 と旧 R12 で同じ計画不具合を2回起こしたため、[planning-rules.md §2.1](planning-rules.md#21-評価対象先行ゲート再発防止必須)を必須ルールとして追加した。
+
+- 評価 Phase は、評価項目だけでは作れない
+- 評価したい性質の **発生機構**を明記する
+- 正式依存順を **設計 → 実装 → 手元成立 → 評価**に固定する
+- ロードマップ改定時、実装開始時、次 Phase handoff時の3回チェックする
+- 反復性では「1回目と2回目で何が変わるか」と「固定問題の別解だけではないか」を必ず反証確認する
+- 1項目でも満たさない場合、評価を開始せず、欠けた前段 Phase を追加する
+
+R13への現在の対応表:
+
+| 項目 | Phase / 内容 |
+| ---- | ------------ |
+| 評価命題 | 繰り返し遊びたいか |
+| 発生機構 | プレイごとに異なる問題系列と構築判断を供給するメイン反復構造 |
+| 設計 | R12k |
+| 実装 | R12m |
+| 成立ゲート | R12o Player 完了 |
+| 評価 | R13 |
+| 反証例 | 固定 `r12_prototype` の内容を再生し、任意に別解を選ぶだけ |
+
+**production code / JSON:** 変更なし。文書ルールのみ。

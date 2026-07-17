@@ -2,6 +2,8 @@
 
 **R3 注記（2026-07-12）:** 新作戦ループの進行正本は **§進行の 3 層（R3）** と [operation-loop.md](operation-loop.md)。Wave 作戦ループ・作戦状態 / 戦闘状態・リトライ・作戦途中セーブ方針はそちらを優先する。
 
+**R12k 再設計（2026-07-17）:** 「固定 Stage のメイン進行 + 独立したローグライク副モード」という旧構成を撤回候補とする。ローグライクをメインにする案を有力方針として、ラン内進行・固定クエスト・作戦外解禁の境界を R12k で再定義する。旧 Phase 10 と [roguelike-mode.md](roguelike-mode.md) は現行正本ではない。
+
 ---
 
 ## 進行の 3 層（R3）
@@ -497,9 +499,9 @@ interface StageRecord {
 
 ## Phase 10 — ローグライクモード（仮称）
 
-Phase 9 完了後に着手。メインモードのステージ進行・EXP とは **独立したラン** で、ランダム問題の解法探索を提供する。
+> **Legacy。** Phase 9 完了後に「メインモードのステージ進行・EXPとは独立した副モード」を作る計画は凍結した。現行ロードマップの R12k で、ローグライクをメインにする可能性を含めて再設計する。
 
-詳細は [roguelike-mode.md](roguelike-mode.md)。実装タスクは同 doc §18 および [phase-roadmap.md](../plans/phase-roadmap.md) Phase 10。
+旧案の詳細は [roguelike-mode.md](roguelike-mode.md)。マップ・報酬・進行の発想素材に限り、R12k の判断を経て再利用する。
 
 ---
 

@@ -1,5 +1,7 @@
 # ステージ選択 UI
 
+**R12k 再設計（2026-07-17）:** 本書の固定 Stage 選択は、今後はクエスト / チュートリアル / 検証用導線になる候補。反復可能なメイン攻略の入口、開始条件、シード、問題プレビューは R12k で別途設計する。固定 Stage 一覧をそのままメインループと確定しない。
+
 実装：`GameSession` 画面状態 **`map`**（**内部名**。ユーザー向け表示・画面タイトルは「**ステージ選択**」）配下（Phase **6d** / **7d**）。敵データは `data/enemies.json`、ステージは `data/stages.json` / `data/stages-demo.json`（体験版）。
 
 本ドキュメントは **ステージ選択 → ステージ詳細 → 出撃** の画面設計正本。クリア履歴のデータ形状・更新ルールは [progression.md §Stage Records](progression.md#stage-records)（legacy 記録枠を含む）。編成画面は [party-formation-ui.md](party-formation-ui.md)。敵の設計意図は [enemy-design-concept.md](../enemy-design-concept.md)。作戦内進行（リソース・パッシブ）は [operation-loop.md](operation-loop.md)。
