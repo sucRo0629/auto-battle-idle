@@ -245,7 +245,7 @@ export function appendSkillEffectTargetingFields(
           effect.chainCount ?? 3,
           (chainCount) =>
             patchEffect((prev) => ({ ...prev, targetShape: 'chain', chainCount })),
-          { min: 1, step: 1 },
+          { min: 1, step: 1, field: 'effect-target-chain-count' },
         ),
       ),
     );

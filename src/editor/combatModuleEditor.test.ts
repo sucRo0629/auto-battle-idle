@@ -16,6 +16,7 @@ import { formatActiveDescription } from '../ui/formatSkillText.ts';
 import { CombatModuleEditorStep } from './CombatModuleEditorStep.ts';
 import {
   findCombatModuleDraft,
+  listCombatModuleAuthoringClassIds,
   listCombatModulesForClass,
   summarizeCombatModuleEffectRange,
   upsertCombatModuleDraft,
@@ -41,16 +42,18 @@ function loadCombatModules(): CombatModuleDef[] {
 }
 
 describe('combat module authoring helpers (R9g)', () => {
-  it('lists two modules per R5 class from data', () => {
+  it('lists two modules per authoring class from data', () => {
     const modules = loadCombatModules();
-    expect(modules).toHaveLength(12);
-    const guardian = listCombatModulesForClass(modules, 'df_guardian');
-    expect(guardian).toHaveLength(2);
-    expect(guardian.every((module) => module.classId === 'df_guardian')).toBe(
-      true,
-    );
-    const paladin = listCombatModulesForClass(modules, 'df_paladin');
-    expect(paladin).toHaveLength(2);
+    expect(modules).toHaveLength(16);
+    const classIds = listCombatModuleAuthoringClassIds(modules);
+    expect(classIds).toHaveLength(8);
+    for (const classId of classIds) {
+      const classModules = listCombatModulesForClass(modules, classId);
+      expect(classModules).toHaveLength(2);
+      expect(classModules.every((module) => module.classId === classId)).toBe(
+        true,
+      );
+    }
   });
 
   it('normalize sorts by classId then id and groups by class file', () => {
@@ -59,14 +62,10 @@ describe('combat module authoring helpers (R9g)', () => {
     const normalized = normalizeCombatModulesDraftForSave(shuffled);
     expect(validateCombatModulesDraftForSave(normalized)).toBeNull();
     const files = combatModuleFilesFromDraft(normalized);
-    expect(files.map((file) => file.classId).sort()).toEqual([
-      'at_sorcerer',
-      'at_swordsman',
-      'df_guardian',
-      'df_paladin',
-      'sp_cleric',
-      'sp_wardweaver',
-    ]);
+    expect(files.map((file) => file.classId).sort()).toEqual(
+      listCombatModuleAuthoringClassIds(modules).sort(),
+    );
+    expect(files).toHaveLength(8);
     expect(files.every((file) => file.modules.length === 2)).toBe(true);
   });
 
@@ -360,5 +359,238 @@ describe('CombatModuleEditorStep (R9g UI)', () => {
     const last = onDraftChange.mock.calls.at(-1)?.[0] as CombatModuleDef[];
     const updated = findCombatModuleDraft(last, selectedId);
     expect(updated?.action.aoeRadiusPx).toBe(140);
+  });
+
+  function mountEditor() {
+    const gameData = loadGameData();
+    let draft = combatModulesDraftFromModules(
+      Object.values(gameData.combatModuleRegistry),
+    );
+    const onDraftChange = vi.fn((next: CombatModuleDef[]) => {
+      draft = next;
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const step = new CombatModuleEditorStep(host, {
+      getDraft: () => draft,
+      classRegistry: gameData.classRegistry,
+      onDraftChange,
+      onSave: vi.fn(),
+      saving: false,
+    });
+    return { gameData, draft: () => draft, onDraftChange, host, step };
+  }
+
+  function selectClassAndModule(
+    step: CombatModuleEditorStep,
+    host: HTMLElement,
+    classId: string,
+    moduleId: string,
+  ) {
+    const classSelect = host.querySelectorAll('select')[0] as HTMLSelectElement;
+    classSelect.value = classId;
+    classSelect.dispatchEvent(new Event('change'));
+    step.refresh();
+    const moduleSelect = host.querySelectorAll('select')[1] as HTMLSelectElement;
+    moduleSelect.value = moduleId;
+    moduleSelect.dispatchEvent(new Event('change'));
+    step.refresh();
+  }
+
+  function moduleIdWithRuntimeKind(
+    registry: Record<string, CombatModuleDef>,
+    kind: NonNullable<CombatModuleDef['runtimeEffect']>['kind'],
+  ): string {
+    const module = Object.values(registry).find(
+      (entry) => entry.runtimeEffect?.kind === kind,
+    );
+    if (!module) throw new Error(`missing runtimeEffect kind ${kind}`);
+    return module.id;
+  }
+
+  function moduleIdWithDangerTarget(
+    registry: Record<string, CombatModuleDef>,
+  ): string {
+    const module = Object.values(registry).find((entry) =>
+      entry.action.effect.some(
+        (effect) => 'target' in effect && effect.target?.kind === 'danger',
+      ),
+    );
+    if (!module) throw new Error('missing danger target module');
+    return module.id;
+  }
+
+  function moduleIdWithRequireBelow(
+    registry: Record<string, CombatModuleDef>,
+  ): string {
+    const module = Object.values(registry).find((entry) => {
+      const effect = entry.action.effect[0];
+      const target = effect && 'target' in effect ? effect.target : undefined;
+      return (
+        target &&
+        'requireBelow' in target &&
+        target.requireBelow !== undefined
+      );
+    });
+    if (!module) throw new Error('missing requireBelow target module');
+    return module.id;
+  }
+
+  function primaryEffectTarget(module: CombatModuleDef | undefined) {
+    const effect = module?.action.effect[0];
+    return effect && 'target' in effect ? effect.target : undefined;
+  }
+
+  function moduleIdWithChainShape(
+    registry: Record<string, CombatModuleDef>,
+  ): string {
+    const module = Object.values(registry).find(
+      (entry) => entry.action.targetShape === 'chain',
+    );
+    if (!module) throw new Error('missing chain targetShape module');
+    return module.id;
+  }
+
+  it('R12g-g: paladin protectFrontlineAllies maxTargets edits draft', () => {
+    const { gameData, draft, host, step } = mountEditor();
+    const moduleId = moduleIdWithRuntimeKind(
+      gameData.combatModuleRegistry,
+      'protectFrontlineAllies',
+    );
+    selectClassAndModule(step, host, 'df_paladin', moduleId);
+
+    const maxInput = host.querySelector(
+      '[data-field="combat-module-runtime-m1-max"]',
+    ) as HTMLInputElement;
+    expect(maxInput).toBeTruthy();
+    maxInput.value = '3';
+    maxInput.dispatchEvent(new Event('change'));
+
+    const updated = findCombatModuleDraft(draft(), moduleId);
+    expect(updated?.runtimeEffect).toMatchObject({
+      kind: 'protectFrontlineAllies',
+      maxTargets: 3,
+    });
+    expect(validateCombatModulesDraftForSave(draft())).toBeNull();
+    host.remove();
+  });
+
+  it('R12g-g: paladin protectDangerTarget windowSec edits draft', () => {
+    const { gameData, draft, host, step } = mountEditor();
+    const moduleId = moduleIdWithRuntimeKind(
+      gameData.combatModuleRegistry,
+      'protectDangerTarget',
+    );
+    selectClassAndModule(step, host, 'df_paladin', moduleId);
+
+    const windowInput = host.querySelector(
+      '[data-field="combat-module-runtime-m2-window"]',
+    ) as HTMLInputElement;
+    expect(windowInput).toBeTruthy();
+    windowInput.value = '2.5';
+    windowInput.dispatchEvent(new Event('change'));
+
+    const updated = findCombatModuleDraft(draft(), moduleId);
+    expect(updated?.runtimeEffect).toMatchObject({
+      kind: 'protectDangerTarget',
+      windowSec: 2.5,
+    });
+    host.remove();
+  });
+
+  it('R12g-g: wardweaver danger maxTargets edits draft', () => {
+    const { gameData, draft, host, step } = mountEditor();
+    const moduleId = moduleIdWithDangerTarget(gameData.combatModuleRegistry);
+    selectClassAndModule(step, host, 'sp_wardweaver', moduleId);
+
+    const dangerMax = host.querySelector(
+      '[data-field="target-spec-danger-max-targets"]',
+    ) as HTMLInputElement;
+    expect(dangerMax).toBeTruthy();
+    dangerMax.value = '2';
+    dangerMax.dispatchEvent(new Event('change'));
+
+    const updated = findCombatModuleDraft(draft(), moduleId);
+    expect(primaryEffectTarget(updated)).toMatchObject({
+      kind: 'danger',
+      maxTargets: 2,
+    });
+    host.remove();
+  });
+
+  it('R12g-g: wardweaver requireBelow flatAmount edits draft', () => {
+    const { gameData, draft, host, step } = mountEditor();
+    const moduleId = moduleIdWithRequireBelow(gameData.combatModuleRegistry);
+    selectClassAndModule(step, host, 'sp_wardweaver', moduleId);
+
+    const flatInput = host.querySelector(
+      '[data-field="target-spec-require-below-flat"]',
+    ) as HTMLInputElement;
+    expect(flatInput).toBeTruthy();
+    flatInput.value = '40';
+    flatInput.dispatchEvent(new Event('change'));
+
+    const updated = findCombatModuleDraft(draft(), moduleId);
+    expect(primaryEffectTarget(updated)).toMatchObject({
+      requireBelow: { kind: 'flat', flatAmount: 40 },
+    });
+    host.remove();
+  });
+
+  it('R12g-g: ranger excludeRoles toggles in priority attackType draft', () => {
+    const { gameData, draft, host, step } = mountEditor();
+    const moduleId = gameData.classRegistry.at_ranger!.combatModuleIds![0]!;
+    selectClassAndModule(step, host, 'at_ranger', moduleId);
+
+    const hostileModeSelect = Array.from(host.querySelectorAll('select')).find(
+      (select) =>
+        select
+          .closest('.editor-field')
+          ?.textContent?.includes('狙い方'),
+    ) as HTMLSelectElement;
+    expect(hostileModeSelect).toBeTruthy();
+    hostileModeSelect.value = 'priority';
+    hostileModeSelect.dispatchEvent(new Event('change'));
+    step.refresh();
+
+    const kindSelect = host.querySelector(
+      '[data-field="target-spec-kind"]',
+    ) as HTMLSelectElement;
+    expect(kindSelect).toBeTruthy();
+    kindSelect.value = 'attackType';
+    kindSelect.dispatchEvent(new Event('change'));
+    step.refresh();
+
+    const supporterExclude = host.querySelector(
+      '[data-field="target-spec-exclude-role-supporter"]',
+    ) as HTMLInputElement;
+    expect(supporterExclude).toBeTruthy();
+    supporterExclude.checked = true;
+    supporterExclude.dispatchEvent(new Event('change'));
+
+    const updated = findCombatModuleDraft(draft(), moduleId);
+    expect(primaryEffectTarget(updated)).toMatchObject({
+      kind: 'attackType',
+      excludeRoles: ['supporter'],
+    });
+    host.remove();
+  });
+
+  it('R12g-g: sorcerer chainCount edits draft', () => {
+    const { gameData, draft, host, step } = mountEditor();
+    const moduleId = moduleIdWithChainShape(gameData.combatModuleRegistry);
+    selectClassAndModule(step, host, 'at_sorcerer', moduleId);
+
+    const chainInput = host.querySelector(
+      '[data-field="effect-target-chain-count"]',
+    ) as HTMLInputElement;
+    expect(chainInput).toBeTruthy();
+    chainInput.value = '3';
+    chainInput.dispatchEvent(new Event('change'));
+
+    const updated = findCombatModuleDraft(draft(), moduleId);
+    expect(updated?.action.targetShape).toBe('chain');
+    expect(updated?.action.chainCount).toBe(3);
+    host.remove();
   });
 });

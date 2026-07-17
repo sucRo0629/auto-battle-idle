@@ -330,7 +330,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 基本対象数 | **1 体**。常時複数保護を標準にしない |
 | tie-break | pending 中の異なる敵数 → 最短 apply 時刻 → pending Hit 数 → HP 割合 → 決定的 ID 順 |
 | 魔法特化 | 対象選定と effect 強度を分離。魔法は同値時の補助加点候補に留める |
-| 未接続 | 仮 Module ID / 仮数値の data 移管は **R12g-d2 Backend 完了**。Player 手元確認は未達。editor / validation の **統合・round-trip・回帰**は **R12g-g**（[current-task.md §105.15](../ai-handoff/current-task.md)。既存 UI の作り直しではない） |
+| 未接続 | 仮 Module ID / 仮数値の data 移管は **R12g-d2 Backend 完了**。Player 手元確認は未達。editor / validation の **統合・round-trip・回帰**は **R12g-g Backend 完了**（[current-task.md §105.15](../ai-handoff/current-task.md)） |
 | R12g-c4〜c5 / R12g-d2 runtime | `dfPaladinM1.ts` / `dfPaladinM2.ts` / `dfPaladinModules.ts` — M1 `df_paladin_mod_frontline_ward`（前線複数・魔法中心）、M2 `df_paladin_mod_danger_guard`（danger 1 体・全属性＋魔法追加）。倍率・duration・window・maxTargets は CombatModule data 所有。**Backend 完了 / Player 未完了** |
 
 #### `sp_cleric` 療養師
@@ -361,7 +361,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | R12g-e2 data | 双刃士 M1/M2 — 上記 `at_assassin` 節。`src/battle/atAssassinModules.test.ts`。**Backend 完了 / Player 未完了** |
 | R12g-e3 data | 弓術士 M1/M2 — 上記 `at_ranger` 節。`src/battle/atRangerModules.test.ts`。**Backend 完了 / Player 未完了** |
 | R12g-e4 data | 魔術師 M1/M2 — 上記 `at_sorcerer` 節。`src/battle/atSorcererModules.test.ts`。**Backend 完了 / Player 未完了** |
-| R12g-e5 統合 | Kill 4 兵科（剣術士・双刃士・弓術士・魔術師）を同一実戦経路で確認。`src/battle/killCombatModules.integration.test.ts` — 正式 M1/M2 pool・basic slot 排他選択・Wave 間 M1→M2 一括変更と再生成 unit の非引き継ぎ・shared targeting 上の相互非干渉（剣術士単体/multiLock・双刃士現在HP最低・弓術士 single/multiLock nearest fallback・魔術師 chain）・敵 `selectedCombatModuleId` 対称経路。弓術士の遠隔攻撃役優先は attack-target 層の責務（Module effect ではない）。production / JSON / schema / editor / Stage / Passive / 数値は未変更。**R12g-e 本流 Backend 完了 / Player 未完了**。次は **R12g-g**（validation / authoring 統合・[current-task.md §105.15](../ai-handoff/current-task.md)・未着手） |
+| R12g-e5 統合 | Kill 4 兵科（剣術士・双刃士・弓術士・魔術師）を同一実戦経路で確認。`src/battle/killCombatModules.integration.test.ts` — 正式 M1/M2 pool・basic slot 排他選択・Wave 間 M1→M2 一括変更と再生成 unit の非引き継ぎ・shared targeting 上の相互非干渉（剣術士単体/multiLock・双刃士現在HP最低・弓術士 single/multiLock nearest fallback・魔術師 chain）・敵 `selectedCombatModuleId` 対称経路。弓術士の遠隔攻撃役優先は attack-target 層の責務（Module effect ではない）。production / JSON / schema / editor / Stage / Passive / 数値は未変更。**R12g-e 本流 Backend 完了 / Player 未完了** |
+| R12g-g 統合 | 全正式 CombatModule（8 兵科 × 各 2 方式 = 16 件）の authoring round-trip と game-data validation 成立。`src/editor/combatModuleAuthoring.integration.test.ts` 等。固有フィールド（`runtimeEffect` 4 kind、`TargetSpec` danger/requireBelow/excludeRoles、`chainCount`、`refillSameTargetOnShortfall`）横断保証。**Backend 完了 / Player 未判定**。新戦闘仕様・数値・パッシブ追加なし。次は **R12h** |
 
 ### R12f → R12g 未接続事項
 
@@ -371,7 +372,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 数値・倍率・秒数・コスト | R12i 中心（形状は R12g。魔術師は構造成立用の暫定値のみ正本記載。正式バランスは R12i。`chainCount` は確定構造値のため R12i 非送付） |
 | 危険対象判定規則（護法士 M2 等） | **R12g-c Backend 完了**（c1〜c5）。Survival Module JSON は **R12g-d1〜d5 Backend 完了**。Player 手元確認は R12g-d5 Player 層 |
 | 鉄衛士 M2 の effect schema / 直接ダメージ型 | R12g-b で **DamageAppliedEvent** 契約確定（[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)）。runtime 実装は R12g-b1〜b2。JSON 数値入力は R12g 本流 |
-| CombatModule validation / authoring 統合 | **R12g-g（未着手）** — 全正式 Module の draft 読込・固有フィールド編集・normalize・保存前 validation・JSON 相当化・round-trip・game-data validation。新戦闘仕様・新 target shape・runtime 変更・パッシブ詳細は対象外。Player 完了は判定しない。正本: [current-task.md §105.15](../ai-handoff/current-task.md) |
+| CombatModule validation / authoring 統合 | **R12g-g Backend 完了** — 全 16 件の draft 読込・固有フィールド編集・normalize・保存前 validation・JSON 相当化・round-trip・game-data validation。新戦闘仕様・新 target shape・runtime 変更・パッシブ詳細は対象外。Player 完了は判定しない。R12g-d/e Player 未完了。正本: [current-task.md §105.15](../ai-handoff/current-task.md) |
 | R11b 現行 Passive 効果 | 維持義務なし。R12f 方向に合わせて再設計 |
 | R2 候補表の方式 A/B | 本節の M1/M2 方向が正。旧案は素材のみ |
 
@@ -2539,7 +2540,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 - `protectFrontlineAllies`（`maxTargets` / `magicDamageTakenMultiplier` / 任意 `allDamageTakenMultiplier`）— 護法士 M1。`formationRow: front` の同陣営複数味方へ選択中永続防護
 - `protectDangerTarget`（`maxTargets` / `windowSec` / `allDamageTakenMultiplier` / `magicDamageTakenMultiplier` / `durationSec`）— 護法士 M2。danger TargetSpec を runtime 構築し危険対象を防護
 
-大規模汎用 trigger DSL ではない。防護・軽減系は [combat.md §戦闘方式](combat.md#戦闘方式) の **選択中永続原則**（周期バフ禁止）に従う。editor / validate / round-trip の横断統合は **R12g-g**（新 kind 追加ではない。[current-task.md §105.15](../ai-handoff/current-task.md)）。
+大規模汎用 trigger DSL ではない。防護・軽減系は [combat.md §戦闘方式](combat.md#戦闘方式) の **選択中永続原則**（周期バフ禁止）に従う。editor / validate / round-trip の横断統合は **R12g-g Backend 完了**（新 kind 追加ではない。[current-task.md §105.15](../ai-handoff/current-task.md)）。
 
 ### アンカーの意味
 

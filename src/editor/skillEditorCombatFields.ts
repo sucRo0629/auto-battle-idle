@@ -1572,7 +1572,8 @@ function appendTargetSpecFieldsCore(
           value,
           label: TARGET_SPEC_KIND_LABELS[value],
         })),
-        (nextKind) => onChange(defaultTargetForKind(nextKind))
+        (nextKind) => onChange(defaultTargetForKind(nextKind)),
+        { field: "target-spec-kind" },
       )
     )
   );
@@ -1738,7 +1739,8 @@ function appendTargetSpecFieldsCore(
                     : 0.15,
               },
             });
-          }
+          },
+          { field: "target-spec-require-below-kind" },
         )
       )
     );
@@ -1752,7 +1754,7 @@ function appendTargetSpecFieldsCore(
               ...normalized,
               requireBelow: { kind: "flat", flatAmount },
             });
-          }, { min: 0.01, step: 1 })
+          }, { min: 0.01, step: 1, field: "target-spec-require-below-flat" })
         )
       );
     }
@@ -1846,6 +1848,7 @@ function appendTargetSpecFieldsCore(
       const row = createEl("div", "editor-field editor-field-checkbox");
       const input = createEl("input") as HTMLInputElement;
       input.type = "checkbox";
+      input.dataset.field = `target-spec-exclude-role-${role}`;
       input.checked = normalized.excludeRoles?.includes(role) === true;
       input.addEventListener("change", () => {
         const current = new Set(normalized.excludeRoles ?? []);
@@ -1955,7 +1958,7 @@ function appendTargetSpecFieldsCore(
         createNumberInput(normalized.maxTargets, (maxTargets) => {
           if (!(maxTargets >= 1) || !Number.isFinite(maxTargets)) return;
           onChange({ ...normalized, maxTargets: Math.floor(maxTargets) });
-        }, { min: 1, step: 1 })
+        }, { min: 1, step: 1, field: "target-spec-danger-max-targets" })
       )
     );
     parent.appendChild(

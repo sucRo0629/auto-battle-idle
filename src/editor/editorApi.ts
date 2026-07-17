@@ -35,7 +35,10 @@ import {
   type AuthoringPassiveCatalogContext,
 } from './authoringValidationPreview.ts';
 import { validateClassCombatModulePoolDraft } from './classCombatModulePoolEditor.ts';
-import { groupCombatModulesByClassId } from './combatModuleEditor.ts';
+import {
+  groupCombatModulesByClassId,
+  listCombatModuleAuthoringClassIds,
+} from './combatModuleEditor.ts';
 
 export type StageDraftValidateContext = Partial<AuthoringCombatModuleContext> & {
   /** 既存 stageId 一覧（新規保存時の重複検査用）。 */
@@ -362,10 +365,10 @@ export function validateCombatModulesDraftForSave(
     }
   }
 
-  for (const classId of R5_COMBAT_MODULE_CLASS_IDS) {
+  for (const classId of listCombatModuleAuthoringClassIds(modules)) {
     const count = modules.filter((module) => module.classId === classId).length;
     if (count !== 2) {
-      return `R5 兵科 ${classId} は戦闘方式がちょうど 2 件必要です（現在 ${count} 件）`;
+      return `兵科 ${classId} は戦闘方式がちょうど 2 件必要です（現在 ${count} 件）`;
     }
   }
 

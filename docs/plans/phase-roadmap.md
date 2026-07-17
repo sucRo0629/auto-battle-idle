@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** システム縦切り（R5〜R11）の上に、**データ再設計で「ゲームとして遊べる試作」を成立**させる（R12）。その後に初めて「繰り返し遊びたいか」を評価する（R13）。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R13 完了後**に再開する。
 
-**現在地:** **R12g-e5 Backend 完了**（Kill 4 兵科 CombatModule 共通統合確認）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e5 Player 確認）。**R12g-e 全体:** Kill Module data（e1〜e4）+ 共通統合（e5）は **Backend 完了 / Player 未完了**。**次:** **R12g-g**（validation / authoring 統合）。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
+**現在地:** **R12g-g Backend 完了**（validation / authoring 統合）。**Player 未判定**（本タスクでは Player 完了を判定しない）。**R12g-d/e Player 未完了**（手元画面確認なし）。**次:** **R12h** — Stage / Wave データ実装。ゲームとしての成立は **R12j** まで未達。反復評価は **R13**。
 
 ---
 
@@ -40,7 +40,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の選択（**試作・Player 完了用**。製品 polish ではない） | 完了（表示 metadata + 回帰） | **完了** | R9.5c Backend |
 | **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | **完了**（`r10_prototype` + 統合） | **構造のみ**（§95）。**遊べる試作 / 反復評価は未達** | 再判定 |
 | **R11** | システム縦切り — 効果範囲新仕様・作戦専用パッシブ枠・資源/積み上げコスト・基礎ステ極端化 | **完了**（a〜d） | **システム Player のみ**。**ゲームとしてのプレイアビリティは未達** | 再判定 |
-| **R12** | 試作をゲームにする — Stage 先行の敵問題設計 → 能力導出・分配 → データ実装 → 手元成立 | R12a〜f 設計完了 / R12g-a〜e5 Backend 完了（d/e Player 未完了） | R12a〜f 設計 Phase 完了。R12g-c〜e Player 未達。ゲーム成立は **R12j** | **次: R12g-g**（validation / authoring 統合） |
+| **R12** | 試作をゲームにする — Stage 先行の敵問題設計 → 能力導出・分配 → データ実装 → 手元成立 | R12a〜f 設計完了 / R12g-a〜g Backend 完了（d/e Player 未完了） | R12a〜f 設計 Phase 完了。R12g-d/e Player 未達。ゲーム成立は **R12j** | **次: R12h**（Stage / Wave データ実装） |
 | **R13** | 反復評価 — 「繰り返し遊びたいか」を判断（本来の R10 評価） | **R12j 後** | **R12j 後** | 未着手 |
 
 | R11 分割 | ゴール | 状態 |
@@ -58,7 +58,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R12d** | 試作 Stage の**敵問題設計**（具体 Wave / 戦術。JSON 入力はしない） | **完了**（設計 Phase） |
 | **R12e** | 敵問題から**必要能力・対処能力を導出** | **完了**（設計 Phase） |
 | **R12f** | 必要能力を兵科・CombatModule・作戦内パッシブへ**分配**（設計） | **完了**（設計 Phase） |
-| **R12g** | class / module / passive の**データ再設計**（入力） | R12g-e5 Backend 完了（Kill 共通統合）。d/e Player 未完了。次は **R12g-g**（未着手） |
+| **R12g** | class / module / passive の**データ再設計**（入力） | R12g-g Backend 完了（validation / authoring 統合）。d/e Player 未完了。次は **R12h** |
 | **R12h** | Stage / Wave **データ実装**（問題構造の JSON 化） | 未着手 |
 | **R12i** | **数値強度調整**（scale / grant / stackStep / 基礎ステ等） | 未着手 |
 | **R12j** | 手元プレイ成立ゲート — 「ゲームとして遊べる」（反復欲求の評価はしない） | 未着手 |
@@ -1069,7 +1069,7 @@ Backend 完了だけでは R10 完了としない → **評価記録は §95.5**
 
 ## R12 — 試作をゲームにする（データ再設計）
 
-**状態:** **R12f Backend（設計）完了 / Player 完了**。公式次 **R12g**。ゲーム成立は **R12j** まで未達。反復評価は **R13**。handoff: [current-task.md §104](../ai-handoff/current-task.md)。
+**状態:** **R12f Backend（設計）完了 / Player 完了**。R12g-g Backend 完了（validation / authoring 統合）。**R12g-d/e Player 未完了**。公式次 **R12h**。ゲーム成立は **R12j** まで未達。反復評価は **R13**。handoff: [current-task.md §105.15](../ai-handoff/current-task.md)。
 
 **全体ゴール:** 機能がある状態から、**プレースホルダー素材のままで「敵問題を編成・方式・パッシブで解く」ゲームとして成立**させる。製品 polish・正式画像は含めない。
 
@@ -1284,8 +1284,8 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | **R12g-e3** | 弓術士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
 | **R12g-e4** | 魔術師 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
 | **R12g-e5** | Kill 4 兵科 CombatModule 共通統合確認 | **Backend 完了 / Player 未完了** |
-| **R12g-g** | validation / authoring 統合（全正式 CombatModule の draft / normalize / validate / round-trip / game-data validation） | **未着手**（正本: [current-task.md §105.15](../ai-handoff/current-task.md)）。新戦闘仕様・数値追加なし。既存 UI / 個別 validation の作り直し禁止 |
-| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | Survival/Kill Module data + 共通統合 Backend 完了。次は **R12g-g**（§105.15） |
+| **R12g-g** | validation / authoring 統合（全正式 CombatModule の draft / normalize / validate / round-trip / game-data validation） | **Backend 完了**（2026-07-17）。8 兵科 × 各 2 方式 = 16 件の round-trip と game-data validation 成立。Player 未判定。正本: [current-task.md §105.15](../ai-handoff/current-task.md) |
+| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | Survival/Kill Module data + 共通統合 + R12g-g Backend 完了。**R12g-d/e Player 未完了**。次は **R12h** |
 
 正本: [current-task.md §105](../ai-handoff/current-task.md)、[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)、[combat.md §Danger Targeting](../spec/combat.md#danger-targetingr12g-c)、[classes-and-skills.md §df_paladin 護法士](../spec/classes-and-skills.md#df_paladin-護法士)。
 
@@ -1441,7 +1441,7 @@ R13 反復評価「繰り返し遊びたいか」
 - **R9.6**・**R9b〜h / R9f** は完了（成立済み）
 - R10 は構造のみ。**遊べる試作と反復評価は R12 / R13**
 - **R11** はシステム縦切り完了。**プレイアビリティ Player は R12j**
-- **公式次は R12g-g**（validation / authoring 統合・[current-task.md §105.15](../ai-handoff/current-task.md)・**未着手**）。R12g-g の後に R12h〜j → R13
+- **公式次は R12h**（Stage / Wave データ実装）。R12g-g Backend 完了（[current-task.md §105.15](../ai-handoff/current-task.md)）。**R12g-d/e Player 未完了**。R12h → R12i → R12j → R13
 - R12j まではゲームとしての成立未達。R13 までは反復評価しない
 - **戦場移動 legacy cleanup** は R13 完了後を推奨 — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 

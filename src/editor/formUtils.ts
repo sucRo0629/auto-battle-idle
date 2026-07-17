@@ -314,8 +314,10 @@ export function createSelect<T extends string | number>(
   value: T,
   options: { value: T; label: string }[],
   onChange: (value: T) => void,
+  attrs?: { field?: string },
 ): HTMLSelectElement {
   const select = createEl('select', 'editor-select') as HTMLSelectElement;
+  if (attrs?.field) select.dataset.field = attrs.field;
   const valueStr = String(value);
   let matched = false;
   for (const option of options) {
