@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12i Backend初回完了 / Player未判定**（cost `1 / 10 / 20`・grant `[0, 12, 12]`・stackStep `1`、敵scale等は据え置き）。**次は R12j**。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。handoff 正本は **§105.17**。
+- **新ロードマップ現在地:** **R12j 手元プレイ成立ゲートは暫定不合格**。標準Moduleでは合法な12点分散×2と24点温存→20点候補の両経路でクリアした一方、全員B側Module・無取得はWave 3でゲーム内366秒超の膠着を実画面再現し、学べる敗北／再試行へ収束しない。**次はR12iへ最小の数値調整で戻す**。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。handoff 正本は **§105.18**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12j** → R13。
+- **次の再開タスク:** **R12i 再調整** → R12j 再判定 → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8907,6 +8907,8 @@ R12hでは具体量を成立値として確定しない。高難度1 Wave Stage�
 - 標準Module・追加取得なし: 約135秒、4人生存、全快勝利
 - 標準Module・12点ずつ使用: 約128秒、4人生存、全快勝利
 - 標準Module・24点まで温存して20点候補取得: 約125秒、4人生存、全快勝利
+- 分散取得の合法経路は、Wave 2前がGuardian 10＋Swordsman 1＋Sorcerer 1、Wave 3前がSorcerer 11（同兵科加重込み）＋Cleric 1
+- 24点温存の合法経路は、Guardian 1＋Swordsman 1＋Sorcerer 1＋Sorcerer 21（同兵科加重込み）
 - 20点温存は無取得比で約7.5%短縮、12点分散との差は約2%であり、現時点では一択化する過剰差ではない
 - B側Moduleを全枠、またはSwordsman / Cleric / Sorcererの1枠だけ選ぶ比較では、Wave 3で味方の魔術師が脱落し、敵Guardian＋Clericと味方Guardian中心が膠着した
 - Wave 3全敵またはAssassin＋Sorcererのみの攻撃を1.15 / 1.25倍にする仮比較は、標準Module側まで魔術師脱落後の膠着へ入ったため不採用
@@ -8925,3 +8927,33 @@ R12hでは具体量を成立値として確定しない。高難度1 Wave Stage�
 以上 **4 files / 37 tests passed**。作業フォルダを正しく設定した実行で終了コード0。
 
 追加の強度比較は **1 file / 1 test passed**。長時間の仮比較では Vitest worker の `onTaskUpdate` timeout が出るため、正本テストは180秒上限のcharacterizationに短縮した。
+
+### 105.18 R12j — 手元プレイ成立ゲート（進行中）
+
+**状態:** **標準Moduleの2資源経路は実画面クリア / 全員B側ModuleのWave 3膠着により暫定不合格**。強度の戻し先は **R12i**。
+
+**実画面で確認済み:**
+
+- `r12_prototype`を検証モードで起動し、鉄衛士・剣術士・療養師・魔術師の4兵科を編成
+- Wave 1後に作戦ポイント12が表示され、1 / 10候補は取得可能、20候補は不足理由付きdisabled
+- Wave 1後: 城壁の護り10＋鎧砕き1＋弧火の術1を取得し、残高0
+- Wave 2後: 同兵科加重で余燼の火力が11になることを確認。余燼の火力11＋応急の加護1を取得し、残高0
+- 取得済み表示・次候補の加重後cost・Wave間維持を確認
+- 標準Moduleのまま最終Waveを突破し、4人生存で`Stage clear: R12 試作作戦`を確認
+- Wave 1後の12点を全温存し、Wave 2後に24点へ持ち越せることを確認
+- 24点から堅盾の構え1＋鎧砕き1＋弧火の術1＋同兵科加重後の共鳴打撃21を取得し、残高0
+- 24点温存→20点候補の深掘り経路でも最終Waveを突破。12点分散×2の即時強化と、24点温存の高額強化はどちらも合法かつクリア可能
+- 全員をB側Module（連鎖／分散回復／前線分担／不屈）へ変更し、無取得でWave 1・2は突破
+- B側ModuleのWave 3は魔術師脱落後、味方前衛と敵Guardian＋Cleric中心の膠着へ入り、ゲーム内366秒超でも未決着。敗北retryへ到達しないため、Player完了条件1の「学べる敗却」を満たさない
+
+**R12jで修正した阻害バグ:**
+
+- ステータスバッジの残時間overlayが、小数または非有限のCanvas寸法を`getImageData`へ渡して描画ループを停止していた
+- `applyRemainingOverlayPixels`で有限値を検証し、pixel寸法を整数化。`statusBadgeRenderer.test.ts`へ小数寸法・非有限入力の回帰を追加
+- 取得済みカードが現在の取得数で再計算した2 / 3 / 22を「消費」として表示し、実際の支払額に見えていた。取得済みカードから再計算cost表示を外し、`wavePrepScreen.test.ts`へ回帰を追加
+
+**残る確認／戻し先:**
+
+- **R12i:** 標準Moduleの2経路クリアを壊さず、B側ModuleのWave 3を有限時間の敗北または勝利へ収束させる最小数値調整
+- **R12j再判定:** 調整後のB側Module敗北／再試行導線と、標準Module2経路の再確認
+- 検証モードをOFF→ONした直後はloop Stageだけ復元されOperationStateが再生成されず、再読込までWave準備へ遷移しないdebug導線差。通常Player導線への影響有無を切り分ける

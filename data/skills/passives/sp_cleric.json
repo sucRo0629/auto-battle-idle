@@ -47,7 +47,7 @@
   },
   {
     "id": "sp_cleric_op_triage",
-    "name": "作戦・応急の加護",
+    "name": "応急の加護",
     "effect": "specialEffect",
     "specialEffectApplyTo": "heal",
     "specialEffect": {
@@ -62,7 +62,7 @@
   },
   {
     "id": "sp_cleric_op_excess_ward",
-    "name": "作戦・余剰の盾",
+    "name": "余剰の盾",
     "effect": "excessHealToBarrier",
     "barrierScale": 0.85,
     "excessHealSources": [
@@ -71,7 +71,7 @@
   },
   {
     "id": "sp_cleric_op_heal_reserve",
-    "name": "作戦・治癒の備蓄",
+    "name": "治癒の備蓄",
     "effect": "healReservation",
     "grantOnHealMaxHpRatio": 0.55,
     "stackDurationSec": 8,

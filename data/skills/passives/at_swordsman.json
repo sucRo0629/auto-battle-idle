@@ -42,7 +42,7 @@
   },
   {
     "id": "at_swordsman_op_armor_break",
-    "name": "作戦・鎧砕き",
+    "name": "鎧砕き",
     "effect": "defenseIgnore",
     "defenseIgnore": {
       "def": {
@@ -53,7 +53,7 @@
   },
   {
     "id": "at_swordsman_op_high_def_focus",
-    "name": "作戦・重装狙い",
+    "name": "重装狙い",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
       "kind": "stat",
@@ -65,7 +65,7 @@
   },
   {
     "id": "at_swordsman_op_finish_cut",
-    "name": "作戦・剛剣の切先",
+    "name": "剛剣の切先",
     "effect": "ignoredDefBonusDamage",
     "ignoredDefBonusScale": 0.55
   }

@@ -30,7 +30,7 @@ const WAVE_PREP_PASSIVE_ID = 'df_guardian_op_wall_aura';
 const GUARDIAN_SLOT = 0;
 const SWORDSMAN_PASSIVE_ID = 'at_swordsman_op_high_def_focus';
 const WAVE_CLEAR_RESOURCE_GRANT = 12;
-const WAVE_PREP_PASSIVE_COST = 2;
+const WAVE_PREP_PASSIVE_COST = 10;
 const levelCurves = loadLevelCurves(levelCurvesJson);
 
 function mockCanvas2d(): void {
@@ -283,7 +283,7 @@ describe('R10 prototype stage', () => {
     expect(document.body.textContent).toContain(
       `作戦内リソース: ${WAVE_CLEAR_RESOURCE_GRANT}`,
     );
-    expect(document.body.textContent).toContain('作戦・城壁の護り');
+    expect(document.body.textContent).toContain('城壁の護り');
 
     selectWavePrepModule(WAVE_PREP_MODULE_ID);
     clickWavePrepAcquire();

@@ -870,6 +870,11 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     ]);
     expect(document.body.textContent).toContain(`作戦内リソース: ${WAVE_CLEAR_RESOURCE_GRANT - R8C_PASSIVE_ACQUIRE_COST}`);
     expect(document.body.textContent).toContain('取得済み');
-    expect(document.body.textContent).toContain('作戦・堅盾の構え');
+    expect(document.body.textContent).toContain('堅盾の構え');
+    const acquiredCard = document.querySelector(
+      `[data-passive-id="${R8C_PASSIVE_ID}"][data-acquired="true"]`,
+    );
+    expect(acquiredCard).not.toBeNull();
+    expect(acquiredCard?.textContent).not.toContain('消費');
   });
 });

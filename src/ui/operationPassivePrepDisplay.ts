@@ -323,7 +323,13 @@ function createPassiveCard(
   appendFact(facts, '維持', view.durationScope);
   appendFact(facts, '重複', view.stackNote);
 
-  card.append(header, cost, effect, facts);
+  card.append(header);
+  // 取得後の acquireCost は「今もう一度取得するとした場合」の再計算値であり、
+  // 実際に支払った額ではない。取得済みカードには誤解を招くコストを表示しない。
+  if (!view.acquired) {
+    card.appendChild(cost);
+  }
+  card.append(effect, facts);
 
   if (view.unavailableReason && view.acquireState !== 'available') {
     const reason = document.createElement('p');

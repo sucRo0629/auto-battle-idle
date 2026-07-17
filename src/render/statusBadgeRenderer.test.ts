@@ -95,6 +95,56 @@ describe('remaining overlay color', () => {
     expect(data[4 * 10 + 3]).toBe(255);
     expect(data[4 * 10]).toBe(255);
   });
+
+  it('uses integer pixel dimensions for fractional scaled badge buffers', () => {
+    const imageData = {
+      data: new Uint8ClampedArray(20 * 12 * 4),
+    } as ImageData;
+    const getImageData = vi.fn(() => imageData);
+    const putImageData = vi.fn();
+    const ctx = {
+      getImageData,
+      putImageData,
+    } as unknown as CanvasRenderingContext2D;
+
+    applyRemainingOverlayPixels(
+      ctx,
+      20.8,
+      24.8,
+      0.5,
+      'rgba(0, 0, 0, 0.5)',
+    );
+
+    expect(getImageData).toHaveBeenCalledWith(0, 0, 20, 12);
+    expect(putImageData).toHaveBeenCalledWith(imageData, 0, 0);
+  });
+
+  it('skips pixel reads when layout inputs are not finite', () => {
+    const getImageData = vi.fn();
+    const putImageData = vi.fn();
+    const ctx = {
+      getImageData,
+      putImageData,
+    } as unknown as CanvasRenderingContext2D;
+
+    applyRemainingOverlayPixels(
+      ctx,
+      Number.NaN,
+      24,
+      0.5,
+      'rgba(0, 0, 0, 0.5)',
+    );
+    applyRemainingOverlayPixels(
+      ctx,
+      20,
+      24,
+      Number.NaN,
+      'rgba(0, 0, 0, 0.5)',
+    );
+
+    expect(getImageData).not.toHaveBeenCalled();
+    expect(putImageData).not.toHaveBeenCalled();
+  });
 });
 
 describe('quantizeBadgeOverlayStep', () => {

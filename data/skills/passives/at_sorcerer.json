@@ -35,7 +35,7 @@
   },
   {
     "id": "at_sorcerer_op_arc_bolt",
-    "name": "作戦・弧火の術",
+    "name": "弧火の術",
     "effect": "defenseIgnore",
     "defenseIgnore": {
       "res": {
@@ -45,7 +45,7 @@
   },
   {
     "id": "at_sorcerer_op_ember_dot",
-    "name": "作戦・余燼の火力",
+    "name": "余燼の火力",
     "effect": "buff",
     "buffSubKind": "stat",
     "buffStat": [
@@ -58,7 +58,7 @@
   },
   {
     "id": "at_sorcerer_op_resonant_hit",
-    "name": "作戦・共鳴打撃",
+    "name": "共鳴打撃",
     "effect": "specialEffect",
     "specialEffectApplyTo": "damage",
     "specialEffect": {

@@ -1023,14 +1023,31 @@ export function applyRemainingOverlayPixels(
   remainingRatio: number,
   overlayColor: string,
 ): void {
+  if (
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    !Number.isFinite(remainingRatio)
+  ) {
+    return;
+  }
   const elapsedRatio = 1 - Math.max(0, Math.min(1, remainingRatio));
   if (elapsedRatio <= 0) return;
 
-  const bandBottom = Math.min(height, Math.ceil(height * elapsedRatio));
-  if (bandBottom <= 0) return;
+  const pixelWidth = Math.max(0, Math.floor(width));
+  const pixelHeight = Math.max(0, Math.floor(height));
+  const bandBottom = Math.min(
+    pixelHeight,
+    Math.ceil(pixelHeight * elapsedRatio),
+  );
+  if (pixelWidth <= 0 || bandBottom <= 0) return;
 
-  const imageData = ctx.getImageData(0, 0, width, bandBottom);
-  darkenBadgeOverlayBand(imageData.data, width, bandBottom, overlayColor);
+  const imageData = ctx.getImageData(0, 0, pixelWidth, bandBottom);
+  darkenBadgeOverlayBand(
+    imageData.data,
+    pixelWidth,
+    bandBottom,
+    overlayColor,
+  );
   ctx.putImageData(imageData, 0, 0);
 }
 

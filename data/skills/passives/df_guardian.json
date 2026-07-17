@@ -38,7 +38,7 @@
   },
   {
     "id": "df_guardian_op_brace",
-    "name": "作戦・堅盾の構え",
+    "name": "堅盾の構え",
     "effect": "buff",
     "buffSubKind": "block",
     "chance": 0.25,
@@ -48,7 +48,7 @@
   },
   {
     "id": "df_guardian_op_wall_aura",
-    "name": "作戦・城壁の護り",
+    "name": "城壁の護り",
     "effect": "buff",
     "buffSubKind": "stat",
     "buffStat": [
@@ -61,7 +61,7 @@
   },
   {
     "id": "df_guardian_op_last_stand",
-    "name": "作戦・最後の誓い",
+    "name": "最後の誓い",
     "effect": "lastStandInvulnerable"
   }
 ]

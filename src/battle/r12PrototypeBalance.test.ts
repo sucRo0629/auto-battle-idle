@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from './data/loadGameData.ts';
+import { resolveOperationPassiveAcquireCost } from '../game/operationPassiveAcquireCost.ts';
 import {
   configureUniversalParty,
   runDemoStageBattle,
@@ -85,6 +86,59 @@ function runPath(
 
 describe('R12 prototype balance characterization', () => {
   it('compares no-spend, incremental-spend, and 20-cost save paths', () => {
+    const catalog = loadGameData().operationPassiveCatalog;
+    expect(
+      resolveOperationPassiveAcquireCost(
+        catalog,
+        'df_guardian_op_wall_aura',
+        0,
+      ) +
+        resolveOperationPassiveAcquireCost(
+          catalog,
+          'at_swordsman_op_armor_break',
+          0,
+        ) +
+        resolveOperationPassiveAcquireCost(
+          catalog,
+          'at_sorcerer_op_arc_bolt',
+          0,
+        ),
+    ).toBe(12);
+    expect(
+      resolveOperationPassiveAcquireCost(
+        catalog,
+        'at_sorcerer_op_ember_dot',
+        1,
+      ) +
+        resolveOperationPassiveAcquireCost(
+          catalog,
+          'sp_cleric_op_triage',
+          0,
+        ),
+    ).toBe(12);
+    expect(
+      resolveOperationPassiveAcquireCost(
+        catalog,
+        'df_guardian_op_brace',
+        0,
+      ) +
+        resolveOperationPassiveAcquireCost(
+          catalog,
+          'at_swordsman_op_armor_break',
+          0,
+        ) +
+        resolveOperationPassiveAcquireCost(
+          catalog,
+          'at_sorcerer_op_arc_bolt',
+          0,
+        ) +
+        resolveOperationPassiveAcquireCost(
+          catalog,
+          'at_sorcerer_op_resonant_hit',
+          1,
+        ),
+    ).toBe(24);
+
     const baseline = summarize(
       'standard modules / no passives',
       runDemoStageBattle(STAGE_ID, {
@@ -104,7 +158,6 @@ describe('R12 prototype balance characterization', () => {
           passivesBySlot[3] = ['at_sorcerer_op_arc_bolt'];
         }
         if (nextWaveIndex === 2) {
-          passivesBySlot[0].push('df_guardian_op_brace');
           passivesBySlot[2] = ['sp_cleric_op_triage'];
           passivesBySlot[3].push('at_sorcerer_op_ember_dot');
         }
@@ -118,7 +171,6 @@ describe('R12 prototype balance characterization', () => {
         if (nextWaveIndex !== 2) return;
         passivesBySlot[0] = ['df_guardian_op_brace'];
         passivesBySlot[1] = ['at_swordsman_op_armor_break'];
-        passivesBySlot[2] = ['sp_cleric_op_triage'];
         passivesBySlot[3] = [
           'at_sorcerer_op_arc_bolt',
           'at_sorcerer_op_resonant_hit',
