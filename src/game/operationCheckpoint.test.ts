@@ -353,6 +353,7 @@ describe('Operation checkpoint (R6f)', () => {
     const op = (session as unknown as { operationState: OperationState }).operationState;
     op.tryAddAcquiredOperationPassiveId(0, 'op_passive_prep');
     op.tryAddUnspentResource(2);
+    const expectedUnspentResource = op.getUnspentResource();
     expect(session.getOperationCheckpoint()).toEqual(before);
 
     expect(session.confirmWavePrepAndStartNextWave()).toBe(true);
@@ -360,7 +361,7 @@ describe('Operation checkpoint (R6f)', () => {
     expect(checkpoint?.acquiredOperationPassives).toEqual([
       { slotIndex: 0, passiveIds: ['op_passive_prep'] },
     ]);
-    expect(checkpoint?.unspentResource).toBe(3);
+    expect(checkpoint?.unspentResource).toBe(expectedUnspentResource);
   });
 
   it('R8b invalid checkpoint passive data fails restore', () => {

@@ -1824,6 +1824,8 @@ export interface StageWave {
   enemies: StageWaveEnemy[];
   /** Wave 単位の敵編成（任意）。未指定時は legacy `enemies` または stage 直下 `enemyGroups` に委譲。 */
   enemyGroups?: StageEnemyGroup[];
+  /** R12h: この Wave の準備開始時に一度付与する作戦ポイント。未指定は legacy fallback。 */
+  prepResourceGrant?: number;
 }
 
 /** ステージ直下の敵編成グループ（v0.3.2）。1 group = 同一 classId の複数体。 */

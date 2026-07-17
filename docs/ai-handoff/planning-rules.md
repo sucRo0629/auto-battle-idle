@@ -128,7 +128,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-17・R12g-g Backend 完了）
+## 8. 現在地メモ（更新: 2026-07-17・R12h Backend 完了）
 
 | 項目 | 状態 |
 | ---- | ---- |
@@ -160,7 +160,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12g-e 全体** | Kill Module data（e1〜e4）+ 共通統合（e5）は **Backend 完了 / Player 未完了** |
 | **R12g-g** | **Backend 完了** — validation / authoring 統合（8 兵科 × 各 2 方式 = 16 件の round-trip / game-data validation）。Player 未判定。正本: [current-task.md §105.15](current-task.md) |
 | **R12g-d/e Player** | **未完了** — Survival（d5）/ Kill（e5）の手元画面確認なし |
-| **公式次タスク** | **R12h** — Stage / Wave データ実装 |
+| **公式次タスク** | **R12i** — 数値強度調整 |
 
 **R12f で確定した主要境界（短縮）:**
 
@@ -200,7 +200,7 @@ R11 は仕組み（範囲・専用パッシブ枠・資源式・基礎ステ極�
 | **R12e** | 必要能力・対処能力の導出 | **完了**（設計 Phase） |
 | **R12f** | 兵科・CombatModule・作戦内パッシブへの分配（設計） | **完了**（設計 Phase） |
 | **R12g** | class / module / passive データ再設計 | R12g-g Backend 完了（validation / authoring 統合）。d/e Player 未完了。次は **R12h** |
-| **R12h** | Stage / Wave データ実装 | 未着手 |
+| **R12h** | Stage / Wave データ実装 | **Backend 完了 / Player 未判定** |
 | **R12i** | 数値強度調整 | 未着手 |
 | **R12j** | 手元成立ゲート | 未着手 |
 | **R13** | 「繰り返し遊びたいか」 | **R12j 後** |

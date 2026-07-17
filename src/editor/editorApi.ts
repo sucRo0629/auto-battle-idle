@@ -641,6 +641,18 @@ export function validateStageDraftForSave(
     if (identityError) return identityError;
   }
 
+  for (let waveIndex = 0; waveIndex < (draft.waves ?? []).length; waveIndex += 1) {
+    const prepResourceGrant = draft.waves![waveIndex]!.prepResourceGrant;
+    if (
+      prepResourceGrant !== undefined &&
+      (!Number.isFinite(prepResourceGrant) ||
+        !Number.isInteger(prepResourceGrant) ||
+        prepResourceGrant < 0)
+    ) {
+      return `waves[${waveIndex}].prepResourceGrant は 0 以上の整数です（省略可）`;
+    }
+  }
+
   if (draft.enemyGroups !== undefined) {
     const levelError = validateRecommendedLevelForSave(draft.recommendedLevel);
     if (levelError) return levelError;

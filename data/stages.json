@@ -219,5 +219,111 @@
         ]
       }
     ]
+  },
+  {
+    "id": "r12_prototype",
+    "displayName": "R12 試作作戦",
+    "formationHintJa": "Wave1は保護突破、Wave2は後方侵入と連鎖への分担、Wave3は両方を統合する3 Wave試作。",
+    "waves": [
+      {
+        "enemies": [],
+        "prepResourceGrant": 0,
+        "enemyGroups": [
+          {
+            "classId": "df_guardian",
+            "count": 1,
+            "selectedCombatModuleId": "df_guardian_mod_nearest_strike",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          },
+          {
+            "classId": "sp_cleric",
+            "count": 1,
+            "selectedCombatModuleId": "sp_cleric_mod_single_mend",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          },
+          {
+            "classId": "at_sorcerer",
+            "count": 1,
+            "selectedCombatModuleId": "at_sorcerer_mod_chain",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          }
+        ]
+      },
+      {
+        "enemies": [],
+        "prepResourceGrant": 12,
+        "enemyGroups": [
+          {
+            "classId": "at_assassin",
+            "count": 1,
+            "selectedCombatModuleId": "at_assassin_mod_rear_intrude",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          },
+          {
+            "classId": "at_sorcerer",
+            "count": 1,
+            "selectedCombatModuleId": "at_sorcerer_mod_chain",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          }
+        ]
+      },
+      {
+        "enemies": [],
+        "prepResourceGrant": 12,
+        "enemyGroups": [
+          {
+            "classId": "df_guardian",
+            "count": 1,
+            "selectedCombatModuleId": "df_guardian_mod_nearest_strike",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          },
+          {
+            "classId": "at_assassin",
+            "count": 1,
+            "selectedCombatModuleId": "at_assassin_mod_rear_intrude",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          },
+          {
+            "classId": "sp_cleric",
+            "count": 1,
+            "selectedCombatModuleId": "sp_cleric_mod_single_mend",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          },
+          {
+            "classId": "at_sorcerer",
+            "count": 1,
+            "selectedCombatModuleId": "at_sorcerer_mod_chain",
+            "hpScale": 1,
+            "atkScale": 1,
+            "defScale": 1,
+            "resScale": 1
+          }
+        ]
+      }
+    ]
   }
 ]

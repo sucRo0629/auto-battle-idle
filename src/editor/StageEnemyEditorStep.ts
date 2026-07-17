@@ -81,6 +81,12 @@ function parsePositiveInteger(raw: string): number | null {
   return parsed;
 }
 
+function parseNonNegativeInteger(raw: string): number | null {
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
 function summarizeLegacyWaveEnemies(
   wave: NonNullable<StageDraft["waves"]>[number]
 ): string {
@@ -601,6 +607,33 @@ export class StageEnemyEditorStep {
         const wave = waves[waveIndex]!;
         const waveSection = createSection(`Wave ${waveIndex}`);
         editSection.appendChild(waveSection);
+        const waveSettingsGrid = appendGrid(waveSection);
+        waveSettingsGrid.appendChild(
+          createFieldRow(
+            "prepResourceGrant",
+            createNumberInput(
+              wave.prepResourceGrant ?? -1,
+              (prepResourceGrant) => {
+                commitDraft((next) => {
+                  const targetWave = next.waves?.[waveIndex];
+                  if (!targetWave) return;
+                  if (prepResourceGrant < 0) {
+                    delete targetWave.prepResourceGrant;
+                  } else {
+                    targetWave.prepResourceGrant = prepResourceGrant;
+                  }
+                });
+              },
+              {
+                field: `waves.${waveIndex}.prepResourceGrant`,
+                emptyWhen: -1,
+                placeholder: "未指定（legacy fallback）",
+                min: 0,
+                parseInput: parseNonNegativeInteger,
+              }
+            )
+          )
+        );
 
         if (wave.enemyGroups !== undefined) {
           appendEnemyGroupsEditor(

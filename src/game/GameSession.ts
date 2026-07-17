@@ -494,6 +494,12 @@ export class GameSession {
     this.operationState?.endWavePrepEditing();
 
     if (!this.beginOperation(stageId, 0)) return false;
+    this.suppressOperationWaveReload = true;
+    try {
+      this.engine.restartBattleAtWave(0);
+    } finally {
+      this.suppressOperationWaveReload = false;
+    }
     if (this.menuHost.isOpen()) {
       this.menuHost.close();
     }
@@ -974,7 +980,7 @@ export class GameSession {
   canEditOperationFormation(): boolean {
     return (
       this.operationState?.isWavePrepEditable === true &&
-      this.isAwaitingNextWave()
+      this.currentScreen === 'wavePrep'
     );
   }
 
@@ -1102,6 +1108,23 @@ export class GameSession {
   confirmWavePrepAndStartNextWave(): boolean {
     if (this.currentScreen !== 'wavePrep') return false;
     if (!this.canEditOperationFormation()) return false;
+    if (
+      this.operationState !== null &&
+      this.operationState.currentWaveIndex === 0 &&
+      this.operationState.clearedWaveCount === 0 &&
+      !this.isAwaitingNextWave()
+    ) {
+      this.operationState.endWavePrepEditing();
+      this.commitCheckpointFromCurrentOperationState();
+      this.suppressOperationWaveReload = true;
+      try {
+        this.engine.restartBattleAtWave(0);
+      } finally {
+        this.suppressOperationWaveReload = false;
+      }
+      this.setGameScreen('battle');
+      return true;
+    }
     return this.startNextWave();
   }
 
@@ -1366,6 +1389,9 @@ export class GameSession {
       this.applyFormationPartyEditsBeforeBattle();
     }
     this.wavePrepSuspended = false;
+    if (this.tryOpenInitialWavePrepScreen()) {
+      return 'wavePrep';
+    }
     return 'battle';
   }
 
@@ -1446,11 +1472,46 @@ export class GameSession {
   /** R6e: 中間 Wave クリア後に Wave 間準備 screen を開く */
   private openWavePrepScreen(): void {
     if (this.operationState === null || !this.isAwaitingNextWave()) return;
+    const targetWaveIndex = this.operationState.clearedWaveCount;
     this.operationState.tryGrantWavePrepResource(
-      this.gameData.operationPassiveCatalog.waveClearResourceGrant,
+      this.resolveWavePrepResourceGrant(
+        this.operationState.stageId,
+        targetWaveIndex,
+      ),
+      targetWaveIndex,
     );
     this.operationState.beginWavePrepEditing();
     this.setGameScreen('wavePrep');
+  }
+
+  private tryOpenInitialWavePrepScreen(): boolean {
+    if (this.operationState === null) return false;
+    if (
+      this.operationState.currentWaveIndex !== 0 ||
+      this.operationState.clearedWaveCount !== 0
+    ) {
+      return false;
+    }
+    const grant = this.resolveWavePrepResourceGrant(
+      this.operationState.stageId,
+      0,
+    );
+    if (grant <= 0) return false;
+    this.operationState.tryGrantWavePrepResource(grant, 0);
+    this.operationState.beginWavePrepEditing();
+    this.commitCheckpointFromCurrentOperationState();
+    return true;
+  }
+
+  private resolveWavePrepResourceGrant(
+    stageId: string,
+    waveIndex: number,
+  ): number {
+    const stage = getStageById(this.gameData.stages, stageId);
+    const configured = stage?.waves[waveIndex]?.prepResourceGrant;
+    if (configured !== undefined) return configured;
+    if (waveIndex === 0) return 0;
+    return this.gameData.operationPassiveCatalog.waveClearResourceGrant;
   }
 
   private resolveOperationStageWaveCount(stageId: string): number {

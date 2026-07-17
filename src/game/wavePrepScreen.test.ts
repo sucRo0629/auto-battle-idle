@@ -67,6 +67,34 @@ function createSession(): GameSession {
   return new GameSession(loaded.data, container);
 }
 
+function createSessionWithPrepGrants(
+  stageId: string,
+  prepResourceGrants: readonly (number | undefined)[],
+): GameSession {
+  const loaded = tryLoadGameData();
+  if (!loaded.ok) throw new Error(loaded.error);
+  const stages = loaded.data.stages.map((stage) =>
+    stage.id !== stageId
+      ? stage
+      : {
+          ...stage,
+          waves: stage.waves.map((wave, waveIndex) => {
+            const prepResourceGrant = prepResourceGrants[waveIndex];
+            const next = { ...wave };
+            if (prepResourceGrant === undefined) {
+              delete next.prepResourceGrant;
+            } else {
+              next.prepResourceGrant = prepResourceGrant;
+            }
+            return next;
+          }),
+        },
+  );
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  return new GameSession({ ...loaded.data, stages }, container);
+}
+
 function getEngine(session: GameSession): BattleEngine {
   return (session as unknown as { engine: BattleEngine }).engine;
 }
@@ -319,6 +347,74 @@ describe('Wave prep screen (R6e)', () => {
     sortieToStage(session, '1');
     sortieToStage(session, '2');
     expect(session.getOperationState()?.stageId).toBe('2');
+  });
+});
+
+describe('Wave preparation resource grants (R12h)', () => {
+  let session: GameSession | null = null;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+    setVerifyModeEnabled(false);
+    setDebugLoopStageId(null);
+    setDebugLoopWaveIndex(null);
+  });
+
+  it('opens Wave 1 prep and grants once when Wave 1 grant is positive', () => {
+    session = createSessionWithPrepGrants('1', [5, 0]);
+    sortieToStage(session, '1');
+    const resolveFormationCloseScreen = (
+      session as unknown as { resolveFormationCloseScreen: () => string }
+    ).resolveFormationCloseScreen.bind(session);
+
+    expect(resolveFormationCloseScreen()).toBe('wavePrep');
+    expect(session.getOperationUnspentResource()).toBe(5);
+    expect(session.getOperationCheckpoint()?.initialResourceGrantApplied).toBe(true);
+    expect(resolveFormationCloseScreen()).toBe('wavePrep');
+    expect(session.getOperationUnspentResource()).toBe(5);
+  });
+
+  it('skips Wave 1 prep when Wave 1 grant is explicit zero', () => {
+    session = createSessionWithPrepGrants('1', [0, 0]);
+    sortieToStage(session, '1');
+    const resolveFormationCloseScreen = (
+      session as unknown as { resolveFormationCloseScreen: () => string }
+    ).resolveFormationCloseScreen.bind(session);
+
+    expect(resolveFormationCloseScreen()).toBe('battle');
+    expect(session.getOperationUnspentResource()).toBe(0);
+  });
+
+  it('opens later Wave prep without catalog fallback for explicit zero', () => {
+    setVerifyModeEnabled(true);
+    setDebugLoopStageId('1');
+    setDebugLoopWaveIndex(null);
+    session = createSessionWithPrepGrants('1', [0, 0]);
+    session.start();
+
+    reachAwaitingNextWave(getEngine(session));
+
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(session.getOperationUnspentResource()).toBe(0);
+  });
+
+  it('uses catalog fallback for an omitted later Wave grant', () => {
+    setVerifyModeEnabled(true);
+    setDebugLoopStageId('1');
+    setDebugLoopWaveIndex(null);
+    session = createSessionWithPrepGrants('1', [0, undefined]);
+    session.start();
+
+    reachAwaitingNextWave(getEngine(session));
+
+    expect(session.getOperationUnspentResource()).toBe(12);
   });
 });
 

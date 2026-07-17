@@ -40,6 +40,8 @@ export interface OperationCheckpointSnapshot {
   readonly unspentResource: number;
   /** R8c: リソース付与済み clearedWaveCount（Wave ごと 1 回付与の重複防止）。 */
   readonly lastResourceGrantClearedWaveCount: number;
+  /** R12h: Wave 1 開始前の準備資源を付与済みか。旧 snapshot は false 扱い。 */
+  readonly initialResourceGrantApplied?: boolean;
   readonly operationExtras: Readonly<Record<string, unknown>>;
 }
 
@@ -120,6 +122,7 @@ export function createCheckpointFromOperationState(
     unspentResource: state.getUnspentResource(),
     lastResourceGrantClearedWaveCount:
       state.getLastResourceGrantClearedWaveCount(),
+    initialResourceGrantApplied: state.hasAppliedInitialResourceGrant(),
     operationExtras: {},
   };
 }
@@ -140,6 +143,9 @@ export function cloneCheckpointSnapshot(
     unspentResource: snapshot.unspentResource,
     lastResourceGrantClearedWaveCount:
       snapshot.lastResourceGrantClearedWaveCount,
+    ...(snapshot.initialResourceGrantApplied !== undefined
+      ? { initialResourceGrantApplied: snapshot.initialResourceGrantApplied }
+      : {}),
     operationExtras: structuredClone(snapshot.operationExtras),
   };
 }
@@ -188,6 +194,12 @@ export function validateCheckpointSnapshot(
   if (
     options.expectedStageId !== undefined &&
     snapshot.stageId !== options.expectedStageId
+  ) {
+    return false;
+  }
+  if (
+    snapshot.initialResourceGrantApplied !== undefined &&
+    typeof snapshot.initialResourceGrantApplied !== 'boolean'
   ) {
     return false;
   }

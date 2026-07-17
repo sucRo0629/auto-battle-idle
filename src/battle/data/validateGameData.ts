@@ -6428,6 +6428,23 @@ function parseStages(raw: unknown): StageDef[] {
       const waveContext = `${context}.waves[${waveIndex}]`;
       const waveObj = requireRecord(waveEntry, waveContext);
       const waveEnemyGroups = parseOptionalStageEnemyGroups(waveObj, waveContext);
+      const prepResourceGrantRaw = waveObj.prepResourceGrant;
+      let prepResourceGrant: number | undefined;
+      if (prepResourceGrantRaw !== undefined) {
+        if (
+          typeof prepResourceGrantRaw !== 'number' ||
+          !Number.isFinite(prepResourceGrantRaw) ||
+          !Number.isInteger(prepResourceGrantRaw) ||
+          prepResourceGrantRaw < 0
+        ) {
+          invalidField(
+            waveContext,
+            'prepResourceGrant',
+            'must be a non-negative integer',
+          );
+        }
+        prepResourceGrant = prepResourceGrantRaw;
+      }
       const enemiesRaw = waveObj.enemies;
       if (!Array.isArray(enemiesRaw)) {
         invalidField(waveContext, 'enemies', 'must be an array');
@@ -6460,6 +6477,7 @@ function parseStages(raw: unknown): StageDef[] {
       return {
         enemies,
         ...(waveEnemyGroups !== undefined ? { enemyGroups: waveEnemyGroups } : {}),
+        ...(prepResourceGrant !== undefined ? { prepResourceGrant } : {}),
       };
     });
 

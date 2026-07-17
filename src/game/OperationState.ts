@@ -63,6 +63,8 @@ export class OperationState {
   private unspentResourceValue = 0;
   /** R8c: リソース付与済みの clearedWaveCount 上限（Wave ごと 1 回付与）。 */
   private lastResourceGrantClearedWaveCountValue = 0;
+  /** R12h: Wave 1 開始前 grant の二重付与防止。 */
+  private initialResourceGrantAppliedValue = false;
 
   private constructor(
     stageId: string,
@@ -139,20 +141,41 @@ export class OperationState {
     return this.lastResourceGrantClearedWaveCountValue;
   }
 
+  hasAppliedInitialResourceGrant(): boolean {
+    return this.initialResourceGrantAppliedValue;
+  }
+
   /**
-   * R8c: 中間 Wave クリア後の Wave 間準備で、clearedWaveCount ごとに 1 回だけリソースを付与する。
-   * 初回出撃前（clearedWaveCount === 0）では付与しない。
+   * R12h: 対象 Wave の準備開始時に一度だけリソースを付与する。
+   * targetWaveIndex=0 は初回出撃前、それ以降は clearedWaveCount と一致する次 Wave。
    */
-  tryGrantWavePrepResource(grantAmount: number): boolean {
-    if (!isValidResourceDelta(grantAmount)) return false;
-    if (this.clearedWaveCountValue <= 0) return false;
+  tryGrantWavePrepResource(
+    grantAmount: number,
+    targetWaveIndex?: number,
+  ): boolean {
+    if (!isValidResourceBalance(grantAmount)) return false;
+    if (targetWaveIndex === undefined) {
+      if (this.clearedWaveCountValue <= 0) return false;
+      targetWaveIndex = this.clearedWaveCountValue;
+    }
+    if (!Number.isInteger(targetWaveIndex) || targetWaveIndex < 0) return false;
+    if (targetWaveIndex === 0) {
+      if (this.currentWaveIndexValue !== 0 || this.clearedWaveCountValue !== 0) {
+        return false;
+      }
+      if (this.initialResourceGrantAppliedValue) return false;
+      if (grantAmount > 0 && !this.tryAddUnspentResource(grantAmount)) return false;
+      this.initialResourceGrantAppliedValue = true;
+      return true;
+    }
+    if (targetWaveIndex !== this.clearedWaveCountValue) return false;
     if (
-      this.clearedWaveCountValue <= this.lastResourceGrantClearedWaveCountValue
+      targetWaveIndex <= this.lastResourceGrantClearedWaveCountValue
     ) {
       return false;
     }
-    if (!this.tryAddUnspentResource(grantAmount)) return false;
-    this.lastResourceGrantClearedWaveCountValue = this.clearedWaveCountValue;
+    if (grantAmount > 0 && !this.tryAddUnspentResource(grantAmount)) return false;
+    this.lastResourceGrantClearedWaveCountValue = targetWaveIndex;
     return true;
   }
 
@@ -450,6 +473,8 @@ export class OperationState {
       },
       snapshot.lastResourceGrantClearedWaveCount,
     );
+    this.initialResourceGrantAppliedValue =
+      snapshot.initialResourceGrantApplied ?? false;
 
     this.currentWaveIndexValue = snapshot.currentWaveIndex;
     this.clearedWaveCountValue = snapshot.clearedWaveCount;

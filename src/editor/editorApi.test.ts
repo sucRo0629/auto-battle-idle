@@ -1071,6 +1071,47 @@ describe('wave enemyGroups draft helpers (R6g-4)', () => {
     expect(normalized.enemyGroups).toBeUndefined();
   });
 
+  it('preserves explicit prepResourceGrant zero and positive values', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'prep_grants',
+      displayName: 'Prep Grants',
+      waves: [
+        {
+          enemies: [],
+          prepResourceGrant: 0,
+          enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+        },
+        {
+          enemies: [],
+          prepResourceGrant: 12,
+          enemyGroups: [{ classId: 'at_hunter', count: 1 }],
+        },
+      ],
+    });
+
+    expect(normalized.waves[0]?.prepResourceGrant).toBe(0);
+    expect(normalized.waves[1]?.prepResourceGrant).toBe(12);
+  });
+
+  it.each([-1, 1.5, Number.NaN])(
+    'rejects invalid prepResourceGrant %s before save',
+    (prepResourceGrant) => {
+      expect(
+        validateStageDraftForSave({
+          id: 'invalid_grant',
+          displayName: 'Invalid Grant',
+          waves: [
+            {
+              enemies: [],
+              prepResourceGrant,
+              enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+            },
+          ],
+        }),
+      ).toContain('prepResourceGrant');
+    },
+  );
+
   it('preserves unedited waves when saving mixed wave draft', () => {
     const normalized = normalizeStageDraftForSave({
       id: 'mixed_wave',

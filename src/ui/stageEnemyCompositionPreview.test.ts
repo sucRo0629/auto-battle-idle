@@ -201,6 +201,29 @@ describe('resolveStageEnemyCompositionPreview', () => {
     expect(preview.enemyGroupLines.map((line) => line.waveIndex)).toEqual([0, 0, 1, 1]);
   });
 
+  it('resolves r12_prototype as the fixed 3-wave composition', () => {
+    const stage = loadGameData().stages.find((entry) => entry.id === 'r12_prototype');
+    expect(stage).toBeDefined();
+    expect(stage?.waves).toHaveLength(3);
+    expect(stage?.waves.map((wave) => wave.prepResourceGrant)).toEqual([
+      0,
+      12,
+      12,
+    ]);
+    expect(stage?.waves.map((wave) => wave.enemyGroups?.length)).toEqual([
+      3,
+      2,
+      4,
+    ]);
+
+    const preview = resolveStageEnemyCompositionPreview(stage!);
+    expect(preview.usesWaveEnemyGroups).toBe(true);
+    expect(
+      [...new Set(preview.enemyGroupLines.map((line) => line.waveIndex))],
+    ).toEqual([0, 1, 2]);
+    expect(preview.totalEnemyCount).toBe(9);
+  });
+
   it('resolves ranged_test stage from loaded game data', () => {
     const stage = loadGameData().stages.find((entry) => entry.id === 'ranged_test');
     expect(stage).toBeDefined();

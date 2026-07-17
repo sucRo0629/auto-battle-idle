@@ -672,4 +672,20 @@ describe('OperationState wave prep resource grant (R8c)', () => {
     expect(op.tryGrantWavePrepResource(1)).toBe(false);
     expect(op.getUnspentResource()).toBe(1);
   });
+
+  it('3. grants Wave 1 preparation once when target wave is explicit', () => {
+    const op = beginOp();
+    expect(op.tryGrantWavePrepResource(5, 0)).toBe(true);
+    expect(op.getUnspentResource()).toBe(5);
+    expect(op.hasAppliedInitialResourceGrant()).toBe(true);
+    expect(op.tryGrantWavePrepResource(5, 0)).toBe(false);
+    expect(op.getUnspentResource()).toBe(5);
+  });
+
+  it('4. records an explicit zero grant without changing the balance', () => {
+    const op = beginOp();
+    expect(op.tryGrantWavePrepResource(0, 0)).toBe(true);
+    expect(op.getUnspentResource()).toBe(0);
+    expect(op.tryGrantWavePrepResource(1, 0)).toBe(false);
+  });
 });

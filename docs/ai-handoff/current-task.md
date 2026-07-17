@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-g Backend 完了**（validation / authoring 統合）。**Player 未判定**（本タスクでは Player 完了を判定しない）。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。**次:** **R12h** — Stage / Wave データ実装。handoff 正本は **§105.16**。
+- **新ロードマップ現在地:** **R12h Backend 完了**（Stage / Wave データ実装）。**Player 未判定**（手元成立確認は R12j）。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。**次:** **R12i** — 数値強度調整。handoff 正本は **§105.16**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12h** → R12i → R12j → R13。
+- **次の再開タスク:** **R12i** → R12j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8840,9 +8840,9 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 
 **同期先:** [phase-roadmap.md §R12g](../plans/phase-roadmap.md#r12g--class--module--passive-データ再設計)、[planning-rules.md §8 / §8c](planning-rules.md)、[classes-and-skills.md](../spec/classes-and-skills.md)。
 
-### 105.16 R12h — Stage / Waveデータ実装（設計確定・実装前）
+### 105.16 R12h — Stage / Waveデータ実装（Backend完了）
 
-**状態:** 構造設計確定 / production code・JSON・test・editor 未変更。公式次タスクは引き続き **R12h**。R12g-d/e Player 未完了を維持する。
+**状態:** **Backend完了 / Player未判定**。公式次タスクは **R12i**。R12g-d/e Player 未完了を維持する。
 
 **主正本:** [operation-loop.md §6.4](../spec/operation-loop.md#64-wave-準備資源r12h)。同期先: [phase-roadmap.md §R12h](../plans/phase-roadmap.md#r12h--stage--wave-データ実装)。
 
@@ -8879,4 +8879,13 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 
 R12hでは具体量を成立値として確定しない。高難度1 Wave Stageの初期配布、Waveごとの異なる配布、付与なしで持ち越しだけを使うWave、長期Stageの小刻みな配布を固定データで表現可能にする。将来のローグライク展開は妨げないが、ランダム生成・ランダム報酬はR12h対象外。
 
-**正式順序:** R12h → R12i → R12j → R13。
+#### 実装結果
+
+- `StageWave.prepResourceGrant?: number` を追加し、load validation・editor validation・Stage enemy editor入力を接続した。未指定と明示 `0` は区別する
+- Wave 1 は正数 grant のときのみ初回準備画面を開き、Wave 2以降は `0` でも準備画面を開く。未指定の Wave 2以降だけ catalog の `waveClearResourceGrant` へ fallback する
+- 初回 grant の適用済み状態を OperationState / checkpoint に保持し、再表示・再試行・checkpoint復元で二重付与しない
+- `r12_prototype` を3 Waveの新規Stageとして追加した。`enemyGroups`を正本とし、`enemies`はlegacy互換の空配列を残した
+- 仮 grant は `[0, 12, 12]`。成立値としての確定・再調整は R12i
+- schema/editor/production Stage preview/Wave準備経路の対象テストは成功。既存 `operationState.test.ts` の `27. restart resets wave progress` は、変更経路へ入る前の既存Stage自動戦闘で Wave待機へ到達できず失敗し、Vitest worker timeoutを伴う。R12h固有テストは成功
+
+**正式順序:** R12i → R12j → R13。
