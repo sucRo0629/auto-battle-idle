@@ -360,7 +360,8 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | R12g-e1 data | 剣術士 M1/M2 — 上記 `at_swordsman` 節。`src/battle/atSwordsmanModules.test.ts`。**Backend 完了 / Player 未完了** |
 | R12g-e2 data | 双刃士 M1/M2 — 上記 `at_assassin` 節。`src/battle/atAssassinModules.test.ts`。**Backend 完了 / Player 未完了** |
 | R12g-e3 data | 弓術士 M1/M2 — 上記 `at_ranger` 節。`src/battle/atRangerModules.test.ts`。**Backend 完了 / Player 未完了** |
-| R12g-e4 data | 魔術師 M1/M2 — 上記 `at_sorcerer` 節。`src/battle/atSorcererModules.test.ts`。**Backend 完了 / Player 未完了**。次タスクは **R12g-e5** |
+| R12g-e4 data | 魔術師 M1/M2 — 上記 `at_sorcerer` 節。`src/battle/atSorcererModules.test.ts`。**Backend 完了 / Player 未完了** |
+| R12g-e5 統合 | Kill 4 兵科（剣術士・双刃士・弓術士・魔術師）を同一実戦経路で確認。`src/battle/killCombatModules.integration.test.ts` — 正式 M1/M2 pool・basic slot 排他選択・Wave 間 M1→M2 一括変更と再生成 unit の非引き継ぎ・shared targeting 上の相互非干渉（剣術士単体/multiLock・双刃士現在HP最低・弓術士 single/multiLock nearest fallback・魔術師 chain）・敵 `selectedCombatModuleId` 対称経路。弓術士の遠隔攻撃役優先は attack-target 層の責務（Module effect ではない）。production / JSON / schema / editor / Stage / Passive / 数値は未変更。**R12g-e 本流 Backend 完了 / Player 未完了**。次は **R12g-g**（validation / authoring 統合） |
 
 ### R12f → R12g 未接続事項
 

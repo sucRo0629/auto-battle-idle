@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-e4 Backend 完了**（魔術師 M1/M2 CombatModule データ再設計）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e4 Player 確認）。**次:** **R12g-e5**（Kill 4 兵科 CombatModule 共通統合確認）。
+- **新ロードマップ現在地:** **R12g-e5 Backend 完了**（Kill 4 兵科 CombatModule 共通統合確認）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e5 Player 確認）。**次:** **R12g-g**（validation / authoring 統合）。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12g-e5**（Kill 4 兵科共通統合）→ R12g-g（editor）/ R12i（数値）→ R12h〜j → R13。
+- **次の再開タスク:** **R12g-g**（validation / authoring 統合）→ R12i（数値）→ R12h〜j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8732,3 +8732,31 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 - 正式 VFX・専用アイコンは不要
 
 **次:** **R12g-e5** — Kill 4 兵科 CombatModule 共通統合確認
+
+### 105.14 R12g-e5 — Kill 4 兵科 CombatModule 共通統合確認（完了・Backend）
+
+**状態:** Backend 完了 / Player 未完了（手元画面確認なし）
+
+**実施内容（要約）:**
+- 新規統合 test: `src/battle/killCombatModules.integration.test.ts`
+- 剣術士 / 双刃士 / 弓術士 / 魔術師の各 M1/M2 pool と、`PartyCombatModuleSelection` から basic slot への排他的な選択を同一編成で確認
+- `OperationState` の Wave 間準備で4兵科を M1→M2へ一括変更し、再生成 unit の module・HP・Barrier が前 Wave 状態を引き継がないことを確認
+- shared targeting 上で、剣術士 multiLock、双刃士 HP 最低、弓術士 single / multiLock fallback、魔術師 chain の各形状が相互干渉しないことを確認
+- 弓術士の遠隔攻撃役優先は Module effect ではなく attack-target 層の責務であることを維持（個別 `atRangerModules.test.ts` で実戦経路を保証）
+- `enemyGroups[].selectedCombatModuleId` から敵4兵科の M2 が生成される対称経路を確認
+- production code / JSON / schema / editor / Stage / Passive / 数値は未変更
+
+**検証結果:**
+- `src/battle/killCombatModules.integration.test.ts`: 4 passed
+- e1〜e5 関連一括: 5 files / 95 passed
+- 今回差分由来の失敗 0。fixture 調整中の失敗は射程配置と chain の複数 resolution wave 集計誤りで、production 不具合ではないと分類
+
+**Player 未完了の不足:**
+- 出撃前 / Wave 間で Kill 4兵科を同時編成し、全 M1/M2 の説明差と選択反映を手元確認していない
+- 実戦で剣術士の単体/分担、双刃士の侵入/前線停止、弓術士の中核集中/分担、魔術師の収束/連鎖を同じ導線から確認していない
+- 戻し先: **R12g-e5 Player 確認**（既存 R9.5c SkillMenuPanel / WavePrep 配線を利用。大規模 UI 改修不要）
+- 正式 VFX / 専用アイコンは不要
+
+**R12g-e 全体:** Kill 4兵科の Module data（e1〜e4）+ 共通統合（e5）は **Backend 完了 / Player 未完了**
+
+**次:** **R12g-g** — validation / authoring 統合
