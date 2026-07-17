@@ -58,7 +58,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R12d** | 試作 Stage の**敵問題設計**（具体 Wave / 戦術。JSON 入力はしない） | **完了**（設計 Phase） |
 | **R12e** | 敵問題から**必要能力・対処能力を導出** | **完了**（設計 Phase） |
 | **R12f** | 必要能力を兵科・CombatModule・作戦内パッシブへ**分配**（設計） | **完了**（設計 Phase） |
-| **R12g** | class / module / passive の**データ再設計**（入力） | R12g-e5 Backend 完了（Kill 共通統合）。d/e Player 未完了。次は **R12g-g** |
+| **R12g** | class / module / passive の**データ再設計**（入力） | R12g-e5 Backend 完了（Kill 共通統合）。d/e Player 未完了。次は **R12g-g**（未着手） |
 | **R12h** | Stage / Wave **データ実装**（問題構造の JSON 化） | 未着手 |
 | **R12i** | **数値強度調整**（scale / grant / stackStep / 基礎ステ等） | 未着手 |
 | **R12j** | 手元プレイ成立ゲート — 「ゲームとして遊べる」（反復欲求の評価はしない） | 未着手 |
@@ -1284,7 +1284,8 @@ R12a 敵問題・戦術目標の基本定義（完了）
 | **R12g-e3** | 弓術士 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
 | **R12g-e4** | 魔術師 M1/M2 CombatModule データ再設計 | **Backend 完了 / Player 未完了** |
 | **R12g-e5** | Kill 4 兵科 CombatModule 共通統合確認 | **Backend 完了 / Player 未完了** |
-| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | Survival/Kill Module data + 共通統合 Backend 完了。次は **R12g-g** |
+| **R12g-g** | validation / authoring 統合（全正式 CombatModule の draft / normalize / validate / round-trip / game-data validation） | **未着手**（正本: [current-task.md §105.15](../ai-handoff/current-task.md)）。新戦闘仕様・数値追加なし。既存 UI / 個別 validation の作り直し禁止 |
+| **R12g 本流** | 8 兵科 JSON データ入力（数値は最小） | Survival/Kill Module data + 共通統合 Backend 完了。次は **R12g-g**（§105.15） |
 
 正本: [current-task.md §105](../ai-handoff/current-task.md)、[combat.md §DamageAppliedEvent](combat.md#damageappliedevent-r12g-b)、[combat.md §Danger Targeting](../spec/combat.md#danger-targetingr12g-c)、[classes-and-skills.md §df_paladin 護法士](../spec/classes-and-skills.md#df_paladin-護法士)。
 
@@ -1440,7 +1441,7 @@ R13 反復評価「繰り返し遊びたいか」
 - **R9.6**・**R9b〜h / R9f** は完了（成立済み）
 - R10 は構造のみ。**遊べる試作と反復評価は R12 / R13**
 - **R11** はシステム縦切り完了。**プレイアビリティ Player は R12j**
-- **公式次は R12g-g**（validation / authoring 統合）。R12g 本流の後に R12h〜j → R13
+- **公式次は R12g-g**（validation / authoring 統合・[current-task.md §105.15](../ai-handoff/current-task.md)・**未着手**）。R12g-g の後に R12h〜j → R13
 - R12j まではゲームとしての成立未達。R13 までは反復評価しない
 - **戦場移動 legacy cleanup** は R13 完了後を推奨 — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 

@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12g-e5 Backend 完了**（Kill 4 兵科 CombatModule 共通統合確認）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e5 Player 確認）。**次:** **R12g-g**（validation / authoring 統合）。
+- **新ロードマップ現在地:** **R12g-e5 Backend 完了**（Kill 4 兵科 CombatModule 共通統合確認）。**Player 未完了**（手元画面確認なし。戻し先: R12g-e5 Player 確認）。**R12g-e 全体:** Backend 完了 / Player 未完了。**次:** **R12g-g**（validation / authoring 統合）— handoff 正本は **§105.15**（**未着手**。完了扱いにしない）。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12g-g**（validation / authoring 統合）→ R12i（数値）→ R12h〜j → R13。
+- **次の再開タスク:** **R12g-g**（validation / authoring 統合）→（R12g の正式残タスクがあればそれを完了）→ R12h → R12i → R12j → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8759,4 +8759,86 @@ delayed pool tick の event 化は **R12g-b1 で実装済み**（`sourceKind: de
 
 **R12g-e 全体:** Kill 4兵科の Module data（e1〜e4）+ 共通統合（e5）は **Backend 完了 / Player 未完了**
 
-**次:** **R12g-g** — validation / authoring 統合
+**次:** **R12g-g** — validation / authoring 統合（§105.15）
+
+### 105.15 R12g-g — validation / authoring 統合（正本・未着手）
+
+**状態:** **未着手**（本節は実装前の handoff 正本）。**完了扱いにしない。** 現在地は R12g-e5 / R12g-e 全体の Backend 完了・Player 未完了を維持する。
+
+**目的:** 新しい戦闘仕様や数値を追加するタスクではない。R12g-d/e で実装済みの **全正式 CombatModule** を対象に、authoring 経路を横断して統合保証する。
+
+保証する経路:
+
+1. 現行 CombatModule JSON の読み込み
+2. CombatModule editor draft への変換
+3. エディタでの固有フィールド編集
+4. 保存用 normalize
+5. 保存前 validation
+6. JSON 相当データへの変換
+7. 再読込後も意味が維持される round-trip
+8. 全正式 CombatModule をまとめた game-data validation
+
+**横断確認対象の固有フィールド（既存実装済み）:**
+
+| 領域 | 項目 |
+| ---- | ---- |
+| `runtimeEffect` | `healOnEnemyAttackHpHit` / `physicalDamageTakenReduction` / `protectFrontlineAllies` / `protectDangerTarget` |
+| `TargetSpec` | `kind: danger` / `requireBelow` / `excludeRoles` |
+| effect-range 等 | `chainCount` / `refillSameTargetOnShortfall` / 各 CombatModule が現在使用している既存 targeting・effect-range フィールド |
+
+既に UI や個別 validation が存在する項目は **別方式へ作り直さない**。不足している統合・round-trip・回帰テストを補う。
+
+**対象:**
+
+- R12g-d1〜d4 の Survival CombatModule（鉄衛士・護法士・療養師・結界師）
+- R12g-e1〜e4 の Kill CombatModule（剣術士・双刃士・弓術士・魔術師）
+- 全正式対象クラスの M1/M2（現行 `data/combat-modules/*.json` の 8 兵科 × 各 2 方式）
+- CombatModule editor、保存用 draft API、game-data validation の統合境界
+
+対象クラス・正式モジュール一覧は、既存の正本定数・class data・CombatModule registry（例: `R5_COMBAT_MODULE_CLASS_IDS` + `listCombatModuleAuthoringClassIds` による draft 発見、`classes.json` の `combatModuleIds`、`data/combat-modules/`）から取得する。テスト専用の重複一覧を可能な限り増やさない。
+
+**対象外:**
+
+- 新しい CombatModule 挙動
+- 新しい target shape
+- runtime 戦闘ロジックの変更
+- CombatModule ID、表示名、配列順、正式な Phase ID の変更
+- パッシブ詳細設計・パッシブ実装
+- 作戦内パッシブ authoring の拡張
+- 仮数値の再調整 / R12i の数値調整
+- R12h の Stage / Wave データ実装
+- Player 戦闘画面の確認
+- 正式 VFX、専用アイコン、i18n、表示 polish
+
+**Backend 完了条件:**
+
+- 全正式 CombatModule の現行 JSON が editor draft に読み込める
+- normalize、保存前 validation、ファイル相当データ化、再読込の round-trip が成立する
+- 上記の固有フィールドが round-trip 後も失われず、意味も変わらない
+- 全正式 CombatModule を含む game-data validation が成功する
+- 代表的な不正値が保存前または game-data validation で拒否される
+- 既存のクラス別 module テスト、CombatModule editor テスト、validation テストが退行しない
+- JSON、戦闘 runtime、数値、パッシブに不要な変更がない
+
+**Player 完了条件:**
+
+本タスクでは **Player 完了を判定しない**。R12g-d/e の Player 確認は未完了のまま維持する。エディタの自動テスト成功を、戦闘画面での Player 完了として扱わない。
+
+**実装候補ファイル（現行構造確認済み・実装時検討）:**
+
+| 候補 | 役割 |
+| ---- | ---- |
+| `src/editor/combatModuleEditor.ts` | draft 一覧・upsert・`runtimeEffectKindValue` 等 |
+| `src/editor/combatModuleEditor.test.ts` | editor / draft 回帰・固有フィールド編集 |
+| `src/editor/CombatModuleEditorStep.ts` | CombatModule 編集 UI（既存 UI の不足分のみ。作り直し禁止） |
+| `src/editor/editorApi.ts` | `combatModulesDraftFromModules` / `normalizeCombatModulesDraftForSave` / `validateCombatModulesDraftForSave` / `combatModuleFilesFromDraft` / save |
+| `src/editor/editorApi.test.ts` | draft API・normalize / validate 回帰 |
+| `src/editor/authoringValidationPreview.ts` | authoring 警告・preview 統合境界 |
+| `src/editor/authoringValidationPreview.test.ts` | preview / validation 回帰 |
+| `src/battle/data/validateGameData.ts` | CombatModule / TargetSpec / `runtimeEffect` の既存 parse・validate |
+| `src/battle/data/validateGameData.combatModules.test.ts` | 全正式 module の game-data validation・不正値拒否 |
+| （必要時のみ）`src/editor/skillEditorCombatFields.ts` / `src/editor/effectTargetingFields.ts` | 既存 TargetSpec・effect-range 入力の再利用。別方式新設禁止 |
+
+**同期先（本 handoff 時点）:** [phase-roadmap.md §R12g](../plans/phase-roadmap.md#r12g--class--module--passive-データ再設計)、[planning-rules.md §8 / §8c](planning-rules.md)、[classes-and-skills.md](../spec/classes-and-skills.md)（authoring 統合の位置づけ。新戦闘仕様は追加しない）。
+
+**次（実装開始後）:** 本節の Backend 完了条件を満たしたら記録を更新する。公式順序は R12g-g →（R12g の正式残タスクがあればそれを完了）→ R12h → R12i → R12j → R13。現時点では R12h へ進めない。

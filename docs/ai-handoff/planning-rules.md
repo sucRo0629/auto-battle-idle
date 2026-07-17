@@ -158,7 +158,8 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12g-e4** | **Backend 完了 / Player 未完了** — 魔術師 M1/M2 CombatModule データ再設計 |
 | **R12g-e5** | **Backend 完了 / Player 未完了** — Kill 4 兵科 CombatModule 共通統合確認（`killCombatModules.integration.test.ts`） |
 | **R12g-e 全体** | Kill Module data（e1〜e4）+ 共通統合（e5）は **Backend 完了 / Player 未完了** |
-| **公式次タスク** | **R12g-g** — validation / authoring 統合 |
+| **R12g-g** | **未着手** — validation / authoring 統合（全正式 CombatModule の draft / normalize / validate / round-trip / game-data validation）。Player 完了は判定しない。正本: [current-task.md §105.15](current-task.md) |
+| **公式次タスク** | **R12g-g** — validation / authoring 統合（完了扱いにしない） |
 
 **R12f で確定した主要境界（短縮）:**
 
@@ -197,7 +198,7 @@ R11 は仕組み（範囲・専用パッシブ枠・資源式・基礎ステ極�
 | **R12d** | 試作 Stage の敵問題設計（JSON 入力なし） | **完了**（設計 Phase） |
 | **R12e** | 必要能力・対処能力の導出 | **完了**（設計 Phase） |
 | **R12f** | 兵科・CombatModule・作戦内パッシブへの分配（設計） | **完了**（設計 Phase） |
-| **R12g** | class / module / passive データ再設計 | R12g-e5 Backend 完了（Kill 共通統合）。d/e Player 未完了。次は **R12g-g** |
+| **R12g** | class / module / passive データ再設計 | R12g-e5 Backend 完了（Kill 共通統合）。d/e Player 未完了。次は **R12g-g**（§105.15・未着手） |
 | **R12h** | Stage / Wave データ実装 | 未着手 |
 | **R12i** | 数値強度調整 | 未着手 |
 | **R12j** | 手元成立ゲート | 未着手 |
