@@ -7387,7 +7387,7 @@ const DEFAULT_OPERATION_PASSIVE_CATALOG: OperationPassiveCatalogDef = {
   passiveAcquireCost: 1,
   waveClearResourceGrant: 1,
   sameClassStackStep: 0,
-  unlockLevelCostTable: { '0': 1, '10': 2, '20': 3 },
+  unlockLevelCostTable: { '0': 1, '10': 10, '20': 20 },
   costUnlockLevelByPassiveId: {},
   candidatesByClass: {},
 };

@@ -128,7 +128,7 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 
 ---
 
-## 8. 現在地メモ（更新: 2026-07-17・R12h Backend 完了）
+## 8. 現在地メモ（更新: 2026-07-17・R12i Backend初回完了）
 
 | 項目 | 状態 |
 | ---- | ---- |
@@ -160,7 +160,9 @@ Player 完了の検証は **この 4 兵科を編成に入れたプレイ** で�
 | **R12g-e 全体** | Kill Module data（e1〜e4）+ 共通統合（e5）は **Backend 完了 / Player 未完了** |
 | **R12g-g** | **Backend 完了** — validation / authoring 統合（8 兵科 × 各 2 方式 = 16 件の round-trip / game-data validation）。Player 未判定。正本: [current-task.md §105.15](current-task.md) |
 | **R12g-d/e Player** | **未完了** — Survival（d5）/ Kill（e5）の手元画面確認なし |
-| **公式次タスク** | **R12i** — 数値強度調整 |
+| **R12h** | **Backend 完了 / Player 未判定** — Stage / Wave データ実装 |
+| **R12i** | **Backend初回完了 / Player未判定** — cost `1 / 10 / 20`・grant `[0, 12, 12]`・stackStep `1`。自動比較では20点温存が無取得比約7.5%短縮。敵scale・基礎stat・CombatModule数値は据え置き |
+| **公式次タスク** | **R12j** — 手元プレイ成立ゲート。Wave 3の判断差と膠着時の敗北収束を確認 |
 
 **R12f で確定した主要境界（短縮）:**
 

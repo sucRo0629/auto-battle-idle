@@ -4,8 +4,8 @@
   "sameClassStackStep": 1,
   "unlockLevelCostTable": {
     "0": 1,
-    "10": 2,
-    "20": 3
+    "10": 10,
+    "20": 20
   },
   "costUnlockLevelByPassiveId": {
     "df_guardian_op_brace": 0,

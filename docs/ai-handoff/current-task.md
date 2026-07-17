@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12h Backend 完了**（Stage / Wave データ実装）。**Player 未判定**（手元成立確認は R12j）。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。**次:** **R12i** — 数値強度調整。handoff 正本は **§105.16**。
+- **新ロードマップ現在地:** **R12i Backend初回完了 / Player未判定**（cost `1 / 10 / 20`・grant `[0, 12, 12]`・stackStep `1`、敵scale等は据え置き）。**次は R12j**。**R12g-d/e Player 未完了**（手元画面確認なし。戻し先: R12g-d5 / R12g-e5 Player 確認）。handoff 正本は **§105.17**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12i** → R12j → R13。
+- **次の再開タスク:** **R12j** → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8889,3 +8889,39 @@ R12hでは具体量を成立値として確定しない。高難度1 Wave Stage�
 - schema/editor/production Stage preview/Wave準備経路の対象テストは成功。既存 `operationState.test.ts` の `27. restart resets wave progress` は、変更経路へ入る前の既存Stage自動戦闘で Wave待機へ到達できず失敗し、Vitest worker timeoutを伴う。R12h固有テストは成功
 
 **正式順序:** R12i → R12j → R13。
+
+### 105.17 R12i — 数値強度調整（Backend初回完了）
+
+**状態:** **Backend初回完了 / Player未判定**。問題設計・敵編成・scale・基礎stat・CombatModule数値は変更していない。
+
+**確定した初回調整:**
+
+- `unlockLevelCostTable` を `0 → 1 / 10 → 10 / 20 → 20` に変更
+- `r12_prototype` の `waves[].prepResourceGrant` は `[0, 12, 12]` を維持
+- `sameClassStackStep` は `1` を維持
+- Wave 2前の12点では10点候補1つと低コスト候補、Wave 3前の累計24点では20点候補への温存と10点候補の分散取得を選択できる
+- 同一slotで3候補すべてを取得する総コストは、base合計31点に積み上げ3点を加えた34点。1作戦の24点だけでは全取得できない
+
+**自動強度比較（`r12PrototypeBalance.test.ts`）:**
+
+- 標準Module・追加取得なし: 約135秒、4人生存、全快勝利
+- 標準Module・12点ずつ使用: 約128秒、4人生存、全快勝利
+- 標準Module・24点まで温存して20点候補取得: 約125秒、4人生存、全快勝利
+- 20点温存は無取得比で約7.5%短縮、12点分散との差は約2%であり、現時点では一択化する過剰差ではない
+- B側Moduleを全枠、またはSwordsman / Cleric / Sorcererの1枠だけ選ぶ比較では、Wave 3で味方の魔術師が脱落し、敵Guardian＋Clericと味方Guardian中心が膠着した
+- Wave 3全敵またはAssassin＋Sorcererのみの攻撃を1.15 / 1.25倍にする仮比較は、標準Module側まで魔術師脱落後の膠着へ入ったため不採用
+
+**判定:** cost `1 / 10 / 20`・grant `[0, 12, 12]`・stackStep `1` を維持する。敵scale・基礎stat・CombatModule数値も据え置く。膠着は単純倍率で解消せず、手元プレイ時の判断差・敗北収束を **R12j** で確認する。
+
+**旧比較:** base `1 / 2 / 3` のまま grant を `[0, 6, 6]` へ下げる案は撤回。高コスト候補を20点まで広げることで、grant 12を維持しても選択代償を作れる。
+
+**回帰:**
+
+- `operationPassiveAcquireCost.test.ts`
+- `operationPassiveCatalogEditor.test.ts`
+- `authoringValidationPreview.test.ts`
+- `stageEnemyCompositionPreview.test.ts`
+
+以上 **4 files / 37 tests passed**。作業フォルダを正しく設定した実行で終了コード0。
+
+追加の強度比較は **1 file / 1 test passed**。長時間の仮比較では Vitest worker の `onTaskUpdate` timeout が出るため、正本テストは180秒上限のcharacterizationに短縮した。

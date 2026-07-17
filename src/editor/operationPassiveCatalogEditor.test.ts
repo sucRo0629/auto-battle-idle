@@ -41,6 +41,11 @@ describe('operation passive catalog (R9d)', () => {
     expect(gameData.operationPassiveCatalog.passiveAcquireCost).toBe(1);
     expect(gameData.operationPassiveCatalog.waveClearResourceGrant).toBe(12);
     expect(gameData.operationPassiveCatalog.sameClassStackStep).toBe(1);
+    expect(gameData.operationPassiveCatalog.unlockLevelCostTable).toEqual({
+      '0': 1,
+      '10': 10,
+      '20': 20,
+    });
     expect(
       gameData.operationPassiveCatalog.candidatesByClass.df_guardian,
     ).toEqual(['df_guardian_op_brace', 'df_guardian_op_wall_aura', 'df_guardian_op_last_stand']);

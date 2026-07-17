@@ -330,11 +330,16 @@ export interface DemoStageBattleResult {
   stageId: string;
   outcome: DemoStageBattleOutcome;
   phase: BattlePhase;
+  finalWaveIndex: number;
   tickCount: number;
   durationSec: number;
   survivingAllies: number;
+  survivingEnemies: number;
+  survivingAllyClassIds: ClassId[];
+  survivingEnemyClassIds: ClassId[];
   totalRemainingHp: number;
   totalMaxHp: number;
+  totalRemainingEnemyHp: number;
   classStats: DemoStageClassStatRow[];
   rangerA2Diagnostics?: RangerA2BattleDiagnostics;
   rangerBasicAttackDiagnostics?: RangerBasicAttackDiagnostics;
@@ -366,6 +371,11 @@ export function runDemoStageBattle(
     gameData?: GameData;
     configureSave?: (save: SaveGameState, gameData: GameData) => void;
     maxTicks?: number;
+    getSelectedCombatModuleId?: (slotIndex: number) => string | undefined;
+    getAcquiredOperationPassiveIds?: (
+      slotIndex: number,
+    ) => readonly string[];
+    beforeStartNextWave?: (nextWaveIndex: number) => void;
     /** demo_ch1_06 Ranger basic attack delay diagnosis */
     enableRangerBasicAttackDiagnostics?: boolean;
     /** Emit [demo-ranger-target-report] after battle when at_ranger is in party */
@@ -454,6 +464,9 @@ export function runDemoStageBattle(
           }
         }
       },
+      getSelectedCombatModuleId: options?.getSelectedCombatModuleId,
+      getAcquiredOperationPassiveIds:
+        options?.getAcquiredOperationPassiveIds,
     },
   );
 
@@ -513,7 +526,9 @@ export function runDemoStageBattle(
 
   for (; tickCount < maxTicks; tickCount++) {
     engine.tick(TICK_DT);
-    if (engine.getSnapshot().awaitingNextWave) {
+    const waveSnapshot = engine.getSnapshot();
+    if (waveSnapshot.awaitingNextWave) {
+      options?.beforeStartNextWave?.(waveSnapshot.waveIndex + 1);
       engine.startNextWave();
     }
     if (rangerBasicTracker) {
@@ -580,11 +595,23 @@ export function runDemoStageBattle(
           ? 'defeat'
           : 'timeout',
     phase,
+    finalWaveIndex: snap.waveIndex,
     tickCount: tickCount + 1,
     durationSec: (tickCount + 1) * TICK_DT,
     survivingAllies: allies.length,
+    survivingEnemies: snap.enemies.filter((enemy) => enemy.hp > 0).length,
+    survivingAllyClassIds: allies.flatMap((ally) =>
+      ally.classId ? [ally.classId] : [],
+    ),
+    survivingEnemyClassIds: snap.enemies.flatMap((enemy) =>
+      enemy.hp > 0 && enemy.classId ? [enemy.classId] : [],
+    ),
     totalRemainingHp,
     totalMaxHp,
+    totalRemainingEnemyHp: snap.enemies.reduce(
+      (sum, enemy) => sum + Math.max(0, enemy.hp),
+      0,
+    ),
     classStats,
     rangerA2Diagnostics: rangerA2Tracker?.snapshot(loadedRangerA2Definition),
     rangerBasicAttackDiagnostics: rangerBasicTracker?.snapshot(),
