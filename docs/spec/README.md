@@ -20,7 +20,7 @@
 
 **R12e 注記（2026-07-15）:** [operation-loop.md §19](operation-loop.md#19-必要能力対処能力r12e) — 必要能力カテゴリ A〜G・必須区分・能力セット。兵科への正式分配は R12f。
 
-**R12k 再設計（2026-07-17）:** 固定 Stage 1 本の成立から反復評価へ直接進む計画を撤回する。ローグライク主軸を有力案として、メインの反復構造と固定クエストの分離を先に設計する。[roguelike-mode.md](roguelike-mode.md) は旧案・素材であり、現行正本ではない。
+**R12k 再設計（2026-07-17）:** 固定 Stage 1 本の成立から反復評価へ直接進む計画を撤回する。ローグライク / ローグライトを含む候補からゲームに合うメイン反復構造を選び、固定クエストとの分離を先に設計する。[roguelike-mode.md](roguelike-mode.md) は旧案・素材であり、現行正本ではない。
 
 **R4 注記（2026-07-12）:** データ責務・エディタ設計・validate / migration は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（plans）。spec 各書の R2 ゲームルール正本は維持。
 
