@@ -2,9 +2,9 @@
 
 この文書は、敵ユニットをどう設計・編成するかの上位方針を整理する設計思想メモである。
 
-個別の敵テンプレート、ステージ JSON、EXP 付与は [spec/progression.md](spec/progression.md) と `data/enemies.json` / `data/stages.json` を正本とする。クラス定義・スキルは [spec/classes-and-skills.md](spec/classes-and-skills.md)、Kill / Flow / Survival 構造は [combat-architecture.md](combat-architecture.md)、ローグライクの問題生成は [spec/roguelike-mode.md](spec/roguelike-mode.md) を参照する。敵データ編集ツールの改修計画は [plans/enemy-editor-refactor.md](plans/enemy-editor-refactor.md)。
+個別の敵テンプレート、ステージ JSON、EXP 付与は [spec/progression.md](spec/progression.md) と `data/enemies.json` / `data/stages.json` を正本とする。クラス定義・スキルは [spec/classes-and-skills.md](spec/classes-and-skills.md)、Kill / Flow / Survival 構造は [combat-architecture.md](combat-architecture.md)。**メイン攻略の問題系列・問題生成の現行正本**は [spec/operation-loop.md §21](spec/operation-loop.md#21-メイン反復構造r12k)。旧 [spec/roguelike-mode.md](spec/roguelike-mode.md) は発想素材であり現行正本ではない。敵データ編集ツールの改修計画は [plans/enemy-editor-refactor.md](plans/enemy-editor-refactor.md)。
 
-**敵問題・戦術目標・敗因の識別可能性** の用語と最小属性は [spec/operation-loop.md §15](spec/operation-loop.md#15-敵問題と戦術目標r12a) を正本とする（R12a）。**1 Wave 成立条件・敵側戦術**は同書 [§16](spec/operation-loop.md#16-1-wave-単位の敵問題r12b)（R12b）。**作戦全体の敵問題・Wave 間関係**は同書 [§17](spec/operation-loop.md#17-作戦全体の敵問題r12c)（R12c）。**試作 Stage の具体敵問題**は同書 [§18](spec/operation-loop.md#18-試作stageの敵問題r12d)（R12d）。**必要能力・対処能力の導出**は同書 [§19](spec/operation-loop.md#19-必要能力対処能力r12e)（R12e）。Wave 勝利条件（敵全滅）は同書 [§5.3.1](spec/operation-loop.md#531-wave-勝利条件r12a)。
+**敵問題・戦術目標・敗因の識別可能性** の用語と最小属性は [spec/operation-loop.md §15](spec/operation-loop.md#15-敵問題と戦術目標r12a) を正本とする（R12a）。**1 Wave 成立条件・敵側戦術**は同書 [§16](spec/operation-loop.md#16-1-wave-単位の敵問題r12b)（R12b）。**作戦全体の敵問題・Wave 間関係**は同書 [§17](spec/operation-loop.md#17-作戦全体の敵問題r12c)（R12c）。**試作 Stage の具体敵問題**は同書 [§18](spec/operation-loop.md#18-試作stageの敵問題r12d)（R12d）。**必要能力・対処能力の導出**は同書 [§19](spec/operation-loop.md#19-必要能力対処能力r12e)（R12e）。**メイン反復構造・問題系列**は同書 [§21](spec/operation-loop.md#21-メイン反復構造r12k)（R12k）。Wave 勝利条件（敵全滅）は同書 [§5.3.1](spec/operation-loop.md#531-wave-勝利条件r12a)。
 
 ここでは数値や JSON スキーマではなく、**敵が何のために存在するか** と **どう構成するか** を扱う。
 
@@ -306,19 +306,15 @@ Sorcerer 敵がいる場合
 
 ---
 
-## 13. ローグライクとの接続
+## 13. メイン攻略の問題系列との接続
 
-ローグライクでは
+メイン攻略では、seed から作者設計の **線形 3 Wave 問題系列** を選ぶ（敵兵科や Wave の個別無作為抽選ではない）。
 
-- 敵クラス構成
-- 補正タグ
-- 制約条件
+- 毎回異なる問題系列が、異なる解法・Module 投資を要求する
+- scale や敵数増加だけで差を作らない
+- 内部の問題分類・接続タグは Player へ正解として表示しない
 
-をランダム生成し、
-
-毎回異なる解法を要求する。
-
-詳細な生成パラメータ・傾向タグは [spec/roguelike-mode.md](spec/roguelike-mode.md#6-ステージ生成問題生成) を参照。
+正本は [spec/operation-loop.md §21](spec/operation-loop.md#21-メイン反復構造r12k)。旧案のランダム生成パラメータは [spec/roguelike-mode.md](spec/roguelike-mode.md#6-ステージ生成問題生成) に発想素材として残るが、現行正本ではない。
 
 ---
 

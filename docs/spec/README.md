@@ -20,21 +20,21 @@
 
 **R12e 注記（2026-07-15）:** [operation-loop.md §19](operation-loop.md#19-必要能力対処能力r12e) — 必要能力カテゴリ A〜G・必須区分・能力セット。兵科への正式分配は R12f。
 
-**R12k 再設計（2026-07-17）:** 固定 Stage 1 本の成立から反復評価へ直接進む計画を撤回する。ローグライク / ローグライトを含む候補からゲームに合うメイン反復構造を選び、固定クエストとの分離を先に設計する。[roguelike-mode.md](roguelike-mode.md) は旧案・素材であり、現行正本ではない。
+**R12k 確定（2026-07-18）:** メイン攻略は seed 付き・作者設計の線形 3 Wave 問題系列。[operation-loop.md §21](operation-loop.md#21-メイン反復構造r12k) を正本とする。固定 Stage はクエスト等へ分離。[roguelike-mode.md](roguelike-mode.md) は旧案・発想素材であり、現行正本ではない。
 
 **R4 注記（2026-07-12）:** データ責務・エディタ設計・validate / migration は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（plans）。spec 各書の R2 ゲームルール正本は維持。
 
 | ファイル | 内容 |
 |----------|------|
-| [operation-loop.md](operation-loop.md) | **作戦ループ**（R3）— 作戦状態 / 戦闘状態、Wave 間準備、チェックポイント、リトライ、途中セーブ方針。**敵問題・戦術目標**（R12a §15）、**1 Wave 敵問題・敵側戦術**（R12b §16）、**作戦全体の敵問題・Wave 間関係**（R12c §17）、**試作 Stage 敵問題**（R12d §18）、**必要能力・対処能力**（R12e §19）、Wave 勝利条件＝敵全滅（§5.3.1） |
+| [operation-loop.md](operation-loop.md) | **作戦ループ**（R3）— 作戦状態 / 戦闘状態、Wave 間準備、チェックポイント、リトライ、途中セーブ方針。**敵問題・戦術目標**（R12a §15）、**1 Wave 敵問題・敵側戦術**（R12b §16）、**作戦全体の敵問題・Wave 間関係**（R12c §17）、**試作 Stage 敵問題**（R12d §18）、**必要能力・対処能力**（R12e §19）、Wave 勝利条件＝敵全滅（§5.3.1）。**メイン反復構造**（R12k §21）— seed・問題系列・情報開示・再試行・作戦内／外・系列 A/B |
 | [stats.md](stats.md) | 兵科基礎ステ、攻撃間隔（R2）。Legacy: Lv 成長、growthPresets、attackSpeedTier |
 | [combat.md](combat.md) | Attack / Hit、攻撃間隔、戦闘方式、DoT・一時効果（R2）、**作戦内パッシブの戦闘中表示**（R8 doc）。Legacy: ダメージパイプライン、CD、gauge |
 | [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘画面 UI / HUD**、戦闘中統計 UI、**1 次元効果範囲のフィールド表示**（R8 doc）。Legacy: BattlePhase 自動 Wave 遷移 |
 | [classes-and-skills.md](classes-and-skills.md) | 兵科・戦闘方式・作戦内パッシブ（R2 候補）、M1 方式表。Legacy: 旧スキル JSON スキーマ・UI 用語辞書 |
 | [i18n-en.md](i18n-en.md) | **英語 i18n 文案方針**（Phase 4e — M1 直前）— スキル効果文・用語・表記統一・スキルカード英語 |
-| [progression.md](progression.md) | 進行 3 層（R3）、作戦外進行。Legacy: EXP、レベル、セーブ、Stage Records、Phase 2〜12 |
+| [progression.md](progression.md) | 進行 3 層（R3）、作戦外進行（非数値解禁・作戦内取得消去）。Legacy: EXP、レベル、セーブ、Stage Records、Phase 2〜12 |
 | [party-formation-ui.md](party-formation-ui.md) | パーティ編成メニュー（`SkillMenuPanel`）の画面設計 — Phase 4d |
 | [ui-fonts.md](ui-fonts.md) | **UI フォント方針**（M PLUS 1p、`--font-body`） |
 | [ui-visual-rules.md](ui-visual-rules.md) | **全 UI 共通ビジュアル**（Web アプリ風禁止・HUD プレート推奨） |
-| [stage-selection-ui.md](stage-selection-ui.md) | ステージ選択・詳細・出撃。Legacy: Level Sync / 想定 Lv / ☆ |
-| [roguelike-mode.md](roguelike-mode.md) | **Legacy / 発想素材** — 固定メイン + 副モード、旧 Phase 10 前提。R12k でメイン化を含めて再設計 |
+| [stage-selection-ui.md](stage-selection-ui.md) | 固定クエスト等の Stage 選択・詳細・出撃。メイン攻略入口の責務境界（§0）。Legacy: Level Sync / 想定 Lv / ☆ |
+| [roguelike-mode.md](roguelike-mode.md) | **Legacy / 発想素材** — 固定メイン + 副モード、旧 Phase 10 前提。現行正本は [operation-loop.md §21](operation-loop.md#21-メイン反復構造r12k) |

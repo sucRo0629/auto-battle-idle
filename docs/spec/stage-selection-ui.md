@@ -1,14 +1,33 @@
 # ステージ選択 UI
 
-**R12k 再設計（2026-07-17）:** 本書の固定 Stage 選択は、今後はクエスト / チュートリアル / 検証用導線になる候補。反復可能なメイン攻略の入口、開始条件、シード、問題プレビューは R12k で別途設計する。固定 Stage 一覧をそのままメインループと確定しない。
+**R12k 確定（2026-07-18）:** 固定 Stage 選択は **クエスト / チュートリアル / 検証 / 物語 / 作者指定課題 / デバッグ** の入口とする。メイン攻略は別入口（下記 §0）。正式 UI レイアウトや実装は R12k では決めない。詳細正本は [operation-loop.md §21](operation-loop.md#21-メイン反復構造r12k)。
 
 実装：`GameSession` 画面状態 **`map`**（**内部名**。ユーザー向け表示・画面タイトルは「**ステージ選択**」）配下（Phase **6d** / **7d**）。敵データは `data/enemies.json`、ステージは `data/stages.json` / `data/stages-demo.json`（体験版）。
 
-本ドキュメントは **ステージ選択 → ステージ詳細 → 出撃** の画面設計正本。クリア履歴のデータ形状・更新ルールは [progression.md §Stage Records](progression.md#stage-records)（legacy 記録枠を含む）。編成画面は [party-formation-ui.md](party-formation-ui.md)。敵の設計意図は [enemy-design-concept.md](../enemy-design-concept.md)。作戦内進行（リソース・パッシブ）は [operation-loop.md](operation-loop.md)。
+本ドキュメントは **ステージ選択 → ステージ詳細 → 出撃** の画面設計正本（固定 Stage 側）。クリア履歴のデータ形状・更新ルールは [progression.md §Stage Records](progression.md#stage-records)（legacy 記録枠を含む）。編成画面は [party-formation-ui.md](party-formation-ui.md)。敵の設計意図は [enemy-design-concept.md](../enemy-design-concept.md)。作戦内進行（リソース・パッシブ）は [operation-loop.md](operation-loop.md)。
 
 **現行方針（R3 以降）:** ステージに **想定レベル / ランクは置かない**。敵の強さは兵科基礎ステ + `enemyGroups` scale。味方の強化は Wave 勝利後の **作戦内リソース → パッシブ取得**。`recommendedLevel`・Level Sync・クリア Lv ☆ は **legacy**（下記各節）。
 
 **体験版の前提:** 各ステージは **最初から選択可能**（順不同で何度でも再挑戦）。**ステージ順クリアで進行制御しない**。
+
+---
+
+## 0. メイン攻略入口（R12k 責務境界）
+
+固定 Stage 一覧をメインループとはしない。メイン攻略は次の別入口を持つ（レイアウト・見た目・実装は未確定）。
+
+```text
+新しい作戦を生成（seed）
+  → 全 3 Wave 概要を開示
+  → 初期準備
+```
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 生成 | seed から作者設計の問題系列を 1 つ選ぶ（[operation-loop.md §21.1](operation-loop.md#211-採用方式)） |
+| 開示 | 開始前の全 Wave 情報（同書 §21.5）。推奨編成・正解説明は出さない |
+| 固定 Stage との関係 | 生成元・入力責務は分離。解決済み Wave 形状と戦闘基盤は共有可 |
+| 本書の残り節 | 当面は固定クエスト等の Stage 選択 UI 正本。メイン攻略の正式画面設計は後続 |
 
 ---
 

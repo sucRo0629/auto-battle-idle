@@ -33,7 +33,7 @@
 | `game-ui-chrome.css`, DOM / Canvas UI 見た目・ツールチップ方針 | [spec/ui-visual-rules.md](spec/ui-visual-rules.md) |
 | `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
 | `EnemyEditorStep`, `editorApi`（敵テンプレ編集）                                  | [plans/enemy-editor-refactor.md](plans/enemy-editor-refactor.md)                |
-| ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
+| メイン攻略の問題系列・seed / 固定クエスト分離（R12k） | [spec/operation-loop.md §21](spec/operation-loop.md#21-メイン反復構造r12k)（旧案素材: [spec/roguelike-mode.md](spec/roguelike-mode.md)） |
 | `formatSkillText.ts`, 4b 説明文 / 4e i18n（**M1 8 クラス**）                      | [spec/i18n-en.md](spec/i18n-en.md)（進捗: [phase-4-roadmap.md §4e](plans/phase-4-roadmap.md#4e--英語-i18n-en-のみ)） |
 | Release M1 / M2 スコープ・配信方針                                                | [plans/phase-roadmap.md §Release マイルストーン](plans/phase-roadmap.md#release-マイルストーン) |
 | フェーズ・作業順                                                                  | [plans/phase-roadmap.md](plans/phase-roadmap.md)                                |
@@ -85,4 +85,5 @@
 | UI フォント方針    | [spec/ui-fonts.md](spec/ui-fonts.md) |
 | UI ビジュアルルール（全画面共通） | [spec/ui-visual-rules.md](spec/ui-visual-rules.md) |
 | ステージ選択 UI    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md) |
-| ローグライクモード | [spec/roguelike-mode.md](spec/roguelike-mode.md)         |
+| メイン攻略・問題系列（R12k） | [spec/operation-loop.md §21](spec/operation-loop.md#21-メイン反復構造r12k) |
+| 旧ローグライク案（素材） | [spec/roguelike-mode.md](spec/roguelike-mode.md)         |

@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12k 設計開始**。R12a〜j は固定 `r12_prototype` の技術材料として維持するが、旧 Lv パッシブ未再編とメイン反復構造の欠落により、R12j のゲーム全体成立判定は **無効 / 未完了**。ローグライク / ローグライトを含む候補から、このゲームに合う反復方式を先に設計する。handoff 正本は **§105.19**。
+- **新ロードマップ現在地:** **R12k 完了 / 公式次 R12l**。R12a〜j は固定 `r12_prototype` の技術材料として維持するが、旧 Lv パッシブ未再編により、R12j のゲーム全体成立判定は **無効 / 未完了**。メイン反復構造は [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)（seed 付き作者設計 3 Wave 問題系列）。handoff 正本は **§105.22**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12k メイン反復構造設計** → R12l 4兵科パッシブ再編 → R12m 反復試作 → R12n 数値調整 → R12o 手元成立 → R13。
+- **次の再開タスク:** **R12l 4兵科パッシブ再編** → R12m 反復試作（系列 A/B）→ R12n 数値調整 → R12o 手元成立 → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -8960,7 +8960,9 @@ R12hでは具体量を成立値として確定しない。高難度1 Wave Stage�
 
 ### 105.19 R12k — メイン反復構造の再設計（2026-07-17）
 
-**状態:** ロードマップ不具合を確認し、文書上の順序を修正。**公式次タスクは R12k の詳細設計**。本節では production code / JSON は変更しない。
+> **履歴。** 詳細設計の完了記録は **§105.22**。本節はロードマップ順序修正時点のメモ。
+
+**状態（当時）:** ロードマップ不具合を確認し、文書上の順序を修正。**当時の公式次は R12k の詳細設計**。本節では production code / JSON は変更しない。
 
 #### 判明した同根の不具合
 
@@ -9038,3 +9040,91 @@ R13への現在の対応表:
 同時にR12kは、ローグライクを名称先行で有力扱いする記述を撤回した。ローグライク / ローグライトを含む方式候補を、編成問題との相性、情報の読みやすさ、反復時の面白さで比較する。面白さの最終判定は人間の Player が行い、LLM / 自動テストは代行しない。
 
 **production code / JSON:** 変更なし。文書ルールのみ。
+
+### 105.22 R12k — メイン反復構造の設計完了（2026-07-18）
+
+**状態:** **R12k 完了（設計 Phase）**。公式次は **R12l**。production code / JSON / test / editor / Player UI は変更していない。
+
+#### 決定事項
+
+- 採用方式: **シード付き・作者設計の線形 3 Wave 問題系列**
+- 敵兵科や Wave の個別無作為抽選はしない
+- 固定 `StageDef` はクエスト / チュートリアル / 検証 / 物語 / 作者指定課題 / デバッグへ分離
+- メイン攻略 = seed 確定〜最終 Wave 勝利または中断。出撃試行 = 各 Wave 開始〜勝敗
+- Wave 敗北は出撃試行終了。問題系列を即消去しない
+- 同 seed 再試行 / 準備へ戻る / Wave 1 から / 新 seed / 中断の状態遷移を確定
+- 作戦開始前に全 3 Wave の敵兵科・Module・scale 表示・付与予定・固有条件・seed を開示。推奨編成・正解説明は非表示
+- 作戦内取得物は終了時消去。恒久数値成長不採用。将来の作戦外解禁は非数値優先
+- R12m 初期不採用: 分岐マップ、ショップ、休憩、イベント、ランダム報酬、パッシブ候補ランダム非表示、完全自動生成、エンドレス、恒久数値成長、作戦途中セーブ
+- プレイヤー向け用語は「作戦」継続。ローグライク／ローグライト正式名称は付けない
+- R13 開始条件は **R12o Player 完了**のまま
+
+#### 変更文書
+
+| 文書 | 概要 |
+| ---- | ---- |
+| [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k) | **主正本** — 採用方式、所有関係、開示、再試行、系列 A/B、R12m 契約 |
+| [design-philosophy.md](../design-philosophy.md) | 反復方式を確定方針へ。詳細は §21 参照 |
+| [progression.md](../spec/progression.md) | 作戦内消去・同 seed / 新 seed・非数値解禁 |
+| [stage-selection-ui.md](../spec/stage-selection-ui.md) | 固定 Stage＝クエスト入口。メインは別入口（§0） |
+| [enemy-design-concept.md](../enemy-design-concept.md) | 問題生成正本を §21 へ。旧 roguelike は素材 |
+| [spec/README.md](../spec/README.md) | 索引・状態同期 |
+| [roguelike-mode.md](../spec/roguelike-mode.md) | 冒頭状態注記のみ（現行正本は §21） |
+| [phase-roadmap.md](../plans/phase-roadmap.md) | R12k 完了、公式次 R12l、R12m＝系列 A/B |
+| 本書 §105.22 / 冒頭 | 本記録 |
+| [planning-rules.md](planning-rules.md) | 現在地・公式次のみ |
+| [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) | Stage 節の R12k 注記を確定へ |
+| [docs/README.md](../README.md) | 索引を §21 正本へ |
+
+**変更していない:** `classes-and-skills.md`、`src/**`、`data/**`、electron、editor、test、package、build。
+
+#### 系列 A／B（短縮）
+
+| 系列 | 主判断 | Wave 概要 |
+| ---- | ------ | --------- |
+| A | 攻撃 Module・突破投資 | 単一保護 → 複数保護 → 保護＋分散圧力の複合 |
+| B | 防護・回復 Module・生存投資 | 集中圧力 → 分散圧力 → 集中・分散同時 |
+
+4兵科のみ（鉄衛士・剣術士・魔術師・療養師）。8兵科前提解法は持ち込まない。数値は R12n。
+
+#### planning-rules.md §2.1 の 7 項目再確認
+
+| 項目 | 判定 |
+| ---- | ---- |
+| 評価命題 | 繰り返し遊びたいか |
+| 発生機構 | seed により異なる作者設計問題系列を供給するメイン攻略 |
+| 設計 | R12k（**完了**） |
+| 実装 | R12m |
+| 成立 | R12o Player 完了 |
+| 評価 | R13 |
+| 反証例 | 同じ固定 Stage を再生し、Player が任意に別解を選ぶだけ |
+| 1回目と2回目の具体差 | 系列 A では攻撃 Module・突破投資、系列 B では防護・回復 Module・生存投資が主判断 |
+| チェック1〜7 | **すべて Yes**（発生機構が状態変化として説明済み、設計→実装→成立→評価の順、Player 完了で差を確認可能、R13 は R12o Player 後、発生機構はスコープ外に送っていない、1/2回目の差が具体、固定別解と反復供給を混同していない） |
+
+#### §2.2 確認対象一覧
+
+| 対象群 | 対象 | 結果 |
+| ------ | ---- | ---- |
+| 上位方針 | design-philosophy.md、enemy-design-concept.md | **確認済み** |
+| 仕様索引 | spec/README.md → operation-loop / progression / stage-selection / roguelike-mode | **確認済み** |
+| 直接依存 | operation-loop §9/13/17/18、progression、stage-selection、classes-and-skills R12f（読取のみ・未変更） | **確認済み** |
+| 計画 | phase-roadmap R12k〜o、current-task §105.19〜21、planning-rules §2.1〜2.2 / §8c | **確認済み** |
+| 実体 | Stage/Wave・`r12_prototype`（`data/stages.json`）、`StageDef`/`StageWave`（`src/battle/types.ts`）・validation（`src/battle/data/validateGameData.ts`）、`OperationState`/`GameSession`（`src/game/OperationState.ts`・`src/game/GameSession.ts`）、Stage enemy editor 保存（`src/editor/StageEnemyEditorStep.ts`・`src/editor/editorApi.ts` `saveStageBundle`）、Stage 選択／Wave 準備 UI（`src/ui/StageSelectionPanel.ts`・`src/game/StageSelectionScreenHost.ts`・`src/game/WavePrepScreenHost.ts`） | **確認済み・変更なし**（読取のみ。文書 Phase のため実体は未変更） |
+| legacy | roguelike-mode.md、固定メイン＋副モード記述、旧「R12k で比較中」保留表現 | **確認済み**（正本を §21 へ寄せ、旧文を素材扱いへ更新） |
+
+#### R12l へ渡す能力方向
+
+- R5対象4兵科の旧 passive / active を cost 1×3 / 10×2 / 20×2 へ再編
+- 全候補表示（ランダム非表示は初期不採用）
+- 系列 A/B の構築差（攻撃突破 vs 防護・回復）を支えられる候補内容にする
+- **R12k では**新パッシブの具体効果・名称・ID・cost ごとの数値を決めない
+
+#### 残った未決事項（意図的）
+
+- R12l のパッシブ具体内容
+- 系列 A/B の最終 scale・付与量・出現重み（→ R12n）
+- メイン攻略の正式 UI レイアウト（→ R12m 以降）
+- generator version / JSON schema 詳細（→ R12m）
+- 作戦外クリア記録の具体 Save 形状
+
+**公式次:** **R12l** — R5対象4兵科のパッシブ・旧active再編。

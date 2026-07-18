@@ -2,7 +2,7 @@
 
 **R3 注記（2026-07-12）:** 新作戦ループの進行正本は **§進行の 3 層（R3）** と [operation-loop.md](operation-loop.md)。Wave 作戦ループ・作戦状態 / 戦闘状態・リトライ・作戦途中セーブ方針はそちらを優先する。
 
-**R12k 再設計（2026-07-17）:** 「固定 Stage のメイン進行 + 独立したローグライク副モード」という旧構成を撤回候補とする。ローグライク / ローグライトを含む候補をゲーム適合性で比較し、ラン内進行・固定クエスト・作戦外解禁の境界を R12k で再定義する。旧 Phase 10 と [roguelike-mode.md](roguelike-mode.md) は現行正本ではない。
+**R12k 確定（2026-07-18）:** メイン攻略は seed 付き問題系列。固定 Stage はクエスト等へ分離。攻略終了時に実行中の作戦状態は破棄し、作戦内取得物（パッシブ・未使用ポイント等）は消去する。利用可能兵科・CombatModule・非数値解禁の恒久削除はしない。恒久数値成長は導入しない。同 seed 再試行と新 seed 開始の境界は [operation-loop.md §21](operation-loop.md#21-メイン反復構造r12k)。旧 Phase 10 と [roguelike-mode.md](roguelike-mode.md) は現行正本ではない。
 
 ---
 
@@ -12,20 +12,21 @@
 
 | 層 | 内容 | 正本 |
 | -- | ---- | ---- |
-| **作戦外進行** | 作戦選択、クリア記録、兵科解禁など将来の恒久報酬 | 本書 §作戦外進行 |
-| **作戦内進行** | 現在 Wave、クリア済み Wave、作戦内リソース、取得パッシブ、Wave 開始チェックポイント | [operation-loop.md](operation-loop.md) |
-| **Wave 戦闘** | 一時的な combat state、勝敗判定、Wave 終了時破棄 | [operation-loop.md §5](operation-loop.md#5-wave-戦闘) + [battle-field.md](battle-field.md) |
+| **作戦外進行** | メイン攻略または固定クエストの選択、クリア記録、将来の非数値解禁 | 本書 §作戦外進行 |
+| **作戦内進行** | 現在 Wave、クリア済み Wave、作戦内リソース、取得パッシブ、Wave 開始チェックポイント。メイン攻略では seed・問題系列を含む | [operation-loop.md](operation-loop.md) / [§21](operation-loop.md#21-メイン反復構造r12k) |
+| **Wave 戦闘** | 一時的な combat state、勝敗判定、Wave 終了時破棄（出撃試行単位） | [operation-loop.md §5](operation-loop.md#5-wave-戦闘) + [battle-field.md](battle-field.md) |
 
-### 作戦外進行（R3 方針）
+### 作戦外進行（R3 方針 + R12k）
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 作戦選択 | **任意選択**。選択順は固定しない |
+| メイン攻略の選択 | 新しい作戦を生成（seed）→ 全 3 Wave 概要 → 初期準備。入口責務は [stage-selection-ui.md](stage-selection-ui.md) |
+| 固定クエストの選択 | 固定 `StageDef` を任意選択。選択順は固定しない |
 | クリア記録 | 作戦完了時に恒久記録へ反映する候補（具体は後続） |
-| 兵科解禁等 | 恒久報酬として設計。旧 `unlockClassIdsOnClear`（例: demo 弩砲士）を **そのまま継承しない** |
-| セーブ | 作戦 **途中** は保存しない。作戦 **完了時** のみ既存 Save へ反映する設計候補 |
+| 作戦外解禁 | **非数値**（兵科、問題系列、ルール等）を優先。恒久数値成長は導入しない |
+| セーブ | 作戦 **途中** は保存しない（R12k〜o 共通スコープ外）。作戦 **完了時** のみ既存 Save へ反映する設計候補 |
 
-**参考として残す:** 既存 7 ステージの非一本道選択、`clearedStageIds` の考え方は作戦選択 UI の参考にできる（[stage-selection-ui.md](stage-selection-ui.md)）。
+**参考として残す:** 既存 7 ステージの非一本道選択、`clearedStageIds` の考え方は固定クエスト UI の参考にできる（[stage-selection-ui.md](stage-selection-ui.md)）。
 
 **新仕様の原則:**
 
@@ -33,6 +34,11 @@
 - 作戦敗北で **別作戦の選択状態を巻き戻さない**
 - **ステージに想定レベル / ランクは置かない**（敵の強さは兵科基礎ステ + `enemyGroups` scale）
 - **クラス側に恒久 Lv / ランク成長は置かない**（強化は作戦内リソース → パッシブ取得。[operation-loop.md](operation-loop.md)）
+- メイン攻略終了時に **実行中の作戦状態は終了・破棄**する。このとき **作戦内取得物**（作戦内パッシブ、未使用作戦ポイント等）は消去する（[operation-loop.md §21.4](operation-loop.md#214-所有関係) / [§21.7](operation-loop.md#217-作戦内作戦外境界)）
+- 編成・CombatModule の選択内容は実行中作戦の **スナップショット**として作戦状態に保持されるが、それ自体を作戦内取得物とは呼ばない。スナップショット破棄は、作戦前に利用可能だった兵科・編成候補・CombatModule・非数値解禁の **恒久削除ではない**
+- **同 seed 再試行**は問題系列を維持し、クリア済み Wave / checkpoint 規則は [operation-loop.md §21.6](operation-loop.md#216-状態遷移と再試行)
+- **新 seed** は新しい問題系列と全作戦内状態の初期化
+- R12m の 4 兵科試作では、必要な 4 兵科・問題系列を最初から利用可能とする
 
 ### Stage / Wave データ（現行方針）
 
@@ -499,9 +505,9 @@ interface StageRecord {
 
 ## Phase 10 — ローグライクモード（仮称）
 
-> **Legacy。** Phase 9 完了後に「メインモードのステージ進行・EXPとは独立した副モード」を作る計画は凍結した。現行ロードマップの R12k で、ローグライクをメインにする可能性を含めて再設計する。
+> **Legacy。** Phase 9 完了後に「メインモードのステージ進行・EXPとは独立した副モード」を作る計画は凍結した。現行のメイン反復構造は [operation-loop.md §21](operation-loop.md#21-メイン反復構造r12k)（R12k 確定）。固定メイン + 副モード構成は採用しない。
 
-旧案の詳細は [roguelike-mode.md](roguelike-mode.md)。マップ・報酬・進行の発想素材に限り、R12k の判断を経て再利用する。
+旧案の詳細は [roguelike-mode.md](roguelike-mode.md)。マップ・報酬・進行の発想素材に限り参照する。
 
 ---
 
