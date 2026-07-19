@@ -66,6 +66,11 @@ import {
   validateCheckpointSnapshot,
   type OperationCheckpointSnapshot,
 } from './OperationCheckpoint.ts';
+import {
+  createProblemSeriesOperationStartSnapshot,
+  type ProblemSeriesOperationStartSnapshot,
+} from '../battle/problemSeries/operationStartSnapshot.ts';
+import { resolveProblemSeriesFromSeed } from '../battle/problemSeries/seedResolve.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import { WavePrepScreenHost } from './WavePrepScreenHost.ts';
 import {
@@ -115,6 +120,12 @@ export class GameSession {
   private operationCheckpoint: OperationCheckpointSnapshot | null = null;
   /** R6h: 作戦完了時に確定する結果（メモリのみ・Save 非統合） */
   private operationResult: OperationResult | null = null;
+  /**
+   * R12m 1C: 問題系列の作戦開始スナップショット（メモリのみ）。
+   * OperationState / BattleEngine / Save へはまだ渡さない。
+   */
+  private problemSeriesOperationStartSnapshot: ProblemSeriesOperationStartSnapshot | null =
+    null;
   /** R6i: checkpoint 再戦中は onBattlefieldReload による Wave 進行巻き戻しを抑止 */
   private suppressOperationWaveReload = false;
   /** R7b: battle simulation 倍率（Save 非永続・初期 1 倍） */
@@ -338,6 +349,30 @@ export class GameSession {
   /** R6c: 作戦中の readonly view（未開始時は null） */
   getOperationState(): OperationStateReadonlyView | null {
     return this.operationState?.toReadonlyView() ?? null;
+  }
+
+  /**
+   * R12m 1C: seed から問題系列を一度選出し、作戦開始スナップショットをメモリ保持する。
+   * OperationState 開始・BattleEngine 起動・Save 書き込みは行わない。
+   */
+  prepareProblemSeriesOperationStart(
+    seed: string,
+  ): ProblemSeriesOperationStartSnapshot {
+    const resolved = resolveProblemSeriesFromSeed(
+      this.gameData.problemSeriesCatalog,
+      seed,
+    );
+    const snapshot = createProblemSeriesOperationStartSnapshot(resolved);
+    this.problemSeriesOperationStartSnapshot = snapshot;
+    return snapshot;
+  }
+
+  /**
+   * R12m 1C: 保持中の問題系列作戦開始スナップショット（未準備時は null）。
+   * 再選出・再変換せず、準備時と同一参照を返す。
+   */
+  getProblemSeriesOperationStartSnapshot(): ProblemSeriesOperationStartSnapshot | null {
+    return this.problemSeriesOperationStartSnapshot;
   }
 
   hasActiveOperation(): boolean {
