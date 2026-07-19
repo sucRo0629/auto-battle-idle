@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { loadGameData } from '../data/loadGameData.ts';
 import type { ProblemSeriesDef } from '../types.ts';
 import { resolveProblemSeriesFromSeed } from './seedResolve.ts';
 import {
   toProblemSeriesBattleWaves,
+  type ProblemSeriesBattleEnemyGroup,
   type ProblemSeriesBattleWave,
 } from './toBattleWaves.ts';
 
@@ -88,6 +89,31 @@ function expectNoAuthoringOrStageFields(waves: ProblemSeriesBattleWave[]): void 
 }
 
 describe('R12m toProblemSeriesBattleWaves (pure conversion)', () => {
+  it('battle enemy group requires selectedCombatModuleId: string', () => {
+    expectTypeOf<
+      ProblemSeriesBattleEnemyGroup['selectedCombatModuleId']
+    >().toEqualTypeOf<string>();
+    expectTypeOf<ProblemSeriesBattleEnemyGroup>().toMatchTypeOf<{
+      selectedCombatModuleId: string;
+    }>();
+    expectTypeOf<
+      ProblemSeriesBattleWave['enemyGroups'][number]['selectedCombatModuleId']
+    >().toEqualTypeOf<string>();
+    // scale は optional のまま
+    expectTypeOf<
+      ProblemSeriesBattleEnemyGroup['hpScale']
+    >().toEqualTypeOf<number | undefined>();
+    expectTypeOf<
+      ProblemSeriesBattleEnemyGroup['atkScale']
+    >().toEqualTypeOf<number | undefined>();
+    expectTypeOf<
+      ProblemSeriesBattleEnemyGroup['defScale']
+    >().toEqualTypeOf<number | undefined>();
+    expectTypeOf<
+      ProblemSeriesBattleEnemyGroup['resScale']
+    >().toEqualTypeOf<number | undefined>();
+  });
+
   it('fixture-a: production catalog → seed resolve → 3 battle waves match series A', () => {
     const catalog = loadGameData().problemSeriesCatalog;
     const { series } = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_A);

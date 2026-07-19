@@ -12,15 +12,29 @@ import type {
 } from '../types.ts';
 
 /**
+ * 問題系列の戦闘用敵 group。
+ * StageEnemyGroup を基礎形状とし、selectedCombatModuleId だけ必須にする。
+ * StageEnemyGroup 一般仕様（optional Module ID）は変更しない。
+ */
+export type ProblemSeriesBattleEnemyGroup = Omit<
+  StageEnemyGroup,
+  'selectedCombatModuleId'
+> & {
+  selectedCombatModuleId: string;
+};
+
+/**
  * 解決済み 1 Wave の戦闘入力（StageWave ではない）。
  * legacy 必須フィールド `enemies` は持たない。
  */
 export interface ProblemSeriesBattleWave {
-  enemyGroups: StageEnemyGroup[];
+  enemyGroups: ProblemSeriesBattleEnemyGroup[];
   prepResourceGrant: number;
 }
 
-function toBattleEnemyGroup(group: ProblemSeriesEnemyGroup): StageEnemyGroup {
+function toBattleEnemyGroup(
+  group: ProblemSeriesEnemyGroup,
+): ProblemSeriesBattleEnemyGroup {
   return {
     classId: group.classId,
     count: group.count,
