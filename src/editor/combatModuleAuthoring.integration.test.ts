@@ -7,6 +7,7 @@ import classesJson from '../../data/classes.json';
 import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
 import operationPassiveCatalogJson from '../../data/operation-passive-catalog.json';
+import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import stagesJson from '@game-data/stages';
 import { loadGameData } from '../battle/data/loadGameData.ts';
 import { readSkillsRoot } from '../battle/data/skillsJsonFs.ts';
@@ -71,6 +72,7 @@ function gameDataBundle(combatModules: CombatModuleDef[]) {
     skills: readSkillsRoot(),
     combatModules,
     operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
   };
 }
 

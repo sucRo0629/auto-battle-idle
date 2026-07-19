@@ -31,6 +31,7 @@ import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
 import stagesJson from '../../data/stages.json';
 import operationPassiveCatalogJson from '../../data/operation-passive-catalog.json';
+import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import {
   combatModuleFilesFromDraft,
   combatModulesDraftFromModules,
@@ -698,6 +699,7 @@ describe('at_assassin CombatModule validation (R12g-e2)', () => {
       skills: loadSkillsRoot(),
       combatModules,
       operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
     };
   }
 

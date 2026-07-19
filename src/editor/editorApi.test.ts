@@ -1,3 +1,4 @@
+import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../battle/data/loadGameData.ts';
 import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
@@ -770,6 +771,7 @@ describe('normalizeStageDraftForSave', () => {
             members: [{ classId: 'df_paladin', build: { activeSkillIds: [] } }],
           },
         },
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );
@@ -818,6 +820,7 @@ describe('normalizeStageDraftForSave', () => {
               members: [{ classId: 'df_paladin', build: { activeSkillIds: [] } }],
             },
           },
+          problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ).stages[0]?.recommendedLevel,
@@ -1196,6 +1199,7 @@ describe('wave enemyGroups draft helpers (R6g-4)', () => {
         skills: minimalStageSkills,
         stages: [normalized],
         parties: emptyParties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );

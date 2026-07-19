@@ -1,0 +1,264 @@
+{
+  "generatorVersion": "r12m-v1",
+  "series": [
+    {
+      "seriesId": "r12m_series_a",
+      "generatorVersion": "r12m-v1",
+      "waveRelationSummary": "単壁突破から複数処理へ。最終Waveは保護と分散圧力の複合。",
+      "waveLinks": [
+        {
+          "fromWaveIndex": 0,
+          "toWaveIndex": 1,
+          "relationKind": "pivot"
+        },
+        {
+          "fromWaveIndex": 1,
+          "toWaveIndex": 2,
+          "relationKind": "opposition"
+        },
+        {
+          "fromWaveIndex": 0,
+          "toWaveIndex": 2,
+          "relationKind": "composite"
+        },
+        {
+          "fromWaveIndex": 1,
+          "toWaveIndex": 2,
+          "relationKind": "composite"
+        }
+      ],
+      "finalWaveCompositeOf": [0, 1],
+      "operationConditions": [],
+      "allowedClassIds": [
+        "df_guardian",
+        "at_swordsman",
+        "at_sorcerer",
+        "sp_cleric"
+      ],
+      "waves": [
+        {
+          "internalProblemClass": "single_protection",
+          "expectedFailureModes": [
+            "failed_break_healed_high_def_guardian",
+            "sorcerer_focus_pressure_before_breach"
+          ],
+          "connection": {
+            "previousWaveIndex": null,
+            "nextWaveIndex": 1,
+            "relationFromPrevious": null
+          },
+          "prepResourceGrant": 0,
+          "enemyGroups": [
+            {
+              "classId": "df_guardian",
+              "count": 1,
+              "selectedCombatModuleId": "df_guardian_mod_nearest_strike"
+            },
+            {
+              "classId": "sp_cleric",
+              "count": 1,
+              "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+            },
+            {
+              "classId": "at_sorcerer",
+              "count": 1,
+              "selectedCombatModuleId": "at_sorcerer_mod_focus"
+            }
+          ]
+        },
+        {
+          "internalProblemClass": "multi_protection",
+          "expectedFailureModes": [
+            "stuck_on_single_target_vs_multi_protection",
+            "party_mend_outlasts_single_focus"
+          ],
+          "connection": {
+            "previousWaveIndex": 0,
+            "nextWaveIndex": 2,
+            "relationFromPrevious": "pivot"
+          },
+          "prepResourceGrant": 12,
+          "enemyGroups": [
+            {
+              "classId": "df_guardian",
+              "count": 1,
+              "selectedCombatModuleId": "df_guardian_mod_nearest_strike"
+            },
+            {
+              "classId": "df_guardian",
+              "count": 1,
+              "selectedCombatModuleId": "df_guardian_mod_guard_focus"
+            },
+            {
+              "classId": "sp_cleric",
+              "count": 1,
+              "selectedCombatModuleId": "sp_cleric_mod_party_mend"
+            },
+            {
+              "classId": "at_sorcerer",
+              "count": 1,
+              "selectedCombatModuleId": "at_sorcerer_mod_chain"
+            }
+          ]
+        },
+        {
+          "internalProblemClass": "protection_scatter_pressure_composite",
+          "expectedFailureModes": [
+            "overcommit_scatter_vs_guard_focus",
+            "overcommit_single_break_vs_scatter_pressure"
+          ],
+          "connection": {
+            "previousWaveIndex": 1,
+            "nextWaveIndex": null,
+            "relationFromPrevious": "opposition"
+          },
+          "prepResourceGrant": 12,
+          "enemyGroups": [
+            {
+              "classId": "df_guardian",
+              "count": 1,
+              "selectedCombatModuleId": "df_guardian_mod_guard_focus"
+            },
+            {
+              "classId": "at_swordsman",
+              "count": 1,
+              "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+            },
+            {
+              "classId": "sp_cleric",
+              "count": 1,
+              "selectedCombatModuleId": "sp_cleric_mod_party_mend"
+            },
+            {
+              "classId": "at_sorcerer",
+              "count": 1,
+              "selectedCombatModuleId": "at_sorcerer_mod_chain"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "seriesId": "r12m_series_b",
+      "generatorVersion": "r12m-v1",
+      "waveRelationSummary": "集中被害から分散被害へ。最終Waveは集中・分散同時圧力の複合。",
+      "waveLinks": [
+        {
+          "fromWaveIndex": 0,
+          "toWaveIndex": 1,
+          "relationKind": "pivot"
+        },
+        {
+          "fromWaveIndex": 1,
+          "toWaveIndex": 2,
+          "relationKind": "opposition"
+        },
+        {
+          "fromWaveIndex": 0,
+          "toWaveIndex": 2,
+          "relationKind": "composite"
+        },
+        {
+          "fromWaveIndex": 1,
+          "toWaveIndex": 2,
+          "relationKind": "composite"
+        }
+      ],
+      "finalWaveCompositeOf": [0, 1],
+      "operationConditions": [],
+      "allowedClassIds": [
+        "df_guardian",
+        "at_swordsman",
+        "at_sorcerer",
+        "sp_cleric"
+      ],
+      "waves": [
+        {
+          "internalProblemClass": "concentrated_pressure",
+          "expectedFailureModes": [
+            "frontline_collapse_under_mixed_focus",
+            "single_mend_insufficient_before_breach"
+          ],
+          "connection": {
+            "previousWaveIndex": null,
+            "nextWaveIndex": 1,
+            "relationFromPrevious": null
+          },
+          "prepResourceGrant": 0,
+          "enemyGroups": [
+            {
+              "classId": "at_swordsman",
+              "count": 1,
+              "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+            },
+            {
+              "classId": "at_sorcerer",
+              "count": 1,
+              "selectedCombatModuleId": "at_sorcerer_mod_focus"
+            }
+          ]
+        },
+        {
+          "internalProblemClass": "scattered_pressure",
+          "expectedFailureModes": [
+            "party_damage_outpaces_single_mend",
+            "stuck_on_focus_defense_vs_scatter"
+          ],
+          "connection": {
+            "previousWaveIndex": 0,
+            "nextWaveIndex": 2,
+            "relationFromPrevious": "pivot"
+          },
+          "prepResourceGrant": 12,
+          "enemyGroups": [
+            {
+              "classId": "at_swordsman",
+              "count": 1,
+              "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+            },
+            {
+              "classId": "at_sorcerer",
+              "count": 1,
+              "selectedCombatModuleId": "at_sorcerer_mod_chain"
+            }
+          ]
+        },
+        {
+          "internalProblemClass": "concentrated_scattered_simultaneous_pressure",
+          "expectedFailureModes": [
+            "overinvest_single_guard_vs_scatter",
+            "overinvest_party_mend_vs_focus_collapse"
+          ],
+          "connection": {
+            "previousWaveIndex": 1,
+            "nextWaveIndex": null,
+            "relationFromPrevious": "opposition"
+          },
+          "prepResourceGrant": 12,
+          "enemyGroups": [
+            {
+              "classId": "at_swordsman",
+              "count": 1,
+              "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+            },
+            {
+              "classId": "at_swordsman",
+              "count": 1,
+              "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+            },
+            {
+              "classId": "at_sorcerer",
+              "count": 1,
+              "selectedCombatModuleId": "at_sorcerer_mod_chain"
+            },
+            {
+              "classId": "sp_cleric",
+              "count": 1,
+              "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

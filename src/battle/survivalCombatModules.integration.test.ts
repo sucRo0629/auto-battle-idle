@@ -12,6 +12,7 @@ import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
 import stagesJson from '../../data/stages.json';
 import operationPassiveCatalogJson from '../../data/operation-passive-catalog.json';
+import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import { BattleEngine } from './BattleEngine.ts';
 import {
   getDamageTakenMultiplier,
@@ -1170,6 +1171,7 @@ describe('Survival CombatModule integration (R12g-d5)', () => {
           skills: loadSkillsRoot(),
           combatModules: Object.values(combatModuleFiles).flat(),
           operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
         }),
       ).not.toThrow();
 
@@ -1252,6 +1254,7 @@ describe('Survival CombatModule integration (R12g-d5)', () => {
           skills: loadSkillsRoot(),
           combatModules: flat,
           operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
         }),
       ).not.toThrow();
       for (const id of touchIds) {

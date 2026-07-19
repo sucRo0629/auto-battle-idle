@@ -447,7 +447,9 @@ CombatModuleEditor 等では、別々の「ターゲット形式」「範囲形�
 
 ## 7. Stage / Wave データ
 
-**R12k 確定注記（2026-07-18）:** 本節の固定 `StageDef` / `waves[]` はクエストおよび縦切り試作用として有効だが、反復可能なメイン攻略全体の schema ではない。メイン攻略は seed 付き・作者設計の問題系列（[operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)）。固定 Stage とメイン反復の入力責務を混在させない。問題系列の TypeScript 型・JSON は R12m で追加する。
+**R12k 確定注記（2026-07-18）:** 本節の固定 `StageDef` / `waves[]` はクエストおよび縦切り試作用として有効だが、反復可能なメイン攻略全体の schema ではない。メイン攻略は seed 付き・作者設計の問題系列（[operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)）。固定 Stage とメイン反復の入力責務を混在させない。
+
+**R12m 1B 実装注記（2026-07-19）:** 問題系列の JSON / runtime 型を `data/problem-series-catalog.json` と `ProblemSeriesCatalogDef` として追加。`StageDef` へ統合しない。詳細は [operation-loop.md §21.11 実装注記](../spec/operation-loop.md#2111-r12m契約最小実装範囲)。
 
 ### 7.1 現行構造（legacy 把握）
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import classesJson from '../../data/classes.json';
 import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
+import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import stagesJson from '@game-data/stages';
 import type { CombatModuleDef } from '../battle/types.ts';
 import { R5_COMBAT_MODULE_CLASS_IDS } from '../battle/types.ts';
@@ -167,6 +168,7 @@ describe('class editor class list (regression)', () => {
       enemies: enemiesJson,
       stages: stagesJson,
       parties: partiesJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
     };
     expect(() => parseAndValidateGameDataJson(payload, { mode: 'editor' })).toThrow(
       /combatModuleId/,
@@ -187,6 +189,7 @@ describe('class editor class list (regression)', () => {
       enemies: enemiesJson,
       stages: stagesJson,
       parties: partiesJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
     };
     const parsed = parseAndValidateGameDataJson(bundle, { mode: 'editor' });
     for (const classId of TARGET_CLASS_IDS) {
@@ -222,6 +225,7 @@ describe('class editor class list (regression)', () => {
           enemies: enemiesJson,
           stages: stagesJson,
           parties: partiesJson,
+          problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ),

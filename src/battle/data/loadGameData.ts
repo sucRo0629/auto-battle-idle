@@ -1,6 +1,7 @@
 import classesJson from '../../../data/classes.json';
 import enemiesJson from '../../../data/enemies.json';
 import operationPassiveCatalogJson from '../../../data/operation-passive-catalog.json';
+import problemSeriesCatalogJson from '../../../data/problem-series-catalog.json';
 import stagesJson from '@game-data/stages';
 import partiesJson from '../../../data/parties.json';
 import type {
@@ -91,6 +92,7 @@ export function loadGameData(): GameData {
     stages: stagesJson,
     parties: partiesJson,
     operationPassiveCatalog: operationPassiveCatalogJson,
+    problemSeriesCatalog: problemSeriesCatalogJson,
   });
 
   const classes = parsed.classes as ClassPreset[];
@@ -106,5 +108,6 @@ export function loadGameData(): GameData {
     stages: parsed.stages,
     parties: parsed.parties,
     operationPassiveCatalog: parsed.operationPassiveCatalog,
+    problemSeriesCatalog: parsed.problemSeriesCatalog,
   };
 }

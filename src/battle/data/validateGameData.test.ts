@@ -1,3 +1,4 @@
+import problemSeriesCatalogJson from '../../../data/problem-series-catalog.json';
 import { describe, expect, it } from 'vitest';
 import classesJson from '../../../data/classes.json';
 import enemiesJson from '../../../data/enemies.json';
@@ -62,6 +63,7 @@ const emptyGameDataShell = {
       ],
     },
   },
+  problemSeriesCatalog: problemSeriesCatalogJson,
 };
 
 describe('deprecated threat validation', () => {
@@ -224,7 +226,10 @@ describe('deprecated threat validation', () => {
           ],
         },
       },
-    });
+      problemSeriesCatalog: problemSeriesCatalogJson,
+    },
+      { mode: 'editor' },
+    );
 
     const basic = result.actives.find((skill) => skill.id === 'at_hunter_basic_attack');
     expect(basic).toBeDefined();
@@ -335,6 +340,7 @@ describe('stage enemyGroups validation', () => {
           },
         ],
         parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );
@@ -362,6 +368,7 @@ describe('stage enemyGroups validation', () => {
           },
         ],
         parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );
@@ -383,6 +390,7 @@ describe('stage enemyGroups validation', () => {
           },
         ],
         parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );
@@ -408,6 +416,7 @@ describe('stage enemyGroups validation', () => {
             },
           ],
           parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ),
@@ -431,6 +440,7 @@ describe('stage enemyGroups validation', () => {
             },
           ],
           parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ),
@@ -454,6 +464,7 @@ describe('stage enemyGroups validation', () => {
             },
           ],
           parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ),
@@ -477,6 +488,7 @@ describe('stage enemyGroups validation', () => {
             },
           ],
           parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ),
@@ -499,6 +511,7 @@ describe('stage enemyGroups validation', () => {
           },
         ],
         parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );
@@ -549,6 +562,7 @@ describe('wave enemyGroups validation (R6g-1)', () => {
       skills: loadMergedSkillsForValidateTest(),
       combatModules: loadMergedCombatModulesForValidateTest(),
       parties: partiesJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
     };
   }
 
@@ -610,6 +624,7 @@ describe('wave enemyGroups validation (R6g-1)', () => {
             },
           ],
           parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ),
@@ -665,6 +680,7 @@ describe('wave enemyGroups validation (R6g-1)', () => {
           },
         ],
         parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );
@@ -688,6 +704,7 @@ describe('wave enemyGroups validation (R6g-1)', () => {
           },
         ],
         parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );
@@ -710,6 +727,7 @@ describe('wave enemyGroups validation (R6g-1)', () => {
           },
         ],
         parties: emptyGameDataShell.parties,
+        problemSeriesCatalog: problemSeriesCatalogJson,
       },
       { mode: 'editor' },
     );
@@ -730,6 +748,7 @@ describe('stages-demo.json validation', () => {
       combatModules: loadMergedCombatModulesForValidateTest(),
       stages: stagesDemoJson,
       parties: partiesJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
     });
 
     expect(result.stages).toHaveLength(7);
@@ -781,6 +800,7 @@ describe('at_ranger passive attackType', () => {
       combatModules: loadMergedCombatModulesForValidateTest(),
       stages: [],
       parties: partiesJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
     });
 
     const p1 = result.passives.find((p) => p.id === 'at_ranger_passive_1');

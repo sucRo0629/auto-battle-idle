@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12l 作業単位 3B Backend 隔離完了**（レビュー修正: 文書残存除去・旧 icon 削除・`emberIgnition.png` rename 込み）。Player は **部分完了のみ**（happy-dom / focused test。実ブラウザ未確認）。**R12l Phase の Player 完了にはしない。** 正本 handoff は **§105.25**。
+- **新ロードマップ現在地:** **R12m 作業単位 1B Backend 完了**（問題系列 catalog / deterministic seed resolver / production load / validation）。Player・BattleEngine 接続は未着手。**公式次は R12m 1C**。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない）。正本 handoff は **§105.26**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12m**（4兵科だけの反復可能メイン試作・系列 A/B）→ R12n → R12o → R13。
+- **次の再開タスク:** **R12m 1C**（BattleEngine / 作戦状態への系列接続）→ 以降の R12m 作業単位 → R12n → R12o → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -9272,3 +9272,46 @@ R13への現在の対応表:
 ### 次の正式タスク入口
 
 - **R12m** — 4兵科だけの反復可能メイン試作（系列 A/B）
+
+## §105.26 R12m 作業単位 1B — 問題系列 catalog / seed / load / validation（2026-07-19）
+
+**状態:** 作業単位 1B の **Backend 完了**。Player 未着手。R12m Phase 全体は未完了。
+
+### 実装内容
+
+- `data/problem-series-catalog.json` — 系列 A/B（§21.10 の Module ID）。`stages.json` / `r12_prototype` は未変更
+- `src/battle/problemSeries/seedResolve.ts` — seed trim、FNV-1a 32-bit、`seriesId` 安定順での deterministic 選出（PRNG/shuffle なし）
+- `src/battle/data/problemSeriesCatalog.ts` — parse / ref validate / normalize / serialize
+- `loadGameData()` / `GameData.problemSeriesCatalog` — 欠落時の空 catalog fallback なし
+- focused test: `src/battle/problemSeries/problemSeriesCatalog.test.ts`
+
+### Fixture seed（generatorVersion `r12m-v1`）
+
+| seed | 選出 |
+| ---- | ---- |
+| `fixture-a` | `r12m_series_a` |
+| `fixture-b` | `r12m_series_b` |
+
+### 未実装（明示）
+
+- BattleEngine / GameSession / OperationState / checkpoint / retry
+- Player 入口・seed 入力 UI・Wave 概要 UI
+- Editor API / UI / import-export（JSON と runtime 型は同一形状を維持済み）
+- R12n 数値調整
+
+### 完了条件対応
+
+| 条件 | 経路 | 証拠 | 判定 |
+| ---- | ---- | ---- | ---- |
+| production load が A/B を読む | `loadGameData()` | `problemSeriesCatalog.test.ts` production load | **完了** |
+| 3 Wave・非空 enemy groups・期待 Module ID | unit | 同上 | **完了** |
+| 同 seed+version 再現 / 配列逆順でも同一選出 | unit | seed resolver tests | **完了** |
+| 不正 catalog 拒否（兵科外・未知 Module・Wave 数・空） | unit | validation tests | **完了** |
+| normalize round-trip 無損失 | unit | round-trip test | **完了** |
+| 固定 Stage 回帰 | focused validate / load | `validateGameData*.test.ts` / flavor | **完了**（focused 範囲） |
+| Player 入口 | — | — | **未着手** |
+| R12m Phase 全体 | — | — | **未完了** |
+
+### 次の正式作業単位
+
+- **R12m 1C** — 選出済み系列の BattleEngine / 作戦状態接続（1B のスコープ外）

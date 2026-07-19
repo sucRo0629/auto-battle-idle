@@ -101,7 +101,7 @@ function buildGameData(skill: ActiveSkillDef): GameData {
       actives: { [skill.id]: skill },
       passives: {},
     },
-  } as GameData;
+  } as unknown as GameData;
 }
 
 describe("df_duelist_active_2 誘い込み", () => {

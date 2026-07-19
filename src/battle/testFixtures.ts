@@ -271,6 +271,19 @@ export function mockTargetingGameData(basicRange = 50): GameData {
     enemyRegistry: {},
     stages: [],
     parties: {},
+    combatModuleRegistry: {},
+    operationPassiveCatalog: {
+      passiveAcquireCost: 1,
+      waveClearResourceGrant: 1,
+      sameClassStackStep: 0,
+      unlockLevelCostTable: { '0': 1, '10': 10, '20': 20 },
+      costUnlockLevelByPassiveId: {},
+      candidatesByClass: {},
+    },
+    problemSeriesCatalog: {
+      generatorVersion: 'test',
+      series: [],
+    },
   };
 }
 

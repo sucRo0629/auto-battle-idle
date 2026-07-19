@@ -81,8 +81,13 @@ import type {
   DamageIncreaseSpec,
   DefenseIgnoreSpec,
   OperationPassiveCatalogDef,
+  ProblemSeriesCatalogDef,
 } from '../types.ts';
 import { R5_COMBAT_MODULE_CLASS_IDS } from '../types.ts';
+import {
+  parseProblemSeriesCatalog,
+  validateProblemSeriesCatalogRefs,
+} from './problemSeriesCatalog.ts';
 import {
   EFFECT_APPLY_MODES,
   EFFECT_RANGE_FORMS,
@@ -7073,6 +7078,12 @@ export type GameDataValidationMode = 'strict' | 'editor';
 
 export interface ParseAndValidateGameDataOptions {
   mode?: GameDataValidationMode;
+  /**
+   * When true, validate problem-series catalog class/module cross-refs even in
+   * `editor` mode. Strict mode always validates; partial editor fixtures stay
+   * lenient unless this flag is set.
+   */
+  requireProblemSeriesCatalogRefs?: boolean;
 }
 
 function validateReferences(
@@ -7084,7 +7095,9 @@ function validateReferences(
   parties: Record<string, PartyDef>,
   combatModules: CombatModuleDef[],
   operationPassiveCatalog: OperationPassiveCatalogDef,
+  problemSeriesCatalog: ProblemSeriesCatalogDef,
   mode: GameDataValidationMode,
+  requireProblemSeriesCatalogRefs: boolean,
 ): void {
   const passiveIds = new Set(passives.map((p) => p.id));
   const activeIds = new Set(actives.map((a) => a.id));
@@ -7142,6 +7155,15 @@ function validateReferences(
     classById,
     passiveIds,
   );
+  // Partial editor fixtures may omit R5 classes; structure is still parsed.
+  // Strict production load always validates. Editor save opt-in via option.
+  if (mode === 'strict' || requireProblemSeriesCatalogRefs) {
+    validateProblemSeriesCatalogRefs(
+      problemSeriesCatalog,
+      classById,
+      moduleById,
+    );
+  }
 
   for (const cls of classes) {
     if (!activeIds.has(cls.basicAttackSkillId)) {
@@ -7366,6 +7388,7 @@ export interface ParsedGameDataJson {
   stages: StageDef[];
   parties: Record<string, PartyDef>;
   operationPassiveCatalog: OperationPassiveCatalogDef;
+  problemSeriesCatalog: ProblemSeriesCatalogDef;
 }
 
 const DEFAULT_OPERATION_PASSIVE_CATALOG: OperationPassiveCatalogDef = {
@@ -7644,10 +7667,13 @@ export function parseAndValidateGameDataJson(
     stages: unknown;
     parties: unknown;
     operationPassiveCatalog?: unknown;
+    problemSeriesCatalog?: unknown;
   },
   options?: ParseAndValidateGameDataOptions,
 ): ParsedGameDataJson {
   const mode = options?.mode ?? 'strict';
+  const requireProblemSeriesCatalogRefs =
+    options?.requireProblemSeriesCatalogRefs === true;
   const skillsRoot = requireRecord(raw.skills, 'skills.json');
   const passivesRaw = skillsRoot.passives;
   const activesRaw = skillsRoot.actives;
@@ -7662,6 +7688,9 @@ export function parseAndValidateGameDataJson(
   const combatModules = parseCombatModules(raw.combatModules);
   const operationPassiveCatalog = parseOperationPassiveCatalog(
     raw.operationPassiveCatalog,
+  );
+  const problemSeriesCatalog = parseProblemSeriesCatalog(
+    raw.problemSeriesCatalog,
   );
   const passives = parsePassives(passivesRaw);
   const activesParsed = parseActives(activesRaw);
@@ -7717,7 +7746,9 @@ export function parseAndValidateGameDataJson(
     parties,
     combatModules,
     operationPassiveCatalog,
+    problemSeriesCatalog,
     mode,
+    requireProblemSeriesCatalogRefs,
   );
 
   return {
@@ -7729,5 +7760,13 @@ export function parseAndValidateGameDataJson(
     stages,
     parties,
     operationPassiveCatalog,
+    problemSeriesCatalog,
   };
 }
+
+export {
+  normalizeProblemSeriesCatalogForSave,
+  parseProblemSeriesCatalog,
+  serializeProblemSeriesCatalog,
+  validateProblemSeriesCatalogRefs,
+} from './problemSeriesCatalog.ts';

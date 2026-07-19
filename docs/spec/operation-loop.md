@@ -1798,6 +1798,16 @@ R12m は本節の上位構造と R12l の 4 兵科パッシブを接続し、次
 
 正式 UI レイアウトは R12k では決めない。入口の責務境界は [stage-selection-ui.md](stage-selection-ui.md) を参照する。
 
+#### 実装注記（R12m 作業単位 1B）
+
+- JSON 正本: `data/problem-series-catalog.json`（固定 `StageDef` / `data/stages.json` には載せない）
+- production 読込: `loadGameData()` → `GameData.problemSeriesCatalog`
+- seed 選出: `src/battle/problemSeries/seedResolve.ts`（FNV-1a 32-bit。汎用 PRNG / shuffle なし）
+- parse / validate / normalize: `src/battle/data/problemSeriesCatalog.ts`
+- catalog 追加・選出規則変更時は `generatorVersion` を変更する
+- Editor API / UI は未実装（JSON と runtime 型は同一形状を維持）
+- BattleEngine / OperationState / Player 入口は後続作業単位
+
 ### 21.12 R12k 完了条件（設計）
 
 1. メイン攻略と固定クエストの責務が分離されている

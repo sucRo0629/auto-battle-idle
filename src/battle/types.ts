@@ -1887,6 +1887,78 @@ export interface OperationPassiveCatalogDef {
   candidatesByClass: Record<string, string[]>;
 }
 
+/**
+ * R12m メイン攻略の問題系列 catalog（`data/problem-series-catalog.json`）。
+ * 固定 `StageDef` とは入力責務を分離する。内部 metadata は Player 表示用ではない。
+ */
+export type ProblemSeriesWaveRelationKind =
+  | 'continuation'
+  | 'pivot'
+  | 'composite'
+  | 'opposition';
+
+/** R5 試作 4 兵科（メイン問題系列の使用可能範囲） */
+export const R5_PROTOTYPE_CLASS_IDS = [
+  'df_guardian',
+  'at_swordsman',
+  'at_sorcerer',
+  'sp_cleric',
+] as const;
+
+export type R5PrototypeClassId = (typeof R5_PROTOTYPE_CLASS_IDS)[number];
+
+export interface ProblemSeriesEnemyGroup {
+  classId: ClassId;
+  count: number;
+  selectedCombatModuleId: string;
+  hpScale?: number;
+  atkScale?: number;
+  defScale?: number;
+  resScale?: number;
+}
+
+export interface ProblemSeriesWaveConnection {
+  previousWaveIndex: number | null;
+  nextWaveIndex: number | null;
+  relationFromPrevious: ProblemSeriesWaveRelationKind | null;
+}
+
+export interface ProblemSeriesWaveLink {
+  fromWaveIndex: number;
+  toWaveIndex: number;
+  relationKind: ProblemSeriesWaveRelationKind;
+}
+
+export interface ProblemSeriesWaveDef {
+  /** validation / authoring 用。Player 表示テキストではない */
+  internalProblemClass: string;
+  /** validation / authoring 用。Player 表示テキストではない */
+  expectedFailureModes: string[];
+  connection: ProblemSeriesWaveConnection;
+  prepResourceGrant: number;
+  enemyGroups: ProblemSeriesEnemyGroup[];
+}
+
+export interface ProblemSeriesDef {
+  seriesId: string;
+  /** catalog 追加・選出規則変更時は version を上げる責務がある */
+  generatorVersion: string;
+  /** Wave 間関係の要約（authoring）。Player 正解表示ではない */
+  waveRelationSummary: string;
+  waveLinks: ProblemSeriesWaveLink[];
+  /** 最終 Wave が複合する前 Wave の 0-based index（通常 [0, 1]） */
+  finalWaveCompositeOf: number[];
+  /** 作戦固有条件（内部）。空配列可 */
+  operationConditions: string[];
+  allowedClassIds: ClassId[];
+  waves: ProblemSeriesWaveDef[];
+}
+
+export interface ProblemSeriesCatalogDef {
+  generatorVersion: string;
+  series: ProblemSeriesDef[];
+}
+
 export interface GameData {
   /** classes.json の配列順（バランス表・編成クラス一覧の並び） */
   classOrder: ClassId[];
@@ -1899,6 +1971,8 @@ export interface GameData {
   parties: Record<string, PartyDef>;
   /** 作戦内パッシブ候補・付与条件（R8/R9d） */
   operationPassiveCatalog: OperationPassiveCatalogDef;
+  /** メイン攻略の問題系列 catalog（R12m）。固定 Stage とは別責務 */
+  problemSeriesCatalog: ProblemSeriesCatalogDef;
 }
 
 export type BattlePhase = "idle" | "running" | "victory" | "defeat";

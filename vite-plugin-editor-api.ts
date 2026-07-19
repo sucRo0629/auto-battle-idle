@@ -41,6 +41,7 @@ const READ_FILES = {
   stages: path.join(DATA_DIR, 'stages.json'),
   parties: path.join(DATA_DIR, 'parties.json'),
   operationPassiveCatalog: path.join(DATA_DIR, 'operation-passive-catalog.json'),
+  problemSeriesCatalog: path.join(DATA_DIR, 'problem-series-catalog.json'),
 } as const;
 
 const COMBAT_MODULES_DIR = path.join(DATA_DIR, 'combat-modules');
@@ -111,7 +112,12 @@ async function reloadGameDataModules(
   }
 }
 
-function loadValidationPayload(): {
+/**
+ * Editor 保存前 validation 用の production payload。
+ * parseAndValidateGameDataJson が要求する全 JSON（問題系列 catalog 含む）を実ファイルから読む。
+ * テストからも同じ helper を呼ぶ（形状を手で複製しない）。
+ */
+export function loadValidationPayload(): {
   classes: unknown;
   skills: unknown;
   combatModules: unknown;
@@ -119,6 +125,7 @@ function loadValidationPayload(): {
   stages: unknown;
   parties: unknown;
   operationPassiveCatalog: unknown;
+  problemSeriesCatalog: unknown;
 } {
   return {
     classes: readJsonFile(READ_FILES.classes),
@@ -128,11 +135,21 @@ function loadValidationPayload(): {
     stages: readJsonFile(READ_FILES.stages),
     parties: readJsonFile(READ_FILES.parties),
     operationPassiveCatalog: readJsonFile(READ_FILES.operationPassiveCatalog),
+    problemSeriesCatalog: readJsonFile(READ_FILES.problemSeriesCatalog),
   };
 }
 
-function validateAll(payload: ReturnType<typeof loadValidationPayload>): void {
-  parseAndValidateGameDataJson(payload, { mode: 'editor' });
+/**
+ * Production Editor 保存前 validation。
+ * 全 apply* 経路が write より先に呼ぶ。問題系列 catalog の class/module 相互参照も検証する。
+ */
+export function validateAll(
+  payload: ReturnType<typeof loadValidationPayload>,
+): void {
+  parseAndValidateGameDataJson(payload, {
+    mode: 'editor',
+    requireProblemSeriesCatalogRefs: true,
+  });
 }
 
 function upsertById<T extends { id: string }>(list: T[], item: T): T[] {

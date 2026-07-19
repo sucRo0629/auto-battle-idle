@@ -28,6 +28,7 @@ import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
 import stagesJson from '../../data/stages.json';
 import operationPassiveCatalogJson from '../../data/operation-passive-catalog.json';
+import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import { isAllyBarrierBasicAttack } from './allyHealBasicAttack.ts';
 import { shouldSkipEngagedAutoApproach } from './resolveApproachBattleX.ts';
 
@@ -504,6 +505,7 @@ describe('sp_wardweaver CombatModule data (R12g-d4)', () => {
         stages: stagesJson,
         parties: partiesJson,
         operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
       }),
     ).toThrow(/barrier effects only|heal/);
   });
@@ -526,6 +528,7 @@ describe('sp_wardweaver CombatModule data (R12g-d4)', () => {
         stages: stagesJson,
         parties: partiesJson,
         operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
       }),
     ).toThrow(/requireBelow/);
   });
@@ -540,6 +543,7 @@ describe('sp_wardweaver CombatModule data (R12g-d4)', () => {
         stages: stagesJson,
         parties: partiesJson,
         operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
       }),
     ).not.toThrow();
   });

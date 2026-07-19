@@ -1,3 +1,4 @@
+import problemSeriesCatalogJson from '../../../data/problem-series-catalog.json';
 import { describe, expect, it } from 'vitest';
 import classesJson from '../../../data/classes.json';
 import enemiesJson from '../../../data/enemies.json';
@@ -47,6 +48,7 @@ function loadRealBundle() {
     enemies: enemiesJson,
     stages: stagesDemoJson,
     parties: partiesJson,
+    problemSeriesCatalog: problemSeriesCatalogJson,
   };
 }
 
@@ -163,28 +165,32 @@ describe('combat module data (R5b)', () => {
   it('allows legacy class without combatModuleIds', () => {
     const skills = loadMergedSkillsForValidateTest();
     expect(() =>
-      parseAndValidateGameDataJson({
-        classes: [legacyClassShell],
-        skills,
-        combatModules: [],
-        enemies: [],
-        stages: [],
-        parties: {
-          test: {
-            name: 'Test',
-            members: [
-              {
-                classId: 'df_paladin',
-                build: {
-                  learnedPassiveIds: [],
-                  learnedActiveIds: [],
-                  equippedActiveSlots: [],
+      parseAndValidateGameDataJson(
+        {
+          classes: [legacyClassShell],
+          skills,
+          combatModules: [],
+          enemies: [],
+          stages: [],
+          parties: {
+            test: {
+              name: 'Test',
+              members: [
+                {
+                  classId: 'df_paladin',
+                  build: {
+                    learnedPassiveIds: [],
+                    learnedActiveIds: [],
+                    equippedActiveSlots: [],
+                  },
                 },
-              },
-            ],
+              ],
+            },
           },
+          problemSeriesCatalog: problemSeriesCatalogJson,
         },
-      }),
+        { mode: 'editor' },
+      ),
     ).not.toThrow();
   });
 

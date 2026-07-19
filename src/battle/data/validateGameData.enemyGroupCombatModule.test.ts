@@ -3,6 +3,7 @@ import classesJson from '../../../data/classes.json';
 import enemiesJson from '../../../data/enemies.json';
 import partiesJson from '../../../data/parties.json';
 import stagesDemoJson from '../../../data/stages-demo.json';
+import problemSeriesCatalogJson from '../../../data/problem-series-catalog.json';
 import type { ActiveSkillDef, CombatModuleDef, PassiveSkillDef } from '../types.ts';
 import { parseAndValidateGameDataJson } from './validateGameData.ts';
 
@@ -44,6 +45,7 @@ function loadRealBundle() {
     enemies: enemiesJson,
     stages: stagesDemoJson,
     parties: partiesJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
   };
 }
 

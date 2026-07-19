@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import classesJson from '../../data/classes.json';
 import enemiesJson from '../../data/enemies.json';
 import operationPassiveCatalogJson from '../../data/operation-passive-catalog.json';
+import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import partiesJson from '../../data/parties.json';
 import stagesJson from '@game-data/stages';
 import type { CombatModuleDef, PassiveSkillDef } from '../battle/types.ts';
@@ -156,6 +157,7 @@ describe('editor server-side validation payload (R9d regression)', () => {
           stages: stagesJson,
           parties: partiesJson,
           operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ),
@@ -173,6 +175,7 @@ describe('editor server-side validation payload (R9d regression)', () => {
           stages: stagesJson,
           parties: partiesJson,
           operationPassiveCatalog: operationPassiveCatalogJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
         },
         { mode: 'editor' },
       ),

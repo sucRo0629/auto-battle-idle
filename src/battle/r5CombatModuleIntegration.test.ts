@@ -14,6 +14,7 @@ import classesJson from '../../data/classes.json';
 import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
 import stagesDemoJson from '../../data/stages-demo.json';
+import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import { BattleEngine } from './BattleEngine.ts';
 import { getEffectiveAttackSpeedMultiplier } from './combatMath.ts';
 import { loadGameData } from './data/loadGameData.ts';
@@ -204,6 +205,7 @@ function loadValidateBundle() {
     enemies: enemiesJson,
     stages: stagesDemoJson,
     parties: partiesJson,
+      problemSeriesCatalog: problemSeriesCatalogJson,
   };
 }
 
