@@ -18,13 +18,13 @@
 
 **R4 注記（2026-07-12）:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態の **データ責務分離・validate・エディタ責務・legacy 移行方針** は [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md) を正本とする。本書はゲームルールと M1 方式 **候補** の正本のまま。具体的な JSON フィールド名・型は R5 で subset 確定。
 
-**R9.5a 注記（2026-07-13）:** R5 対象 4 兵科で CombatModule 通常行動が解決済みのとき、legacy active JSON と `classes.json` 参照は **データ互換のため維持** するが、runtime では active cooldown を生成しない（[combat.md §戦闘方式](combat.md#戦闘方式)）。R9f まで JSON 削除は行わない。
+**R9.5a 注記（2026-07-13 / R12l 3B 更新）:** CombatModule 通常行動が解決済みの兵科では、legacy active は runtime で cooldown を生成しない（[combat.md §戦闘方式](combat.md#戦闘方式)）。**R12l 作業単位 3B** で R5 対象 4 兵科（`df_guardian` / `at_swordsman` / `at_sorcerer` / `sp_cleric`）の旧 active 1〜4・catalog 外旧 op・未使用旧 passive は **JSON / runtime から物理削除**済み（`*_basic_attack` のみ残置、`classes.json` の `skills[]` は省略可）。他兵科の legacy active JSON は未移行のまま残る。
 
 **R12e 注記（2026-07-15）:** 試作 Stage から導出した必要能力・対処能力は [operation-loop.md §19](operation-loop.md#19-必要能力対処能力r12e) を正本とする。
 
 **R12f 注記（2026-07-16）:** A〜G の兵科・CombatModule・作戦内パッシブへの正式分配は [§R12f](#r12f--必要能力の分配確定) および [operation-loop.md §20](operation-loop.md#20-必要能力の兵科combatmodule作戦内パッシブ分配r12f) を正本とする。下記「M1 兵科 — 新仕様候補（R2）」表および R11b 候補 ID は **legacy / 候補記録** であり、R12f 確定値ではない。データ再設計は **R12g**。
 
-**R12l 確定メモ（2026-07-19）:** 現行 production の `Lv0 / Lv10 / Lv20` パッシブと旧 active は新仕様の完成データではなく、再分類する素材である。R5 対象 4 兵科（鉄衛士・剣術士・魔術師・療養師）の **unit 1** は、各兵科 **兵科本体 1 + cost 1 を 3 件 + cost 10 を 2 件（計 6 件）**に確定し、候補は全表示する。**cost 20 は今回 scope 外**。4兵科の新 path では `unlockLevel` ではなく `fixedCostByPassiveId` を正本にし、`classes.json` の passive 習得は **兵科本体のみ常時習得**へ切り替える。旧 `seedFlame` / `blazingFlame` 系 passive・旧 `op_*` は **移行待ち legacy material** として JSON に残す。
+**R12l 確定メモ（2026-07-19 / 3B 更新）:** R5 対象 4 兵科（鉄衛士・剣術士・魔術師・療養師）の production は **兵科本体 1 + cost 1×3 + cost 10×2（計 6 件）+ CombatModule**。候補は全表示。**cost 20 は今回 scope 外**。4兵科の新 path では `unlockLevel` ではなく `fixedCostByPassiveId` を正本にし、`classes.json` の passive 習得は **兵科本体のみ常時習得**。**作業単位 3B:** 旧 Lv active 1〜4・旧 `seedFlame` / `blazingFlame` / `blockResonance` 系・catalog 外旧 `op_*`・未使用旧 passive（鉄衛士 P3・魔術師 P2〜P4 等）は **移行待ちとして JSON に残さない** — 物理削除済み。JA 用語「種火」の所有は `emberIgnition` のみ。他兵科の旧 Lv 表は各クラスが移行するまで残す。
 
 ### 兵科の主要構造
 
@@ -68,8 +68,7 @@
 | -------- | ---- |
 | 旧兵科本体の RES 無視 | 旧 P1「猛火の術」の RES 10% 無視を外す。**R12l cost1「魔法耐性無視率増加」（+5pt）は採用** |
 | 複雑な耐性貫通 | 旧構造の廃止方向 |
-| Lv 段階の種火 / 熾火完成 | active 連鎖前提の旧 DoT 構造を廃止方向 |
-| active 連鎖 | P3 連なる炎等（移行待ち） |
+| 旧種火 / 熾火 DoT・active 連鎖 | **R12l 3B で削除済み。** 現行は種火蓄積 → 発火（`emberIgnition`）。詳細は [§R12f 魔術師](#at_sorcerer-魔術師) / [combat.md](combat.md) §種火 / 発火 |
 
 **R2 整理方向（R12f / R12l と整合する部分）:**
 
@@ -117,28 +116,28 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 
 | classId | 名称 | 基本ロール | 固定優先ターゲット | 固定属性 | 方式 A 方向性 | 方式 B 方向性 | 旧スキル再利用候補 | 廃止する旧要素 | 未確定事項 |
 | ------- | ---- | ---------- | ------------------ | -------- | ------------- | ------------- | ------------------ | -------------- | ---------- |
-| `df_guardian` | 鉄衛士 | 前線・単路線防衛 | 敵 default（defender 被弾入口） | 物理 | **集中防護** — 前線停止、高 block / 被ダメ軽減、単体被弾の主受け口 | **反撃圧** — 被弾起点の短距離反撃・前線押し上げ（城塞構えの **思想** のみ素材） | block、立ちはだかる壁（damageReduction）、迎撃態勢（blockResonance **候補** → 方式 or 作戦内パッシブ） | DEF buff active、hitsTaken + gauge 構え、Lv20 無敵の Lv 前提 | 方式名、block 数値、攻撃間隔、Hit 構造 |
+| `df_guardian` | 鉄衛士 | 前線・単路線防衛 | 敵 default（defender 被弾入口） | 物理 | **集中防護** — 前線停止、高 block / 被ダメ軽減、単体被弾の主受け口 | **反撃圧** — 被弾起点の短距離反撃・前線押し上げ（城塞構えの **思想** のみ素材） | **R12l で置換済み。** 現行は [§鉄衛士（R12l）](#鉄衛士df_guardian基礎) / [§R12f 鉄衛士](#df_guardian-鉄衛士) を参照 | （旧 inventory は再利用不可） | 方式名、block 数値、攻撃間隔、Hit 構造 |
 | `df_paladin` | 護法士 | 戦線全体の被害分担 | 同上 | 物理 | **広域防護** — 前列 block aura + 半径内 damageReduction（護法陣思想） | **自己防御** — 厚い自己 barrier / 短時間被ダメ軽減、前線からやや後退 | frontBlockAura、護法陣 aura、光明剣 barrier 思想 | 魔法 block Lv 前提拡張、gauge active | 半径、barrier 量、方式切替時の位置 |
-| `at_swordsman` | 剣術士 | 高 DEF 処理 | **高 DEF 敵** | 物理 | **単体叩き付け** — 単体高 DEF 向け、DEF 無視 or 高係数 Hit（剛剣思想は **作戦内パッシブ候補**） | **薙ぎ払い** — 前方 pierce / 小 AoE で複数 DEF 帯を処理 | DEF 無視条件、叩き付け / 薙ぎ払い active の **形状** | ignoredDefBonus の Lv20 前提、gauge BAC | 方式名、DEF 無視を方式に含めるか、Hit 数 |
+| `at_swordsman` | 剣術士 | 高 DEF 処理 | **高 DEF 敵** | 物理 | **単体叩き付け** — 単体高 DEF 向け、DEF 無視 or 高係数 Hit（剛剣思想は **作戦内パッシブ候補**） | **薙ぎ払い** — 前方 pierce / 小 AoE で複数 DEF 帯を処理 | **R12l で置換済み。** 現行は [§剣術士（R12l）](#剣術士at_swordsman基礎) / [§R12f 剣術士](#at_swordsman-剣術士) を参照 | （旧 active / Lv inventory は再利用不可） | 方式名、DEF 無視を方式に含めるか、Hit 数 |
 | `at_assassin` | 双刃士 | 低 HP 処刑 | **低 HP 敵（現在 HP）** | 物理 | **背後回り込み** — 実移動で対象背後、単体処理（§方式候補 A） | **投げナイフ** — 中距離、低 HP 優先、前線非侵入（§方式候補 B） | 薄命狩り（優先ターゲット）、影の刃 move 思想、出血 DoT **候補** | 固定 2 Hit basic、bonusBasicAttackOnHit gauge、DEF 100% 無視 P3 | 方式名、移動詳細、Hit 数、射程 |
 | `at_ranger` | 弓術士 | 遠隔物理 DPS | **遠隔敵** | 物理 | **連射** — 単体または少数への高頻度 Hit | **連ね矢** — 複数対象への分配 Hit（multiLock 等 **候補**） | 遠隔優先、連射 / 連ね矢 active の形状 | attackSpeed buff 前提、Lv 解放連射 | 方式名、Hit 数、対象数、攻撃間隔 |
 | `at_ballista` | 弩砲士 | 高 Max HP 処理 | **高 Max HP 敵** | 物理 | **重矢単体** — 溜め or 高係数単体（破城矢思想） | **砲撃標的 splash** — マーク対象中心の副次 Hit（ballistaMark 思想） | idleAtkRamp 溜め、ballistaMark splash、targetHpRatioDamageScale | gauge 待機蓄積、nextOutgoingDamage 武装 | 方式名、溜めを方式に含めるか、Hit 数 |
-| `at_sorcerer` | 魔術師 | 安定魔法火力 | **最近傍候補** | 魔法 | **単体魔法** — 単体 high 係数 magic Hit | **拡散魔法** — 複数対象 or 小 AoE magic Hit | 炎術 / 双炎 / 散火の **形状差** のみ素材 | RES 無視、種火 / 熾火、active 連鎖、Lv 完成 | **R12g-e4 Backend 完了 / Player 未完了**（`targetShape: chain`。M1 `chainCount: 1` / M2 `chainCount: 2`。MultiLock 不採用）。構造成立用の暫定値あり（正式バランスは R12i）。種火 Passive は後続 |
-| `sp_cleric` | 療養師 | 回復・欠損復元 | **PHT**（負傷者 HP 割合最小） | 回復（行動属性） | **単体回復** — PHT へ concentrated heal / 短 HoT | **複数回復** — 半径内複数負傷者 or 全体小 heal | 低 HP heal 特化、excessHealToBarrier、smart heal withhold | Lv10/20 回復精度段階、healReservation gauge | 方式名、対象数、HoT 要否 |
+| `at_sorcerer` | 魔術師 | 安定魔法火力 | **最近傍候補** | 魔法 | **単体魔法** — 単体 high 係数 magic Hit | **拡散魔法** — 複数対象 or 小 AoE magic Hit | **R12l で置換済み。** 現行は [§魔術師（R12l）](#魔術師at_sorcerer基礎) / [§R12f 魔術師](#at_sorcerer-魔術師) / `emberIgnition`（[combat.md](combat.md) §種火 / 発火）を参照 | （旧 DoT / 熾火 / active 連鎖 inventory は再利用不可） | **R12g-e4 Backend 完了 / Player 未完了**（`targetShape: chain`。M1 `chainCount: 1` / M2 `chainCount: 2`。MultiLock 不採用）。構造成立用の暫定値あり（正式バランスは R12n） |
+| `sp_cleric` | 療養師 | 回復・欠損復元 | **PHT**（負傷者 HP 割合最小） | 回復（行動属性） | **単体回復** — PHT へ concentrated heal / 短 HoT | **複数回復** — 半径内複数負傷者 or 全体小 heal | **R12l で置換済み。** 現行は [§療養師（R12l）](#療養師sp_cleric基礎) / [§R12f 療養師](#sp_cleric-療養師) を参照 | （旧 active / Lv inventory は再利用不可） | 方式名、対象数、HoT 要否 |
 | `sp_wardweaver` | 結界師 | 事前 barrier・猶予 | **PHT**（barrier 付与時 stat ratio） | 回復 / 防護 | **厚い Barrier** — 単体 PHT へ大 barrier | **広い Barrier** — 半径内複数 or 全体 thin barrier | 低 HP 特効 barrier、barrierDepletionHeal 思想 | Wave 開始全体 barrier の Lv 前提 | 方式名、barrier 量、対象数 |
 
-### 作戦内パッシブ候補（R11b — R5 4 兵科・枠のみ維持）
+### 作戦内パッシブ候補（R11b — R5 4 兵科・枠のみ記録）
 
-> **R11b は枠・専用 ID の縦切り完了記録。** 効果内容・維持義務は持たない。Passive 方向の正本は [§R12f](#r12f--必要能力の分配確定)。ID・数値の再設計は **R12g**。
+> **R11b は枠・専用 ID の縦切り完了記録。** 効果内容・維持義務は持たない。Passive 方向の正本は [§R12f](#r12f--必要能力の分配確定) / **R12l 新仕様表**。下表の ID は **R11b 時点の履歴**であり、**現行 catalog ではない**（R12l 作業単位 3B で削除済み）。
 
-| classId | R11b 作戦向け候補（短名・現行 catalog） |
-| ------- | ---------------------------- |
-| `df_guardian` | 堅盾の構え / 城壁の護り / 最後の誓い（`df_guardian_op_brace` / `_wall_aura` / `_last_stand`） |
-| `at_swordsman` | 鎧砕き / 重装狙い / 剛剣の切先（`at_swordsman_op_armor_break` / `_high_def_focus` / `_finish_cut`） |
-| `at_sorcerer` | 弧火の術 / 余燼の火力 / 共鳴打撃（`at_sorcerer_op_arc_bolt` / `_ember_dot` / `_resonant_hit`） |
-| `sp_cleric` | 応急の加護 / 余剰の盾 / 治癒の備蓄（`sp_cleric_op_triage` / `_excess_ward` / `_heal_reserve`） |
+| classId | R11b 時点の候補 ID（削除済み・現行でない） |
+| ------- | ----------------------------------------- |
+| `df_guardian` | `df_guardian_op_brace` / `_wall_aura` / `_last_stand` |
+| `at_swordsman` | `at_swordsman_op_armor_break` / `_high_def_focus` / `_finish_cut` |
+| `at_sorcerer` | `at_sorcerer_op_arc_bolt` / `_ember_dot` / `_resonant_hit` |
+| `sp_cleric` | `sp_cleric_op_triage` / `_excess_ward` / `_heal_reserve` |
 
-> 現行候補 ID とコスト帯は `data/operation-passive-catalog.json`。legacy `passive_1〜4` 定義は残すが、作戦候補一覧からは外す。
+> **現行 production catalog** は `data/operation-passive-catalog.json`（`fixedCostByPassiveId`）と各兵科の R12l 詳細表を正とする。
 
 ### 作戦内パッシブ候補（設計アイデア — M1 外・未確定・legacy）
 
@@ -295,7 +294,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 - 規定 stack（既定 5、cost10「火勢」で 4）到達時、種火を全消費して対象単体へ **発火** 魔法ダメージを与える
 - 発火から種火付与や再帰発火は発生しない
 - 種火最大 stack から熾火へ変換する現行挙動は **廃止**
-- 旧 P2/P3/P4 と旧 `op_*` の `seedFlame` / `blazingFlame` / active 連鎖は **移行待ち legacy material**
+- 旧 P2/P3/P4・旧 `op_*`・旧 `seedFlame` / `blazingFlame` DoT・`sorcererFlame.ts` は **R12l 3B で削除済み**（production に残さない）
 - 発火基礎式は暫定で `floor(ATK × emberIgnitionAtkScale)`、cost10「爆炎」で 1.5 倍、cost1「魔法ダメージ増加」は発火にも乗る。正式バランスは **R12n**
 
 #### `df_guardian` 鉄衛士
@@ -444,20 +443,17 @@ Hensei Only のスキルカード表示は、プレイヤー向け UI 上で次�
 
 戦闘中に **状態として保持される** もの。HUD バッジ + 用語パネル / ホバー tooltip で表示。**スキルカード編成 UI では State Chip 行を持たない**（状態定義は文中リンク tooltip へ統合）。
 
-**対象例（固定リストではない）:** バリア / 障壁 / 防壁 / DoT / HoT / 毒 / 出血 / 種火 / 熾火 / 印 / 薬効
+**対象例（固定リストではない）:** バリア / 障壁 / DoT / HoT / 毒 / 出血 / 種火（`emberIgnition`）/ 印 / 薬効
 
 **辞書:** 状態も `description` を正本とする。スキルカードでは `aliases` + 文中リンク tooltip で参照。
 
 | 日本語 | English | `GameTermId` |
 | ------ | ------- | ------------ |
-| 種火 | Seed Flame | `seedFlame` |
-| 熾火 | Blazing Flame | `blazingFlame` |
+| 種火 | Ember | `emberIgnition` |
 | 乾印 | Qian Mark | `windMark` |
 | 坤印 | Kun Mark | `earthMark` |
 | 闘士の指名 | Gladiator's Mark | `arenaMark` |
 | 砲撃標的 | Barrage Mark | `ballistaMark` |
-| 防壁 | Bulwark | `blockResonance` |
-| 城塞の構え | Citadel Stance | `blockResonanceStance` |
 | 治癒の残響 | Healing Echo | `healReservation` |
 | 薬効 | Herbal Potency | `herbalPotency` |
 | 頑健 | Hardy | `herbalPotencyConstitution` |
@@ -525,7 +521,7 @@ AoE・周囲・地点は半径の中心が異なるため、同一ラベルに�
 
 戦闘中に **実際に付与されている状態** を表示する。スキルカードの 3 系統とは **別物**。表示可否は「戦闘中に状態として存在するか」で判断する。
 
-例: バリア / 障壁 / ブロック / 毒 / 出血 / スタン / 種火 / 熾火 / 闘士の指名 / ダメージ遅延
+例: バリア / 障壁 / ブロック / 毒 / 出血 / スタン / 種火（`emberIgnition`） / 闘士の指名 / ダメージ遅延
 
 HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易表示 vs 詳細表示](combat.md#簡易表示-vs-詳細表示)・[battle-field.md §7.1.2](battle-field.md#712-状態バッジクリック用語パネル) を正とする。
 
@@ -584,7 +580,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 
 - 初版は `formatSkillText` 出力で **頻出する用語** から段階追加（全用語一括は不要）
 - **`StatusDisplayCategory` 全件**（HUD 状態アイコン）には `statusCategory` 付き辞書エントリを用意する。HUD 表示名のみのエントリは `description` / `aliases` を省略し、スキル説明文内では用語リンクしない（`annotateGameTerms` は `aliases` 登録分のみマッチ）。**`description` なし** は戦闘 HUD で **ホバー tooltip**（表示名）。**`description` あり・`aliases` なし** のエントリも同様に本文リンク化しないが、ホバー tooltip は出さず **クリック** で用語パネルを開ける（[combat.md §簡易表示 vs 詳細表示](combat.md#簡易表示-vs-詳細表示)）
-- 頻出の非 stat 用語（**ブロック** / **魔法ブロック**・**defender 優先ターゲット**・**通常攻撃**・**種火** / **熾火** 等）も `gameTermGlossary.ts` に登録する
+- 頻出の非 stat 用語（**ブロック** / **魔法ブロック**・**defender 優先ターゲット**・**通常攻撃**・**種火**（`emberIgnition`）等）も `gameTermGlossary.ts` に登録する。旧 `seedFlame` / `blazingFlame` / `blockResonance` 用語は R12l 3B で削除済み
 - ルール変更時は **本書 / combat.md と辞書の `ja` を同作業内で更新**
 - 状態アイコン・カテゴリの正本は [combat.md §ステータス効果](combat.md#ステータス効果) の HUD バッジ節。辞書の `statusCategory` はそれに従う
 
@@ -637,7 +633,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - move `toAnchor` + 直後 damage — `対象の背後に移動した後、{ダメージ文}`
 - 常時 self stat buff — `攻撃速度+25%` 等（対象・常時の冗長表記は省略）
 - 常時 `defenseIgnore` — `攻撃時、対象の防御力をN%無視する`（`def`）/ `攻撃時、対象の魔法耐性をN%無視する`（`res`）
-- `seedFlameOnActiveHit` — トリガー 1 行 + `種火` / `熾火` を `effectLines` のリストブロック（`kind: "list"`）で表示。数値は passive JSON の `seedFlame*` / `blazingFlame*` を `mergeSorcererFlameDotConfig` で解決（戦闘と同経路）
+- `emberIgnition` — 種火蓄積 → 発火の説明（CombatModule Hit）。用語リンクは `emberIgnition`（JA alias「種火」）。旧 `seedFlameOnActiveHit` / `mergeSorcererFlameDotConfig` 経路は削除済み
 - `specialEffect` heal（低 HP 条件）— `HPがN%以下の味方を回復時、HP回復効果+{bonus}`
 - `specialEffect` barrier（低 HP 条件）— `HPがN%以下の味方にバリア付与時、バリア量+{bonus}`
 - `barrierDepletionHeal` — `味方に付与したバリアが完全に消失した時、対象を攻撃力のN%で回復（味方ごとにWave1回まで）`
@@ -1131,7 +1127,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 | classId       | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0 代表）             | アクティブ（Lv0）  |
 | ------------- | ------ | --------- | ----- | ---- | -------------------------------- | ------------------ |
-| `df_guardian` | 鉄衛士 | Guardian  | front | 近接 | 共有 block + 追加 block          | 防御強化／防御専念 |
+| `df_guardian` | 鉄衛士 | Guardian  | front | 近接 | **R12l:** 大盾使い（本体）+ 作戦内 cost1/10 | CombatModule のみ（旧 active 削除済み） |
 | `df_paladin`  | 護法士 | Paladin   | front | 近接 | 護法陣 DR aura + 前列 block      | 光明剣／障身法     |
 | `df_duelist`  | 闘技士 | Gladiator | front | 近接 | 低 HP 時 DEF 上昇（`passive_2`） | 戦叫び／体力温存   |
 
@@ -1141,13 +1137,13 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 | classId        | 表示名 | epithetEn | 列    | 射程     | パッシブ（Lv0 代表）                                             | アクティブ（Lv0）                          |
 | -------------- | ------ | --------- | ----- | -------- | ---------------------------------------------------------------- | ------------------------------------------ |
-| `at_swordsman`   | 剣術士 | Swordsman | front | 近接     | 最高 DEF 狙い + DEF 無視                                         | 叩き付け／薙ぎ払い                         |
+| `at_swordsman`   | 剣術士 | Swordsman | front | 近接     | **R12l:** 重装狙い（本体）+ DEF 無視系 cost1/10 | CombatModule のみ（旧 active 削除済み） |
 | `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP（現在値）狙い + 回避                                     | 引き裂き／影の刃                           |
 | `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura                    | 号令／崩勢／鼓舞／追撃                     |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                                       | 連射／連ね矢                               |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的                             | 破城矢装填／重矢                           |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | DoT 圧縮補助 + 味方物理 basic 毒 proc                            | 毒罠／粘着罠／追い込み／毒収穫             |
-| `at_sorcerer`  | 魔術師 | Sorcerer  | back  | 遠隔魔法 | **R12l:** 猛火の術（種火→発火）。旧 Lv 種火/熾火 DoT は移行待ち | CombatModule `chain`（収束/連鎖）。旧 active は移行待ち |
+| `at_sorcerer`  | 魔術師 | Sorcerer  | back  | 遠隔魔法 | **R12l:** 猛火の術（種火→発火） | CombatModule `chain`（収束/連鎖）。旧 active / 旧 DoT 削除済み |
 | `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | 印術 / 刻み返し（Lv0）+ 共鳴する印 / 印術の完成（Lv10/20）       | 刻み直し / 重ね刻み（Lv0）+ 重ね鳴り / 早鳴りの印（Lv10/20） |
 | `at_conductor` | 法陣師 | Conductor | back  | 遠隔魔法 | —（未実装）                                                      | （未実装・JSON 廃棄）                      |
 
@@ -1161,7 +1157,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 | classId         | 表示名 | epithetEn  | 列    | 射程 | パッシブ（Lv0）                                                                                   | アクティブ（Lv0）                                                    |
 | --------------- | ------ | ---------- | ----- | ---- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `sp_cleric`     | 療養師 | Cleric     | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）。Lv10 / Lv20 で回復精度・治癒の残響 | `sp_cleric_active_1` + `sp_cleric_active_2`（低 HP smart heal）      |
+| `sp_cleric`     | 療養師 | Cleric     | back  | 遠隔 | **R12l:** 慈悲の加護（本体）+ 余剰・予約系 cost1/10 | CombatModule のみ（旧 active 削除済み）      |
 | `sp_wardweaver` | 結界師 | Wardweaver | back  | 遠隔 | 低 HP 特効 barrier + バリア枯渇回復（`passive_1` / `passive_2`）                                  | `sp_wardweaver_active_1` + `sp_wardweaver_active_2`（smart barrier） |
 | `sp_alchemist`  | 薬草師 | Herbalist  | front | 近接 | 薬効浸潤 aura + 高 HP 味方 hp buff（`passive_1` / `passive_2`）                                   | `sp_alchemist_active_1` + `sp_alchemist_active_2`（HoT sustain）     |
 
@@ -1235,23 +1231,21 @@ Defender 共通 passive と各 Defender の受け口設計は同一視しない�
 
 戦場の**物理ラインそのものを作る壁**。
 
-#### 習得スキル（v1.6 確定）
+#### スキル枠（R12l production）
 
-鉄衛士は barrier / HoT を持たない（Recovery 系は療養師・護法士のみ例外）。
+鉄衛士は barrier / HoT を持たない（Recovery 系は療養師・護法士のみ例外）。旧 active 1〜4・`blockResonance`（迎撃態勢）・旧 catalog op は **削除済み**。通常行動は CombatModule。`SkillMenuPanel` は class Lv active が空のとき active 節を出さない。
 
-| 枠             | ID                         | 名称           | 効果                                                                                                     |
-| -------------- | -------------------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
-| basic          | `df_guardian_basic_attack` | —              | 最近接 physical                                                                                          |
-| passive 1 Lv0  | `df_guardian_passive_1`    | 大盾使い       | 自己 block                                                                                               |
-| passive 2 Lv0  | `df_guardian_passive_2`    | 立ちはだかる壁 | passive `damageReduction`（自身対象・常時 `damageTaken` 軽減 8%）。main tank は defender 優先ターゲット + P1 block |
-| active 1 Lv0   | `df_guardian_active_1`     | 防御強化       | 自己 DEF buff                                                                                            |
-| active 2 Lv0   | `df_guardian_active_2`     | 防御専念       | `hitsTaken` + DEF / block + `useDurationSec`                                                             |
-| passive 3 Lv10 | `df_guardian_passive_3`    | 迎撃態勢       | 常時 block +10% + `blockResonance`（block 成功で stack 蓄積・減衰・ダメージ軽減）                        |
-| active 3 Lv10  | `df_guardian_active_3`     | 鉄身           | smart 自己 `damageTaken` 低下（HoT 廃止）                                                                |
-| passive 4 Lv20 | `df_guardian_passive_4`    | 不撓の誓い     | `lastStandInvulnerable`（致死時 Wave 1 回・3 秒無敵）                                                    |
-| active 4 Lv20  | `df_guardian_active_4`     | 城塞の構え     | `hitsTaken` + smart `blockResonanceStacks≥1` → stack 消費態勢。構え中 block で周囲敵に DEF ダメージ + KB |
+| 枠 | ID | 名称 | 効果 |
+| -- | -- | ---- | ---- |
+| Module | `df_guardian_mod_nearest_strike` / `_guard_focus` | 近接打撃 / 防御姿勢 | CombatModule（詳細は [§R12f 鉄衛士](#df_guardian-鉄衛士)） |
+| 本体 | `df_guardian_passive_1` | 大盾使い | 自己 block |
+| cost1 | `df_guardian_passive_2` | 防御力増加 | 自己 DEF 乗算 |
+| cost1 | `df_guardian_op_block_rate_up` | ブロック率増加 | 自己 block |
+| cost1 | `df_guardian_op_frontline_maintenance` | 戦線維持 | block 成功時自己即時回復（`healOnBlock`） |
+| cost10 | `df_guardian_passive_4` | 不撓の誓い | `lastStandInvulnerable`（致死時 Wave 1 回・無敵） |
+| cost10 | `df_guardian_op_fortress_stance` | 城塞の構え | block 成功時半径内 knockback（`knockbackOnBlock`） |
 
-新 effect: `blockResonance` / `lastStandInvulnerable` / `blockResonanceConsume`。共通 overlay: `invulnerable`（[combat.md](combat.md)）。
+新 effect: `healOnBlock` / `knockbackOnBlock` / `lastStandInvulnerable`。共通 overlay: `invulnerable`（[combat.md](combat.md)）。旧 `blockResonance` / `blockResonanceConsume` は削除済み。
 
 ---
 
@@ -1388,17 +1382,20 @@ Defender 共通 passive と各 Defender の受け口設計は同一視しない�
 
 **療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。パッシブは回復そのものを無限に強化するのではなく、**回復の結果処理と安定性** を制御する（HP 直接操作・防御生成・被ダメ介入は行わない）。
 
-- **設計思想:** 回復が戦闘に与える影響を整える。Active との機能重複は禁止。
-- **Passive 構造:** Lv0 / Lv10 / Lv20 の 3 段階。各段階は独立した常時効果で、上位は下位を置き換えず **累積** する。
+- **設計思想:** 回復が戦闘に与える影響を整える。旧 active との機能重複は禁止（旧 active は R12l 3B で削除済み）。
+- **R12l 構造:** 兵科本体 1 + cost1×3 + cost10×2。通常行動は CombatModule。
 
-| 段階 | id                    | 名称（JSON） | 効果                                                                                                                                             | 役割                                             |
-| ---- | --------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| Lv0  | `sp_cleric_passive_1` | 慈悲の加護   | 対象 HP 割合が低いほど回復量増（`specialEffect` heal、軽度補正）                                                                                 | 基礎回復の安定性・緊急回復の最低保証             |
-| Lv0  | `sp_cleric_passive_2` | 癒光循環     | 余剰回復（オーバーヒール）を固定率でバリアに変換（`excessHealToBarrier`）                                                                        | 回復リソースの無駄削減・実効 HP への変換         |
-| Lv10 | `sp_cleric_passive_3` | 生命調律     | オーバーヒールの一部を **次に HP 割合が低い味方** へ転送（`excessHealRedirect`、1 ホップのみ）                                                   | 回復リソースの再配分。満タン回復時の無駄を減らす |
-| Lv20 | `sp_cleric_passive_4` | ヒール予約   | 低 HP 対象を回復した際にバフ「治癒の残響」を付与。被ダメで HP が閾値以下になったら 1 スタック消費して即時回復（`healReservation`、蘇生ではない） | 回復後の即死リスク軽減・短期保険                 |
+| 枠 | id | 名称（JSON） | 効果 | 役割 |
+| -- | -- | ------------ | ---- | ---- |
+| Module | `sp_cleric_mod_single_mend` / `_party_mend` | 緊急単体 / 分散 | CombatModule heal | 欠損復元の主経路 |
+| 本体 | `sp_cleric_passive_1` | 慈悲の加護 | 低 HP 対象への heal 特効（`specialEffect`）+ 負傷優先 | 基礎回復の安定性・緊急回復の最低保証 |
+| cost1 | `sp_cleric_passive_2` | 生気の循環 | 余剰回復 → バリア（`excessHealToBarrier`） | 回復リソースの無駄削減 |
+| cost1 | `sp_cleric_op_heal_amount_up` | 回復量増加 | heal 量増加（`specialEffect`） | 補助 |
+| cost1 | `sp_cleric_op_interval_reduction` | 回復間隔短縮 | `attackIntervalScale` | 補助 |
+| cost10 | `sp_cleric_passive_3` | 巡る生命 | 余剰の一部を次の低 HP 味方へ転送（`excessHealRedirect`） | 回復リソースの再配分 |
+| cost10 | `sp_cleric_passive_4` | 生命調律 | 低 HP 回復時に「治癒の残響」付与・閾値で消費回復（`healReservation`） | 回復後の即死リスク軽減 |
 
-**Active 参照:** Lv0 の `sp_cleric_active_1` は単体即時 heal + 短 HoT、`sp_cleric_active_2` は低 HP 味方向けの smart heal（`time` + `firePolicy: smart` + `fireConditions`）。旧 `sp_cleric_active_2`（広域治療）は `sp_cleric_active_3` として **Lv10 習得** に移した。Lv20 の `sp_cleric_active_4` は大きな欠損を即座に立て直す smart heal（被ダメ反応 trigger は将来ゲート。現行は A 案の待機型即応 heal）。
+旧 Lv0 active / Lv10〜20 active・旧 R11b op は **削除済み**。
 
 **結界師（Wardweaver）参照:** 主責務は Recovery ではなく **Stability Control（崩壊前猶予）**。療養師と Lv0 で同等の崩壊対策を目指し、直接 heal は補助。用語: **バリア** = `barrierHp`（ダメージ先消耗シールド）、**障壁** = `wardBarrier` スタック（上位軽減・バリアより先に消費）、**乾印 / 坤印** = 印術師専用（`windMark` / `earthMark`。結界師・弩砲士・闘技士のマーク系と混同しない）。
 
@@ -1488,7 +1485,7 @@ Defender 共通 passive と各 Defender の受け口設計は同一視しない�
 - P3 は「誰を狙うか」ではなく「処理対象に当たったときどれだけ効くか」の段階強化。
 - active 側は回転・火力形状を担い、passive の特効とは役割分担する。
 
-**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_swordsman基礎近接) P1=重装狙い / P3=穿甲の一撃 / P4=剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=薄命狩り / P3=刈り取り / P4=無慈悲な刃、[弓術士](#弓術士at_ranger基礎遠隔) P1=射手排除 / P3=遠隔狩り / P4=二の矢。
+**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_swordsman基礎近接) R12l=重装狙い / 防御力無視率増加 / 穿甲の一撃 / 剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=薄命狩り / P3=刈り取り / P4=無慈悲な刃、[弓術士](#弓術士at_ranger基礎遠隔) P1=射手排除 / P3=遠隔狩り / P4=二の矢。
 
 ### 三分類と classId
 
@@ -1527,24 +1524,24 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 #### 役割
 
 - 高 DEF 単体の防御突破（DEF debuff は付けない）
-- 無視 DEF 量のボーナスダメ（Lv20 パッシブ）
+- 無視 DEF 量のボーナスダメ（cost10「剛剣の冴え」）
 - Paladin と組んだ際の前衛 sub-defender
 
-#### スキル枠（basic + passive×4 + active×4）
+#### スキル枠（R12l production）
 
-| 枠             | ID                        | 名称       | 概要                                                           |
-| -------------- | ------------------------- | ---------- | -------------------------------------------------------------- |
-| basic          | `at_swordsman_basic_attack` | 斬撃       | 標準物理単体                                                   |
-| passive 1 Lv0  | `at_swordsman_passive_1`    | 重装狙い   | 高 DEF 優先 `targetRuleOverride`                               |
-| passive 2 Lv0  | `at_swordsman_passive_2`    | 鎧砕き     | 常時 DEF 25% 無視                                              |
-| passive 3 Lv10 | `at_swordsman_passive_3`    | 穿甲の一撃 | DEF 100% 無視（`chance: 0.15`）                                |
-| passive 4 Lv20 | `at_swordsman_passive_4`    | 剛剣の冴え | `ignoredDefBonusDamage` — 無視 DEF × 0.5 追加ダメ              |
-| active 1 Lv0   | `at_swordsman_active_1`     | 叩き付け   | 高 HP 単体重撃（`threatBurst*` は廃止）                        |
-| active 2 Lv0   | `at_swordsman_active_2`     | 薙ぎ払い   | 近接複数対応（弱め）                                           |
-| active 3 Lv10  | `at_swordsman_active_3`     | 突き通し   | BAC 7・小前進 + DEF 100% 無視単体（回転核）                    |
-| active 4 Lv20  | `at_swordsman_active_4`     | 断鉄       | BAC 14・溜め斬り・DEF 100% 無視 + 全軽減貫通フラグ（回避除く） |
+旧 active 1〜4・旧 R11b op は **削除済み**。通常行動は CombatModule。
 
-新 effect: `ignoredDefBonusDamage` / `pierceBarrier` / `pierceWard` / `pierceBlock` / `ignoreDamageTakenReduction`（[combat.md](combat.md) 物理ダメージ節）。
+| 枠 | ID | 名称 | 概要 |
+| -- | -- | ---- | ---- |
+| Module | `at_swordsman_mod_single_slash` / `_pierce_slash` | 正面集中 / 前線分担 | CombatModule（詳細は [§R12f 剣術士](#at_swordsman-剣術士)） |
+| 本体 | `at_swordsman_passive_2` | 重装狙い | 高 DEF 優先 `targetRuleOverride` + DEF 無視（併記） |
+| cost1 | `at_swordsman_passive_1` | 防御力無視率増加 | 常時 DEF 無視 |
+| cost1 | `at_swordsman_op_interval_reduction` | 攻撃間隔短縮 | `attackIntervalScale` |
+| cost1 | `at_swordsman_op_physical_damage_up` | 物理ダメージ増加 | `outgoingHitDamageIncrease` |
+| cost10 | `at_swordsman_passive_3` | 穿甲の一撃 | 確率で高率 DEF 無視 |
+| cost10 | `at_swordsman_passive_4` | 剛剣の冴え | `ignoredDefBonusDamage` — 無視 DEF × scale 追加ダメ |
+
+新 effect: `ignoredDefBonusDamage` 等（[combat.md](combat.md) 物理ダメージ節）。旧 active の pierce 系フラグは削除済み。
 
 #### 処理対象
 
@@ -1823,16 +1820,19 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 
 **火** — 純粋な破壊エネルギーとしての直感的火力。
 
-#### スキル枠（Phase 3 確定）
+#### スキル枠（R12l production）
 
 | 枠      | id                         | 名称           | 概要                                 |
 | ------- | -------------------------- | -------------- | ------------------------------------ |
 | Module  | `at_sorcerer_mod_focus` / `_chain` | 収束 / 連鎖 | `targetShape: chain`（M1 count1 / M2 count2） |
 | 本体    | `at_sorcerer_passive_1`    | 猛火の術       | CombatModule Hit で種火+1。閾値で発火（全消費） |
-| cost1   | `at_sorcerer_op_*`         | 間隔短縮 / 魔法ダメ増加 / 魔法耐性無視率増加 | 固定 cost 1 |
-| cost10  | `at_sorcerer_op_ignition_*` | 爆炎 / 火勢   | 発火+50% / 必要 stack -1 |
+| cost1   | `at_sorcerer_op_interval_reduction` | 攻撃間隔短縮 | `attackIntervalScale` |
+| cost1   | `at_sorcerer_op_magic_damage_up` | 魔法ダメージ増加 | `outgoingHitDamageIncrease`（発火にも乗算） |
+| cost1   | `at_sorcerer_op_res_ignore_up` | 魔法耐性無視率増加 | RES 無視 |
+| cost10  | `at_sorcerer_op_ignition_damage` | 爆炎 | 発火基礎量ボーナス |
+| cost10  | `at_sorcerer_op_ignition_threshold` | 火勢 | 発火必要 stack 減少 |
 
-**移行待ち legacy（通常候補外）:** 旧 P2〜P4・旧 active・旧 `op_*`（種火 DoT / 熾火 / active 連鎖）。combat ルールの legacy 節は [combat.md](combat.md) §種火 / 熾火（legacy）。実装残: `src/battle/sorcererFlame.ts`。production path は `emberIgnition.ts`。
+旧 P2〜P4・旧 active・旧 R11b op・`sorcererFlame.ts` / 種火 DoT / 熾火は **R12l 3B で削除済み**。production path は `emberIgnition.ts`（[combat.md](combat.md) §種火 / 発火）。
 
 ---
 
@@ -2276,8 +2276,8 @@ interface CharacterBuild {
 
 ```json
 {
-  "id": "at_swordsman_active_1",
-  "trigger": { "kind": "basicAttackCount", "value": 4 },
+  "id": "at_ranger_active_1",
+  "trigger": { "kind": "basicAttackCount", "value": 5 },
   "effect": [ ... ]
 }
 ```
@@ -2379,18 +2379,19 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `skillAmountOverride`      | `targetSkillId`, `amount`, `effectIndex?`, `passiveAmountField?`                                                                                                                                                  | 指定スキル（アクティブ / 取得済みパッシブ）の `ResourceAmountSpec` を完全上書き。アクティブは `effectIndex` 省略で amount 持ち effect すべて。パッシブは `hotAmount` / `barrierAmount`。複数時は `learnedPassiveIds` の後方優先。反撃 `counterResponses` は対象外                                                                                                                        |
 | `skillPropertyOverride`    | `maxChargesBonus`, `skillPropertyTargetSkillIds?`                                                                                                                                                                 | 対象アクティブの `maxCharges` 加算（上限 3）                                                                                                                                                                                                                                                                                                                                             |
 | `threatControl`            | —                                                                                                                                                                                                                                                 | **廃止**（ヘイトランタイム削除）。旧: 被弾 / block によるヘイト維持・`frontThreatFloor` aura。護法陣は `damageReduction` passive へ移行（[combat.md](combat.md)） |
-| `blockResonance`           | `chance?`, `blockResonanceMaxStacks`, `blockResonanceDamageTakenPerStack`, `blockResonanceDecayIntervalSec?`                                                                                                      | 常時 block（`chance`）+ 物理直接ダメージの block 成功で stack 蓄積。stack ごとにダメージ軽減。`overlay: blockResonance`。減衰タイマーは `herbalPotency` とは別。実装: `blockResonance.ts`                                                                                                                                                                                                |
+| `emberIgnition`            | `emberIgnitionThreshold?`, `emberIgnitionAtkScale?`                                                                                                                                                                                              | CombatModule damage Hit で種火 stack。閾値到達で発火（全消費・魔法 direct）。非時間制。実装: `emberIgnition.ts`（[combat.md](combat.md) §種火 / 発火） |
+| `healOnBlock`              | `healOnBlockAmount`                                                                                                                                                                                               | 物理直接ダメージの block 成功時、自己へ即時回復。派生回復再帰なし |
+| `knockbackOnBlock`         | `knockbackOnBlockRadiusPx?`, `knockbackOnBlockDistancePx?`                                                                                                                                                        | block 成功時、半径内敵を knockback。派生ダメージ再帰なし |
 | `herbalPotency`            | `hotAmount?`, `hotTargetRule?`, `herbalPotencyMaxStacks`, `herbalPotencyHotPerStackPercent?`, `herbalPotencyHotTickSec?`, `herbalPotencyAccumulateSec?`, `herbalPotencyConstitutionThresholds?` / `HpMultipliers`, `herbalPotencyConstitutionDisplayName?` | aura HoT + **薬効** stack 蓄積 + **頑健**（hp 乗算、表示名は JSON 可変）。習得済みパッシブを合成（`maxStacks` は最大値、間隔系は後勝ち）。実装: `herbalPotency.ts`                                                                                                                                                                                                                                       |
 | `lastStandInvulnerable`    | （フィールドなし）                                                                                                                                                                                                | 致死ダメージ直前に Wave 1 回だけダメージ 0 + 3 秒 `overlay: invulnerable`。実装: `lastStandInvulnerable.ts`                                                                                                                                                                                                                                                                              |
 | `frontBlockAura`           | `chance?`, `frontBlockAuraMagicBlock?`, `frontBlockAuraRadiusPx?`                                                                                                                                                                            | 生存中、周囲味方へ block overlay。`frontBlockAuraMagicBlock` で魔法直接も block 対象。実装: `frontBlockAura.ts`                                                                                                                                                                                                                                                                          |
 | `lastStandRecovery`        | `lastStandRecoveryHpRatio?`, `lastStandRecoverySelfDamageTakenMultiplier?`, `lastStandRecoveryFrontAllyDamageTakenMultiplier?`, `lastStandRecoveryFrontAllyAuraRadiusPx?`, `lastStandRecoveryDurationSec?`                                                   | 致死直前 Wave 1 回・半復活 + 自己/周囲 DR。実装: `lastStandRecovery.ts`                                                                                                                                                                                                                                                                                                                  |
 | `duelistPride`             | `prideHpRatioMin?`, `prideHealMultiplier?`                                                                                                                                                                        | HP 高帯で被回復（即時・HoT）を抑制。バリア非対象。実装: `duelistPride.ts`                                                                                                                                                                                                                                                                                                                |
-| `seedFlameOnActiveHit`     | `seedFlameMaxStacks?`, `seedFlameDurationSec?`, `seedFlameDotAtkScale?`, `blazingFlameDotAtkScale?`, `blazingFlameMagicTakenPerStack?`, `blazingFlameMaxStacksDefault?`                                          | 習得者の **active** damage Hit ごとに対象へ種火 +1。basic 非対象。種火 / 熾火 DoT 数値の正本は JSON（未指定時のみ `sorcererFlame.ts` 既定）。実装: `sorcererFlame.ts`                                                                                                                                                                                                                    |
-| `bonusActiveOnHit`         | `bonusActiveSkillId`                                                                                                                                                                                              | active Hit 後、指定 active の damage effect を CD 消費なし追撃（`suppressBonusActiveOnHit` で P3 非再帰）。実装: `sorcererFlame.ts`                                                                                                                                                                                                                                                      |
-| `blazingFlameDetonate`     | `blazingFlameDetonateSpreadRadiusPx?`, `blazingFlameDetonatePerSeedScale?`, `blazingFlameDetonateMultiplier?`, `blazingFlameUncap?`                                                                               | 熾火 ≥1 の対象へ active Hit ごとに起爆 + spread 種火。`blazingFlameUncap` で熾火 stack 上限解除。実装: `sorcererFlame.ts`                                                                                                                                                                                                                                                                |
 | `lowHpCover`               | `coverHpRatioThreshold?`, `coverWaveLimit?`                                                                                                                                                                       | 低 HP 味方への被ダメを闘技士へ肩代わり。Wave 内上限。実装: `lowHpCover.ts`                                                                                                                                                                                                                                                                                                               |
 | `lastStandGuts`            | `lastStandGutsDurationSec?`, `lastStandGutsEndStunSec?`, `lastStandGutsEndKnockbackPx?`                                                                                                                           | 致死直前 Wave 1 回・HP1 維持（無敵ではない）。終了時敵全体 stun+KB。実装: `lastStandGuts.ts`                                                                                                                                                                                                                                                                                             |
 | `bloodlustDuelist`         | `bloodlustBlockChance?`, `bloodlustDefMaxBuffAtHpRatio?`, `bloodlustDefBuffMultiplierMax?`, `bloodlustAtkMaxBuffAtHpRatio?`, `bloodlustAtkBuffMultiplierMax?`, `bloodlustAtkBuffCurveExponent?`                   | block + 低 HP DEF（線形）/ ATK（指数カーブ可）。実装: `bloodlustDuelist.ts`                                                                                                                                                                                                                                                                                                              |
+
+**削除済み（R12l 3B・4兵科旧経路）:** `blockResonance` / `blockResonanceConsume`（`blockResonance.ts`）、`seedFlameOnActiveHit` / `bonusActiveOnHit` / `blazingFlameDetonate`（`sorcererFlame.ts`）。schema・runtime・glossary から除去。
 
 **スタン（`stun` / `debuffSubKind: stun` / counter `kind: stun`）:** `durationSec` **上限 5 秒**。スタン中は使用者として通常攻撃・アクティブ発動・ターゲット選択不可。**付与成功時**に **通常攻撃 CD のみ** 満タンリセット。アクティブ CD・イベントゲージは停止しない。CD 進行停止が必要な状態はスタンではなく、凍結 / 時間停止系拘束など別 `StatusEffect` として定義する。詳細は [combat.md](combat.md) のスタン行。
 

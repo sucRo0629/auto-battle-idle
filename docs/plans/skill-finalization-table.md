@@ -53,19 +53,19 @@
 
 | classId         | 現行 passive                                                               | v1 確定方針                                                                                                                                         |
 | --------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `df_guardian`   | block、Threat 維持、旧 Wave barrier 重複                                   | **v1.6 確定**。Lv0=大盾使い+立ちはだかる壁。Lv10=迎撃態勢（`blockResonance`）。Lv20=不撓の誓い。barrier / 重複 passive 削除                         |
+| `df_guardian`   | **R12l で新仕様へ置換済み** | 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の鉄衛士 R12l 節。旧 `blockResonance` / Lv active 表は再利用不可 |
 | `df_paladin`    | block、front Threat floor、全体 barrier、全体 damageReduction              | **v1 確定・実装済**。護身手 / 護法陣 / 真言加護 / 不退転 + 光明剣 / 障身法 / 慈光 / 降魔光明。`frontBlockAura` / 魔法 block / `lastStandRecovery`   |
 | `df_duelist`    | block、低 HP DEF / ATK、counter                                            | **残す**。Duelist の被弾起点・反撃・低 HP 逆転を passive 側の核にする                                                                               |
-| `at_swordsman`    | 高 DEF 狙い、DEF 無視                                                      | **残す**。Warrior の高 DEF 単体処理の正本                                                                                                           |
+| `at_swordsman`    | **R12l で新仕様へ置換済み** | 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の剣術士 R12l 節。旧 Lv active / gauge BAC 表は再利用不可 |
 | `at_assassin`   | 低 HP（現在値）狙い、evasion、低 HP 対象 damage bonus                      | **残す**。瀕死処理と背後アクセスの補助に限定し、Defender 的な生存性能には寄せない                                                                   |
 | `at_lancer`     | pierce 範囲 ATK debuff、近傍 ally ATK aura                                 | **残す**。Position Flow の常時圧力として扱う                                                                                                        |
 | `at_ranger`     | 遠隔敵優先、attackSpeed buff、遠隔特効・二の矢                             | **実装済**（Physical pass A）。応射（counter）廃止。P3 遠隔狩り / P4 二の矢 / A3 早射ち / A4 矢の雨                                                 |
 | `at_ballista`   | 高 Max HP 狙いが重複、DEF 無視が古い仕様として残存                         | **実装済**（Physical pass B）。P1 城落としの弩（`maxHp`）/ P2 巻き上げ機構 / P3 城塞穿ち / P4 粉砕する大矢。常時 DEF 無視は置換済み                 |
 | `at_hunter`     | debuff 中対象への damage bonus                                             | **実装済**（Physical pass B）。P1 濃縮毒 / P2 毒の武器 / P3 癒えぬ傷 / P4 仕留め時。Field Flow（poison 主軸、placedField / dotCompress / hasDot）   |
-| `at_sorcerer`   | 種火 / 熾火 + active 連鎖（Phase 3 実装済）                                | **実装済**。passive×4 + active×4 + basic                                                                                                            |
+| `at_sorcerer`   | **R12l で新仕様へ置換済み** | 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の魔術師 R12l 節および [combat.md](../spec/combat.md) §種火 / 発火。旧種火 DoT / 熾火 / detonate は再利用不可 |
 | `at_sigilist`   | P1 印術が通常攻撃を置換（設計確定）                                        | **確定**（2026 再設計）。combat / JSON は Phase 9a |
 | `at_conductor`  | AoE crowd bonus、AoE / scatter 攻撃寄り active（旧 `at_geomancer`）        | **置換**。既存攻撃スキルは正本にしない。Conductor は自身で damage を出さず、観測・蓄積・法陣による damage routing / distribution / recycling を扱う |
-| `sp_cleric`     | 低 HP heal 強化、余剰 heal → barrier、Lv10 余剰 heal 転送、Lv20 治癒の残響 | **残す / 実装済**。Recovery Control の核。passive 3 = `excessHealRedirect`、passive 4 = `healReservation`                                           |
+| `sp_cleric`     | **R12l で新仕様へ置換済み** | 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の療養師 R12l 節。旧 Lv active 表は再利用不可 |
 | `sp_wardweaver` | 低 HP barrier 特効、枯渇回復、障壁（ward）、先読み smart                   | **実装済**（Stability Control リデザイン）                                                                                                          |
 | `sp_alchemist`  | party HoT aura、高 HP ally DEF、Wave 回数限定の debuff cleanse             | **残す**。debuff cleanse は薬草師専用の補助個性だが、必須インフラにはしない                                                                         |
 
@@ -73,7 +73,7 @@
 
 | classId       | 設計の柱                                                         | 現行スキル                                                                            | v1 確定方針                                                                             | 実装影響                                                                                                |
 | ------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `df_guardian` | 前線構築。単一路線の完全防衛、高 HP 正面受け、被弾による前線押上 | v1.6: basic+4passive+4active。`active_3` 鉄身、`active_4` 城塞の構え                  | **v1.6 実装済**。barrier / HoT 候補は削除。迎撃態勢・不退・城塞で前線保持を強化         | `blockResonance` / `lastStandInvulnerable` / `invulnerable` overlay / `blockResonanceConsume`           |
+| `df_guardian` | 前線構築。単一路線の完全防衛、高 HP 正面受け、被弾による前線押上 | **R12l で新仕様へ置換済み。** 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の鉄衛士 R12l 節 | （同上） | 旧 `blockResonance` / `blockResonanceConsume` / Lv active inventory は再利用不可 |
 | `df_paladin`  | 戦線安定。範囲・魔法ダメージを含む戦場全体の被害緩和             | v1: 護身手 / 護法陣 / 真言加護 / 不退転 + 光明剣 / 障身法 / 慈光 / 降魔光明           | **v1 実装済**。Defender 内唯一の barrier（障身法）。前列 block + 魔法 block + 半復活 DR | `frontBlockAura` / 魔法 block / `lastStandRecovery` / 障身法 AoE 50px（スキル共通 target）              |
 | `df_duelist`  | 攻撃防御。敵ターゲット操作・単体強敵制圧                         | v1: 闘士の矜持 / 流血闘志 / 攻撃誘導 / 不屈 + 誘い込み / 体捌き / 隙打ち / 闘技場の掟 | **v1 実装済**。敵 Threat 操作が主軸。barrier なし                                       | `lowHpCover` / `duelistPride` / `bloodlustDuelist` / `lastStandGuts` / `enemyReelIn` / `arenaDominance` |
 
@@ -83,12 +83,7 @@ Defender 3 種は「硬さの大小」ではなく、被害入口の作り方で
 
 | classId       | 枠                  | 方針                                                                               | 採否                                                   |
 | ------------- | ------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `df_guardian` | basic               | 最近接敵への通常攻撃。main tank の Threat は basic 火力ではなく passive で維持する | 現行 `df_guardian_basic_attack` を **残す**            |
-| `df_guardian` | Lv0 passive 1-2     | block + 被弾 / block による Threat 維持。Guardian は単体前線の main tank           | **v1.6 確定**（大盾使い / 立ちはだかる壁）             |
-| `df_guardian` | Lv0 active 1-2      | 防御強化 / 防御専念                                                                | **v1.6 残す**                                          |
-| `df_guardian` | Lv10 / Lv20 passive | 迎撃態勢（`blockResonance`）+ 不撓の誓い（`lastStandInvulnerable`）                | **v1.6 確定**                                          |
-| `df_guardian` | Lv10 active 3       | 鉄身: smart 自己 `damageTaken` 低下（息入れ HoT 廃止）                             | **v1.6 確定**                                          |
-| `df_guardian` | Lv20 active 4       | 城塞の構え: `blockResonanceConsume` + 構え中 block 範囲反撃                        | **v1.6 確定**                                          |
+| `df_guardian` | （全枠）            | **R12l で新仕様へ置換済み。** 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の鉄衛士 R12l 節。旧 `blockResonance` / Lv active 表は再利用不可 | （旧 v1.6 Lv 表は削除） |
 | `df_paladin`  | basic               | 最近接敵への通常攻撃。火力ではなく前線安定の補助                                   | 現行 `df_paladin_basic_attack` を **残す**             |
 | `df_paladin`  | Lv0 passive 1-2     | 護身手（`frontBlockAura`）+ 護法陣（`threatControl` のみ）                         | **v1 確定**                                            |
 | `df_paladin`  | Lv10 / Lv20 passive | 真言加護（魔法 block）+ 不退転（`lastStandRecovery`）                              | **v1 確定**                                            |
@@ -105,7 +100,7 @@ Defender 3 種は「硬さの大小」ではなく、被害入口の作り方で
 
 Defender pass の実装方針:
 
-- Guardian の Threat 維持は passive `threatControl` を正本にする。active では Threat 値を直接操作せず、受け続けるための防御状態を作る。
+- **`df_guardian`:** R12l で新仕様へ置換済み。現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の鉄衛士 R12l 節（旧 Threat/`blockResonance` 方針は再利用不可）。
 - Paladin の Threat は front 全体の受け口を安定させる passive を正本にする。active は barrier / damageTaken / 補助 heal で前線崩壊を遅らせる。
 - Paladin の Lv0 passive 2 枠は `frontThreatFloor` 系 + 前列 `block` aura に使う。盾を持つ直感を優先しつつ、自己だけでなく front 全体を守る shared tank として表現する。
 - Paladin の前列ダメージ軽減は `threatControl` に含めない。Threat 制御と damage reduction は責務が異なるため、必要なら前列向け `damageReduction` passive として別スキル化する。ただし Lv0 の柱は前列 block を優先する。
@@ -117,7 +112,7 @@ Defender pass の実装方針:
 
 | classId       | 設計の柱                                           | 現行スキル                                                               | v1 確定方針                                                                                                                                                                                                  | 実装影響                                                                                                                                                                     |
 | ------------- | -------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `at_swordsman`  | 単体安定。高 DEF 単体を DEF 貫通・固定 DPS で処理  | `active_1` 叩き付け、`active_2` 薙ぎ払い。`active_3` / `active_4` 未配置 | **実装済**（Physical pass A）。P3 穿甲 / P4 剛剣の冴え / A3 突き通し / A4 断鉄                                                                                                                               | `ignoredDefBonusDamage` / 貫通フラグ（`pierce*` / `ignoreDamageTakenReduction`）                                                                                             |
+| `at_swordsman`  | 単体安定。高 DEF 単体を DEF 貫通・固定 DPS で処理  | **R12l で新仕様へ置換済み。** 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の剣術士 R12l 節 | （同上） | 旧 Lv active / gauge BAC inventory は再利用不可 |
 | `at_assassin` | 高速処理。Hit 数、背後侵入、瀕死処理               | basic + 4passive + 4active（Lv0 引き裂き/影の刃）                        | **実装済**（Physical pass A）。P3 刈り取り / P4 無慈悲な刃 / A3 失血刻印 / A4 百花繚乱                                                                                                                       | `bonusBasicAttackOnHit` / 条件付き `specialEffect`+`defenseIgnore` / `dotFlavor: bleed` + smart `damageTaken` debuff                                                         |
 | `at_lancer`   | Position Flow。前線バフ・前線デバフ・戦線再形成    | basic + 4passive + 4active（号令／崩勢／鼓舞／追撃／堅陣／援護）         | **実装済**（Physical pass B）。A1 `move` 削除・A2 `stun`+`knockback`（ダメなし）・A4 追撃状態 `allyAttackFollowUp`。P4 援護反撃 `frontAllyDamaged`                                                           | pierce approach（[battle-field.md](../spec/battle-field.md) §4.4）既存。援護反撃は [combat.md](../spec/combat.md) §援護反撃。追撃は [combat.md](../spec/combat.md) §追撃状態 |
 | `at_ranger`   | 連射変形。攻撃回数、攻撃速度、遠隔敵処理           | basic + 4passive + 4active（Lv0 連射/連ね矢）                            | **実装済**（Physical pass A）。P3 遠隔狩り / P4 二の矢 / A3 早射ち / A4 矢の雨。応射廃止                                                                                                                     | `attackType` 条件 / `bonusBasicAttackConditions` / scatter / hitCount / basicAttackTransform / attackSpeed buff                                                              |
@@ -130,13 +125,7 @@ Warrior / Assassin / Ranger は v1 では新 effect を増やさず、既存の 
 
 | classId       | 枠                  | 方針                                                                                                                                                                | 採否                                                                     |
 | ------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `at_swordsman`  | basic               | 最近接敵への標準物理攻撃                                                                                                                                            | 現行 `at_swordsman_basic_attack` を **残す**                               |
-| `at_swordsman`  | Lv0 passive 1-2     | 高 DEF 敵優先 + DEF 無視。Warrior の「高 DEF 単体処理」を Lv0 で成立させる                                                                                          | 現行 `at_swordsman_passive_1` / `at_swordsman_passive_2` を **残す**         |
-| `at_swordsman`  | Lv10 / Lv20 passive | P3: 15% で DEF 100% 無視。P4: `ignoredDefBonusDamage`                                                                                                               | **実装済**                                                               |
-| `at_swordsman`  | Lv0 active 1        | 高 HP または高 DEF 対象へ重い単体打撃                                                                                                                               | 現行 `at_swordsman_active_1`（叩き付け）を **残す**                        |
-| `at_swordsman`  | Lv0 active 2        | 近接標準の複数対応。主役は単体処理なので範囲火力に寄せすぎない                                                                                                      | 現行 `at_swordsman_active_2`（薙ぎ払い）を **残す / 弱めに整理**           |
-| `at_swordsman`  | Lv10 active 3       | BAC 7・小前進 + DEF 100% 無視単体（突き通し）                                                                                                                       | **実装済**                                                               |
-| `at_swordsman`  | Lv20 active 4       | BAC 14・溜め斬り・全軽減貫通（`pierce*` + `ignoreDamageTakenReduction`、回避除く）                                                                                  | **実装済**                                                               |
+| `at_swordsman`  | （全枠）            | **R12l で新仕様へ置換済み。** 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の剣術士 R12l 節。旧 Lv active / BAC 表は再利用不可 | （旧 Physical pass A Lv 表は削除） |
 | `at_assassin` | basic               | 2 Hit 通常攻撃。Hit 密度の基礎                                                                                                                                      | 現行 `at_assassin_basic_attack` を **残す**                              |
 | `at_assassin` | Lv0 passive 1-2     | 低 HP（現在値）狙い + evasion。瀕死処理と背後アクセスの補助                                                                                                         | 現行 `at_assassin_passive_1` / `at_assassin_passive_2` を **残す**       |
 | `at_assassin` | Lv10 / Lv20 passive | P3: 刈り取り（`specialEffect` + 条件付き DEF 無視）。P4: `bonusBasicAttackOnHit`                                                                                    | **実装済**                                                               |
@@ -154,7 +143,7 @@ Warrior / Assassin / Ranger は v1 では新 effect を増やさず、既存の 
 
 Physical pass A の実装方針:
 
-- Warrior は高 DEF 対象処理を崩さない。範囲対応は副次で、Ranger / Hunter の領域を奪わない。Paladin と組んだ際は前衛 sub-defender も担うため、Lv10 以降に攻撃寄りの防御手段を持ってよい。ただし Guardian 的な受け専用性能ではなく、攻撃継続のための短時間 barrier / damageTaken 低下、または近接 counter に留める。
+- **`at_swordsman`:** R12l で新仕様へ置換済み（正本: classes-and-skills.md 剣術士 R12l 節）。Assassin / Ranger の方針は下記。
 - Assassin の rear assault は Kill アクセスであり、Threat / frontline ownership を変えるものではない。
 - Assassin は既に Lv0 passive に evasion を持つため、防御手段をさらに積むより、Hit 密度・瀕死処理・回転加速へ伸ばす。
 - Ranger は Hit 数と attackSpeed の相互作用を軸にする。応射（counter）は廃止し、遠隔敵特効（P3）と追い矢（P4）で段階強化する。
@@ -199,25 +188,17 @@ Physical pass B の実装方針:
 
 | classId        | 設計の柱                                  | 現行スキル                                                        | v1 確定方針                                                       | 実装影響                                                                               |
 | -------------- | ----------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `at_sorcerer`  | 純出力・種火 / 熾火                       | **実装済**（Phase 3 Caster pass A）。basic + passive×4 + active×4 | 種火 / 熾火 / P4 起爆 / `poolEach` 燎原。数値は仮（Phase 8 調整） |
+| `at_sorcerer`  | 純出力・種火 → 発火（`emberIgnition`） | **R12l で新仕様へ置換済み。** 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の魔術師 R12l 節および [combat.md](../spec/combat.md) §種火 / 発火 | 旧種火 DoT / 熾火 / detonate inventory は再利用不可 |
 | `at_sigilist`  | 乾印 / 坤印の付与・手動 / 自動起爆。印起爆型 Kill   | 旧 JSON 廃棄済み                                                  | 設計は **確定**（2026 再設計）。combat / JSON / tooling は **Phase 9a 以降** | `windMark` / `earthMark`、印術 basic、手動起爆、editor / validate / `formatSkillText` / spec 同期 |
 | `at_conductor` | Damage Routing / Distribution / Recycling | 旧 JSON 廃棄済み                                                  | 設計は **確定**。combat / JSON / tooling は **Phase 8 以降**      | damage reservoir、地点指定範囲、非 damage basic 等（Phase 8 以降）                     |
 
 ### Caster pass 枠確定案
 
-Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」ではなく出力構造の違いで分ける。Phase 3 では `at_sorcerer` のみ JSON / combat 実装の対象とし、`at_sigilist` / `at_conductor` は独自システムのため設計確定のみ行い実装は **Phase 8 以降** とする。
+Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」ではなく出力構造の違いで分ける。`at_sorcerer` は **R12l で新仕様へ置換済み**（正本: classes-and-skills.md 魔術師 R12l 節 / combat.md §種火 / 発火）。`at_sigilist` / `at_conductor` は独自システムのため設計確定のみ行い実装は **Phase 8 以降** とする。
 
 | classId        | 枠                  | 効果カテゴリ・対象・条件                                                                                                                                         | 方針                                                                                                                                                                                                                   | 採否 / 実装影響                                                                                                                                                                                                                                                                |
 | -------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `at_sorcerer`  | basic               | magic single（名称なし可）。P2/P3/P4 対象外                                                                                                                      | **実装**                                                                                                                                                                                                               |
-| `at_sorcerer`  | Lv0 passive 1       | 猛火の術 — REG 20% 無視（`defenseIgnore.reg.percent: 0.2`）                                                                                                      | **実装**                                                                                                                                                                                                               |
-| `at_sorcerer`  | Lv0 passive 2       | 焼き尽くす熾火 — `seedFlameOnActiveHit`                                                                                                                          | **実装**                                                                                                                                                                                                               |
-| `at_sorcerer`  | Lv10 passive 3      | 連なる炎 — `bonusActiveOnHit` → `at_sorcerer_active_1` 追撃（非再帰）                                                                                            | **実装**                                                                                                                                                                                                               |
-| `at_sorcerer`  | Lv20 passive 4      | 花開く炎 — `blazingFlameDetonate` + `blazingFlameUncap`                                                                                                          | **実装**                                                                                                                                                                                                               |
-| `at_sorcerer`  | Lv0 active 1        | 炎術 — magic single（CD 8s）                                                                                                                                     | **実装**                                                                                                                                                                                                               |
-| `at_sorcerer`  | Lv0 active 2        | 双炎 — multiLock hitCount 2（CD 10s）                                                                                                                            | **実装**                                                                                                                                                                                                               |
-| `at_sorcerer`  | Lv10 active 3       | 散火 — multiLock hitCount 3（CD 14s）                                                                                                                            | **実装**                                                                                                                                                                                                               |
-| `at_sorcerer`  | Lv20 active 4       | 燎原 — 種火 overlay 敵へ `poolEach` single（CD 18s）。範囲大火力ではない                                                                                         | **実装**                                                                                                                                                                                                               |
+| `at_sorcerer`  | （全枠）            | **R12l で新仕様へ置換済み。** 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の魔術師 R12l 節および [combat.md](../spec/combat.md) §種火 / 発火。旧種火 DoT / 熾火 / detonate / active 連鎖は再利用不可 | （旧 Caster pass A Lv 表は削除） |
 | `at_sigilist`  | basic               | P1 印術が通常攻撃を置換。直接ダメージなし。敵数で乾印 / 坤印を選択                                                                                                                                                                  | **追加**（Phase 9a）                                                                                                                                                                                                   |
 | `at_sigilist`  | Lv0 passive 1       | 印術 — 通常攻撃を印術に置換。同属性印があれば手動起爆、なければ付与。P1 のみ起爆後は再付与しない                                                                                                                                 | **追加**                                                                                                                                                                                                               |
 | `at_sigilist`  | Lv0 passive 2       | 刻み返し — 通常攻撃の手動起爆後、同対象へ同属性印を再付与                                                                                                                                                                        | **追加**。未習得時は見習い型（付与↔起爆交互）                                                                                                                                                                          |
@@ -239,17 +220,17 @@ Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」では
 
 Caster pass の実装方針:
 
-- Sorcerer は **種火 / 熾火** スタック debuff と active Hit 連鎖（P2 seed 付与、P3 A1 追撃、P4 起爆 + spread）で純出力を構成する。旧案（MultiLock Count Increase / Full Saturation / 刻炎 / basic「魔弾」/ A4 上位 multiLock のみ）は **不採用**。
+- **`at_sorcerer`:** R12l で新仕様へ置換済み。現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の魔術師 R12l 節および [combat.md](../spec/combat.md) §種火 / 発火。旧種火 DoT / 熾火 / active 連鎖は再利用不可。
 - Sigilist は **乾印 / 坤印**（`windMark` / `earthMark`）の付与と **手動起爆** が火力の核。通常攻撃と active は直接ダメージを与えない（P1 印術が通常攻撃を置換）。敵数で乾印 / 坤印を切替。自動起爆は拡散 / 収束のみでダメージなし。旧 Branch `conditionalEffect` 案は **不採用**（2026 再設計）。**数値 TBD（閾値・持続・ダメージ式等）は Phase 9a 実装まで保留** — [classes-and-skills.md §数値 TBD](../spec/classes-and-skills.md#数値tbd実装まで保留) / [combat.md](../spec/combat.md#印術師の印乾印坤印)。詳細は [classes-and-skills.md §印術師](../spec/classes-and-skills.md#印術師at_sigilist拡張) / [combat.md §印術師の印](../spec/combat.md#印術師の印乾印坤印)。
 - Conductor は地点指定範囲 / 持続範囲を Hunter と共有するが、置く effect が異なる。Hunter は DoT 圧縮 / 行動制限、Conductor は damage concentration / distribution / recycling を置く。既存 AoE / scatter 攻撃は正本にせず、通常攻撃を含めて自分で damage を出さない。ダメージ軽減職・ATK/DEF buff 職ではなく、damage の発生量を直接増減せず routing / distribution / recycling が主役。蓄積プールは主役ではなく補助エンジン。成長ラインは Lv0=観測・集中・分散、Lv10=観測拡張、Lv20=再循環。
-- Caster pass で増やす新要素は、Phase 3 では `at_sorcerer` の既存 effect 整理に限定する。`at_sigilist` 向けの乾印 / 坤印（`windMark` / `earthMark`）・手動起爆系、`at_conductor` 向け damage reservoir 系は **Phase 9 以降**。
+- `at_sorcerer` は R12l 置換済み（正本上記）。`at_sigilist` 向けの乾印 / 坤印（`windMark` / `earthMark`）・手動起爆系、`at_conductor` 向け damage reservoir 系は **Phase 9 以降**。
 - `at_sigilist` と `at_conductor` の現行 `data/skills/actives/*.json` は設計確定に伴い **廃棄済み**。`classes.json` の Lv0 active 習得も空。新スキルは Phase 8 以降に設計表どおり追加する。
 
 ## Survival
 
 | classId         | 設計の柱                                                                | 現行スキル                                                                                           | v1 確定方針                                                                                                             | 実装影響                                                                                |
 | --------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `sp_cleric`     | Recovery Control。欠損 HP の即時復元、余剰回復を barrier 化             | `active_1` 癒しの光、`active_2` 広域治療。仕様上は `active_2` が Lv10 とされ、Lv0=2 との整合が未解決 | `active_1` は **残す**。広域治療は Lv10 へ移し、Lv0 2 枠目は低 HP smart heal として **追加**。Lv20 は反応型大 heal 候補 | 既存 heal / hot / fireConditions で先行可能。真の被ダメ反応 trigger は新規ゲート        |
+| `sp_cleric`     | Recovery Control。欠損 HP の即時復元、余剰回復を barrier 化             | **R12l で新仕様へ置換済み。** 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の療養師 R12l 節 | （同上） | 旧 Lv active inventory は再利用不可 |
 | `sp_wardweaver` | Stability Control。崩壊前猶予、barrier max、障壁（ward）、先読み smart  | **実装済**（2025 リデザイン）                                                                        | Lv0: heal 補助 + barrier 特効 + 枯渇回復。Lv10: 単体 barrierStack。Lv20: 三重の障壁（障壁 2+バリア）                    | `barrierDepletionHeal` / `wardBarrier` / `pendingIncomingDamage` / `fireConditionMatch` |
 | `sp_alchemist`  | Sustain Control。薬効浸潤（`herbalPotency`）HoT + stack 蓄積 + 薬効顕現 | **実装済**（2025 リデザイン）                                                                        | Lv0: aura + stack 基礎 + 近接 HoT。Lv20: 体質段階 + 薬効顕現                                                            | `herbalPotency` / `herbalPotencyConsume` / `stackOnApply` / `potencyStackScale`         |
 
@@ -259,14 +240,7 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 
 | classId         | 枠                  | 方針                                                                                                                         | 採否                                                              |
 | --------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `sp_cleric`     | basic               | 最低 HP 比率の味方へ小さな即時 heal。Recovery の常時基礎                                                                     | 現行 `sp_cleric_basic_attack` を **残す**                         |
-| `sp_cleric`     | Lv0 passive 1-2     | 低 HP heal 強化、余剰 heal → barrier                                                                                         | 現行 `sp_cleric_passive_1` / `sp_cleric_passive_2` を **残す**    |
-| `sp_cleric`     | Lv10 passive 3      | オーバーヒールの一部を次低 HP 味方へ転送（`excessHealRedirect`、1 ホップ）。残り余剰は barrier 等へ                          | `sp_cleric_passive_3`（生命調律）を **実装**                      |
-| `sp_cleric`     | Lv20 passive 4      | 低 HP 回復時にバフ「治癒の残響」を付与。被ダメ後の短期保険回復（`healReservation`、蘇生ではない）                            | `sp_cleric_passive_4`（ヒール予約）を **実装**                    |
-| `sp_cleric`     | Lv0 active 1        | 単体欠損を戻す主 heal。対象は最低 HP 比率、即時 heal + 短い HoT                                                              | 現行 `sp_cleric_active_1`（癒しの光）を **残す**                  |
-| `sp_cleric`     | Lv0 active 2        | 低 HP の味方だけに反応する救命 heal。真の被ダメ反応 trigger は使わず、`time` + `firePolicy: smart` + `fireConditions` で先行 | **追加**。`sp_cleric_active_2` をこの役割へ再定義する案           |
-| `sp_cleric`     | Lv10 active 3       | Recovery の範囲化・維持化。全体または複数対象の HoT / heal                                                                   | 現行 `sp_cleric_active_2`（広域治療）は Lv10 枠へ **移動 / 改番** |
-| `sp_cleric`     | Lv20 active 4       | 上位 Recovery。大きな欠損を即座に立て直す smart heal。被ダメ反応 trigger は将来ゲート                                        | **追加**                                                          |
+| `sp_cleric`     | （全枠）            | **R12l で新仕様へ置換済み。** 現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の療養師 R12l 節。旧 Lv active 表は再利用不可 | （旧 Supporter Lv 表は削除） |
 | `sp_wardweaver` | basic               | 最低 HP 味方へ heal ATK×0.7 のみ（barrier なし）                                                                             | **実装**                                                          |
 | `sp_wardweaver` | Lv0 passive 1-2     | 低 HP barrier 特効 1.25、バリア枯渇時 instant heal                                                                           | **実装**                                                          |
 | `sp_wardweaver` | Lv10 / Lv20 passive | Lv10: Wave 開始全体 barrier×0.5（`passive_3`）。Lv20: `barrierBreakRegen`（`passive_4`）                                     | **実装**                                                          |
@@ -284,7 +258,7 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 
 Supporter pass の実装方針:
 
-- `sp_cleric_active_2` は **広域治療のまま Lv0 に置かない**。設計書の「広域治療は Lv10」を正とし、Lv0 2 枠目は低 HP smart heal として追加する。
+- **`sp_cleric`:** R12l で新仕様へ置換済み。現行正本は [classes-and-skills.md](../spec/classes-and-skills.md) の療養師 R12l 節。旧 Lv active 方針は再利用不可。
 - `sp_wardweaver` は direct heal 量を主役にしない。heal は barrier を成立させる補助で、役割の本体は barrier / damageTaken / Wave 猶予。
 - `sp_alchemist` は毒・罠による Field Flow へ寄せない。敵への干渉は Survival 範囲の ATK debuff / 被害速度低下に限定する。
 - `sp_alchemist` の味方 ATK buff は Lv10 以降なら許容する。ただし [`classes-and-skills.md`](../spec/classes-and-skills.md) の Survival 設計原則を正とし、Kill 主目的の火力支援ではなく、近接帯の味方を長く戦わせる継戦リズム調整として実装する。
@@ -292,14 +266,11 @@ Supporter pass の実装方針:
 
 ## 優先実装順
 
-1. **Supporter 3 種の passive / active Lv0=2 整合**
-   - `sp_cleric` の広域治療は Lv10 正本に寄せ、Lv0 active 2 枠目は低 HP smart heal として追加する。passive も Lv0 2 / Lv10 1 / Lv20 1 へ整理する。
-2. **Defender 3 種の passive / active 4 枠化**
-   - 既存 effect でほぼ進められる。戦線維持・戦線安定・攻撃防御の差分を明確化する。
+1. **Supporter** — `sp_cleric` は **R12l で新仕様へ置換済み**（正本: classes-and-skills.md 療養師 R12l 節）。`sp_wardweaver` / `sp_alchemist` は本表の各節を参照。
+2. **Defender** — `df_guardian` は **R12l で新仕様へ置換済み**（正本: classes-and-skills.md 鉄衛士 R12l 節）。`df_paladin` / `df_duelist` は本表の各節を参照。
 3. **物理 Kill / Flow 6 種の passive / active Lv10 / Lv20 追加**
    - 多くは既存 effect で進められる。Hunter と Ballista の新メカニクスだけゲート化する。
-4. **Caster — `at_sorcerer` の passive / active 4 枠化**
-   - 印術師・法陣師は独自システムのため **Phase 8 以降**（設計は本表で確定済み、JSON / combat 実装は送る）。
+4. **Caster** — `at_sorcerer` は **R12l で新仕様へ置換済み**（正本: classes-and-skills.md 魔術師 R12l 節 / combat.md §種火 / 発火）。印術師・法陣師は独自システムのため **Phase 8 以降**（設計は本表で確定済み、JSON / combat 実装は送る）。
 5. **印術師・法陣師（Phase 8 以降）**
    - `at_sigilist`: 乾印（`windMark`）/ 坤印（`earthMark`）、印術 basic、手動 / 自動起爆、`data/skills/` 投入。
    - `at_conductor`: damage reservoir、法陣 routing / recycling、地点指定範囲、非 damage basic。
@@ -308,11 +279,11 @@ Supporter pass の実装方針:
 
 | 実装単位        | 対象                                         | 目的                                                                                    |
 | --------------- | -------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Supporter pass  | `sp_cleric`, `sp_wardweaver`, `sp_alchemist` | passive / active の Lv0=2 整合、Lv10 / Lv20 の Survival 構造確定                        |
-| Defender pass   | `df_guardian`, `df_paladin`, `df_duelist`    | passive / active の 4 枠化、戦線維持系の重複整理                                        |
-| Physical pass A | `at_swordsman`, `at_assassin`, `at_ranger`     | 既存 effect 中心で Kill クラスの passive / active 4 枠化                                |
+| Supporter pass  | `sp_cleric`（**R12l 置換済**）, `sp_wardweaver`, `sp_alchemist` | `sp_cleric` は classes-and-skills.md 療養師 R12l 節を正本。他は Survival 構造確定 |
+| Defender pass   | `df_guardian`（**R12l 置換済**）, `df_paladin`, `df_duelist`    | `df_guardian` は classes-and-skills.md 鉄衛士 R12l 節を正本。他は 4 枠化・重複整理 |
+| Physical pass A | `at_swordsman`（**R12l 置換済**）, `at_assassin`, `at_ranger`     | `at_swordsman` は classes-and-skills.md 剣術士 R12l 節を正本。他は Kill 4 枠化 |
 | Physical pass B | `at_lancer`, `at_ballista`, `at_hunter`      | **実装済**（Lancer / Ballista / Hunter）。Flow / pierce / trap / siege のゲート整理完了 |
-| Caster pass A   | `at_sorcerer`                                | passive / active 4 枠化（Phase 3）                                                      |
+| Caster pass A   | `at_sorcerer`（**R12l 置換済**）             | 正本は classes-and-skills.md 魔術師 R12l 節 / combat.md §種火 / 発火                    |
 | Caster pass B   | `at_sigilist`, `at_conductor`                | 独自システム実装（**Phase 8 以降**）。設計確定は本表、JSON / combat / tooling は未着手  |
 | Tooling pass    | editor / validate / `formatSkillText` / spec | 新 effect / targetShape / condition を採用した場合の同期                                |
 

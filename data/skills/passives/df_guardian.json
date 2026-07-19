@@ -23,15 +23,6 @@
     }
   },
   {
-    "id": "df_guardian_passive_3",
-    "name": "迎撃態勢",
-    "effect": "blockResonance",
-    "blockResonanceMaxStacks": 6,
-    "blockResonanceDamageTakenPerStack": 0.02,
-    "blockResonanceDecayIntervalSec": 8,
-    "chance": 0.1
-  },
-  {
     "id": "df_guardian_passive_4",
     "name": "不撓の誓い",
     "effect": "lastStandInvulnerable"
@@ -61,33 +52,5 @@
     "effect": "knockbackOnBlock",
     "knockbackOnBlockRadiusPx": 50,
     "knockbackOnBlockDistancePx": 50
-  },
-  {
-    "id": "df_guardian_op_brace",
-    "name": "堅盾の構え",
-    "effect": "buff",
-    "buffSubKind": "block",
-    "chance": 0.25,
-    "buffTargetRule": {
-      "kind": "self"
-    }
-  },
-  {
-    "id": "df_guardian_op_wall_aura",
-    "name": "城壁の護り",
-    "effect": "buff",
-    "buffSubKind": "stat",
-    "buffStat": [
-      "def"
-    ],
-    "buffMultiplier": 1.08,
-    "buffTargetRule": {
-      "kind": "self"
-    }
-  },
-  {
-    "id": "df_guardian_op_last_stand",
-    "name": "最後の誓い",
-    "effect": "lastStandInvulnerable"
   }
 ]

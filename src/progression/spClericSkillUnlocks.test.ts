@@ -1,48 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../battle/data/loadGameData.ts';
-import { getClassSkillIds } from './skillUnlocks.ts';
-import {
-  expectRatio,
-  expectUnlockTiersMatchGameData,
-} from '../test/gameDataResilience.ts';
+import { getClassSkillIds, resolveLearnedSkills } from './skillUnlocks.ts';
 
 describe('sp_cleric passive / active unlock structure', () => {
   const gameData = loadGameData();
   const clericClass = gameData.classRegistry['sp_cleric'];
   const { passives, actives } = gameData.skillRegistry;
 
-  it('loads class skills with non-empty display names', () => {
+  it('loads class body passive and no Lv actives (R12l)', () => {
     expect(clericClass.passiveIds).toEqual(['sp_cleric_passive_1']);
-    expect(
-      clericClass.skills.flatMap((entry) => entry.skillIds).filter((id) =>
-        id.startsWith('sp_cleric_passive_'),
-      ),
-    ).toEqual([]);
-    for (const id of getClassSkillIds(clericClass.skills)) {
-      const skill = passives[id] ?? actives[id];
-      expect(skill?.name).toBeTruthy();
-    }
+    expect(clericClass.skills).toEqual([]);
+    expect(getClassSkillIds(clericClass.skills)).toEqual([]);
     for (const id of clericClass.passiveIds ?? []) {
       expect(passives[id]?.id).toBe(id);
     }
+    expect(actives['sp_cleric_basic_attack']).toBeDefined();
+    expect(actives['sp_cleric_active_1']).toBeUndefined();
   });
 
-  it('redefines active_2 as low HP smart heal and moves area heal to active_3', () => {
-    const active2 = actives['sp_cleric_active_2']!;
-    expect(active2.firePolicy).toBe('smart');
-    expect(active2.fireConditions?.[0]?.kind).toBe('targetHp');
-    expectRatio(active2.fireConditions?.[0]?.maxHpRatio);
-    expect(active2.effect.some((e) => e.type === 'heal' && e.target?.kind === 'all')).toBe(
-      false,
+  it('resolveLearnedSkills yields body passive only and zero learned actives', () => {
+    const learned = resolveLearnedSkills(
+      clericClass,
+      99,
+      gameData.skillRegistry,
     );
-
-    const active3 = actives['sp_cleric_active_3']!;
-    expect(active3.effect.some((e) => e.type === 'heal' && e.target?.kind === 'all')).toBe(
-      true,
-    );
-  });
-
-  it('syncs member build with resolveLearnedSkills at each unlock tier', () => {
-    expectUnlockTiersMatchGameData('sp_cleric', gameData);
+    expect(learned.learnedPassiveIds).toEqual(['sp_cleric_passive_1']);
+    expect(learned.learnedActiveIds).toEqual([]);
   });
 });

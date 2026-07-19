@@ -281,7 +281,7 @@ describe('Operation retry (R6i)', () => {
   });
 
   it('R8c retry restores checkpoint acquired via public API', () => {
-    const passiveId = 'df_guardian_op_brace';
+    const passiveId = 'df_guardian_op_block_rate_up';
     session = bootVerifySession();
     reachAwaitingNextWave(getEngine(session));
     expect(session.tryAcquireOperationPassive(0, passiveId)).toBe(true);

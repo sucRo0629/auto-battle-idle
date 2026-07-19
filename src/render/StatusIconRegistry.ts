@@ -17,8 +17,6 @@ import counterIconUrl from "../assets/status-icons/counter.png";
 import damageDelayIconUrl from "../assets/status-icons/damageDelay.png";
 import herbalPotencyIconUrl from "../assets/status-icons/herbalPotency.png";
 import basicAttackTransformIconUrl from "../assets/status-icons/basicAttackTransform.png";
-import blockResonanceIconUrl from "../assets/status-icons/blockResonance.png";
-import blockResonanceStanceIconUrl from "../assets/status-icons/blockResonanceStance.png";
 import healReservationIconUrl from "../assets/status-icons/healReservation.png";
 import wardBarrierIconUrl from "../assets/status-icons/wardBarrier.png";
 import windMarkIconUrl from "../assets/status-icons/windMark.png";
@@ -28,8 +26,7 @@ import invulnerableIconUrl from "../assets/status-icons/invulnerable.png";
 import lastStandGutsIconUrl from "../assets/status-icons/lastStandGuts.png";
 import arenaDominanceIconUrl from "../assets/status-icons/arenaDominance.png";
 import duelistPrideIconUrl from "../assets/status-icons/duelistPride.png";
-import seedFlameIconUrl from "../assets/status-icons/seedFlame.png";
-import blazingFlameIconUrl from "../assets/status-icons/blazingFlame.png";
+import emberIgnitionIconUrl from "../assets/status-icons/emberIgnition.png";
 import ballistaMarkIconUrl from "../assets/status-icons/ballistaMark.png";
 import allyAttackFollowUpIconUrl from "../assets/status-icons/allyAttackFollowUp.png";
 import poisonWeaponIconUrl from "../assets/status-icons/poisonWeapon.png";
@@ -62,8 +59,6 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   counter: counterIconUrl,
   damageDelay: damageDelayIconUrl,
   herbalPotency: herbalPotencyIconUrl,
-  blockResonance: blockResonanceIconUrl,
-  blockResonanceStance: blockResonanceStanceIconUrl,
   basicAttackTransform: basicAttackTransformIconUrl,
   invulnerable: invulnerableIconUrl,
   lastStandGuts: lastStandGutsIconUrl,
@@ -73,9 +68,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   windMark: windMarkIconUrl,
   earthMark: earthMarkIconUrl,
   arenaMark: arenaMarkIconUrl,
-  seedFlame: seedFlameIconUrl,
-  blazingFlame: blazingFlameIconUrl,
-  emberIgnition: seedFlameIconUrl,
+  emberIgnition: emberIgnitionIconUrl,
   ballistaMark: ballistaMarkIconUrl,
   allyAttackFollowUp: allyAttackFollowUpIconUrl,
   poisonWeapon: poisonWeaponIconUrl,

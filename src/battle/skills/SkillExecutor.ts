@@ -1,8 +1,4 @@
 import {
-  actorHasSorcererFlamePassives,
-  processSorcererActiveDamageHit,
-} from "../sorcererFlame.ts";
-import {
   applyEmberIgnitionOnCombatModuleHit,
   clearEmberIgnition,
   shouldGrantEmberOnCombatModuleHit,
@@ -66,15 +62,6 @@ import {
   consumeAllAllyHerbalPotencyStacks,
   resolvePartyHerbalPotencyConfig,
 } from "../herbalPotency.ts";
-import {
-  addBlockResonanceStacksOnBlock,
-  applyBlockResonanceStance,
-  applyBlockResonanceStanceOnBlock,
-  consumeBlockResonanceStacks,
-  hasBlockResonanceStance,
-  resolveBlockResonanceConfigForUnit,
-  resolveEffectiveUseDurationSec,
-} from "../blockResonance.ts";
 import { mitigateIncomingDamage } from "../incomingDamageMitigation.ts";
 import { resolveLowHpCoverTarget } from "../lowHpCover.ts";
 import {
@@ -315,7 +302,6 @@ function shouldDeferUntilHostileToAnchorInRange(
 
 export class SkillExecutor {
   private potencyStacksConsumed = new Map<string, number>();
-  private blockResonanceStacksConsumed = new Map<string, number>();
 
   constructor(
     private readonly gameData: GameData,
@@ -477,7 +463,6 @@ export class SkillExecutor {
 
     let appliedAny = false;
     this.potencyStacksConsumed.clear();
-    this.blockResonanceStacksConsumed.clear();
     const effectHitPools = new Map<number, CombatantState[]>();
     const sharedTargetingLocks = new Map<
       string,
@@ -631,13 +616,6 @@ export class SkillExecutor {
       };
     }
 
-    if (effectDef.type === "blockResonanceConsume") {
-      const stacks = consumeBlockResonanceStacks(actor);
-      if (stacks <= 0) return empty;
-      this.blockResonanceStacksConsumed.set(actor.id, stacks);
-      applyBlockResonanceStance(actor, skill, stacks);
-      return { applied: true, hitUnits: [] };
-    }
 
     if (effectDef.type === "placedField") {
       const centerX = resolvePlacedFieldCenterX(actor, effectDef, enemies);
@@ -1142,7 +1120,6 @@ export class SkillExecutor {
           {
             suppressBonusBasicAttack: hit.suppressBonusBasicAttack === true,
             suppressAllyAttackFollowUp: hit.suppressAllyAttackFollowUp === true,
-            suppressBonusActiveOnHit: hit.suppressBonusActiveOnHit === true,
           }
         )
       ) {
@@ -1521,75 +1498,6 @@ export class SkillExecutor {
       }
       if (didBlock) {
         this.emit({ type: "block", targetId: damageTarget.id });
-        const blockResonanceConfig = resolveBlockResonanceConfigForUnit(
-          damageTarget,
-          passives
-        );
-        if (blockResonanceConfig.maxStacks > 0) {
-          addBlockResonanceStacksOnBlock(damageTarget, blockResonanceConfig);
-        }
-        if (hasBlockResonanceStance(damageTarget)) {
-          const stanceSkill =
-            this.gameData.skillRegistry.actives[
-              damageTarget.statusEffects.find(
-                (effect) =>
-                  effect.overlay === "blockResonanceStance" &&
-                  effect.remainingSec > 0
-              )?.skillId ?? ""
-            ];
-          if (stanceSkill) {
-            applyBlockResonanceStanceOnBlock(
-              damageTarget,
-              enemies,
-              stanceSkill,
-              passives,
-              (defender, enemy, counterAmount) => {
-                const ward = applyWardBarrierToIncomingDamage(
-                  enemy,
-                  counterAmount
-                );
-                const mitigation = mitigateIncomingDamage(
-                  enemy,
-                  ward.damage,
-                  passives
-                );
-                if (mitigation.lastStandTriggered) {
-                  this.emit({ type: "invulnerable", targetId: enemy.id });
-                }
-                const incoming = applyIncomingDamage(
-                  enemy,
-                  mitigation.finalDamage
-                );
-                const { damageResult } = incoming;
-                const appliedCounterDamage =
-                  damageResult.hpDamage + damageResult.barrierDamage;
-                notifyDamageApplied(
-                  this.deps.onDamageApplied,
-                  defender,
-                  enemy,
-                  buildDamageAppliedEvent({
-                    attacker: defender,
-                    target: enemy,
-                    sourceKind: "counter",
-                    attackKind: "damage",
-                    damageResult,
-                    attackMethod: resolveUnitAttackMethod(
-                      defender,
-                      this.deps.gameData,
-                    ),
-                  }),
-                );
-                if (damageResult.lethal) {
-                  clearEmberIgnition(enemy);
-                  enemy.isAlive = false;
-                  this.deps.getSequenceRunner().clearForActor(enemy.id);
-                  this.deps.onUnitDied?.(enemy);
-                  this.emit({ type: "death", targetId: enemy.id });
-                }
-              }
-            );
-          }
-        }
         const blockHeal = applyHealOnBlock(damageTarget, passives);
         if (blockHeal > 0) {
           this.deps.onHealApplied?.(damageTarget, damageTarget, blockHeal);
@@ -1788,96 +1696,6 @@ export class SkillExecutor {
             }
           }
         } else if (ignition.stacks > 0) {
-          this.deps.onTargetReceivedDebuff?.(damageTarget);
-        }
-      }
-      if (
-        cd.slotKind === "active" &&
-        appliedDamage > 0 &&
-        damageTarget.isAlive &&
-        actorHasSorcererFlamePassives(actor, passives)
-      ) {
-        const [partyAlliesForHook, enemiesForHook] = this.splitCombatants();
-        const flameOutcome = processSorcererActiveDamageHit(
-          actor,
-          damageTarget,
-          partyAlliesForHook,
-          enemiesForHook,
-          passives,
-          this.gameData,
-          {
-            battleTimeSec: this.deps.getBattleTimeSec(),
-            suppressBonusActiveOnHit:
-              damageContext.suppressBonusActiveOnHit === true,
-          }
-        );
-        if (flameOutcome.pendingHits.length > 0) {
-          this.deps.enqueuePendingHits(flameOutcome.pendingHits);
-        }
-        for (const [
-          targetId,
-          explosionDamage,
-        ] of flameOutcome.explosionDamageByTargetId) {
-          const explosionTarget = findCombatantById(
-            targetId,
-            partyAlliesForHook,
-            enemiesForHook
-          );
-          if (!explosionTarget?.isAlive || explosionDamage <= 0) continue;
-          const explosionMitigation = mitigateIncomingDamage(
-            explosionTarget,
-            explosionDamage,
-            passives,
-            { allies: partyAlliesForHook }
-          );
-          const explosionIncoming = applyIncomingDamage(
-            explosionTarget,
-            explosionMitigation.finalDamage
-          );
-          const explosionApplied =
-            explosionIncoming.damageResult.hpDamage +
-            explosionIncoming.damageResult.barrierDamage;
-          if (explosionApplied <= 0) continue;
-          notifyDamageApplied(
-            this.deps.onDamageApplied,
-            actor,
-            explosionTarget,
-            buildDamageAppliedEvent({
-              attacker: actor,
-              target: explosionTarget,
-              sourceKind: "derived",
-              attackKind: "damage",
-              damageResult: explosionIncoming.damageResult,
-              slotKind: cd.slotKind,
-              skillId: skill.id,
-              effectIndex,
-              hitIndex,
-              attackMethod: resolveSkillAttackMethod(skill),
-            }),
-          );
-          this.emit({
-            type: "skill",
-            actorId: actor.id,
-            targetId: explosionTarget.id,
-            skillId: skill.id,
-            skillName: skill.name,
-            slotKind: cd.slotKind,
-            effect: "damage",
-            effectIndex,
-            amount: explosionMitigation.finalDamage,
-            range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId),
-          });
-          this.emit({ type: "hurt", targetId: explosionTarget.id });
-          if (explosionIncoming.damageResult.lethal) {
-            clearEmberIgnition(explosionTarget);
-            explosionTarget.isAlive = false;
-            this.deps.getSequenceRunner().clearForActor(explosionTarget.id);
-            this.deps.onUnitDied?.(explosionTarget);
-            this.emit({ type: "death", targetId: explosionTarget.id });
-          }
-        }
-        if (flameOutcome.debuffChanged) {
           this.deps.onTargetReceivedDebuff?.(damageTarget);
         }
       }
@@ -2860,11 +2678,7 @@ export class SkillExecutor {
     slotKind: SkillSlotKind
   ): void {
     if (slotKind === "basic") return;
-    const useSec = resolveEffectiveUseDurationSec(
-      skill,
-      actorId,
-      this.blockResonanceStacksConsumed
-    );
+    const useSec = skill.useDurationSec ?? 0;
     if (useSec <= 0) return;
     const duration = Math.max(useSec, resolveSequenceWallClockSec(skill));
     this.deps.getSequenceRunner().beginUse(actorId, duration, {

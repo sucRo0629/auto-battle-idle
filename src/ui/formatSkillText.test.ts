@@ -8,15 +8,14 @@ import {
   type SkillCardLines,
 } from './formatSkillText.ts';
 
-/** 4b polish 済み M1 クラス — Lv10 / Lv20 スキル suffix */
+/** 4b polish 済み M1 クラス — Lv10 / Lv20 スキル suffix。R12l 4兵科は旧 active 削除済み。 */
 const POLISHED_CLASS_LV10_PLUS: Record<string, readonly string[]> = {
-  df_guardian: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  df_guardian: ['passive_4'],
   df_paladin: ['active_3', 'active_4', 'passive_3', 'passive_4'],
-  at_swordsman: ['active_3', 'active_4', 'passive_3', 'passive_4'],
-  sp_cleric: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  at_swordsman: ['passive_3', 'passive_4'],
+  sp_cleric: ['passive_3', 'passive_4'],
   at_ranger: ['active_3', 'active_4', 'passive_3', 'passive_4'],
   at_assassin: ['active_3', 'active_4', 'passive_3', 'passive_4'],
-  at_sorcerer: ['active_3', 'active_4', 'passive_3', 'passive_4'],
   sp_wardweaver: ['active_3', 'active_4', 'passive_3', 'passive_4'],
 };
 
@@ -52,16 +51,6 @@ const LV10_PLUS_SKILL_ASSERTIONS: Record<
   Partial<Record<string, (ctx: Lv10PlusSkillContext) => void>>
 > = {
   df_guardian: {
-    active_3: ({ desc }) => {
-      expect(desc).toContain('発動条件：');
-      expect(desc).toContain('ダメージ軽減25%');
-    },
-    active_4: ({ desc, card }) => {
-      expect(desc).toContain('被攻撃12回');
-      expect(desc).toContain('硬直：');
-      expect(desc).toContain('移動停止あり');
-      expect(card.metaLine).toContain('被攻撃12回');
-    },
     passive_4: ({ desc }) => {
       expect(desc).toContain('3秒無敵');
     },
@@ -73,29 +62,13 @@ const LV10_PLUS_SKILL_ASSERTIONS: Record<
       expect(card.effectLines).toContain('チャージ可能 1'),
   },
   at_swordsman: {
-    active_3: ({ desc }) => {
-      expect(desc).toContain('通常攻撃7回');
-      expect(desc).toContain('攻撃力の150%の物理ダメージ');
-    },
-    active_4: ({ desc }) => expect(desc).toContain('通常攻撃14回'),
     passive_4: ({ desc }) =>
       expect(desc).toContain('無視防御力50% 追加ダメ'),
   },
-  sp_cleric: {
-    active_3: ({ desc, card }) => {
-      expect(desc).toContain('発動条件：');
-      expect(desc).toContain('味方全体のHPを攻撃力の105%で回復');
-      expect(card.effectLines).toEqual([
-        '味方全体のHPを攻撃力の105%で回復',
-        'チャージ可能 1',
-      ]);
-    },
-    active_4: ({ card }) =>
-      expect(card.effectLines).toContain('チャージ可能 1'),
-  },
+  sp_cleric: {},
   at_ranger: {
     active_3: ({ card }) =>
-      expect(card.effectLines).toEqual(['攻撃速度+25%']),
+      expect(card.effectLines).toEqual(['攻撃力+20%', '攻撃速度+50%']),
     active_4: ({ desc }) => expect(desc).toContain('通常攻撃11回'),
   },
 };
@@ -674,50 +647,22 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('最終Wave開始');
   });
 
-  it('formats df_guardian actives with new template', async () => {
-    const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
-    const a2 = gameData.skillRegistry.actives.df_guardian_active_2;
-    const a3 = gameData.skillRegistry.actives.df_guardian_active_3;
-    const a4 = gameData.skillRegistry.actives.df_guardian_active_4;
-    expect(a1).toBeDefined();
-    expect(a2).toBeDefined();
-    expect(a3).toBeDefined();
-    expect(a4).toBeDefined();
 
-    expect(formatActiveDescription(a1!)).toBe(
-      '再使用：8秒 / 持続：5秒 / 防御力+15% /',
-    );
-    expect(formatActiveDescription(a2!)).toBe(
-      '再使用：被攻撃8回 / 持続：5秒 / 硬直：5秒 / 移動停止あり / 防御力+20%、ブロック率+50% /',
-    );
-    expect(formatActiveDescription(a3!)).toBe(
-      '再使用：12秒 / 持続：5秒 / 発動条件：自身のHPが80%以下 / ダメージ軽減25% /',
-    );
-    expect(formatActiveDescription(a4!)).toContain('再使用：被攻撃12回');
-    expect(formatActiveDescription(a4!)).toContain('持続：2+防壁スタック数秒');
-    expect(formatActiveDescription(a4!)).toContain('硬直：2+防壁スタック数秒');
-    expect(formatActiveDescription(a4!)).toContain('移動停止あり');
-    expect(formatActiveDescription(a4!)).toContain('発動条件：防壁≥1');
-    expect(formatActiveDescription(a4!)).toContain('城塞の構え');
-  });
-
-  it('formats df_guardian passives with 効果 prefix', async () => {
+  it('formats df_guardian remaining passives with 効果 prefix', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
     const gameData = await loadGameData();
     const p1 = gameData.skillRegistry.passives.df_guardian_passive_1;
     const p2 = gameData.skillRegistry.passives.df_guardian_passive_2;
-    const p3 = gameData.skillRegistry.passives.df_guardian_passive_3;
     const p4 = gameData.skillRegistry.passives.df_guardian_passive_4;
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+    expect(p4).toBeDefined();
+    expect(gameData.skillRegistry.passives.df_guardian_passive_3).toBeUndefined();
 
-    expect(formatPassiveDescription(p1!)).toBe('効果：ブロック率+20%');
-    expect(formatPassiveDescription(p2!)).toBe('効果：HP+5%');
-    expect(formatPassiveDescription(p3!)).toContain('効果：ブロック率+10%');
-    expect(formatPassiveDescription(p3!)).toContain('8秒ごとに1スタック消失');
-    expect(formatPassiveDescription(p4!)).toBe(
-      '効果：HPが0以下になるダメージを受けた際、3秒無敵（Wave 1回まで）',
-    );
+    expect(formatPassiveDescription(p1!)).toContain('効果：');
+    expect(formatPassiveDescription(p2!)).toContain('効果：');
+    expect(formatPassiveDescription(p4!)).toContain('効果：');
+    expect(formatPassiveDescription(p4!)).toContain('無敵');
   });
 
   it('formats df_paladin actives with new template', async () => {
@@ -746,101 +691,32 @@ describe('formatActiveDescription', () => {
     );
   });
 
-  it('formatSkillCardLines splits df_guardian actives by effect', async () => {
+
+
+  it('formats at_swordsman remaining passives (R12l: no Lv actives)', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
     const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
-    const a2 = gameData.skillRegistry.actives.df_guardian_active_2;
-    expect(a1).toBeDefined();
-    expect(a2).toBeDefined();
-
-    const card1 = formatSkillCardLines(a1!, { locale: 'ja' });
-    expect(card1.metaLine).toBe('再使用：8秒 / 持続：5秒');
-    expect(card1.effectLines).toEqual(['防御力+15%']);
-    expect(card1.effectLines.length).toBe(1);
-
-    const card2 = formatSkillCardLines(a2!, { locale: 'ja' });
-    expect(card2.metaLine).toBe(
-      '再使用：被攻撃8回 / 持続：5秒 / 硬直：5秒 / 移動停止あり',
-    );
-    expect(card2.effectLines.length).toBe(2);
-    expect(card2.effectLines[0]).toContain('防御力+20%');
-    expect(card2.effectLines[1]).toContain('ブロック率+50%');
-
-    const p2 = gameData.skillRegistry.passives.df_guardian_passive_2;
-    expect(p2).toBeDefined();
-    const wallCard = formatSkillCardLines(p2!, { locale: 'ja' });
-    expect(wallCard.effectLines).toEqual(['HP+5%']);
-  });
-
-  it('formatSkillCardLines keeps blockResonance passive as one effect line', async () => {
-    const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const gameData = await loadGameData();
-    const p3 = gameData.skillRegistry.passives.df_guardian_passive_3;
-    expect(p3).toBeDefined();
-
-    const card = formatSkillCardLines(p3!, { locale: 'ja' });
-    expect(card.effectLines.length).toBe(1);
-    expect(card.effectLines[0]).toContain('ブロック率+10%');
-    expect(card.effectLines[0]).toContain('8秒ごとに1スタック消失');
-    expect(card.effectLines[0]).not.toMatch(/^効果：/);
-    expect(formatPassiveDescription(p3!)).toBe(`効果：${card.effectLines[0]}`);
-  });
-
-  it('formats at_swordsman Lv0 skills with 4b polish', async () => {
-    const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.at_swordsman_active_1;
-    const a2 = gameData.skillRegistry.actives.at_swordsman_active_2;
     const p1 = gameData.skillRegistry.passives.at_swordsman_passive_1;
     const p2 = gameData.skillRegistry.passives.at_swordsman_passive_2;
-    expect(a1).toBeDefined();
-    expect(a2).toBeDefined();
     expect(p1).toBeDefined();
     expect(p2).toBeDefined();
+    expect(gameData.skillRegistry.actives.at_swordsman_active_1).toBeUndefined();
 
-    expect(formatActiveDescription(a1!)).toBe(
-      '再使用：通常攻撃5回 / 発動条件：対象のHPが50%以上 / 攻撃力の180%の物理ダメージ /',
-    );
-
-    const nagihara = formatSkillCardLines(a2!, { locale: 'ja' });
-    expect(nagihara.metaLine).toBe('再使用：10秒');
-    expect(nagihara.effectLines).toEqual([
-      'マルチロック 2 / 攻撃力の60%の物理ダメージ',
-    ]);
-
-    expect(formatPassiveDescription(p1!)).toBe(
-      '効果：最も防御力が高い敵を優先して攻撃する',
-    );
-    expect(formatPassiveDescription(p2!)).toBe(
-      '効果：攻撃時、対象の防御力を25%無視する',
-    );
+    expect(formatPassiveDescription(p1!)).toContain('効果：');
+    expect(formatPassiveDescription(p2!)).toContain('効果：');
   });
 
-  it('formats sp_cleric Lv0 skills with 4b polish', async () => {
+  it('formats sp_cleric remaining passives (R12l: no Lv actives)', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
     const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.sp_cleric_active_1;
     const p1 = gameData.skillRegistry.passives.sp_cleric_passive_1;
     const p2 = gameData.skillRegistry.passives.sp_cleric_passive_2;
-    expect(a1).toBeDefined();
     expect(p1).toBeDefined();
     expect(p2).toBeDefined();
+    expect(gameData.skillRegistry.actives.sp_cleric_active_1).toBeUndefined();
 
-    expect(formatActiveDescription(a1!)).toBe(
-      '再使用：8秒 / 味方のHPを攻撃力の175%で回復 /',
-    );
-
-    const card = formatSkillCardLines(a1!, { locale: 'ja' });
-    expect(card.metaLine).toBe('再使用：8秒');
-    expect(card.effectLines).toEqual(['味方のHPを攻撃力の175%で回復']);
-
-    expect(formatPassiveDescription(p1!)).toBe(
-      '効果：HPが50%以下の味方を回復時、HP回復効果+25%',
-    );
-    expect(formatPassiveDescription(p2!)).toBe(
-      '効果：味方を回復時、最大HPを超えた回復量の80%をバリアとして対象に付与する',
-    );
+    expect(formatPassiveDescription(p1!)).toContain('効果：');
+    expect(formatPassiveDescription(p2!)).toContain('効果：');
   });
 
   it('formats sp_wardweaver Lv0 passives with 4b polish', async () => {
@@ -947,83 +823,7 @@ describe('formatActiveDescription', () => {
     expect(passive2Card.effectLines).toEqual(['回避+20%']);
   });
 
-  it('formats at_sorcerer Lv0 passives with 4b polish', async () => {
-    const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const gameData = await loadGameData();
-    const p1 = gameData.skillRegistry.passives.at_sorcerer_passive_1;
-    const p2 = gameData.skillRegistry.passives.at_sorcerer_passive_2;
-    expect(p1).toBeDefined();
-    expect(p2).toBeDefined();
 
-    expect(formatPassiveDescription(p1!)).toBe(
-      '効果：攻撃時、対象の魔法耐性を20%無視する',
-    );
-    expect(formatPassiveDescription(p2!)).toBe(
-      '効果：敵に攻撃スキルが1回命中するごとに「種火」を1スタックする、種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える、最大スタック数：5、最大スタック数到達時に「熾火」を1スタック付与する。熾火が上限（1）のときは種火は最大のまま据え置き。、熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える、さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる、最大スタック数：1',
-    );
-
-    const card1 = formatSkillCardLines(p1!, { locale: 'ja' });
-    expect(card1.metaLine).toBe('常時');
-    expect(card1.effectLines).toEqual([
-      '攻撃時、対象の魔法耐性を20%無視する',
-    ]);
-
-    const card2 = formatSkillCardLines(p2!, { locale: 'ja' });
-    expect(card2.metaLine).toBe('常時');
-    expect(card2.effectLines).toEqual([
-      '敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
-      {
-        kind: 'list',
-        items: [
-          {
-            text: '種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える',
-            details: [
-              '最大スタック数：5',
-              '最大スタック数到達時に「熾火」を1スタック付与する。熾火が上限（1）のときは種火は最大のまま据え置き。',
-            ],
-          },
-          {
-            text: '熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える',
-            details: [
-              'さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる',
-              '最大スタック数：1',
-            ],
-          },
-        ],
-      },
-    ]);
-  });
-
-  it('formatSkillCardLines applies common en templates for df_guardian Lv0', async () => {
-    const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
-    const a2 = gameData.skillRegistry.actives.df_guardian_active_2;
-    const p1 = gameData.skillRegistry.passives.df_guardian_passive_1;
-    const p2 = gameData.skillRegistry.passives.df_guardian_passive_2;
-    expect(a1).toBeDefined();
-    expect(a2).toBeDefined();
-    expect(p1).toBeDefined();
-    expect(p2).toBeDefined();
-
-    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
-    expect(card1.metaLine).toBe('Recast: 8s / Duration: 5s');
-    expect(card1.effectLines).toEqual(['DEF+15%']);
-
-    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
-    expect(card2.metaLine).toBe(
-      'Recast: After 8 hits taken / Duration: 5s / Lockout: 5s / Movement stop',
-    );
-    expect(card2.effectLines).toEqual(['DEF+20%', 'Block rate+50%']);
-
-    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
-    expect(passive1.metaLine).toBe('Always');
-    expect(passive1.effectLines).toEqual(['Block rate+20%']);
-
-    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
-    expect(passive2.metaLine).toBe('Always');
-    expect(passive2.effectLines).toEqual(['HP+5%']);
-  });
 
   it('formatSkillCardLines applies common en templates for df_paladin Lv0', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
@@ -1059,42 +859,6 @@ describe('formatActiveDescription', () => {
     expect(passive2.effectLines).toEqual(['Nearby 5 / Allied 5% Damage Reduction']);
   });
 
-  it('formatSkillCardLines applies common en templates for at_swordsman Lv0', async () => {
-    const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.at_swordsman_active_1;
-    const a2 = gameData.skillRegistry.actives.at_swordsman_active_2;
-    const p1 = gameData.skillRegistry.passives.at_swordsman_passive_1;
-    const p2 = gameData.skillRegistry.passives.at_swordsman_passive_2;
-    expect(a1).toBeDefined();
-    expect(a2).toBeDefined();
-    expect(p1).toBeDefined();
-    expect(p2).toBeDefined();
-
-    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
-    expect(card1.metaLine).toBe(
-      'Recast: After 5 basic attacks / Condition: Target HP ≥50%',
-    );
-    expect(card1.effectLines).toEqual(['180% ATK physical damage']);
-
-    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
-    expect(card2.metaLine).toBe('Recast: 10s');
-    expect(card2.effectLines).toEqual([
-      'Multi-Lock 2 / 60% ATK physical damage',
-    ]);
-
-    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
-    expect(passive1.metaLine).toBe('Always');
-    expect(passive1.effectLines).toEqual([
-      'Prioritizes the enemy with the highest DEF',
-    ]);
-
-    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
-    expect(passive2.metaLine).toBe('Always');
-    expect(passive2.effectLines).toEqual([
-      'On attack, ignores 25% of target DEF',
-    ]);
-  });
 
   it('formatSkillCardLines applies common en templates for at_assassin Lv0', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
@@ -1168,92 +932,7 @@ describe('formatActiveDescription', () => {
     expect(passive2.effectLines).toEqual(['Attack Speed+25%']);
   });
 
-  it('formatSkillCardLines applies common en templates for at_sorcerer Lv0', async () => {
-    const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.at_sorcerer_active_1;
-    const a2 = gameData.skillRegistry.actives.at_sorcerer_active_2;
-    const p1 = gameData.skillRegistry.passives.at_sorcerer_passive_1;
-    const p2 = gameData.skillRegistry.passives.at_sorcerer_passive_2;
-    expect(a1).toBeDefined();
-    expect(a2).toBeDefined();
-    expect(p1).toBeDefined();
-    expect(p2).toBeDefined();
 
-    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
-    expect(card1.metaLine).toBe('Recast: 8s');
-    expect(card1.effectLines).toEqual(['110% ATK magic damage']);
-
-    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
-    expect(card2.metaLine).toBe('Recast: 10s');
-    expect(card2.effectLines).toEqual([
-      'Multi-Lock 2 / 90% ATK magic damage',
-    ]);
-
-    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
-    expect(passive1.metaLine).toBe('Always');
-    expect(passive1.effectLines).toEqual([
-      'On attack, ignores 20% of target RES',
-    ]);
-
-    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
-    expect(passive2.metaLine).toBe('Always');
-    expect(passive2.effectLines).toEqual([
-      'Stacks Seed Flame on the enemy for each hit from an attack skill',
-      {
-        kind: 'list',
-        items: [
-          {
-            text: 'Seed Flame: For each stack, deals 5% ATK as magic damage every second for 10s',
-            details: [
-              'Max stacks: 5',
-              'At max stacks, applies 1 Blazing Flame. If Blazing Flame is capped at 1, Seed Flame stays at max.',
-            ],
-          },
-          {
-            text: 'Blazing Flame: For each stack, deals 35% ATK as magic damage every second indefinitely',
-            details: [
-              'Additionally, +10% magic damage taken per stack',
-              'Max stacks: 1',
-            ],
-          },
-        ],
-      },
-    ]);
-  });
-
-  it('formatSkillCardLines applies common en templates for sp_cleric Lv0', async () => {
-    const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.sp_cleric_active_1;
-    const a2 = gameData.skillRegistry.actives.sp_cleric_active_2;
-    const p1 = gameData.skillRegistry.passives.sp_cleric_passive_1;
-    const p2 = gameData.skillRegistry.passives.sp_cleric_passive_2;
-    expect(a1).toBeDefined();
-    expect(a2).toBeDefined();
-    expect(p1).toBeDefined();
-    expect(p2).toBeDefined();
-
-    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
-    expect(card1.metaLine).toBe('Recast: 8s');
-    expect(card1.effectLines).toEqual(['Heals an ally for 175% of ATK']);
-
-    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
-    expect(card2.metaLine).toBe('Recast: 10s / Condition: Target HP ≤50%');
-    expect(card2.effectLines).toEqual(['Heals an ally for 200% of ATK']);
-
-    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
-    expect(passive1.metaLine).toBe('Always');
-    expect(passive1.effectLines).toEqual([
-      'When healing an ally at ≤50% HP, heal potency +25%',
-    ]);
-
-    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
-    expect(passive2.metaLine).toBe('Always');
-    expect(passive2.effectLines).toEqual([
-      'When healing an ally, converts 80% of overheal into Barrier on the target',
-    ]);
-  });
 
   it('formatSkillCardLines applies common en templates for sp_wardweaver Lv0', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');

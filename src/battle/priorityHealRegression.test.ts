@@ -71,11 +71,13 @@ describe('PHT regression — sp_cleric and related paths', () => {
     ).toBeNull();
   });
 
-  it('sp_cleric all-ally active resolves when any ally is damaged', () => {
+  it('sp_cleric party_mend module resolves when any ally is damaged', () => {
     const cleric = mockCleric(20, { rangePx: 80 });
     const pht = mockUnit('guardian', 224, { hp: 47, maxHp: 235 });
-    const active3 = gameData.skillRegistry.actives['sp_cleric_active_3'];
-    const healEffect = active3?.effect.find((entry) => entry.type === 'heal');
+    // R12l: 旧 active_3 は削除。同責務の CombatModule party_mend で検証する。
+    const partyMend = gameData.combatModuleRegistry['sp_cleric_mod_party_mend'];
+    expect(partyMend).toBeDefined();
+    const healEffect = partyMend!.action.effect.find((entry) => entry.type === 'heal');
     expect(healEffect).toBeDefined();
 
     const resolution = resolveEffectResolution(
@@ -86,9 +88,7 @@ describe('PHT regression — sp_cleric and related paths', () => {
       gameData,
       Math.random,
       undefined,
-      active3!.effect,
-      undefined,
-      active3,
+      partyMend!.action.effect,
     );
     expect(resolution).not.toBeNull();
     expect(
@@ -98,8 +98,6 @@ describe('PHT regression — sp_cleric and related paths', () => {
         [cleric, pht],
         [],
         gameData,
-        undefined,
-        active3,
       ),
     ).toBeNull();
   });

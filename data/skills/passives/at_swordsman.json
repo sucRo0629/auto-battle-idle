@@ -58,34 +58,5 @@
     "effect": "outgoingHitDamageIncrease",
     "outgoingHitDamageIncrease": 0.05,
     "outgoingHitDamageType": "physical"
-  },
-  {
-    "id": "at_swordsman_op_armor_break",
-    "name": "鎧砕き",
-    "effect": "defenseIgnore",
-    "defenseIgnore": {
-      "def": {
-        "mode": "percent",
-        "amount": 0.18
-      }
-    }
-  },
-  {
-    "id": "at_swordsman_op_high_def_focus",
-    "name": "重装狙い",
-    "effect": "targetRuleOverride",
-    "targetRuleOverride": {
-      "kind": "stat",
-      "side": "enemy",
-      "stat": "def",
-      "order": "highest"
-    },
-    "targetRuleOverrideApplyTo": "enemy"
-  },
-  {
-    "id": "at_swordsman_op_finish_cut",
-    "name": "剛剣の切先",
-    "effect": "ignoredDefBonusDamage",
-    "ignoredDefBonusScale": 0.55
   }
 ]

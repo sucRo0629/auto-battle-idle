@@ -85,11 +85,11 @@ describe("GameTermTooltip", () => {
   it("resolves tooltip body from description for status terms", () => {
     setupTooltip();
     const anchor = createAnchor("種火");
-    tooltip.openFromTerm("seedFlame", anchor, "ja");
+    tooltip.openFromTerm("emberIgnition", anchor, "ja");
 
     const body = host.querySelector(".game-term-tooltip-body");
-    expect(body?.textContent).toContain("魔法ダメージ");
-    expect(body?.textContent).toContain("最大5スタック");
+    expect(body?.textContent).toContain("時間では消えない");
+    expect(body?.textContent).not.toContain("毎秒");
   });
 
   it("positions from the pointer in scaled mount coordinates", () => {

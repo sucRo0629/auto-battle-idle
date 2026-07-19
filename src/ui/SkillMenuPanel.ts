@@ -795,8 +795,16 @@ export class SkillMenuPanel {
     }
     skillsWrap.append(
       this.createSkillKindSection("passive", preset, learned, unlockedSlots),
-      this.createSkillKindSection("active", preset, learned, unlockedSlots)
     );
+    // R12l: CombatModule 兵科は skills[] が空で learned active も 0。空の旧 active 欄を出さない。
+    const hasClassLvActives = preset.skills.some((entry) =>
+      entry.skillIds.some((id) => this.gameData.skillRegistry.actives[id]),
+    );
+    if (hasClassLvActives || learned.learnedActiveIds.length > 0) {
+      skillsWrap.append(
+        this.createSkillKindSection("active", preset, learned, unlockedSlots),
+      );
+    }
     layout.appendChild(skillsWrap);
 
     this.bodyEl.appendChild(layout);

@@ -391,26 +391,23 @@ describe('R12l Player production path (GameSession WavePrep)', () => {
   });
 });
 
-describe('R12l glossary: seedFlame vs emberIgnition (no shared alias)', () => {
-  it('does not register the same ja alias on both legacy and R12l 種火 entries', () => {
-    const seed = getGameTermEntry('seedFlame');
+describe('R12l glossary: emberIgnition owns 種火', () => {
+  it('registers emberIgnition with Japanese alias 種火 and new-spec description', () => {
     const ember = getGameTermEntry('emberIgnition');
-    expect(seed).toBeDefined();
     expect(ember).toBeDefined();
-
-    // legacy DoT 文面の自動リンク用
-    expect(seed!.aliases?.ja).toContain('種火');
-    // R12l は statusCategory 経路専用。共通 alias「種火」は持たない
-    expect(ember!.aliases?.ja ?? []).not.toContain('種火');
+    expect(GAME_TERM_ENTRIES.some((entry) => entry.id === ('seedFlame' as never))).toBe(
+      false,
+    );
+    expect(ember!.aliases?.ja).toContain('種火');
     expect(ember!.statusCategory).toBe('emberIgnition');
-    expect(seed!.statusCategory).toBe('seedFlame');
+    expect(ember!.description?.ja).toContain('時間では消えない');
+    expect(ember!.description?.ja).not.toContain('毎秒');
   });
 
-  it('HUD badge category opens emberIgnition, not seedFlame', () => {
+  it('HUD badge category opens emberIgnition', () => {
     expect(resolveGameTermIdForStatusCategory('emberIgnition')).toBe(
       'emberIgnition',
     );
-    expect(resolveGameTermIdForStatusCategory('seedFlame')).toBe('seedFlame');
     const badge = {
       category: 'emberIgnition' as const,
       kind: 'debuff' as const,
@@ -419,26 +416,19 @@ describe('R12l glossary: seedFlame vs emberIgnition (no shared alias)', () => {
       stackCount: 2,
     };
     expect(resolveStatusBadgeGameTermId(badge)).toBe('emberIgnition');
-    expect(getGameTermEntry('emberIgnition')?.description?.ja).toContain(
-      '時間では消えない',
-    );
-    expect(getGameTermEntry('emberIgnition')?.description?.ja).not.toContain(
-      '毎秒',
-    );
   });
 
-  it('plain-text alias「種火」は legacy seedFlame のみ（登録順依存の競合を残さない）', () => {
+  it('plain-text alias「種火」resolves to emberIgnition (unique owner)', () => {
     const segments = segmentTextByGameTerms(
       '敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
       'ja',
     );
     expect(segments).toEqual([
       { kind: 'text', text: '敵に攻撃スキルが1回命中するごとに「' },
-      { kind: 'term', termId: 'seedFlame', matchedText: '種火' },
+      { kind: 'term', termId: 'emberIgnition', matchedText: '種火' },
       { kind: 'text', text: '」を1スタックする' },
     ]);
 
-    // 同一 alias が複数 term に載っていないことを固定
     const jaAliasOwners = new Map<string, string[]>();
     for (const entry of GAME_TERM_ENTRIES) {
       for (const alias of entry.aliases?.ja ?? []) {
@@ -447,6 +437,6 @@ describe('R12l glossary: seedFlame vs emberIgnition (no shared alias)', () => {
         jaAliasOwners.set(alias, owners);
       }
     }
-    expect(jaAliasOwners.get('種火')).toEqual(['seedFlame']);
+    expect(jaAliasOwners.get('種火')).toEqual(['emberIgnition']);
   });
 });

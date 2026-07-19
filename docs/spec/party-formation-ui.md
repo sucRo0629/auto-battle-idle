@@ -277,7 +277,7 @@ Formation Screen の主操作領域。プレイヤーはここでクラス札を
 | 詳細 · クラスヘッダー                  | **表示しない**                                                                                   |
 | 詳細 · ステータス見出し                | **「Lv n」付き見出しは使わない**（例: `ステータス（Lv 12）` は廃止）                             |
 | ロスター各カード                       | **表示しない**                                                                                   |
-| スキル未解放枠                         | **スキル名** + 解放 **プレイヤー Lv**（例: `迎撃態勢　プレイヤー Lv10 で追加`）               |
+| スキル未解放枠                         | **スキル名** + 解放 **プレイヤー Lv**（例: `真言加護　プレイヤー Lv10 で追加`）               |
 | Exp バー                               | **表示しない**（プレイヤー共通 Exp バーは戦闘 HUD — [progression.md](progression.md)「進行 UI」） |
 
 **実装:** Formation Screen では `MetaMenuOverlay` の `meta-menu-window-bar` を非表示。`playerProgress.level` はステ・スキル解放計算の正本（表示はスキル未解放枠の Lv 注記などに限定）。`SkillMenuPanel` は左ペイン（Class Select / Party Summary）と右ペイン Detail の独立領域を持つ。
@@ -405,7 +405,7 @@ Wave 間準備画面（`WavePrepScreenHost`）でも同一の CombatModule プ�
 - **解放済み:** セクション内に **gap を空けた戦術カード**（最大 **2 列**）。隣接カードの共有罫線・表セル化はしない
 - **未解放:** カード群の下に **小さなチップ / ロック行**（`+ Lv{n}: {name}`）。通常カードと同じ面積を取らない
 - **スクロール:** 右ペイン **詳細表示領域のみ**（§4.5）。1 画面内への全スキル強制収容は前提としない
-- スキル本文は `resolveSkillCardDisplay().headlineLines` をカード内表示。`formatSkillCardLines` の **状態定義リスト行**（種火 / 熾火 等）は効果行から省略し、**付与条件行 + 文中リンク tooltip**（`description` 全文）で確認する
+- スキル本文は `resolveSkillCardDisplay().headlineLines` をカード内表示。`formatSkillCardLines` の **状態定義リスト行**（種火＝`emberIgnition`、薬効＝`herbalPotency` 等）は効果行から省略し、**付与条件行 + 文中リンク tooltip**（`description` 全文）で確認する
 
 #### 体験版（Release M1）のスキル表示方針
 
@@ -442,14 +442,14 @@ Wave 間準備画面（`WavePrepScreenHost`）でも同一の CombatModule プ�
 | モジュール | `src/ui/formatSkillText.ts` |
 | シグネチャ | `formatSkillCardLines(def: ActiveSkillDef \| PassiveSkillDef, options: { locale: SkillCardLocale; basicAttackRangePx?: number }): SkillCardLines` |
 | `SkillCardLocale` | `'ja'` \| `'en'`（4e。`skillTextLocale` / `skillTextPhrases`） |
-| `SkillCardLines` | `{ metaLine: string; effectLines: SkillCardEffectLine[] }` — 各要素は plain `string` または `{ kind: "list"; items: { text; details? }[] }`（焼き尽くす熾火の種火 / 熾火など）。画面表示では `resolveSkillCardDisplay` が `headlineLines`（Plain Text + 文中リンク）へ flatten する |
+| `SkillCardLines` | `{ metaLine: string; effectLines: SkillCardEffectLine[] }` — 各要素は plain `string` または `{ kind: "list"; items: { text; details? }[] }`（薬効スタック段階など、状態定義が必要な list）。画面表示では `resolveSkillCardDisplay` が `headlineLines`（Plain Text + 文中リンク）へ flatten する |
 
 **行の意味（§6.3 行 2 / 行 3+ に対応）**
 
 | フィールド | Active | Passive |
 | ---------- | ------ | ------- |
 | `metaLine` | 再使用・持続・硬直・移動停止あり・発動条件を `/` 区切り 1 行（効果本文は含めない） | 発動タイミング要約（`formatPassiveTriggerSummary` 等） |
-| `effectLines` | `def.effect[]` を 1 effect 1 行（`formatActiveEffectDetail` compact）。`blockResonanceConsume` は map から除外；consume 専用スキルは特殊 1 行 | `[formatPassiveEffect(...)]` 1 要素（`効果：` プレフィックスなし） |
+| `effectLines` | `def.effect[]` を 1 effect 1 行（`formatActiveEffectDetail` compact） | `[formatPassiveEffect(...)]` 1 要素（`効果：` プレフィックスなし） |
 
 - 文節 split 禁止 — 改行単位は **effect 配列要素**（Passive は effect 種別 1 行）。リストが必要な passive は `effectLines` に `kind: "list"` ブロックを返し、各 `item.text` を効果行として表示する
 - プレイヤー向けの距離・範囲・射程差分は内部 `px / 10` の単位なし数値で表示する（例: `50px` → `5`、`+30px` → `+3`）。`px` や `m` はスキル本文へ出さない
@@ -493,30 +493,28 @@ Wave 間準備画面（`WavePrepScreenHost`）でも同一の CombatModule プ�
 
 **戦闘 HUD 状態バッジ**（State tooltip）は編成 UI スキルカードとは別系統。[combat.md §簡易表示 vs 詳細表示](combat.md#簡易表示-vs-詳細表示) を参照。
 
-**例: 焼き尽くす熾火**
+**例: 猛火の術（`emberIgnition`）**
 
 本文（効果行）:
 
 ```
-敵に攻撃スキルが1回命中するごとに「種火」を1スタックする
+CombatModule のダメージ Hit ごとに「種火」を1スタックする。規定スタックで発火ダメージへ変換して全消費する
 ```
 
-リスト行（`種火：…` / `熾火：…`）はカード本文に出さない。詳細は「種火」クリック tooltip へ。
+状態定義リスト行はカード本文に出さない。詳細は「種火」クリック tooltip へ。
 
 「種火」クリック tooltip（`description` 全文）:
 
 ```
-魔法DoT。
+魔術師の CombatModule Hit で付くスタック状態（R12l）。
 
-・毎秒攻撃力5%の魔法ダメージ
-・10秒持続
-・最大5スタック
-
-最大スタック時、新たに付与される代わりに「熾火」へ変化する。
+・時間では消えない
+・規定スタックで発火ダメージへ変換して全消費
+・対象死亡 / Wave 終了 / 発火で消える
 ```
 
-- 本文中の「種火」「熾火」は **文中リンク**（`aliases` 登録）。状態定義はクリック tooltip 側
-- 付与条件（攻撃スキル命中ごと）は本文の責務。tooltip には書かない
+- 本文中の「種火」は **文中リンク**（`aliases` 登録・`emberIgnition`）。状態定義はクリック tooltip 側
+- 付与条件（CombatModule Hit ごと）は本文の責務。tooltip には書かない
 
 ##### 状態辞典（辞書データ）
 
@@ -529,7 +527,7 @@ Wave 間準備画面（`WavePrepScreenHost`）でも同一の CombatModule プ�
 | 用語 | 正本 | 禁止 |
 | ---- | ---- | ---- |
 | Multi-Lock | 本文内 `[マルチロック] N` + Inline tooltip | 別枠タグ行、本文への再配分説明 |
-| 種火 / 熾火 | 効果行テキスト + 文中リンク tooltip（`description`） | 別枠 Chip 行 |
+| 種火（`emberIgnition`） | 効果行テキスト + 文中リンク tooltip（`description`） | 別枠 Chip 行 |
 | バリア / 障壁 | 効果行テキスト + 文中リンク tooltip | 別枠 Chip 行 |
 
 #### スキルカード表示分類ルール

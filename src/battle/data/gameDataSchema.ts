@@ -62,7 +62,6 @@ export const SKILL_EFFECT_KINDS = [
   "basicAttackTransform",
   "conditionalEffect",
   "herbalPotencyConsume",
-  "blockResonanceConsume",
   "enemyReelIn",
   "arenaDominance",
   "grantNextOutgoingDamage",
@@ -349,7 +348,6 @@ export const PASSIVE_EFFECT_KINDS = [
   "skillAmountOverride",
   "skillPropertyOverride",
   "herbalPotency",
-  "blockResonance",
   "lastStandInvulnerable",
   "frontBlockAura",
   "lastStandRecovery",
@@ -364,9 +362,6 @@ export const PASSIVE_EFFECT_KINDS = [
   "dotDurationMultiplierOnApply",
   "dottedEnemyHealReceivedDebuff",
   "conditionalEnemyDamageTakenAura",
-  "seedFlameOnActiveHit",
-  "bonusActiveOnHit",
-  "blazingFlameDetonate",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -403,7 +398,6 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   skillAmountOverride: "スキル効果量上書き",
   skillPropertyOverride: "スキル属性上書き",
   herbalPotency: "薬効浸潤",
-  blockResonance: "迎撃態勢",
   lastStandInvulnerable: "不撓の誓い",
   frontBlockAura: "護身手",
   lastStandRecovery: "不退転",
@@ -418,9 +412,6 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   dotDurationMultiplierOnApply: "Dot延長",
   dottedEnemyHealReceivedDebuff: "DoT中被回復減",
   conditionalEnemyDamageTakenAura: "条件付き被ダメージ増加",
-  seedFlameOnActiveHit: "種火付与",
-  bonusActiveOnHit: "アクティブ誘発",
-  blazingFlameDetonate: "熾火起爆",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -520,7 +511,6 @@ export const SPECIAL_EFFECT_APPLY_TO_LABELS: Record<
 export const EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES = [
   "conditionalEffect",
   "herbalPotencyConsume",
-  "blockResonanceConsume",
   "enemyReelIn",
   "arenaDominance",
   "grantNextOutgoingDamage",
@@ -574,7 +564,6 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   knockback: "ノックバック",
   conditionalEffect: "条件分岐",
   herbalPotencyConsume: "薬効消費",
-  blockResonanceConsume: "迎撃消費",
   enemyReelIn: "敵引き寄せ",
   arenaDominance: "闘技場の掟",
   grantNextOutgoingDamage: "次のダメージ増加",
@@ -708,7 +697,6 @@ export const FIRE_CONDITION_KINDS = [
   "enemyCount",
   "pendingIncomingDamage",
   "targetBarrierBelowGrant",
-  "blockResonanceStacks",
   "hasDot",
 ] as const satisfies readonly FireConditionKind[];
 
@@ -723,7 +711,6 @@ export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
   enemyCount: "敵数",
   pendingIncomingDamage: "先読み被ダメ",
   targetBarrierBelowGrant: "付与量>現バリア",
-  blockResonanceStacks: "迎撃スタック",
   hasDot: "DoT中",
 };
 
@@ -787,11 +774,7 @@ export const EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS = [
   "dotDurationMultiplierOnApply",
   "dottedEnemyHealReceivedDebuff",
   "conditionalEnemyDamageTakenAura",
-  "seedFlameOnActiveHit",
-  "bonusActiveOnHit",
-  "blazingFlameDetonate",
   "herbalPotency",
-  "blockResonance",
   "lastStandInvulnerable",
   "frontBlockAura",
   "lastStandRecovery",
@@ -862,7 +845,6 @@ export const DEBUFF_FILTER_TAGS = [
   { id: "bleed" as const, label: "出血" },
   { id: "poison" as const, label: "毒" },
   { id: "stun" as const, label: "スタン" },
-  { id: "seedFlame" as const, label: "種火" },
 ] as const satisfies readonly { id: DebuffFilterTag; label: string }[];
 
 export const DISPEL_PRIORITIES = [

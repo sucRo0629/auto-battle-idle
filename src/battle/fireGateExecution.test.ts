@@ -181,19 +181,17 @@ describe('runUnitSkills fire gate', () => {
     expect(activeCd.remaining).toBe(8);
   });
 
-  it('stage 1-1 engaged: at_swordsman nagihara gate sees two in-range enemies', () => {
+  it('stage 1-1 engaged: swordsman actor with smart fire gate sees two in-range enemies', () => {
     const engine = createStage1Engine();
     waitForEngaged(engine);
     for (let i = 0; i < 120; i++) engine.tick(TICK_DT);
 
     const internals = asBattleEngineInternals(engine);
     const warrior = internals.players.find((p) => p.classId === 'at_swordsman');
-    const skill = internals.gameData.skillRegistry.actives.at_swordsman_active_2;
     expect(warrior).toBeDefined();
-    expect(skill).toBeDefined();
-    skill!.firePolicy = nagiharaSkill.firePolicy;
-    skill!.fireConditions = nagiharaSkill.fireConditions;
-    expect(skill?.fireConditions).toEqual([
+    // R12l: 旧 active_2 は削除済み。fire gate 本体の責務を inline skill で検証する。
+    const skill = structuredClone(nagiharaSkill);
+    expect(skill.fireConditions).toEqual([
       { kind: 'enemyCount', min: 2, scope: 'inRange' },
     ]);
 
@@ -206,7 +204,7 @@ describe('runUnitSkills fire gate', () => {
       actor: warrior!,
       allies: internals.players,
       enemies: internals.enemies,
-      skill: skill!,
+      skill,
       passives: [],
       gameData: internals.gameData,
       battleTimeSec: 0,

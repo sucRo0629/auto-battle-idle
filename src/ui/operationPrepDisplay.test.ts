@@ -53,9 +53,9 @@ describe('combatModulePrepDisplay (R9.6-A)', () => {
     expect(summary.attackIntervalText).toContain(
       String(module.attackIntervalSec),
     );
-    expect(summary.effectSummary).toContain('近接');
+    // 現行 module は物理堅守（自己 DEF buff + runtime 物理被ダメ軽減）。近接打撃文ではない。
     expect(summary.effectSummary).toContain('単体');
-    expect(summary.effectSummary).toContain('攻撃力の100%のダメージ');
+    expect(summary.effectSummary).toContain('防御力');
     expect(summary.effectSummary).not.toContain('最近傍');
     expect(summary.effectSummary).not.toContain('再使用');
   });
@@ -104,7 +104,7 @@ describe('operationPassivePrepDisplay (R9.6-B)', () => {
   it('exposes cost, target, amount, duration, and text status labels', () => {
     const loaded = tryLoadGameData();
     if (!loaded.ok) throw new Error(loaded.error);
-    const def = loaded.data.skillRegistry.passives.df_guardian_op_wall_aura;
+    const def = loaded.data.skillRegistry.passives.df_guardian_passive_2;
     expect(def).toBeTruthy();
 
     const view = buildOperationPassiveCandidateView(def!, {
@@ -139,7 +139,7 @@ describe('operationPassivePrepDisplay (R9.6-B)', () => {
     const loaded = tryLoadGameData();
     if (!loaded.ok) throw new Error(loaded.error);
     const views = buildOperationPassivePrepViews({
-      candidateIds: ['df_guardian_op_wall_aura'],
+      candidateIds: ['df_guardian_passive_2'],
       acquiredIds: [],
       getAcquireCost: () => 1,
       currentResource: 0,

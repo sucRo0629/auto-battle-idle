@@ -648,7 +648,7 @@ describe('Wave prep retry (R7d)', () => {
   });
 });
 
-const R8C_PASSIVE_ID = 'df_guardian_op_brace';
+const R8C_PASSIVE_ID = 'df_guardian_op_block_rate_up';
 const R8C_GUARDIAN_SLOT = 0;
 const WAVE_CLEAR_RESOURCE_GRANT = 12;
 const R8C_PASSIVE_ACQUIRE_COST = 1;

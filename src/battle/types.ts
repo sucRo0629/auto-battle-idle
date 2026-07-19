@@ -109,6 +109,10 @@ export interface ClassPreset extends CombatStats {
   basicAttackSkillId: string;
   /** 固定パッシブ（LvUP で増えない）。skills[] とは分離 */
   passiveIds?: string[];
+  /**
+   * Lv 解放 active/passive。CombatModule 兵科（R12l 対象4）は省略または空配列可。
+   * 対象外兵科は従来どおり level 0 エントリ必須。
+   */
   skills: ClassSkillUnlock[];
   /** 一次職 = 1（既定）。二次職 = 2 は Phase 7 以降 */
   jobTier?: JobTier;
@@ -320,7 +324,6 @@ export type FireCondition =
       windowSec: number;
     }
   | { kind: "targetBarrierBelowGrant" }
-  | { kind: "blockResonanceStacks"; min: number }
   | { kind: "hasDot" };
 
 export interface SkillCooldown {
@@ -373,7 +376,7 @@ export interface SaveGameState {
 }
 
 /** DoT フレーバー種別（tick 式は overlay dot 共通） */
-export type DotFlavor = "bleed" | "poison" | "seedFlame" | "blazingFlame";
+export type DotFlavor = "bleed" | "poison";
 
 export interface StatusEffect {
   id: string;
@@ -394,8 +397,6 @@ export interface StatusEffect {
     | "healReservation"
     | "wardBarrier"
     | "herbalPotency"
-    | "blockResonance"
-    | "blockResonanceStance"
     | "invulnerable"
     | "lastStandGuts"
     | "arenaDominance"
@@ -465,8 +466,6 @@ export interface StatusEffect {
   dotTickDamageMul?: number;
   /** dot overlay: Hunter dotCompress 対象外 */
   dotCompressImmune?: boolean;
-  /** blazingFlame dot: stack ごとの被魔法ダメ加算（付与時コピー） */
-  blazingFlameMagicTakenPerStack?: number;
   /** dfPaladinM2Protection overlay: 魔法被ダメ追加倍率（全属性軽減とは別乗算） */
   dfPaladinM2MagicTakenMultiplier?: number;
   /**
@@ -509,8 +508,7 @@ export type DebuffFilterTag =
   | "dot"
   | "bleed"
   | "poison"
-  | "stun"
-  | "seedFlame";
+  | "stun";
 
 /** デバフ解除の優先順位（dispelCount > 0 のとき） */
 export type DispelPriority = "longest" | "strongest";
@@ -703,8 +701,6 @@ export interface CombatantState extends Combatant {
   herbalPotencyAccumTickSec?: number;
   /** herbalPotency: 到達済み体質段階（active_4 消費後も維持） */
   herbalPotencyConstitutionTier?: number;
-  /** blockResonance: 減衰タイマー残秒 */
-  blockResonanceDecayTickSec?: number;
   /** lastStandInvulnerable: Wave 内 1 回消費済み */
   lastStandInvulnerableUsed?: boolean;
   /** lastStandRecovery: Wave 内 1 回消費済み */
@@ -765,7 +761,6 @@ export type PassiveEffectKind =
   | "healReceivedIncrease"
   | "extendSelfAppliedDebuff"
   | "herbalPotency"
-  | "blockResonance"
   | "lastStandInvulnerable"
   | "frontBlockAura"
   | "lastStandRecovery"
@@ -780,9 +775,6 @@ export type PassiveEffectKind =
   | "dotDurationMultiplierOnApply"
   | "dottedEnemyHealReceivedDebuff"
   | "conditionalEnemyDamageTakenAura"
-  | "seedFlameOnActiveHit"
-  | "bonusActiveOnHit"
-  | "blazingFlameDetonate"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -1064,12 +1056,6 @@ export interface PassiveSkillDef {
   herbalPotencyConstitutionHpMultipliers?: number[];
   /** herbalPotency: 体質段階バフの HUD 表示名（未指定 = 「頑健」） */
   herbalPotencyConstitutionDisplayName?: string;
-  /** blockResonance: スタック上限 */
-  blockResonanceMaxStacks?: number;
-  /** blockResonance: stack ごとのダメージ軽減率（0.03 = 3%/stack） */
-  blockResonanceDamageTakenPerStack?: number;
-  /** blockResonance: stack 減衰間隔（秒） */
-  blockResonanceDecayIntervalSec?: number;
   /** frontBlockAura: 魔法直接ダメージも block 対象にする */
   frontBlockAuraMagicBlock?: boolean;
   /** frontBlockAura: 周囲 aura 半径（px）。未指定 = 50 */
@@ -1104,16 +1090,6 @@ export interface PassiveSkillDef {
   enemyDamageTakenMultiplier?: number;
   /** conditionalEnemyDamageTakenAura: AND 条件 */
   auraConditions?: DamageIncreaseCondition[];
-  /** bonusActiveOnHit: 追撃する active スキル ID */
-  bonusActiveSkillId?: string;
-  /** blazingFlameDetonate: 爆発後の種火 spread 半径（px） */
-  blazingFlameDetonateSpreadRadiusPx?: number;
-  /** blazingFlameDetonate: 消費種火 1 stack あたりの N（ATK 倍率） */
-  blazingFlameDetonatePerSeedScale?: number;
-  /** blazingFlameDetonate: 爆発ダメ倍率 */
-  blazingFlameDetonateMultiplier?: number;
-  /** blazingFlameDetonate: 熾火 stack 上限解除（P4） */
-  blazingFlameUncap?: boolean;
   /** healOnBlock: ブロック成功時の自己回復量 */
   healOnBlockAmount?: ResourceAmountSpec;
   /** knockbackOnBlock: ブロック成功時の周囲半径（px） */
@@ -1134,18 +1110,6 @@ export interface PassiveSkillDef {
   outgoingHitDamageType?: DamageType;
   /** attackIntervalScale: 基本攻撃 interval 乗算（0.95 = 5% 短縮） */
   attackIntervalScale?: number;
-  /** seedFlameOnActiveHit: 種火 stack 上限（未指定 = 5） */
-  seedFlameMaxStacks?: number;
-  /** seedFlameOnActiveHit: 種火 overlay 持続（秒。未指定 = 10） */
-  seedFlameDurationSec?: number;
-  /** seedFlameOnActiveHit: 種火 DoT tick = 付与者 ATK × scale（未指定 = 0.05） */
-  seedFlameDotAtkScale?: number;
-  /** seedFlameOnActiveHit: 熾火 DoT tick = 付与者 ATK × scale（未指定 = 0.35） */
-  blazingFlameDotAtkScale?: number;
-  /** seedFlameOnActiveHit: 熾火 stack ごとの被魔法ダメ加算（未指定 = 0.1） */
-  blazingFlameMagicTakenPerStack?: number;
-  /** seedFlameOnActiveHit: P4 未習得時の熾火 stack 上限（未指定 = 1） */
-  blazingFlameMaxStacksDefault?: number;
   /** bloodlustDuelist: block 率（未指定 = 0.05） */
   bloodlustBlockChance?: number;
   /** bloodlustDuelist: DEF バフ（maxBuffAtHpRatio / buffMultiplierMax） */
@@ -1180,7 +1144,6 @@ export type SkillEffectKind =
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot"
   | "herbalPotencyConsume"
-  | "blockResonanceConsume"
   | "enemyReelIn"
   | "arenaDominance"
   | "grantNextOutgoingDamage"
@@ -1391,8 +1354,6 @@ export interface PendingSkillHit {
   suppressBonusBasicAttack?: boolean;
   /** allyAttackFollowUp 由来 Hit — 再帰追撃を抑止 */
   suppressAllyAttackFollowUp?: boolean;
-  /** bonusActiveOnHit 由来 Hit — P3 再帰を抑止 */
-  suppressBonusActiveOnHit?: boolean;
 }
 
 export interface DamageSkillEffect extends SkillEffectCommon {
@@ -1605,10 +1566,6 @@ export interface HerbalPotencyConsumeSkillEffect extends SkillEffectCommon {
   type: "herbalPotencyConsume";
 }
 
-export interface BlockResonanceConsumeSkillEffect extends SkillEffectCommon {
-  type: "blockResonanceConsume";
-}
-
 export interface EnemyReelInSkillEffect extends SkillEffectCommon {
   type: "enemyReelIn";
 }
@@ -1691,7 +1648,6 @@ export type SkillEffectDef =
   | BasicAttackTransformSkillEffect
   | ConditionalSkillEffect
   | HerbalPotencyConsumeSkillEffect
-  | BlockResonanceConsumeSkillEffect
   | EnemyReelInSkillEffect
   | ArenaDominanceSkillEffect
   | GrantNextOutgoingDamageSkillEffect
@@ -1808,20 +1764,6 @@ export interface ActiveSkillDef extends SkillSharedTargetingFields {
   fireTimeoutSec?: number;
   /** 多段チャージ上限。省略 = 1 */
   maxCharges?: number;
-  /** blockResonanceConsume: 態勢の基礎持続秒（+消費 stack） */
-  blockResonanceStanceDurationBaseSec?: number;
-  /** blockResonanceConsume: 態勢中 stack あたりのダメージ軽減率 */
-  blockResonanceStanceDamageTakenPerStack?: number;
-  /** blockResonanceConsume: 態勢中 stack あたりの DEF 倍率加算 */
-  blockResonanceStanceDefPerStack?: number;
-  /** blockResonanceConsume: 態勢中 stack あたりの block 率加算 */
-  blockResonanceStanceBlockPerStack?: number;
-  /** blockResonanceConsume: 態勢中ブロック成功時の範囲ダメージ */
-  blockResonanceOnBlockDamage?: ResourceAmountSpec;
-  /** blockResonanceConsume: 態勢中ブロック成功時の範囲半径（px） */
-  blockResonanceOnBlockKnockbackRadiusPx?: number;
-  /** blockResonanceConsume: 態勢中ブロック成功時のノックバック距離（px） */
-  blockResonanceOnBlockKnockbackDistancePx?: number;
   /** arenaDominance 等: Stage 内発動上限（未指定 = 無制限） */
   stageTriggerLimit?: number;
   /** arenaDominance: 効果持続秒（未指定 = 15） */

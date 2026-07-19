@@ -7,17 +7,15 @@ describe('df_guardian passive / active unlock structure', () => {
   const guardianClass = gameData.classRegistry['df_guardian'];
   const { passives, actives } = gameData.skillRegistry;
 
-  it('keeps only the class-body passive as always learned', () => {
+  it('keeps only the class-body passive as always learned (R12l: no Lv actives)', () => {
     expect(guardianClass.passiveIds).toEqual(['df_guardian_passive_1']);
-    expect(
-      guardianClass.skills.flatMap((entry) => entry.skillIds).filter((id) =>
-        id.startsWith('df_guardian_passive_'),
-      ),
-    ).toEqual([]);
+    expect(guardianClass.skills).toEqual([]);
+    expect(getClassSkillIds(guardianClass.skills)).toEqual([]);
     expect(passives['df_guardian_passive_1']?.name).toBe('大盾使い');
-    expect(passives['df_guardian_passive_4']?.name).toBe('不撓の誓い');
-    for (const id of getClassSkillIds(guardianClass.skills)) {
-      expect(actives[id]?.id).toBe(id);
-    }
+    expect(passives['df_guardian_passive_4']?.effect).toBe(
+      'lastStandInvulnerable',
+    );
+    expect(actives['df_guardian_basic_attack']).toBeDefined();
+    expect(actives['df_guardian_active_1']).toBeUndefined();
   });
 });

@@ -113,7 +113,6 @@ import {
   appendPassiveBuffFields,
   appendPassiveSpecialEffectFields,
   appendActiveFireGateFields,
-  appendActiveBlockResonanceStanceFields,
   appendConditionListFields,
   appendPassiveSkillPropertyOverrideFields,
   appendTargetSpecFields,
@@ -604,23 +603,6 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case "bonusBasicAttackOnHit":
       passive.chance ??= 0.5;
       passive.bonusBasicAttackHpRatio ??= 0.3;
-      break;
-    case "seedFlameOnActiveHit":
-      passive.seedFlameMaxStacks ??= 5;
-      passive.seedFlameDurationSec ??= 10;
-      passive.seedFlameDotAtkScale ??= 0.05;
-      passive.blazingFlameDotAtkScale ??= 0.35;
-      passive.blazingFlameMagicTakenPerStack ??= 0.1;
-      passive.blazingFlameMaxStacksDefault ??= 1;
-      break;
-    case "bonusActiveOnHit":
-      passive.bonusActiveSkillId ??= "at_sorcerer_active_1";
-      break;
-    case "blazingFlameDetonate":
-      passive.blazingFlameDetonateSpreadRadiusPx ??= 50;
-      passive.blazingFlameDetonatePerSeedScale ??= 0.5;
-      passive.blazingFlameDetonateMultiplier ??= 1.3;
-      passive.blazingFlameUncap ??= true;
       break;
     case "periodicDispel":
       passive.periodicTrigger ??= "waveStart";
@@ -1978,10 +1960,6 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         target: { kind: "all", side: "ally" },
         type: "herbalPotencyConsume",
       };
-    case "blockResonanceConsume":
-      return {
-        type: "blockResonanceConsume",
-      };
     case "enemyReelIn":
       return {
         target: { kind: "attackType", ranged: true },
@@ -2871,80 +2849,6 @@ export class SkillEditorStep {
           { traitsRangePx: this.resolveTraitsRangePx() }
         );
         break;
-      case "blockResonance":
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("chance"),
-            createNumberInput(
-              passive.chance ?? 0.1,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.chance = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.01, min: 0, max: 1 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blockResonanceMaxStacks"),
-            createNumberInput(
-              passive.blockResonanceMaxStacks ?? 6,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blockResonanceMaxStacks = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 1, min: 1 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blockResonanceDamageTakenPerStack"),
-            createNumberInput(
-              passive.blockResonanceDamageTakenPerStack ?? 0.03,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blockResonanceDamageTakenPerStack = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.01, min: 0, max: 1 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blockResonanceDecayIntervalSec"),
-            createNumberInput(
-              passive.blockResonanceDecayIntervalSec ?? 8,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blockResonanceDecayIntervalSec = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.1, min: 0.1 }
-            )
-          )
-        );
-        break;
       case "lastStandInvulnerable":
         break;
       case "frontBlockAura":
@@ -3334,129 +3238,6 @@ export class SkillEditorStep {
           )
         );
         break;
-      case "seedFlameOnActiveHit":
-        effectGrid.appendChild(
-          createEl(
-            "p",
-            "editor-hint",
-            "active ダメージ Hit ごとに種火 +1 stack（basic 非対象）。P4 未習得時の熾火上限は「熾火 stack 上限（P4未習得）」。"
-          )
-        );
-        effectGrid.appendChild(
-          createEl("p", "editor-hint", "— 種火 DoT —")
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("seedFlameMaxStacks"),
-            createNumberInput(
-              passive.seedFlameMaxStacks ?? 5,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.seedFlameMaxStacks = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 1, min: 1 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("seedFlameDurationSec"),
-            createNumberInput(
-              passive.seedFlameDurationSec ?? 10,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.seedFlameDurationSec = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.5, min: 0.1 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("seedFlameDotAtkScale"),
-            createNumberInput(
-              passive.seedFlameDotAtkScale ?? 0.05,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.seedFlameDotAtkScale = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.01, min: 0 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createEl("p", "editor-hint", "— 熾火 DoT —")
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blazingFlameDotAtkScale"),
-            createNumberInput(
-              passive.blazingFlameDotAtkScale ?? 0.35,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blazingFlameDotAtkScale = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.01, min: 0 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blazingFlameMagicTakenPerStack"),
-            createNumberInput(
-              passive.blazingFlameMagicTakenPerStack ?? 0.1,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blazingFlameMagicTakenPerStack = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.01, min: 0 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blazingFlameMaxStacksDefault"),
-            createNumberInput(
-              passive.blazingFlameMaxStacksDefault ?? 1,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blazingFlameMaxStacksDefault = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 1, min: 1 }
-            )
-          )
-        );
-        break;
       case "healOnBlock":
         appendResourceAmountFields(
           effectGrid,
@@ -3653,102 +3434,6 @@ export class SkillEditorStep {
                 );
               },
               { step: 0.01, min: 0.01 }
-            )
-          )
-        );
-        break;
-      case "bonusActiveOnHit":
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("bonusActiveSkillId"),
-            createTextInput(
-              passive.bonusActiveSkillId ?? "",
-              (bonusActiveSkillId) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.bonusActiveSkillId = bonusActiveSkillId.trim();
-                  },
-                  { rerender: false }
-                );
-              }
-            )
-          )
-        );
-        break;
-      case "blazingFlameDetonate":
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blazingFlameDetonateSpreadRadiusPx"),
-            createNumberInput(
-              passive.blazingFlameDetonateSpreadRadiusPx ?? 50,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blazingFlameDetonateSpreadRadiusPx = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 1, min: 1 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blazingFlameDetonatePerSeedScale"),
-            createNumberInput(
-              passive.blazingFlameDetonatePerSeedScale ?? 0.5,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blazingFlameDetonatePerSeedScale = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.05, min: 0 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blazingFlameDetonateMultiplier"),
-            createNumberInput(
-              passive.blazingFlameDetonateMultiplier ?? 1.3,
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blazingFlameDetonateMultiplier = value;
-                  },
-                  { rerender: false }
-                );
-              },
-              { step: 0.05, min: 0 }
-            )
-          )
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            editorFieldLabel("blazingFlameUncap"),
-            createSelect(
-              passive.blazingFlameUncap ? "true" : "false",
-              [
-                { value: "false", label: "熾火 max 1" },
-                { value: "true", label: "熾火上限解除" },
-              ],
-              (value) => {
-                this.patchPassive(
-                  index,
-                  (current) => {
-                    current.blazingFlameUncap = value === "true";
-                  },
-                  { rerender: false }
-                );
-              }
             )
           )
         );
@@ -5113,12 +4798,6 @@ export class SkillEditorStep {
         )
       );
       appendActiveFireGateFields(grid, active, setActive);
-      appendActiveBlockResonanceStanceFields(
-        grid,
-        active,
-        setActive,
-        appendResourceAmountFields
-      );
     }
 
     this.appendSkillDescriptionPreview(parent, formatActiveDescription(active));
@@ -6987,15 +6666,6 @@ export class SkillEditorStep {
           );
           break;
         case "enemyReelIn":
-          break;
-        case "blockResonanceConsume":
-          detailGrid.appendChild(
-            createEl(
-              "p",
-              "editor-hint",
-              "態勢パラメータはスキル詳細（発動ゲートの下）で編集します。"
-            )
-          );
           break;
         case "arenaDominance":
           detailGrid.appendChild(

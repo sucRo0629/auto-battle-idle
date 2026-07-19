@@ -39,8 +39,6 @@ export type GameTermId =
   | "poison"
   | "bleed"
   | "healReservation"
-  | "blockResonance"
-  | "blockResonanceStance"
   | "herbalPotency"
   | "herbalPotencyConstitution"
   | "hp"
@@ -54,8 +52,6 @@ export type GameTermId =
   | "lastStandGuts"
   | "arenaDominance"
   | "duelistPride"
-  | "seedFlame"
-  | "blazingFlame"
   | "emberIgnition"
   | "ballistaMark"
   | "allyAttackFollowUp"
@@ -364,24 +360,6 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     statusCategory: "healReservation",
   },
   {
-    id: "blockResonance",
-    title: { ja: "防壁" },
-    description: {
-      ja: "鉄衛士の迎撃態勢でブロック成功時に蓄積するバフ。\n1スタックごとにダメージ軽減効果を持つ。",
-    },
-    aliases: { ja: ["防壁"] },
-    statusCategory: "blockResonance",
-  },
-  {
-    id: "blockResonanceStance",
-    title: { ja: "城塞の構え" },
-    description: {
-      ja: "「防壁」を全消費して付与されるバフ。この効果中のブロック成功で周囲の敵へダメージとノックバックを与える。",
-    },
-    aliases: { ja: ["城塞の構え"] },
-    statusCategory: "blockResonanceStance",
-  },
-  {
     id: "herbalPotency",
     title: { ja: "薬効" },
     description: {
@@ -474,32 +452,13 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     statusCategory: "duelistPride",
   },
   {
-    id: "seedFlame",
-    title: { ja: "種火" },
-    description: {
-      ja: "魔術師固有のデバフ。\n\n・毎秒攻撃力1%の魔法ダメージ\n・5秒持続\n・最大5スタック\n\n最大スタック時、新たに付与される代わりに「熾火」へ変化する。",
-    },
-    aliases: { ja: ["種火"] },
-    statusCategory: "seedFlame",
-  },
-  {
     id: "emberIgnition",
     title: { ja: "種火" },
     description: {
       ja: "魔術師の CombatModule Hit で付くスタック状態（R12l）。\n\n・時間では消えない\n・規定スタックで発火ダメージへ変換して全消費\n・対象死亡 / Wave 終了 / 発火で消える",
     },
-    // 旧 DoT「種火」(seedFlame) と共通 alias を持たない。
-    // Player HUD は statusCategory → resolveStatusBadgeGameTermId で開く。
+    aliases: { ja: ["種火"] },
     statusCategory: "emberIgnition",
-  },
-  {
-    id: "blazingFlame",
-    title: { ja: "熾火" },
-    description: {
-      ja: "種火から昇格した魔術師固有のデバフ。\n\n・毎秒攻撃力10%の魔法ダメージ（無期限）\n・1スタックごとに魔法攻撃の被ダメージを5%増加\n・最大1スタック",
-    },
-    aliases: { ja: ["熾火"] },
-    statusCategory: "blazingFlame",
   },
   {
     id: "ballistaMark",
@@ -636,6 +595,30 @@ export function resolveStatusEffectStatDisplayName(
 ): string {
   return resolveGameTermTitle(STATUS_EFFECT_STAT_TERM_ID[stat], locale);
 }
+
+
+/** Same alias must not be owned by multiple terms (no registration-order resolution). */
+function assertUniqueGameTermAliases(
+  entries: readonly GameTermEntry[],
+): void {
+  for (const locale of ["ja", "en"] as const) {
+    const owners = new Map<string, GameTermId>();
+    for (const entry of entries) {
+      for (const alias of entry.aliases?.[locale] ?? []) {
+        if (alias.length === 0) continue;
+        const prev = owners.get(alias);
+        if (prev !== undefined && prev !== entry.id) {
+          throw new Error(
+            `Duplicate game-term alias "${alias}" (${locale}): ${prev} and ${entry.id}`,
+          );
+        }
+        owners.set(alias, entry.id);
+      }
+    }
+  }
+}
+
+assertUniqueGameTermAliases(GAME_TERM_ENTRIES);
 
 const ENTRY_BY_STATUS_CATEGORY = new Map<StatusDisplayCategory, GameTermEntry>(
   GAME_TERM_ENTRIES.flatMap((entry) =>

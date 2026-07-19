@@ -22,8 +22,6 @@ export type StatusDisplayCategory =
   | "damageDelay"
   | "wardBarrier"
   | "herbalPotency"
-  | "blockResonance"
-  | "blockResonanceStance"
   | "basicAttackTransform"
   | "invulnerable"
   | "lastStandGuts"
@@ -32,8 +30,6 @@ export type StatusDisplayCategory =
   | "windMark"
   | "earthMark"
   | "arenaMark"
-  | "seedFlame"
-  | "blazingFlame"
   | "emberIgnition"
   | "ballistaMark"
   | "allyAttackFollowUp"
@@ -54,8 +50,6 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "damageDelay",
   "wardBarrier",
   "herbalPotency",
-  "blockResonance",
-  "blockResonanceStance",
   "basicAttackTransform",
   "invulnerable",
   "lastStandGuts",
@@ -64,8 +58,6 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "windMark",
   "earthMark",
   "arenaMark",
-  "seedFlame",
-  "blazingFlame",
   "emberIgnition",
   "ballistaMark",
   "allyAttackFollowUp",
@@ -87,11 +79,9 @@ const NEUTRAL_EPSILON = 0.001;
 
 function resolveDotDisplayCategory(
   effect: StatusEffect
-): "dot" | "bleed" | "poison" | "seedFlame" | "blazingFlame" {
+): "dot" | "bleed" | "poison" {
   if (effect.dotFlavor === "bleed") return "bleed";
   if (effect.dotFlavor === "poison") return "poison";
-  if (effect.dotFlavor === "seedFlame") return "seedFlame";
-  if (effect.dotFlavor === "blazingFlame") return "blazingFlame";
   return "dot";
 }
 
@@ -127,7 +117,6 @@ export interface StatusEffectBadgeDisplay {
 
 const STACK_OVERLAY_CATEGORIES = new Set<StatusEffect["overlay"]>([
   "herbalPotency",
-  "blockResonance",
   "windMark",
   "earthMark",
   "arenaMark",
@@ -315,23 +304,9 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
-    case "blockResonance":
-      return {
-        category: "blockResonance",
-        kind: "buff",
-        remainingRatio: statusEffectRemainingRatio(effect),
-        isPassive: isPassiveDisplayedStatusEffect(effect),
-      };
     case "basicAttackTransform":
       return {
         category: "basicAttackTransform",
-        kind: "buff",
-        remainingRatio: statusEffectRemainingRatio(effect),
-        isPassive: isPassiveDisplayedStatusEffect(effect),
-      };
-    case "blockResonanceStance":
-      return {
-        category: "blockResonanceStance",
         kind: "buff",
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
@@ -554,17 +529,6 @@ function effectsForCategory(
       (effect) => effect.overlay === "dot" && effect.dotFlavor === "poison"
     );
   }
-  if (category === "seedFlame") {
-    return effects.filter(
-      (effect) => effect.overlay === "dot" && effect.dotFlavor === "seedFlame"
-    );
-  }
-  if (category === "blazingFlame") {
-    return effects.filter(
-      (effect) =>
-        effect.overlay === "dot" && effect.dotFlavor === "blazingFlame"
-    );
-  }
   if (category === "emberIgnition") {
     return effects.filter((effect) => effect.overlay === "emberIgnition");
   }
@@ -613,19 +577,11 @@ function effectsForCategory(
   if (category === "herbalPotency") {
     return effects.filter((effect) => effect.overlay === "herbalPotency");
   }
-  if (category === "blockResonance") {
-    return effects.filter((effect) => effect.overlay === "blockResonance");
-  }
   if (category === "windMark") {
     return effects.filter((effect) => effect.overlay === "windMark");
   }
   if (category === "earthMark") {
     return effects.filter((effect) => effect.overlay === "earthMark");
-  }
-  if (category === "blockResonanceStance") {
-    return effects.filter(
-      (effect) => effect.overlay === "blockResonanceStance"
-    );
   }
   if (category === "invulnerable") {
     return effects.filter((effect) => effect.overlay === "invulnerable");
@@ -872,8 +828,6 @@ const COMPACT_TIER3_DOT: ReadonlySet<StatusDisplayCategory> = new Set([
   "dot",
   "bleed",
   "poison",
-  "seedFlame",
-  "blazingFlame",
   "emberIgnition",
 ]);
 

@@ -10,7 +10,6 @@ import {
   HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME,
   HERBAL_POTENCY_HOT_TICK_SEC,
 } from "../battle/herbalPotency.ts";
-import { mergeSorcererFlameDotConfig } from "../battle/sorcererFlame.ts";
 import {
   BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
@@ -93,8 +92,6 @@ import {
   phraseBarrierAmountBonusOnLowHpAlly,
   phraseBarrierDepletionHeal,
   phraseBasicAttackMultiHit,
-  phraseBlazingFlameDotPerStack,
-  phraseBlazingFlameMagicTakenPerStack,
   phraseBlockChance,
   phraseBlockRate,
   phraseBlockRateBuff,
@@ -115,16 +112,12 @@ import {
   phraseIfTargetHp,
   phraseKnockbackLabel,
   phraseMagicBlockEnable,
-  phraseMaxStacks,
   phraseMoveBehindTargetThen,
   phraseMultiHitDamage,
   phraseMultiLockEffectSentence,
   phraseOverhealToBarrier,
   phraseScopeAllAllies,
   phraseScopeSelfOrigin,
-  phraseSeedFlameDotPerStack,
-  phraseSeedFlameStackOnHit,
-  phraseSeedFlameUpgradeToBlazing,
   phraseSelfDamageReduction,
   phraseStunDuration,
   phraseSurroundingBlockRateBuff,
@@ -243,8 +236,6 @@ function formatFireConditionSummary(condition: FireCondition): string {
       )}`;
     case "targetBarrierBelowGrant":
       return "付与量>現バリア";
-    case "blockResonanceStacks":
-      return `防壁≥${condition.min}`;
     case "hasDot":
       return FIRE_CONDITION_KIND_LABELS.hasDot;
   }
@@ -432,48 +423,7 @@ export function flattenSkillCardEffectLines(
   return out;
 }
 
-function formatSeedFlameOnActiveHitEffectLines(
-  def: PassiveSkillDef
-): SkillCardEffectLine[] {
-  const config = mergeSorcererFlameDotConfig([def]);
-  const seedFlameDotPct = formatPercent(config.seedFlameDotAtkScale);
-  const blazingFlameDotPct = formatPercent(config.blazingFlameDotAtkScale);
-  const blazingFlameMagicTakenPct = formatPercent(
-    config.blazingFlameMagicTakenPerStack
-  );
 
-  return [
-    phraseSeedFlameStackOnHit(),
-    {
-      kind: "list",
-      items: [
-        {
-          text: phraseSeedFlameDotPerStack(
-            config.seedFlameDurationSec,
-            seedFlameDotPct,
-          ),
-          details: [
-            phraseMaxStacks(config.seedFlameMaxStacks),
-            phraseSeedFlameUpgradeToBlazing(config.blazingFlameMaxStacksDefault),
-          ],
-        },
-        {
-          text: phraseBlazingFlameDotPerStack(blazingFlameDotPct),
-          details: [
-            phraseBlazingFlameMagicTakenPerStack(blazingFlameMagicTakenPct),
-            phraseMaxStacks(config.blazingFlameMaxStacksDefault),
-          ],
-        },
-      ],
-    },
-  ];
-}
-
-function formatSeedFlameOnActiveHitPassive(def: PassiveSkillDef): string {
-  return flattenSkillCardEffectLines(
-    formatSeedFlameOnActiveHitEffectLines(def)
-  ).join("、");
-}
 
 function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
   const scalePct = formatPercent(def.barrierScale ?? 1);
@@ -799,23 +749,10 @@ function collectEffectDurationSec(
   }
 }
 
-function formatBlockResonanceStanceDurationLabel(
-  def: ActiveSkillDef,
-  options?: { useDurationFallback?: boolean }
-): string {
-  const fallback = options?.useDurationFallback
-    ? def.useDurationSec || 2
-    : 2;
-  const base = def.blockResonanceStanceDurationBaseSec ?? fallback;
-  return `${base}+防壁スタック数秒`;
-}
 
 function resolveActiveSkillDurationLabel(
   def: ActiveSkillDef
 ): string | undefined {
-  if (def.effect.some((effect) => effect.type === "blockResonanceConsume")) {
-    return formatBlockResonanceStanceDurationLabel(def);
-  }
   let maxSec = 0;
   for (const effect of def.effect) {
     collectEffectDurationSec(effect, (sec) => {
@@ -829,17 +766,8 @@ function resolveActiveSkillDurationLabel(
 function resolveActiveSkillLockDurationLabel(
   def: ActiveSkillDef
 ): string | undefined {
-  const hasConsume = def.effect.some(
-    (effect) => effect.type === "blockResonanceConsume"
-  );
   const useSec = def.useDurationSec ?? 0;
-  if (useSec <= 0 && !hasConsume) return undefined;
-
-  if (hasConsume) {
-    return formatBlockResonanceStanceDurationLabel(def, {
-      useDurationFallback: true,
-    });
-  }
+  if (useSec <= 0) return undefined;
   return formatSecondsLabel(useSec);
 }
 
@@ -855,28 +783,10 @@ function formatActiveSkillLockMetaParts(def: ActiveSkillDef): string[] {
   return parts;
 }
 
-function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
-  const radius = def.blockResonanceOnBlockKnockbackRadiusPx ?? 50;
-  const damage = def.blockResonanceOnBlockDamage;
-  const defScale = damage?.kind === "defBased" ? damage.defScale ?? 1 : 1;
-  return `「城塞の構え」：ブロック時半径${formatUiDistanceValue(radius)}内の敵に${formatDefScale(
-    defScale
-  )}のダメージ+ノックバック`;
-}
 
 function resolveActiveSkillSpecialEffectLines(
   def: ActiveSkillDef
 ): string[] | null {
-  const hasConsume = def.effect.some(
-    (effect) => effect.type === "blockResonanceConsume"
-  );
-  const mappableEffects = def.effect.filter(
-    (effect) => effect.type !== "blockResonanceConsume"
-  );
-  if (hasConsume && mappableEffects.length === 0) {
-    return [formatBlockResonanceConsumeSkillEffect(def)];
-  }
-
   const polishedSequentialLines = tryFormatPolishedSequentialEffectLines(def);
   if (polishedSequentialLines) {
     const maxChargesLine = formatActiveSkillMaxChargesLine(def);
@@ -896,9 +806,7 @@ function formatActiveSkillDefaultEffectLines(
   def: ActiveSkillDef,
   options?: { includeMaxCharges?: boolean } & SkillCardFormatContext
 ): string[] {
-  const mappableEffects = def.effect.filter(
-    (effect) => effect.type !== "blockResonanceConsume"
-  );
+  const mappableEffects = def.effect;
   const scopePrefix = resolveActiveSkillScopePrefix(def);
   const lines: string[] = [];
   let scopeApplied = false;
@@ -1181,8 +1089,6 @@ function formatDebuffFilterTagProseLabel(tag: DebuffFilterTag): string {
       return skillTerm("bleed");
     case "poison":
       return skillTerm("poison");
-    case "seedFlame":
-      return skillTerm("seedFlame");
     case "dot":
       return skillTerm("dot");
     default:
@@ -1313,9 +1219,7 @@ function tryFormatEvasionMoveStrikeLines(
 function tryFormatPolishedSequentialEffectLines(
   def: ActiveSkillDef
 ): string[] | null {
-  const effects = def.effect.filter(
-    (effect) => effect.type !== "blockResonanceConsume"
-  );
+  const effects = def.effect;
   return (
     tryFormatDamageThenBleedDotLines(effects) ??
     tryFormatEvasionMoveStrikeLines(effects)
@@ -1751,9 +1655,6 @@ function formatActiveEffectDetail(
   const compact = options?.compact ?? false;
   const inheritTarget = options?.inheritTarget;
 
-  if (effect.type === "blockResonanceConsume") {
-    return "";
-  }
   if (effect.type === "conditionalEffect") {
     const conditionCount = effect.conditions.length;
     const thenSummary = effect.thenEffects
@@ -2341,8 +2242,6 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "条件分岐";
     case "herbalPotencyConsume":
       return "薬効消費";
-    case "blockResonanceConsume":
-      return "迎撃消費";
     case "enemyReelIn":
       return "敵引き寄せ";
     case "arenaDominance":
@@ -2494,7 +2393,6 @@ function formatPassiveEffect(
       );
     case "hot":
     case "herbalPotency":
-    case "blockResonance":
     case "lastStandInvulnerable":
     case "frontBlockAura":
     case "lastStandRecovery":
@@ -2565,25 +2463,6 @@ function formatPassiveEffect(
           { kind: "distance", side: "ally", order: "selfOrigin" },
           parts.join(getSkillTextLocale() === "en" ? ", " : "、")
         );
-      }
-      if (def.effect === "blockResonance") {
-        const parts: string[] = [];
-        if (def.chance !== undefined) {
-          const rateLabel =
-            getSkillTextLocale() === "en"
-              ? `${phraseBlockRate()}+${formatPercent(def.chance)}`
-              : `ブロック率+${formatPercent(def.chance)}`;
-          parts.push(rateLabel);
-        }
-        const maxStacks = def.blockResonanceMaxStacks ?? 6;
-        const perStack = def.blockResonanceDamageTakenPerStack ?? 0.03;
-        const decay = def.blockResonanceDecayIntervalSec ?? 8;
-        parts.push(
-          `ブロック時「防壁」1スタック（上限${maxStacks})。「防壁」：1スタックごとに${formatDamageTakenReductionRateLabel(
-            perStack
-          )}。${decay}秒ごとに1スタック消失`
-        );
-        return parts.join("/");
       }
       if (def.effect === "heal" && (def.healSubKind ?? "hot") !== "hot") {
         return HEAL_SUB_KIND_LABELS[def.healSubKind ?? "instant"];
@@ -2706,17 +2585,6 @@ function formatPassiveEffect(
       return `仕留め aura（hasDot+HP≤50% → ${formatDamageTakenMultiplierLabel(
         def.enemyDamageTakenMultiplier ?? 1.2
       )}）`;
-    case "seedFlameOnActiveHit":
-      return formatSeedFlameOnActiveHitPassive(def);
-    case "bonusActiveOnHit":
-      return `active Hit 後 ${def.bonusActiveSkillId ?? "—"} 追撃（非再帰）`;
-    case "blazingFlameDetonate": {
-      const radius = def.blazingFlameDetonateSpreadRadiusPx ?? 50;
-      const n = def.blazingFlameDetonatePerSeedScale ?? 0.5;
-      const mul = def.blazingFlameDetonateMultiplier ?? 1.3;
-      const uncap = def.blazingFlameUncap ? " / 熾火上限解除" : "";
-      return `熾火起爆（(ATK+種火×ATK×${n})×${mul} / spread${formatUiDistanceValue(radius)}）${uncap}`;
-    }
     case "healReservation": {
       const grant = formatPercent(def.grantOnHealMaxHpRatio ?? 1);
       const trigger = formatPercent(def.triggerHpRatio ?? 0.35);
@@ -2922,9 +2790,6 @@ function formatPassiveEffect(
 function formatPassiveSkillEffectLines(def: PassiveSkillDef): SkillCardEffectLine[] {
   if (def.effect === "barrierDepletionHeal") {
     return formatBarrierDepletionHealEffectLines(def);
-  }
-  if (def.effect === "seedFlameOnActiveHit") {
-    return formatSeedFlameOnActiveHitEffectLines(def);
   }
   return [formatPassiveEffect(def.effect, def)];
 }

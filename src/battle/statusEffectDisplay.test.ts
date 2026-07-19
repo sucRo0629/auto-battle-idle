@@ -382,7 +382,6 @@ describe('statusEffectDisplay', () => {
 
   it('collects class-specific overlay badges', () => {
     const overlays = [
-      ['blockResonanceStance', 'blockResonanceStance', 'buff'],
       ['invulnerable', 'invulnerable', 'buff'],
       ['lastStandGuts', 'lastStandGuts', 'buff'],
       ['arenaDominance', 'arenaDominance', 'buff'],
@@ -421,37 +420,6 @@ describe('statusEffectDisplay', () => {
     }
   });
 
-  it('collects dot flavor badges for seedFlame and blazingFlame', () => {
-    const badges = collectStatusEffectBadgeDisplays(
-      [
-        {
-          id: 'seed',
-          kind: 'debuff',
-          overlay: 'dot',
-          dotFlavor: 'seedFlame',
-          multiplier: 1,
-          durationSec: 10,
-          remainingSec: 8,
-        },
-        {
-          id: 'blaze',
-          kind: 'debuff',
-          overlay: 'dot',
-          dotFlavor: 'blazingFlame',
-          multiplier: 1,
-          durationSec: 10,
-          remainingSec: 6,
-        },
-      ],
-      { baseMaxHp: 100, atk: 10, def: 10, res: 0 },
-    );
-
-    expect(badges.map((badge) => badge.category)).toEqual([
-      'seedFlame',
-      'blazingFlame',
-    ]);
-    expect(badges.every((badge) => badge.kind === 'debuff')).toBe(true);
-  });
 
   it('collects arenaMark stack badges as one badge with stackCount', () => {
     const badges = collectStatusEffectBadgeDisplays(
@@ -602,22 +570,22 @@ describe('compact status badge selection', () => {
   it('formats badge tooltip labels with optional stack count', () => {
     expect(
       resolveStatusBadgeTooltipLabel({
-        category: 'blockResonance',
-        kind: 'buff',
+        category: 'emberIgnition',
+        kind: 'debuff',
         remainingRatio: 1,
-        isPassive: true,
+        isPassive: false,
       }),
-    ).toBe('防壁');
+    ).toBe('種火');
 
     expect(
       resolveStatusBadgeTooltipLabel({
-        category: 'blockResonance',
-        kind: 'buff',
+        category: 'emberIgnition',
+        kind: 'debuff',
         remainingRatio: 1,
-        isPassive: true,
+        isPassive: false,
         stackCount: 3,
       }),
-    ).toBe('防壁 ×3');
+    ).toBe('種火 ×3');
   });
 
   it('joins overflow badge tooltip labels for hidden compact badges', () => {

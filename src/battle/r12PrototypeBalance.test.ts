@@ -85,59 +85,65 @@ function runPath(
 }
 
 describe('R12 prototype balance characterization', () => {
-  it('compares no-spend, incremental-spend, and 20-cost save paths', () => {
+  it('compares no-spend, incremental-spend, and save-then-spend paths', () => {
     const catalog = loadGameData().operationPassiveCatalog;
+    // Wave grant is 12; cheap ops are 1, expensive ops are 10 (R12l catalog).
     expect(
       resolveOperationPassiveAcquireCost(
         catalog,
-        'df_guardian_op_wall_aura',
+        'df_guardian_op_block_rate_up',
         0,
       ) +
         resolveOperationPassiveAcquireCost(
           catalog,
-          'at_swordsman_op_armor_break',
+          'at_swordsman_op_interval_reduction',
           0,
         ) +
         resolveOperationPassiveAcquireCost(
           catalog,
-          'at_sorcerer_op_arc_bolt',
+          'at_sorcerer_op_interval_reduction',
+          0,
+        ),
+    ).toBe(3);
+    expect(
+      resolveOperationPassiveAcquireCost(
+        catalog,
+        'df_guardian_op_fortress_stance',
+        0,
+      ) +
+        resolveOperationPassiveAcquireCost(
+          catalog,
+          'at_swordsman_op_physical_damage_up',
+          0,
+        ) +
+        resolveOperationPassiveAcquireCost(
+          catalog,
+          'sp_cleric_op_heal_amount_up',
           0,
         ),
     ).toBe(12);
     expect(
       resolveOperationPassiveAcquireCost(
         catalog,
-        'at_sorcerer_op_ember_dot',
-        1,
-      ) +
-        resolveOperationPassiveAcquireCost(
-          catalog,
-          'sp_cleric_op_triage',
-          0,
-        ),
-    ).toBe(12);
-    expect(
-      resolveOperationPassiveAcquireCost(
-        catalog,
-        'df_guardian_op_brace',
+        'df_guardian_op_fortress_stance',
         0,
       ) +
         resolveOperationPassiveAcquireCost(
           catalog,
-          'at_swordsman_op_armor_break',
+          'at_swordsman_passive_3',
           0,
         ) +
         resolveOperationPassiveAcquireCost(
           catalog,
-          'at_sorcerer_op_arc_bolt',
+          'at_sorcerer_op_ignition_damage',
           0,
         ) +
         resolveOperationPassiveAcquireCost(
           catalog,
-          'at_sorcerer_op_resonant_hit',
-          1,
+          'sp_cleric_op_interval_reduction',
+          0,
         ),
-    ).toBe(24);
+    ).toBe(22);
 
     const baseline = summarize(
       'standard modules / no passives',
@@ -149,32 +155,37 @@ describe('R12 prototype balance characterization', () => {
     );
 
     const incremental = runPath(
-      'standard modules / spend 12 each prep',
+      'standard modules / spend each prep',
       undefined,
       (nextWaveIndex, passivesBySlot) => {
         if (nextWaveIndex === 1) {
-          passivesBySlot[0] = ['df_guardian_op_wall_aura'];
-          passivesBySlot[1] = ['at_swordsman_op_armor_break'];
-          passivesBySlot[3] = ['at_sorcerer_op_arc_bolt'];
+          passivesBySlot[0] = ['df_guardian_op_block_rate_up'];
+          passivesBySlot[1] = ['at_swordsman_op_interval_reduction'];
+          passivesBySlot[3] = ['at_sorcerer_op_interval_reduction'];
         }
         if (nextWaveIndex === 2) {
-          passivesBySlot[2] = ['sp_cleric_op_triage'];
-          passivesBySlot[3].push('at_sorcerer_op_ember_dot');
+          passivesBySlot[0] = [
+            'df_guardian_op_block_rate_up',
+            'df_guardian_op_fortress_stance',
+          ];
+          passivesBySlot[1] = [
+            'at_swordsman_op_interval_reduction',
+            'at_swordsman_op_physical_damage_up',
+          ];
+          passivesBySlot[2] = ['sp_cleric_op_heal_amount_up'];
         }
       },
     );
 
-    const savedForTwenty = runPath(
-      'standard modules / save 24 then spend',
+    const savedThenSpend = runPath(
+      'standard modules / save then spend',
       undefined,
       (nextWaveIndex, passivesBySlot) => {
         if (nextWaveIndex !== 2) return;
-        passivesBySlot[0] = ['df_guardian_op_brace'];
-        passivesBySlot[1] = ['at_swordsman_op_armor_break'];
-        passivesBySlot[3] = [
-          'at_sorcerer_op_arc_bolt',
-          'at_sorcerer_op_resonant_hit',
-        ];
+        passivesBySlot[0] = ['df_guardian_op_fortress_stance'];
+        passivesBySlot[1] = ['at_swordsman_passive_3'];
+        passivesBySlot[3] = ['at_sorcerer_op_ignition_damage'];
+        passivesBySlot[2] = ['sp_cleric_op_interval_reduction'];
       },
     );
 
@@ -199,7 +210,7 @@ describe('R12 prototype balance characterization', () => {
     const rows = [
       baseline,
       incremental,
-      savedForTwenty,
+      savedThenSpend,
       alternateModules,
       ...singleAlternateRows,
     ];

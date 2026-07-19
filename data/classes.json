@@ -21,32 +21,6 @@
     "passiveIds": [
       "df_guardian_passive_1"
     ],
-    "skills": [
-      {
-        "level": 0,
-        "skillIds": [
-          "df_guardian_active_1"
-        ]
-      },
-      {
-        "level": 1,
-        "skillIds": [
-          "df_guardian_active_2"
-        ]
-      },
-      {
-        "level": 10,
-        "skillIds": [
-          "df_guardian_active_3"
-        ]
-      },
-      {
-        "level": 20,
-        "skillIds": [
-          "df_guardian_active_4"
-        ]
-      }
-    ],
     "growthTier": {
       "maxHp": 3,
       "atk": 1,
@@ -218,32 +192,6 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_swordsman_basic_attack",
-    "skills": [
-      {
-        "level": 0,
-        "skillIds": [
-          "at_swordsman_active_1"
-        ]
-      },
-      {
-        "level": 1,
-        "skillIds": [
-          "at_swordsman_active_2"
-        ]
-      },
-      {
-        "level": 10,
-        "skillIds": [
-          "at_swordsman_active_3"
-        ]
-      },
-      {
-        "level": 20,
-        "skillIds": [
-          "at_swordsman_active_4"
-        ]
-      }
-    ],
     "growthTier": {
       "maxHp": 2,
       "atk": 3,
@@ -620,32 +568,6 @@
     "passiveIds": [
       "at_sorcerer_passive_1"
     ],
-    "skills": [
-      {
-        "level": 0,
-        "skillIds": [
-          "at_sorcerer_active_1"
-        ]
-      },
-      {
-        "level": 1,
-        "skillIds": [
-          "at_sorcerer_active_2"
-        ]
-      },
-      {
-        "level": 10,
-        "skillIds": [
-          "at_sorcerer_active_3"
-        ]
-      },
-      {
-        "level": 20,
-        "skillIds": [
-          "at_sorcerer_active_4"
-        ]
-      }
-    ],
     "growthTier": {
       "maxHp": 2,
       "atk": 3,
@@ -757,32 +679,6 @@
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "sp_cleric_basic_attack",
-    "skills": [
-      {
-        "level": 0,
-        "skillIds": [
-          "sp_cleric_active_1"
-        ]
-      },
-      {
-        "level": 1,
-        "skillIds": [
-          "sp_cleric_active_2"
-        ]
-      },
-      {
-        "level": 10,
-        "skillIds": [
-          "sp_cleric_active_3"
-        ]
-      },
-      {
-        "level": 20,
-        "skillIds": [
-          "sp_cleric_active_4"
-        ]
-      }
-    ],
     "growthTier": {
       "maxHp": 2,
       "atk": 2,

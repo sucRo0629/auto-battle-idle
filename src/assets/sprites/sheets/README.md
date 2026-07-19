@@ -138,7 +138,7 @@ sheets/skills/at_assassin_active_1_1.png   # damage ステップ
 ```
 sheets/vfx/
   df_guardian_basic_attack_vfx.png     # 通常攻撃（traits.basicAttackVfx）
-  at_swordsman_active_1_vfx.png          # active main（単 effect）
+  at_ranger_active_1_vfx.png           # active main（単 effect）
   at_assassin_active_1_0_vfx.png       # move 付き active の effect 0
   at_assassin_active_1_1_vfx.png       # damage ステップ main
   at_assassin_active_1_1_vfx_hit.png   # 同上の命中 VFX

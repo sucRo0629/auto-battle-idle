@@ -117,11 +117,6 @@ import {
   clearAllEmberIgnition,
   clearEmberIgnition,
 } from "./emberIgnition.ts";
-import {
-  resolveBlockResonanceConfigForUnit,
-  syncBlockResonanceAuras,
-  tickBlockResonanceDecay,
-} from "./blockResonance.ts";
 import { syncFrontBlockAuras } from "./frontBlockAura.ts";
 import { syncPoisonWeaponAuras } from "./allyBasicAttackDotProc.ts";
 import { mitigateIncomingDamage } from "./incomingDamageMitigation.ts";
@@ -843,13 +838,6 @@ export class BattleEngine {
         }
       },
     );
-    for (const ally of this.players) {
-      if (!ally.isAlive) continue;
-      const config = resolveBlockResonanceConfigForUnit(ally, passives);
-      if (config.maxStacks > 0) {
-        syncBlockResonanceAuras(ally, config);
-      }
-    }
   }
 
   private handlePassiveDispelOnDebuffReceived(target: CombatantState): void {
@@ -2225,14 +2213,6 @@ export class BattleEngine {
       this.gameData.skillRegistry.passives,
       deltaTime,
     );
-    const passives = this.gameData.skillRegistry.passives;
-    for (const ally of this.players) {
-      if (!ally.isAlive) continue;
-      const config = resolveBlockResonanceConfigForUnit(ally, passives);
-      if (config.maxStacks > 0) {
-        tickBlockResonanceDecay(ally, deltaTime, config);
-      }
-    }
     this.syncContinuousPassiveAuras();
     this.tickCooldowns(this.players, deltaTime);
     this.tickCooldowns(this.enemies, deltaTime);

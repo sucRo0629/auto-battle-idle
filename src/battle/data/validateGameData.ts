@@ -199,7 +199,7 @@ const BUFF_SUB_KINDS_SET = new Set<import('../types.ts').BuffSubKind>(
 const DEBUFF_SUB_KINDS_SET = new Set<import('../types.ts').DebuffSubKind>(
   DEBUFF_SUB_KINDS,
 );
-const DOT_FLAVORS_SET = new Set<string>(DOT_FLAVORS);
+const DOT_FLAVORS_SET = new Set<import('../types.ts').DotFlavor>(DOT_FLAVORS);
 
 function parseOptionalDotFlavor(
   obj: Record<string, unknown>,
@@ -1683,13 +1683,6 @@ function parseFireCondition(raw: unknown, context: string): FireCondition {
   if (kind === 'targetBarrierBelowGrant') {
     return { kind: 'targetBarrierBelowGrant' };
   }
-  if (kind === 'blockResonanceStacks') {
-    const min = requireNumber(obj, 'min', context);
-    if (!Number.isInteger(min) || min < 1) {
-      invalidField(context, 'min', 'must be a positive integer');
-    }
-    return { kind: 'blockResonanceStacks', min };
-  }
   if (kind === 'hasDot') {
     return { kind: 'hasDot' };
   }
@@ -2504,7 +2497,6 @@ function effectTypeRequiresTarget(type: string): boolean {
     type !== 'conditionalEffect' &&
     type !== 'counter' &&
     type !== 'basicAttackTransform' &&
-    type !== 'blockResonanceConsume' &&
     type !== 'herbalPotencyConsume' &&
     type !== 'grantNextOutgoingDamage' &&
     type !== 'dotCompress' &&
@@ -3068,16 +3060,6 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     return normalizeSkillEffect({
       type: 'herbalPotencyConsume',
       ...(target !== undefined ? { target } : {}),
-      ...sequenceTiming,
-      ...presentation,
-    });
-  }
-  if (typeRaw === 'blockResonanceConsume') {
-    const presentation = parseOptionalEffectPresentation(obj, context);
-    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
-    return normalizeSkillEffect({
-      type: 'blockResonanceConsume',
-      target: { kind: 'self' },
       ...sequenceTiming,
       ...presentation,
     });
@@ -4737,43 +4719,6 @@ function requirePassiveEffectParams(
         ...(hotDurationSec !== undefined ? { hotDurationSec } : {}),
       };
     }
-    case 'blockResonance': {
-      const maxStacks = requireNumber(obj, 'blockResonanceMaxStacks', context);
-      if (!Number.isInteger(maxStacks) || maxStacks < 1) {
-        invalidField(
-          context,
-          'blockResonanceMaxStacks',
-          'must be a positive integer',
-        );
-      }
-      const damageTakenPerStack = requireNumber(
-        obj,
-        'blockResonanceDamageTakenPerStack',
-        context,
-      );
-      if (damageTakenPerStack < 0 || damageTakenPerStack > 1) {
-        invalidField(
-          context,
-          'blockResonanceDamageTakenPerStack',
-          'must be between 0 and 1',
-        );
-      }
-      const decayIntervalSec = parseOptionalNonNegativeNumber(
-        obj,
-        'blockResonanceDecayIntervalSec',
-        context,
-      );
-      const chance = parseOptionalNonNegativeNumber(obj, 'chance', context);
-      return {
-        ...base,
-        blockResonanceMaxStacks: maxStacks,
-        blockResonanceDamageTakenPerStack: damageTakenPerStack,
-        ...(decayIntervalSec !== undefined
-          ? { blockResonanceDecayIntervalSec: decayIntervalSec }
-          : {}),
-        ...(chance !== undefined ? { chance } : {}),
-      };
-    }
     case 'lastStandInvulnerable':
       return { ...base };
     case 'frontBlockAura': {
@@ -5328,90 +5273,6 @@ function requirePassiveEffectParams(
         ...base,
         enemyDamageTakenMultiplier,
         ...(auraConditions !== undefined ? { auraConditions } : {}),
-      };
-    }
-    case 'seedFlameOnActiveHit': {
-      const seedFlameMaxStacks = parseOptionalPositiveNumber(
-        obj,
-        context,
-        'seedFlameMaxStacks',
-      );
-      const seedFlameDurationSec = parseOptionalPositiveNumber(
-        obj,
-        context,
-        'seedFlameDurationSec',
-      );
-      const seedFlameDotAtkScale =
-        obj.seedFlameDotAtkScale === undefined
-          ? {}
-          : { seedFlameDotAtkScale: requireNumber(obj, 'seedFlameDotAtkScale', context) };
-      const blazingFlameDotAtkScale =
-        obj.blazingFlameDotAtkScale === undefined
-          ? {}
-          : {
-              blazingFlameDotAtkScale: requireNumber(
-                obj,
-                'blazingFlameDotAtkScale',
-                context,
-              ),
-            };
-      const blazingFlameMagicTakenPerStack =
-        obj.blazingFlameMagicTakenPerStack === undefined
-          ? {}
-          : {
-              blazingFlameMagicTakenPerStack: requireNumber(
-                obj,
-                'blazingFlameMagicTakenPerStack',
-                context,
-              ),
-            };
-      const blazingFlameMaxStacksDefault = parseOptionalPositiveNumber(
-        obj,
-        context,
-        'blazingFlameMaxStacksDefault',
-      );
-      return {
-        ...base,
-        ...seedFlameMaxStacks,
-        ...seedFlameDurationSec,
-        ...seedFlameDotAtkScale,
-        ...blazingFlameDotAtkScale,
-        ...blazingFlameMagicTakenPerStack,
-        ...blazingFlameMaxStacksDefault,
-      };
-    }
-    case 'bonusActiveOnHit': {
-      const bonusActiveSkillId = requireString(
-        obj,
-        'bonusActiveSkillId',
-        context,
-      );
-      return { ...base, bonusActiveSkillId };
-    }
-    case 'blazingFlameDetonate': {
-      const blazingFlameDetonateSpreadRadiusPx =
-        obj.blazingFlameDetonateSpreadRadiusPx === undefined
-          ? 50
-          : requireNumber(
-              obj,
-              'blazingFlameDetonateSpreadRadiusPx',
-              context,
-            );
-      const blazingFlameDetonatePerSeedScale =
-        obj.blazingFlameDetonatePerSeedScale === undefined
-          ? 0.5
-          : requireNumber(obj, 'blazingFlameDetonatePerSeedScale', context);
-      const blazingFlameDetonateMultiplier =
-        obj.blazingFlameDetonateMultiplier === undefined
-          ? 1.3
-          : requireNumber(obj, 'blazingFlameDetonateMultiplier', context);
-      const blazingFlameUncap = obj.blazingFlameUncap === true;
-      return {
-        ...base,
-        blazingFlameDetonateSpreadRadiusPx,
-        blazingFlameDetonatePerSeedScale,
-        blazingFlameDetonateMultiplier,
-        ...(blazingFlameUncap ? { blazingFlameUncap: true } : {}),
       };
     }
     case 'healReservation': {
@@ -5990,13 +5851,15 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       obj.passiveIds === undefined
         ? []
         : requireStringArray(obj, 'passiveIds', context);
-    const skills = parseClassSkills(obj.skills, context);
-    if (skills.length === 0) {
-      throw new Error(`${context}.skills must not be empty`);
-    }
-    const hasLevelZero = skills.some((entry) => entry.level === 0);
-    if (!hasLevelZero) {
-      throw new Error(`${context}.skills must include a level 0 entry`);
+    // R12l: CombatModule 兵科は Lv active を持たないため skills 省略 / 空配列を許可。
+    // 対象外兵科は従来どおり non-empty + level 0 必須。
+    const skills =
+      obj.skills === undefined ? [] : parseClassSkills(obj.skills, context);
+    if (skills.length > 0) {
+      const hasLevelZero = skills.some((entry) => entry.level === 0);
+      if (!hasLevelZero) {
+        throw new Error(`${context}.skills must include a level 0 entry`);
+      }
     }
 
     const jobTier = parseJobTier(obj.jobTier, context);
@@ -6300,46 +6163,6 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
         maxCharges = maxChargesRaw;
       }
     }
-    const blockResonanceStanceDurationBaseSec = parseOptionalNonNegativeNumber(
-      obj,
-      'blockResonanceStanceDurationBaseSec',
-      context,
-    );
-    const blockResonanceStanceDamageTakenPerStack = parseOptionalNonNegativeNumber(
-      obj,
-      'blockResonanceStanceDamageTakenPerStack',
-      context,
-    );
-    const blockResonanceStanceDefPerStack = parseOptionalNonNegativeNumber(
-      obj,
-      'blockResonanceStanceDefPerStack',
-      context,
-    );
-    const blockResonanceStanceBlockPerStack = parseOptionalNonNegativeNumber(
-      obj,
-      'blockResonanceStanceBlockPerStack',
-      context,
-    );
-    const blockResonanceOnBlockDamage = obj.blockResonanceOnBlockDamage;
-    let parsedBlockResonanceOnBlockDamage:
-      | import('../types.ts').ResourceAmountSpec
-      | undefined;
-    if (blockResonanceOnBlockDamage !== undefined) {
-      parsedBlockResonanceOnBlockDamage = parseResourceAmountSpec(
-        blockResonanceOnBlockDamage,
-        `${context}.blockResonanceOnBlockDamage`,
-      );
-    }
-    const blockResonanceOnBlockKnockbackRadiusPx = parseOptionalNonNegativeNumber(
-      obj,
-      'blockResonanceOnBlockKnockbackRadiusPx',
-      context,
-    );
-    const blockResonanceOnBlockKnockbackDistancePx = parseOptionalNonNegativeNumber(
-      obj,
-      'blockResonanceOnBlockKnockbackDistancePx',
-      context,
-    );
     if (firePolicy === 'smart' && !fireConditions?.length) {
       invalidField(
         context,
@@ -6392,27 +6215,6 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       ...(fireConditionMatch !== undefined ? { fireConditionMatch } : {}),
       ...(fireTimeoutSec !== undefined ? { fireTimeoutSec } : {}),
       ...(maxCharges !== undefined ? { maxCharges } : {}),
-      ...(blockResonanceStanceDurationBaseSec !== undefined
-        ? { blockResonanceStanceDurationBaseSec }
-        : {}),
-      ...(blockResonanceStanceDamageTakenPerStack !== undefined
-        ? { blockResonanceStanceDamageTakenPerStack }
-        : {}),
-      ...(blockResonanceStanceDefPerStack !== undefined
-        ? { blockResonanceStanceDefPerStack }
-        : {}),
-      ...(blockResonanceStanceBlockPerStack !== undefined
-        ? { blockResonanceStanceBlockPerStack }
-        : {}),
-      ...(parsedBlockResonanceOnBlockDamage !== undefined
-        ? { blockResonanceOnBlockDamage: parsedBlockResonanceOnBlockDamage }
-        : {}),
-      ...(blockResonanceOnBlockKnockbackRadiusPx !== undefined
-        ? { blockResonanceOnBlockKnockbackRadiusPx }
-        : {}),
-      ...(blockResonanceOnBlockKnockbackDistancePx !== undefined
-        ? { blockResonanceOnBlockKnockbackDistancePx }
-        : {}),
       ...(stageTriggerLimit !== undefined ? { stageTriggerLimit } : {}),
       ...(arenaDominanceDurationSec !== undefined
         ? { arenaDominanceDurationSec }

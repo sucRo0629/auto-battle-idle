@@ -105,7 +105,7 @@ Wave ごとに各兵科へ **2 方式** を選択する。全兵科を「単体 
 
 詳細と M1 兵科ごとの方式 **候補** は [classes-and-skills.md §M1 兵科 — 新仕様候補](classes-and-skills.md#m1-兵科--新仕様候補r2)。
 
-**R9.5a 注記（2026-07-13）:** CombatModule が解決された Combatant（`basic` slot の skillId が `combatModuleRegistry` に存在）では、legacy active は **runtime に cooldown 登録せず** `runUnitSkills` からも発動しない。`learnedActiveIds` と JSON データは移行期間中維持。legacy passive・作戦内 passive は従来どおり。実装: `resolveRuntimeActiveSkillIds`（`src/progression/battleActiveSkills.ts`）。
+**R9.5a 注記（2026-07-13 / R12l 3B 更新）:** CombatModule が解決された Combatant（`basic` slot の skillId が `combatModuleRegistry` に存在）では、legacy active は **runtime に cooldown 登録せず** `runUnitSkills` からも発動しない。**R12l 対象 4 兵科**（`df_guardian` / `at_swordsman` / `at_sorcerer` / `sp_cleric`）では旧 active JSON・`classes.json` の `skills[]` 参照を **物理削除済み**（`learnedActiveIds` は空、`*_basic_attack` のみ残置）。他兵科の legacy active JSON は未移行のまま残りうる。legacy passive・作戦内 passive は従来どおり。実装: `resolveRuntimeActiveSkillIds`（`src/progression/battleActiveSkills.ts`）。
 
 **R9.5b 注記（HUD 表示との整合）:** 上記 runtime 停止判定と同一の `basicSkillId` 由来判定を用い、CombatModule 兵科の Party HUD からは legacy active 2×2 ゲージを非表示にする。戦闘中ステータスの攻撃間隔表示（秒）は選択中 CombatModule の `attackIntervalSec` を正本とし、legacy `attackSpeedTier` を新表示の正本にしない。表示詳細は [battle-field.md §7.1.1 / §8.7.1](battle-field.md)。
 
@@ -157,7 +157,7 @@ Wave ごとに各兵科へ **2 方式** を選択する。全兵科を「単体 
 - UI 表示
 - 同種 DoT と異種 DoT の扱い
 
-§Legacy [DoT 圧縮・延長](#dot-圧縮延長持続罠狩猟士-field-flow)・[種火 / 熾火（legacy / 移行待ち）](#種火--熾火legacy-移行待ち魔術師-at_sorcerer) は現行実装の説明。R12l の production path は下記 **種火 / 発火** を正本とする。
+§Legacy [DoT 圧縮・延長](#dot-圧縮延長持続罠狩猟士-field-flow) は狩猟士向け現行実装の説明。魔術師の種火は下記 **種火 / 発火**（`emberIgnition`）を正本とする。旧種火 DoT / 熾火 / `sorcererFlame.ts` は R12l 3B で削除済み。
 
 ### 一時バフ / デバフ
 
@@ -736,7 +736,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 複数ステを異なる倍率/固定値で上げるパッシブ buff は `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1ステのみの場合は従来の `buffStat` + `buffMultiplier` / `buffFlatBonus` でも可（実装: `parseStatBuffModifiers`）。
 
-**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**20×20px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（20×20、スロットと同一、`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）を重ね、その上に効果アイコン（`{category}.png`、**12×12**、スロット内上下左右中央）を重ねる。`isPassive` 由来バッジは五角形・効果アイコン・残時間暗化・累積数を含め **全体を半透明**（`STATUS_BADGE_PASSIVE_ALPHA = 0.55`）で描画する。効果アイコンの位置は buff / debuff 共通。五角形のみ **buff 系を Y − 2px**、**debuff 系は Y 0**（スロット基準。debuff 形状の視覚バランス用）。行の描画高さは **24px**（スロット 20 + 上下パディング 2px ずつ、buff 五角形のはみ出し用）。残時間の暗化はオフスクリーン合成後に **alpha > 0 のピクセルのみ**上端から暗化（透明部分は変更しない）。累積数は 20×20 スロット枠基準。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。**同一 `StatusDisplayCategory` に passive と active が混在する場合は active 表示**（不透明・active 五角形）を優先する。アイコン縁は黒で統一（stat 系 hp/atk/def/res/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride` / `poisonWeapon`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `windMark` / `earthMark`（印術師・Phase 7b 以降）/ `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。`hp` stat buff/debuff は `hp.png`（`baseMaxHp` 基準）。
+**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**20×20px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（20×20、スロットと同一、`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）を重ね、その上に効果アイコン（`{category}.png`、**12×12**、スロット内上下左右中央）を重ねる。`isPassive` 由来バッジは五角形・効果アイコン・残時間暗化・累積数を含め **全体を半透明**（`STATUS_BADGE_PASSIVE_ALPHA = 0.55`）で描画する。効果アイコンの位置は buff / debuff 共通。五角形のみ **buff 系を Y − 2px**、**debuff 系は Y 0**（スロット基準。debuff 形状の視覚バランス用）。行の描画高さは **24px**（スロット 20 + 上下パディング 2px ずつ、buff 五角形のはみ出し用）。残時間の暗化はオフスクリーン合成後に **alpha > 0 のピクセルのみ**上端から暗化（透明部分は変更しない）。累積数は 20×20 スロット枠基準。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。**同一 `StatusDisplayCategory` に passive と active が混在する場合は active 表示**（不透明・active 五角形）を優先する。アイコン縁は黒で統一（stat 系 hp/atk/def/res/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride` / `poisonWeapon`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `emberIgnition` / `windMark` / `earthMark`（印術師・Phase 7b 以降）/ `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。`hp` stat buff/debuff は `hp.png`（`baseMaxHp` 基準）。
 
 **簡易表示 vs 詳細表示:**
 
@@ -754,21 +754,11 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 | ---- | ---- |
 | 1 | CC debuff: `stun`, `moveLock`, `damageDelay` |
 | 2 | DEF/RES debuff のみ（`category` が def/res かつ `kind` debuff） |
-| 3 | 継続ダメ・被ダメ悪化: `dot`, `bleed`, `poison`, `seedFlame`, `blazingFlame`（debuff）、`damageIncrease`（`kind` debuff のみ） |
+| 3 | 継続ダメ・被ダメ悪化: `dot`, `bleed`, `poison`, `emberIgnition`（debuff）、`damageIncrease`（`kind` debuff のみ） |
 | 4 | その他 debuff |
-| 5 | buff（passive buff 含む: `blockResonance`, `herbalPotency`, `duelistPride` 等）。`damageReduction` buff も Tier 5 |
+| 5 | buff（passive buff 含む: `herbalPotency`, `duelistPride` 等）。`damageReduction` buff も Tier 5 |
 
 実装: `statusEffectDisplay.ts`（compact 選択）, `statusBadgeRenderer.ts`（`drawCompactStatusBadgeRow`, `drawStatusBadgeWrap`）, `StatusIconRegistry.ts`。エディタ確認: `editor.html` → 状態アイコン（HUD 同等 ×1）。詳細 UI は [battle-field.md §7](battle-field.md#7-戦闘中統計-ui)。
-
-### 迎撃態勢（`blockResonance`）
-
-実装: `src/battle/blockResonance.ts`
-
-- passive effect `blockResonance`: 常時 block 率（`chance`）+ 物理直接ダメージの **block 成功** で専用 stack +1（`blockResonanceMaxStacks` 上限）
-- stack ごとに自己 `damageTaken` 軽減（`blockResonanceDamageTakenPerStack`）。HUD overlay `blockResonance`（`displayName`: **防壁**、stacks 表示）
-- `blockResonanceDecayIntervalSec` ごとに stack -1（`herbalPotency` 蓄積とは別タイマー）
-- active `blockResonanceConsume`（城塞の構え）: 全 stack 消費 → overlay `blockResonanceStance`（持続 `blockResonanceStanceDurationBaseSec + n`）。`useDurationSec` も同秒数。態勢中 block 成功で半径内敵へ `blockResonanceOnBlockDamage` + knockback
-- smart 発動条件: `fireConditions` に `{ kind: "blockResonanceStacks", min: 1 }`
 
 ### 無敵（overlay `invulnerable`）
 
@@ -947,7 +937,7 @@ A4 **早鳴りの印** は戦場の全乾印・坤印の残り時間を短縮し
 
 | 操作 | 対象 | 効果 |
 | ---- | ---- | ---- |
-| **dot 圧縮**（`dotCompress`） | 対象の全 dot（`dotCompressImmune` 除く） | 残り `durationSec` を `compressRatio` で短縮。tick 総ダメは `1/compressRatio` 方向に増幅。熾火（`dotFlavor: blazingFlame`）は圧縮対象外 |
+| **dot 圧縮**（`dotCompress`） | 対象の全 dot（`dotCompressImmune` 除く） | 残り `durationSec` を `compressRatio` で短縮。tick 総ダメは `1/compressRatio` 方向に増幅 |
 | **dot 延長**（`dotExtend`） | 対象の全 dot | 残り duration / tick 予算を `extendRatio` で延長（新規 dot 付与ではない） |
 | **placedField** | `clusterCenter` 配置 + 半径 | 進入時 `enterEffects`、滞在 tick で `stayEffects`。A3 は滞在ごとに圧縮比率 +0.05 累積 |
 | **dotHarvest** | 単体 | 各 dot 残ダメの `harvestRatio` を即時結算（dot は消費しない） |
@@ -959,7 +949,7 @@ A4 **早鳴りの印** は戦場の全乾印・坤印の残り時間を短縮し
 
 ### 種火 / 発火（R12l production・魔術師 `at_sorcerer`）
 
-実装: `src/battle/emberIgnition.ts`。overlay は `emberIgnition`。**旧 `seedFlameOnActiveHit` / `blazingFlameDetonate` は production path では使わず、JSON にのみ移行待ち legacy material として残す。**
+実装: `src/battle/emberIgnition.ts`。overlay は `emberIgnition`。JA 用語「種火」は `emberIgnition` が所有。旧 `seedFlame` / `blazingFlame` DoT・`sorcererFlame.ts`・`seedFlameOnActiveHit` / `blazingFlameDetonate` は **R12l 3B で削除済み**（production / schema / glossary に残さない）。
 
 | 状態 | stack 上限 | その他 |
 | ---- | ---------- | ------ |
@@ -969,26 +959,6 @@ A4 **早鳴りの印** は戦場の全乾印・坤印の残り時間を短縮し
 **再帰禁止:** 発火から新しい種火付与、連続発火、redirect 的派生処理は起こさない。敵対関係の対象にのみ付与（味方→敵 / 敵→味方）。
 
 **余剰転送（療養師）:** `excessHealRedirect` の単体率 / 範囲率は **回復行動の形状**（`targetShape` / `effectRange.form`）で決める。有効対象が 1 人でも範囲行動なら `redirectScaleMulti`。1 行動の余剰を集約して 1 回だけ転送。
-
-### 種火 / 熾火（legacy / 移行待ち・魔術師 `at_sorcerer`）
-
-実装: `src/battle/sorcererFlame.ts`。overlay は `dot` + `dotFlavor: seedFlame | blazingFlame`。DoT 数値の既定はコード内定数。`seedFlameOnActiveHit` passive の各フィールドで上書き可（エディタ編集可）。
-
-| 状態 | stack 上限 | DoT（1 stack / tick） | その他 |
-| ---- | ---------- | --------------------- | ------ |
-| **種火** | 5（`seedFlameMaxStacks`） | 付与者 ATK×0.05 magic / 10s（`seedFlameDotAtkScale` / `seedFlameDurationSec`。リフレッシュ） | max 到達で熾火 +1 へ変換。熾火が上限なら種火は max のまま据え置き |
-| **熾火** | P4 未習得: 1（`blazingFlameMaxStacksDefault`） / P4 後: 無制限 | 付与者 ATK×0.35 magic / tick（`blazingFlameDotAtkScale`） | 被**魔法**ダメ +10%/stack（`blazingFlameMagicTakenPerStack`。`damageTaken` stat とは分離）。`dotCompressImmune` |
-
-**active Hit のみ**（`slotKind: active`）で P2/P3/P4 が発動。basic では種火付与・連なる炎・花開く炎は走らない。
-
-| 枠 | passive / active | 発火 |
-| ---- | ---------------- | ---- |
-| P2 焼き尽くす熾火 | `seedFlameOnActiveHit` | active damage Hit ごとに種火 +1 |
-| P3 連なる炎 | `bonusActiveOnHit` + `bonusActiveSkillId` | active Hit 後 `at_sorcerer_active_1` を CD 消費なし追撃。追撃から P3 は再帰しない |
-| P4 花開く炎 | `blazingFlameDetonate` | 熾火≥1 の対象へ active Hit ごとに起爆: 種火全消費 → 熾火 -1 → 爆発 `(ATK + 消費種火×N)×1.3`（N 仮 = ATK×0.5）→ 対象 + 半径 50px 内へ種火 +1 |
-| A4 燎原 | `targetShape: poolEach` + `debuffTags: [seedFlame]` | 種火 overlay 敵各 1 回 magic single |
-
-multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発火する。
 
 ### 通常攻撃変形（`basicAttackTransform`）
 

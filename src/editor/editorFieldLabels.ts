@@ -20,9 +20,6 @@ export const EDITOR_FIELD_LABELS = {
   "maxCharges 加算": "最大チャージ加算",
   ignoredDefBonusScale: "DEF無視ボーナス倍率",
   "bonusBasicAttackHpRatio（省略可）": "通常攻撃 HP割合（省略可）",
-  blockResonanceMaxStacks: "block 共鳴 stack 上限",
-  blockResonanceDamageTakenPerStack: "stack あたり被ダメ軽減",
-  blockResonanceDecayIntervalSec: "stack 減衰間隔（秒）",
   frontBlockAuraMagicBlock: "前列魔法 block 率",
   lastStandRecoveryHpRatio: "復活 HP 割合",
   lastStandRecoverySelfDamageTakenMultiplier: "自己被ダメ倍率",
@@ -37,17 +34,6 @@ export const EDITOR_FIELD_LABELS = {
   lastStandGutsEndKnockbackPx: "終了時ノックバック（px）",
   bloodlustBlockChance: "block 確率",
   bloodlustAtkBuffCurveExponent: "ATKバフ曲線指数",
-  seedFlameMaxStacks: "種火 stack 上限",
-  seedFlameDurationSec: "種火 効果時間（秒）",
-  seedFlameDotAtkScale: "種火 DoT ATK倍率",
-  blazingFlameDotAtkScale: "熾火 DoT ATK倍率",
-  blazingFlameMagicTakenPerStack: "熾火 被魔法ダメ加算（/stack）",
-  blazingFlameMaxStacksDefault: "熾火 stack 上限（P4未習得）",
-  bonusActiveSkillId: "追撃スキル ID",
-  blazingFlameDetonateSpreadRadiusPx: "起爆 spread 半径（px）",
-  blazingFlameDetonatePerSeedScale: "起爆 種火1 stack ATK倍率",
-  blazingFlameDetonateMultiplier: "起爆 ダメ倍率",
-  blazingFlameUncap: "熾火上限解除",
   dotCompressRatio: "DoT圧縮率",
   debuffDotDurationSec: "DoT秒数",
   debuffDotDamageType: "DoTダメージ種",
@@ -79,6 +65,8 @@ export const EDITOR_FIELD_LABELS = {
   "herbalPotencyConstitutionHpMultipliers（カンマ区切り）":
     "頑健 HP倍率（カンマ区切り）",
   herbalPotencyConstitutionDisplayName: "頑健 表示名",
+  emberIgnitionThreshold: "種火 発火閾値",
+  emberIgnitionAtkScale: "発火 ATK倍率",
 } as const satisfies Record<string, string>;
 
 export type EditorFieldLabelKey = keyof typeof EDITOR_FIELD_LABELS;

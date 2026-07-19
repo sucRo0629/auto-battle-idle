@@ -397,47 +397,11 @@ export function phraseWardBarrierBuff(
   return `${ward} ×${stacks}（${reductionLabel}）`;
 }
 
-export function phraseSeedFlameStackOnHit(): string {
-  return L() === "en"
-    ? `Stacks ${skillTerm("seedFlame")} on the enemy for each hit from an attack skill`
-    : `敵に攻撃スキルが1回命中するごとに「${skillTerm("seedFlame")}」を1スタックする`;
-}
 
-export function phraseSeedFlameDotPerStack(
-  durationSec: number,
-  pct: string,
-): string {
-  if (L() === "en") {
-    return `${skillTerm("seedFlame")}: For each stack, deals ${pct} ${skillStat("atk")} as magic damage every second for ${durationSec}s`;
-  }
-  return `${skillTerm("seedFlame")}：1スタックごとに${durationSec}秒間毎秒攻撃力の${pct}の魔法ダメージを与える`;
-}
 
-export function phraseBlazingFlameDotPerStack(pct: string): string {
-  if (L() === "en") {
-    return `${skillTerm("blazingFlame")}: For each stack, deals ${pct} ${skillStat("atk")} as magic damage every second indefinitely`;
-  }
-  return `${skillTerm("blazingFlame")}：1スタックごとに無期限で毎秒攻撃力の${pct}の魔法ダメージを与える`;
-}
 
-export function phraseBlazingFlameMagicTakenPerStack(pct: string): string {
-  return L() === "en"
-    ? `Additionally, +${pct} magic damage taken per stack`
-    : `さらに1スタックごとに魔法攻撃の被ダメージを${pct}増加させる`;
-}
 
-export function phraseMaxStacks(count: number): string {
-  return L() === "en" ? `Max stacks: ${count}` : `最大スタック数：${count}`;
-}
 
-export function phraseSeedFlameUpgradeToBlazing(
-  blazingMaxStacks: number,
-): string {
-  if (L() === "en") {
-    return `At max stacks, applies 1 ${skillTerm("blazingFlame")}. If ${skillTerm("blazingFlame")} is capped at ${blazingMaxStacks}, Seed Flame stays at max.`;
-  }
-  return `最大スタック数到達時に「${skillTerm("blazingFlame")}」を1スタック付与する。熾火が上限（${blazingMaxStacks}）のときは種火は最大のまま据え置き。`;
-}
 
 export function phraseAtkBasedHealAmount(pct: string): string {
   if (L() === "en") {

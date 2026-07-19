@@ -163,18 +163,6 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
       "After taking damage, if HP falls below a threshold, consumes one stack to heal instantly.",
     aliases: ["Healing Echo"],
   },
-  blockResonance: {
-    title: "Bulwark",
-    description:
-      "A buff stacked by the Guardian's Intercept Stance on successful blocks.\nEach stack grants damage reduction.",
-    aliases: ["Bulwark"],
-  },
-  blockResonanceStance: {
-    title: "Citadel Stance",
-    description:
-      "Granted by consuming all Bulwark stacks. While active, successful blocks damage and knock back nearby enemies.",
-    aliases: ["Citadel Stance"],
-  },
   herbalPotency: {
     title: "Herbal Potency",
     description:
@@ -223,22 +211,11 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
       "While HP is above a ratio threshold, amplifies instant heals and HoT ticks for the Gladiator. Weaker self-heal boost than Arena Law.",
     aliases: ["Duelist's Pride"],
   },
-  seedFlame: {
-    title: "Seed Flame",
-    description:
-      "Magic DoT.\n\n· Magic damage equal to 5% ATK per second\n· Lasts 10s\n· Max 5 stacks\n\nAt max stacks, further applications convert to Blazing Flame instead.",
-    aliases: ["Seed Flame"],
-  },
   emberIgnition: {
     title: "Seed Flame",
     description:
       "Stack status from the Sorcerer's CombatModule hits (R12l).\n\n· Does not expire over time\n· At the required stacks, converts into Ignition damage and consumes all stacks\n· Clears on target death, Wave end, or Ignition",
-  },
-  blazingFlame: {
-    title: "Blazing Flame",
-    description:
-      "Magic DoT upgraded from Seed Flame.\n\n· Magic damage equal to 35% ATK per second (indefinite)\n· +10% magic damage taken per stack\n· Max 1 stack",
-    aliases: ["Blazing Flame"],
+    aliases: ["Seed Flame"],
   },
   ballistaMark: { title: "Barrage Mark" },
   allyAttackFollowUp: {

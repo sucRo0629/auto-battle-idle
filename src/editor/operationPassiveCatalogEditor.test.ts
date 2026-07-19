@@ -40,15 +40,18 @@ describe('operation passive catalog (R9d)', () => {
     const gameData = loadGameData();
     expect(gameData.operationPassiveCatalog.passiveAcquireCost).toBe(1);
     expect(gameData.operationPassiveCatalog.waveClearResourceGrant).toBe(12);
-    expect(gameData.operationPassiveCatalog.sameClassStackStep).toBe(1);
-    expect(gameData.operationPassiveCatalog.unlockLevelCostTable).toEqual({
-      '0': 1,
-      '10': 10,
-      '20': 20,
-    });
+    // R12l: 同兵科加算なし（sameClassStackStep=0）。cost 正本は fixedCostByPassiveId。
+    expect(gameData.operationPassiveCatalog.sameClassStackStep).toBe(0);
+    expect(gameData.operationPassiveCatalog.unlockLevelCostTable).toEqual({});
     expect(
       gameData.operationPassiveCatalog.candidatesByClass.df_guardian,
-    ).toEqual(['df_guardian_op_brace', 'df_guardian_op_wall_aura', 'df_guardian_op_last_stand']);
+    ).toEqual([
+      'df_guardian_op_block_rate_up',
+      'df_guardian_op_frontline_maintenance',
+      'df_guardian_passive_2',
+      'df_guardian_op_fortress_stance',
+      'df_guardian_passive_4',
+    ]);
   });
 
   it('parseOperationPassiveCatalog rejects duplicate passive ids per class', () => {
@@ -57,7 +60,7 @@ describe('operation passive catalog (R9d)', () => {
         passiveAcquireCost: 1,
         waveClearResourceGrant: 1,
         candidatesByClass: {
-          df_guardian: ['df_guardian_op_brace', 'df_guardian_op_brace'],
+          df_guardian: ['df_guardian_op_block_rate_up', 'df_guardian_op_block_rate_up'],
         },
       }),
     ).toThrow(/duplicate/i);
@@ -70,11 +73,11 @@ describe('operation passive catalog (R9d)', () => {
       sameClassStackStep: 1,
       unlockLevelCostTable: { '0': 1, '10': 2, '20': 3 },
       costUnlockLevelByPassiveId: {
-        df_guardian_op_brace: 0,
+        df_guardian_op_block_rate_up: 0,
         unused_passive: 10,
       },
       candidatesByClass: {
-        df_guardian: ['df_guardian_op_brace', 'df_guardian_op_brace'],
+        df_guardian: ['df_guardian_op_block_rate_up', 'df_guardian_op_block_rate_up'],
         at_swordsman: [],
       },
     });
@@ -83,9 +86,10 @@ describe('operation passive catalog (R9d)', () => {
       waveClearResourceGrant: 3,
       sameClassStackStep: 1,
       unlockLevelCostTable: { '0': 1, '10': 2, '20': 3 },
-      costUnlockLevelByPassiveId: { df_guardian_op_brace: 0 },
+      costUnlockLevelByPassiveId: { df_guardian_op_block_rate_up: 0 },
+      fixedCostByPassiveId: {},
       candidatesByClass: {
-        df_guardian: ['df_guardian_op_brace'],
+        df_guardian: ['df_guardian_op_block_rate_up'],
       },
     });
   });
@@ -93,10 +97,10 @@ describe('operation passive catalog (R9d)', () => {
   it('editor draft helpers update class candidates', () => {
     const base = parseOperationPassiveCatalog(operationPassiveCatalogJson);
     const next = setOperationPassiveCandidatesForClassDraft(base, 'df_guardian', [
-      'df_guardian_op_brace',
+      'df_guardian_op_block_rate_up',
     ]);
     expect(getOperationPassiveCandidatesForClassDraft(next, 'df_guardian')).toEqual(
-      ['df_guardian_op_brace'],
+      ['df_guardian_op_block_rate_up'],
     );
     expect(validateOperationPassiveCatalogDraftForSave(next)).toBeNull();
   });
@@ -105,8 +109,8 @@ describe('operation passive catalog (R9d)', () => {
     const gameData = loadGameData();
     const passives = Object.values(gameData.skillRegistry.passives);
     const ids = listPassiveIdsForClassStem(passives, 'df_guardian');
-    expect(ids).toContain('df_guardian_op_brace');
-    expect(ids).toContain('df_guardian_op_brace');
+    expect(ids).toContain('df_guardian_op_block_rate_up');
+    expect(ids).toContain('df_guardian_op_block_rate_up');
     expect(ids.every((id) => id.startsWith('df_guardian_passive_') || id.startsWith('df_guardian_op_'))).toBe(true);
   });
 
@@ -116,15 +120,17 @@ describe('operation passive catalog (R9d)', () => {
     expect(
       getOperationPassiveCandidatesForClass(catalog, 'df_guardian'),
     ).toEqual([
-      'df_guardian_op_brace',
-      'df_guardian_op_wall_aura',
-      'df_guardian_op_last_stand',
+      'df_guardian_op_block_rate_up',
+      'df_guardian_op_frontline_maintenance',
+      'df_guardian_passive_2',
+      'df_guardian_op_fortress_stance',
+      'df_guardian_passive_4',
     ]);
     expect(
       isOperationPassiveCandidateForClass(
         catalog,
         'df_guardian',
-        'df_guardian_op_brace',
+        'df_guardian_op_block_rate_up',
       ),
     ).toBe(true);
     expect(
@@ -198,10 +204,10 @@ describe('editor server-side validation payload (R9d regression)', () => {
     const catalog = parseOperationPassiveCatalog({
       ...operationPassiveCatalogJson,
       candidatesByClass: {
-        df_guardian: ['df_guardian_op_brace', catalogOnlyPassive.id],
+        df_guardian: ['df_guardian_op_block_rate_up', catalogOnlyPassive.id],
       },
       costUnlockLevelByPassiveId: {
-        df_guardian_op_brace: 0,
+        df_guardian_op_block_rate_up: 0,
         [catalogOnlyPassive.id]: 10,
       },
     });
@@ -254,7 +260,7 @@ describe('OperationPassiveCatalogEditorStep (R9d UI)', () => {
 
     expect(host.textContent).toContain('付与条件');
     expect(host.textContent).toContain('兵科ごとの取得候補');
-    expect(host.textContent).toContain('df_guardian_op_brace');
+    expect(host.textContent).toContain('df_guardian_op_block_rate_up');
     expect(host.textContent).toContain('参照プレビュー');
     expect(host.textContent).toContain('df_guardian:');
     expect(host.textContent).toContain('at_swordsman:');

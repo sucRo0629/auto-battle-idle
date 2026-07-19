@@ -36,13 +36,6 @@ describe("segmentTextByGameTerms", () => {
     expect(
       wardSegments.some((s) => s.kind === "term" && s.termId === "wardBarrier")
     ).toBe(true);
-
-    const resonanceSegments = segmentTextByGameTerms("防壁≥3", "ja");
-    expect(
-      resonanceSegments.some(
-        (s) => s.kind === "term" && s.termId === "blockResonance",
-      )
-    ).toBe(true);
   });
 
   it("separates sigilist marks and arenaMark ids", () => {
@@ -150,7 +143,7 @@ describe("segmentTextByGameTerms", () => {
     expect(segmentsToPlainText(segments)).toBe(text);
   });
 
-  it("links seedFlame in body text when aliases are registered", () => {
+  it("links emberIgnition as 種火 in body text", () => {
     expect(
       segmentTextByGameTerms(
         "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
@@ -158,36 +151,40 @@ describe("segmentTextByGameTerms", () => {
       ),
     ).toEqual([
       { kind: "text", text: "敵に攻撃スキルが1回命中するごとに「" },
-      { kind: "term", termId: "seedFlame", matchedText: "種火" },
+      { kind: "term", termId: "emberIgnition", matchedText: "種火" },
       { kind: "text", text: "」を1スタックする" },
     ]);
   });
 
-  it("does not give emberIgnition the shared「種火」alias (HUD uses statusCategory)", async () => {
+  it("emberIgnition owns 種火 for both HUD category and plain-text alias", async () => {
     const { getGameTermEntry, resolveGameTermIdForStatusCategory } =
       await import("./gameTermGlossary.ts");
     const ember = getGameTermEntry("emberIgnition");
-    expect(ember?.aliases?.ja ?? []).not.toContain("種火");
+    expect(ember?.aliases?.ja).toContain("種火");
     expect(resolveGameTermIdForStatusCategory("emberIgnition")).toBe(
       "emberIgnition",
     );
-    // 文中「種火」は legacy seedFlame のみ。登録順で emberIgnition に奪われない
     const termSeg = segmentTextByGameTerms("種火", "ja").find(
       (s) => s.kind === "term",
     );
     expect(termSeg).toEqual({
       kind: "term",
-      termId: "seedFlame",
+      termId: "emberIgnition",
       matchedText: "種火",
     });
   });
 
-  it("registers seedFlame with description and aliases", async () => {
-    const { getGameTermEntry } = await import("./gameTermGlossary.ts");
-    const entry = getGameTermEntry("seedFlame");
-    expect(entry?.description?.ja).toContain("魔法ダメージ");
+  it("registers emberIgnition with new-spec description", async () => {
+    const { getGameTermEntry, GAME_TERM_ENTRIES } = await import(
+      "./gameTermGlossary.ts"
+    );
+    const entry = getGameTermEntry("emberIgnition");
+    expect(entry?.description?.ja).toContain("時間では消えない");
+    expect(entry?.description?.ja).not.toContain("毎秒");
     expect(entry?.aliases?.ja).toContain("種火");
-    expect(entry?.tooltip).toBeUndefined();
+    expect(
+      GAME_TERM_ENTRIES.some((e) => e.id === ("seedFlame" as never)),
+    ).toBe(false);
   });
 
   it("links all glossary aliases in skill card body without allowlist", () => {
@@ -291,8 +288,7 @@ describe("gameTermGlossary locale shape", () => {
       if (entry.description === undefined) continue;
       const jaAliases = entry.aliases?.ja ?? [];
       if (jaAliases.length === 0) {
-        // 文中 alias なしは HUD statusCategory 経路専用（例: R12l emberIgnition）
-        // 旧 DoT と共通 alias「種火」を共有しないための意図的な欠落
+        // 文中 alias なしは HUD statusCategory 経路専用
         expect(entry.statusCategory).toBeDefined();
         continue;
       }

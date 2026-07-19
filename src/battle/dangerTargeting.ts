@@ -67,8 +67,7 @@ export function isPendingHitInDangerWindow(
 export function isDerivedPendingSkillHit(hit: PendingSkillHit): boolean {
   return (
     hit.suppressBonusBasicAttack === true ||
-    hit.suppressAllyAttackFollowUp === true ||
-    hit.suppressBonusActiveOnHit === true
+    hit.suppressAllyAttackFollowUp === true
   );
 }
 

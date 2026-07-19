@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12l 作業単位2 レビュー修正済み（Backend 成立確認完了 / Player WavePrep 部分確認）。** 作業単位3（旧仕様隔離）未着手。正本 handoff は **§105.24**。
+- **新ロードマップ現在地:** **R12l 作業単位 3B Backend 隔離完了**（レビュー修正: 文書残存除去・旧 icon 削除・`emberIgnition.png` rename 込み）。Player は **部分完了のみ**（happy-dom / focused test。実ブラウザ未確認）。**R12l Phase の Player 完了にはしない。** 正本 handoff は **§105.25**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** R12l 作業単位3（旧仕様隔離）→ R12m → R12n → R12o → R13。
+- **次の再開タスク:** **R12m**（4兵科だけの反復可能メイン試作・系列 A/B）→ R12n → R12o → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -9171,7 +9171,7 @@ R13への現在の対応表:
 
 ## §105.24 R12l unit2 新仕様成立確認（2026-07-19）
 
-**状態（レビュー修正後）:** Backend production 経路の成立確認は完了。Player は **GameSession WavePrep 到達＋4兵科候補 DOM** まで確認。実ブラウザ手動確認は未実施。**作業単位3（旧仕様隔離）は未着手。** R12l 全体の Player 完了にはしない。
+**状態（レビュー修正後）:** Backend production 経路の成立確認は完了。Player は **GameSession WavePrep 到達＋4兵科候補 DOM** まで確認。実ブラウザ手動確認は未実施。**作業単位3（旧仕様隔離）は §105.25 で Backend 完了**（Player は部分のまま）。R12l 全体の Player 完了にはしない。
 
 ### 今回反映（unit2 + レビュー修正）
 
@@ -9209,7 +9209,7 @@ R13への現在の対応表:
 ### 未確認 / 未完了
 
 - 実ブラウザでの手元プレイ観察
-- 旧 active / 旧基盤 / 旧炎 DoT の通常経路隔離（**作業単位3**）
+- 旧 active / 旧基盤 / 旧炎 DoT の通常経路隔離 → **§105.25 で Backend 完了**
 - `npm run build` は大量の既存 TS エラーで失敗する。今回差分との因果は未分類（「今回差分に致命なし」とは断定しない）
 
 ### 完了判定（レビュー修正後）
@@ -9218,9 +9218,57 @@ R13への現在の対応表:
 | -- | ---- |
 | Backend（作業単位2の成立確認） | **完了**（BattleEngine production 経路） |
 | Player（WavePrep 候補表示の production 経路） | **部分完了**（happy-dom GameSession まで。実ブラウザ未確認） |
-| R12l Phase / 作業単位3 | **未完了** |
+| R12l Phase / 作業単位3 | **§105.25 参照**（Backend 完了 / Player 部分） |
 
 ### 次の正式タスク入口
 
-- 作業単位3: 旧仕様隔離・廃止
-- その後 R12m
+- **§105.25**（作業単位 3B）を経て、公式次は **R12m**
+
+## §105.25 R12l unit 3B 旧仕様隔離（2026-07-19）
+
+**状態（レビュー修正後）:** 作業単位 3B の **Backend 隔離は完了**（data / runtime / 文書残存 / アセット整理込み）。Player は **部分完了のみ**（happy-dom / focused test。実ブラウザ未確認）。**R12l Phase 全体の Player 完了にはしない。** R12m 未着手。
+
+### 今回反映（3B + レビュー修正）
+
+- R5 対象 4 兵科の旧 active 1〜4 を物理削除（`*_basic_attack` のみ残置）
+- catalog 外旧 op・未使用旧 passive（鉄衛士 P3・魔術師 P2〜P4・旧 R11b op 等）を削除
+- 4兵科の `classes.json` から `skills[]` を除去（validate は omit / empty 可）
+- `blockResonance.ts` / `sorcererFlame.ts` および関連 runtime / schema / editor / glossary を削除
+- JA alias「種火」は `emberIgnition` が唯一所有
+- `SkillMenuPanel` は class Lv active が空のとき active 節をスキップ
+- 隔離テスト: `src/battle/r12lLegacyIsolation.test.ts`（削除対象 ID 件数固定・空振り禁止）
+
+### レビュー修正（文書・アセット）
+
+- UI 仕様書（`party-formation-ui.md`）から旧炎・`blockResonanceConsume`・「焼き尽くす熾火」例を除去し、`emberIgnition` 新仕様例へ更新
+- legacy 表（`skill-finalization-table.md`）および R12f 候補表の対象 4 兵科詳細を「R12l で置換済み / 現行正本参照」へ縮退
+- 未使用旧 status icon（`blazingFlame.png` / `blockResonance.png` / `blockResonanceStance.png`）を削除
+- `seedFlame.png` → `emberIgnition.png` へ rename。`StatusIconRegistry` は `emberIgnitionIconUrl` を参照
+
+### Backend 判定
+
+| 条件 | 経路 | 証拠 | 判定 |
+| ---- | ---- | ---- | ---- |
+| 旧 active / 旧 op / 旧炎・迎撃 effect が registry に無い | production GameData load | `r12lLegacyIsolation.test.ts` | **完了** |
+| 4兵科 `skills[]` 空・learned active 0・本体 passive のみ | `resolveLearnedSkills` + classRegistry | 同上 | **完了** |
+| `emberIgnition` が種火 production path | schema / glossary / passive JSON / icon | 同上 + unit1/2 経路 | **完了** |
+| 現行正本・UI 仕様に削除済み effect 詳細を再導入しない | 指定 doc + isolation 境界 assert | `party-formation-ui.md` assert / classes-and-skills / skill-finalization 縮退 | **完了** |
+| 旧 status icon 削除・`emberIgnition.png` 参照 | assets + registry | isolation icon assert | **完了** |
+
+### Player 判定
+
+| 条件 | 経路 | 証拠 | 判定 |
+| ---- | ---- | ---- | ---- |
+| WavePrep / 編成で旧候補が出ない | happy-dom GameSession（unit2）+ 隔離 test | `r12lPlayerDisplay.test.ts` / isolation | **部分完了** |
+| 実ブラウザでの手元確認 | — | 未実施 | **未確認** |
+| R12l Phase Player 完了 | — | — | **未完了**（宣言しない） |
+
+### 未確認 / 未完了
+
+- 実ブラウザでの手元プレイ観察
+- R12l Phase 全体の Player 完了条件（WavePrep 正式 UI 等を含む広い判定）は未達
+- `npm run build` の既存 TS エラーとの因果は未分類
+
+### 次の正式タスク入口
+
+- **R12m** — 4兵科だけの反復可能メイン試作（系列 A/B）

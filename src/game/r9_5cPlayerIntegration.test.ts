@@ -21,7 +21,7 @@ import {
 const TICK_MS = 1000 / 60;
 const FORMATION_MODULE_ID = 'df_guardian_mod_guard_focus';
 const WAVE_PREP_MODULE_ID = 'df_guardian_mod_nearest_strike';
-const R8C_PASSIVE_ID = 'df_guardian_op_brace';
+const R8C_PASSIVE_ID = 'df_guardian_op_block_rate_up';
 const R8C_GUARDIAN_SLOT = 0;
 
 function mockCanvas2d(): void {
