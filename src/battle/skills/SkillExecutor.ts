@@ -2,6 +2,11 @@ import {
   actorHasSorcererFlamePassives,
   processSorcererActiveDamageHit,
 } from "../sorcererFlame.ts";
+import {
+  applyEmberIgnitionOnCombatModuleHit,
+  clearEmberIgnition,
+  shouldGrantEmberOnCombatModuleHit,
+} from "../emberIgnition.ts";
 import type { BattleEventListener } from "../events.ts";
 import { applyIncomingDamage } from "../damageDelay.ts";
 import {
@@ -34,7 +39,9 @@ import {
   isUnitStunned,
 } from "../ccEffects.ts";
 import {
+  applyDirectHealBatchWithExcess,
   applyDirectHealWithExcess,
+  resolveHealActionScopeFromTargetShape,
   sameSideAlliesFrom,
 } from "../instantHealExcess.ts";
 import { grantHealReservationStacks } from "../healReservation.ts";
@@ -104,6 +111,10 @@ import { spawnPlacedField, resolvePlacedFieldCenterX } from "../placedField.ts";
 import { resetIdleAtkRampOnAttack } from "../idleAtkRamp.ts";
 import { scheduleNextOutgoingDamageCharge } from "../nextOutgoingDamage.ts";
 import { applyEnemyReelIn } from "../enemyReelIn.ts";
+import {
+  applyHealOnBlock,
+  applyKnockbackOnBlock,
+} from "../blockReactivePassives.ts";
 import { resolveEffectiveAmountSpecForActiveEffect } from "../skillAmountOverride.ts";
 import { resolveEffectiveBasicAttackSkill } from "../resolveEffectiveBasicAttack.ts";
 import { basicAttackTransformSpecFromEffect } from "../resolveEffectiveBasicAttack.ts";
@@ -325,7 +336,15 @@ export class SkillExecutor {
     const module = this.gameData.combatModuleRegistry[moduleId];
     const intervalSec = module?.attackIntervalSec;
     if (!(intervalSec !== undefined && intervalSec > 0)) return false;
-    cd.remaining = intervalSec;
+    const skill = this.gameData.skillRegistry.actives[moduleId];
+    if (skill) {
+      resetCooldownAfterFire(cd, skill, {
+        unit: actor,
+        passives: this.gameData.skillRegistry.passives,
+      });
+    } else {
+      cd.remaining = intervalSec;
+    }
     this.deps.onBasicAttackExecuted?.(actor.id);
     this.deps.onCombatActionExecuted?.(actor, {
       slotKind: "basic",
@@ -506,7 +525,10 @@ export class SkillExecutor {
           actor.build.learnedActiveIds
         );
       } else {
-        resetCooldownAfterFire(cd, skill);
+        resetCooldownAfterFire(cd, skill, {
+          unit: actor,
+          passives: this.gameData.skillRegistry.passives,
+        });
       }
       if (cd.slotKind === "basic") {
         this.deps.onBasicAttackExecuted?.(actor.id);
@@ -793,6 +815,48 @@ export class SkillExecutor {
       skill,
       effectIndex,
     };
+    if (
+      effectDef.type === "heal" &&
+      (effectDef.healSubKind ?? "instant") === "instant"
+    ) {
+      const resolvedTargets: Array<{
+        unit: CombatantState;
+        powerMultiplierOverride?: number;
+        hitIndex?: number;
+        vfxSourceId?: string;
+      }> = [];
+      for (const wave of resolution!.waves) {
+        for (const { unit, powerMultiplierOverride } of wave.targets) {
+          if (
+            !targetPassesEffectConditions(effectConditionCtx, effectDef, unit)
+          ) {
+            continue;
+          }
+          resolvedTargets.push({
+            unit,
+            powerMultiplierOverride,
+            hitIndex: wave.hitIndex,
+            vfxSourceId: usesSegmentVfxSource(effectDef.targetShape)
+              ? segmentSourceId
+              : undefined,
+          });
+          if (usesSegmentVfxSource(effectDef.targetShape)) {
+            segmentSourceId = unit.id;
+          }
+        }
+      }
+      return {
+        applied: this.applyInstantHealResolution(
+          actor,
+          skill,
+          effectDef,
+          effectIndex,
+          cd,
+          resolvedTargets,
+        ),
+        hitUnits,
+      };
+    }
     for (const wave of resolution!.waves) {
       for (const { unit, powerMultiplierOverride } of wave.targets) {
         if (
@@ -845,6 +909,123 @@ export class SkillExecutor {
       slotKind: cd.slotKind,
       effectIndex,
     });
+  }
+
+  private applyInstantHealResolution(
+    actor: CombatantState,
+    skill: ActiveSkillDef,
+    effectDef: Extract<SkillEffectDef, { type: "heal" }>,
+    effectIndex: number,
+    cd: SkillCooldown,
+    targets: Array<{
+      unit: CombatantState;
+      powerMultiplierOverride?: number;
+      hitIndex?: number;
+      vfxSourceId?: string;
+    }>,
+  ): boolean {
+    const passives = this.gameData.skillRegistry.passives;
+    const amountByTargetId = new Map<string, number>();
+    const healEntries = targets
+      .filter(({ unit }) => !isAllySupportBlockedDuringArenaDominance(unit, actor))
+      .map(({ unit, powerMultiplierOverride }) => {
+        const healAmountSpec = resolveEffectiveAmountSpecForActiveEffect(
+          actor,
+          passives,
+          skill,
+          effectDef,
+          effectIndex,
+          effectDef.amount ?? ({ kind: "flat", flatAmount: 0 } as const),
+        );
+        const attemptedHeal = resolveHealAmount(
+          actor,
+          unit,
+          healAmountSpec,
+          passives,
+          {
+            atkScaleOverride: powerMultiplierOverride,
+            effectSpecialIncrease: effectDef.damageIncrease,
+          },
+        );
+        amountByTargetId.set(unit.id, attemptedHeal);
+        return { target: unit, attemptedHeal };
+      })
+      .filter((entry) => entry.attemptedHeal > 0);
+    if (healEntries.length === 0) return false;
+
+    const sameSideAllies = sameSideAlliesFrom(this.deps.getAllCombatants(), actor);
+    const healActionScope = resolveHealActionScopeFromTargetShape(
+      effectDef.targetShape,
+      effectDef.effectRange?.form,
+    );
+    const healResult = applyDirectHealBatchWithExcess(
+      actor,
+      healEntries,
+      sameSideAllies,
+      passives,
+      { allowRedirect: true, healActionScope },
+    );
+    let appliedAny = false;
+
+    for (const entry of targets) {
+      const result = healResult.targets.find(
+        (targetResult) => targetResult.target.id === entry.unit.id,
+      );
+      if (!result) continue;
+      if (
+        result.healed <= 0 &&
+        result.outgoingBarrierGranted <= 0 &&
+        result.incomingBarrierGranted <= 0
+      ) {
+        continue;
+      }
+      appliedAny = true;
+      grantHealReservationStacks(
+        actor,
+        result.target,
+        result.hpRatioBeforeHeal,
+        passives,
+      );
+      this.deps.onHealApplied?.(actor, result.target, result.healed);
+      this.emit({
+        type: "skill",
+        actorId: actor.id,
+        targetId: result.target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: "heal",
+        effectIndex,
+        amount: amountByTargetId.get(result.target.id) ?? result.healed,
+        range: effectDef.range,
+        ...skillHitEventFields(entry.hitIndex, entry.vfxSourceId),
+      });
+    }
+
+    if (healResult.redirectTarget && healResult.redirectHealed > 0) {
+      appliedAny = true;
+      // 転送回復は派生回復。予約付与・再転送・バリア化は発生させない
+      this.deps.onHealApplied?.(
+        actor,
+        healResult.redirectTarget,
+        healResult.redirectHealed,
+      );
+      this.emit({
+        type: "skill",
+        actorId: actor.id,
+        targetId: healResult.redirectTarget.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: "heal",
+        effectIndex,
+        amount: healResult.redirectAmount,
+        range: effectDef.range,
+        ...skillHitEventFields(targets[0]?.hitIndex, targets[0]?.vfxSourceId),
+      });
+    }
+
+    return appliedAny;
   }
 
   applyScheduledStep(
@@ -1115,6 +1296,7 @@ export class SkillExecutor {
       });
       this.emit({ type: "hurt", targetId: target.id });
       if (damageResult.lethal) {
+        clearEmberIgnition(target);
         target.isAlive = false;
         this.deps.getSequenceRunner().clearForActor(target.id);
         this.deps.onUnitDied?.(target);
@@ -1293,7 +1475,11 @@ export class SkillExecutor {
         passives,
         {
           atkScaleOverride: powerMultiplierOverride,
-          passiveContext: { ...damageContext, allies: partyAllies },
+          passiveContext: {
+            ...damageContext,
+            allies: partyAllies,
+            isHitDamage: true,
+          },
           effectDamageIncrease: effectDef.damageIncrease,
           effectDefenseIgnore: effectDef.defenseIgnore,
           ignoreDamageTakenReduction:
@@ -1394,6 +1580,7 @@ export class SkillExecutor {
                   }),
                 );
                 if (damageResult.lethal) {
+                  clearEmberIgnition(enemy);
                   enemy.isAlive = false;
                   this.deps.getSequenceRunner().clearForActor(enemy.id);
                   this.deps.onUnitDied?.(enemy);
@@ -1403,6 +1590,20 @@ export class SkillExecutor {
             );
           }
         }
+        const blockHeal = applyHealOnBlock(damageTarget, passives);
+        if (blockHeal > 0) {
+          this.deps.onHealApplied?.(damageTarget, damageTarget, blockHeal);
+        }
+        applyKnockbackOnBlock(
+          damageTarget,
+          this.deps
+            .getAllCombatants()
+            .filter(
+              (unit) => unit.isAlive && unit.isEnemy !== damageTarget.isEnemy,
+            ),
+          passives,
+          this.deps.onBattleXChanged,
+        );
       }
       if (actor.isEnemy && !damageTarget.isEnemy) {
         const dominanceOverlay = damageTarget.statusEffects.find(
@@ -1501,6 +1702,96 @@ export class SkillExecutor {
         resetIdleAtkRampOnAttack(actor);
       }
       if (
+        shouldGrantEmberOnCombatModuleHit({
+          actorIsEnemy: actor.isEnemy,
+          targetIsEnemy: damageTarget.isEnemy,
+          slotKind: cd.slotKind,
+          isCombatModuleSkill:
+            this.gameData.combatModuleRegistry[skill.id] !== undefined,
+          targetAlive: damageTarget.isAlive,
+        }) &&
+        appliedDamage > 0
+      ) {
+        const ignition = applyEmberIgnitionOnCombatModuleHit(
+          actor,
+          damageTarget,
+          passives,
+        );
+        if (ignition.ignited) {
+          let ignitionDamage = ignition.resolvedDamage;
+          const ignitionBlock = applyBlockToMagicDamage(
+            damageTarget,
+            ignitionDamage,
+          );
+          ignitionDamage = ignitionBlock.finalDamage;
+          const ignitionWard = applyWardBarrierToIncomingDamage(
+            damageTarget,
+            ignitionDamage,
+          );
+          ignitionDamage = ignitionWard.damage;
+          const ignitionMitigation = mitigateIncomingDamage(
+            damageTarget,
+            ignitionDamage,
+            passives,
+            {
+              allies: partyAllies,
+            }
+          );
+          const ignitionIncoming = applyIncomingDamage(
+            damageTarget,
+            ignitionMitigation.finalDamage,
+          );
+          const ignitionApplied =
+            ignitionIncoming.damageResult.hpDamage +
+            ignitionIncoming.damageResult.barrierDamage;
+          if (ignitionApplied > 0) {
+            notifyDamageApplied(
+              this.deps.onDamageApplied,
+              actor,
+              damageTarget,
+              buildDamageAppliedEvent({
+                attacker: actor,
+                target: damageTarget,
+                sourceKind: "derived",
+                attackKind: "damage",
+                damageResult: ignitionIncoming.damageResult,
+                slotKind: cd.slotKind,
+                skillId: skill.id,
+                effectIndex,
+                hitIndex,
+                attackMethod: resolveSkillAttackMethod(skill),
+              }),
+              {
+                didBlock: ignitionBlock.didBlock,
+              },
+            );
+            this.emit({
+              type: "skill",
+              actorId: actor.id,
+              targetId: damageTarget.id,
+              skillId: skill.id,
+              skillName: skill.name,
+              slotKind: cd.slotKind,
+              effect: "damage",
+              effectIndex,
+              amount: ignitionMitigation.finalDamage,
+              range: effectDef.range,
+              ...skillHitEventFields(hitIndex, vfxSourceId),
+            });
+            this.emit({ type: "hurt", targetId: damageTarget.id });
+            if (ignitionIncoming.damageResult.lethal) {
+              clearEmberIgnition(damageTarget);
+              damageTarget.isAlive = false;
+              this.deps.getSequenceRunner().clearForActor(damageTarget.id);
+              this.deps.onUnitDied?.(damageTarget);
+              this.emit({ type: "death", targetId: damageTarget.id });
+            }
+          }
+        } else if (ignition.stacks > 0) {
+          this.deps.onTargetReceivedDebuff?.(damageTarget);
+        }
+      }
+      if (
         cd.slotKind === "active" &&
         appliedDamage > 0 &&
         damageTarget.isAlive &&
@@ -1579,6 +1870,7 @@ export class SkillExecutor {
           });
           this.emit({ type: "hurt", targetId: explosionTarget.id });
           if (explosionIncoming.damageResult.lethal) {
+            clearEmberIgnition(explosionTarget);
             explosionTarget.isAlive = false;
             this.deps.getSequenceRunner().clearForActor(explosionTarget.id);
             this.deps.onUnitDied?.(explosionTarget);
@@ -1648,6 +1940,7 @@ export class SkillExecutor {
           });
           this.emit({ type: "hurt", targetId: splashTarget.id });
           if (splashResult.lethal) {
+            clearEmberIgnition(splashTarget);
             splashTarget.isAlive = false;
             this.deps.getSequenceRunner().clearForActor(splashTarget.id);
             this.deps.onUnitDied?.(splashTarget);
@@ -1656,6 +1949,7 @@ export class SkillExecutor {
         }
       }
       if (lethal) {
+        clearEmberIgnition(damageTarget);
         damageTarget.isAlive = false;
         if (!damageTarget.isEnemy) {
           stripPassivesAurasFromSource(
@@ -1944,13 +2238,7 @@ export class SkillExecutor {
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       if (healResult.redirectTarget && healResult.redirectHealed > 0) {
-        grantHealReservationStacks(
-          actor,
-          healResult.redirectTarget,
-          healResult.redirectHpRatioBeforeHeal ??
-            currentHpRatio(healResult.redirectTarget),
-          passives
-        );
+        // 転送回復は派生回復。予約付与は発生させない
         this.deps.onHealApplied?.(
           actor,
           healResult.redirectTarget,

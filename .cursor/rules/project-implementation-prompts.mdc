@@ -25,6 +25,7 @@ alwaysApply: true
 - UI ビジュアル: `.cursor/rules/ui-visual-rules.mdc`、`docs/spec/ui-visual-rules.md`
 - UI 開閉（hidden 禁止）: `.cursor/rules/game-ui-overlay-visibility.mdc`、`src/ui/gameUiOverlay.ts`
 - テスト通過≠完了: `.cursor/rules/tests-not-proof.mdc`
+- 指示遵守・空振り防止・完了ゲート: `.cursor/rules/instruction-compliance-gates.mdc`
 
 ## 実装プロンプトの追加チェック
 
@@ -32,6 +33,8 @@ alwaysApply: true
 - 更新すべき spec は `docs/spec/README.md` と `docs/README.md` の対応表で確認させる。
 - acceptance criteria には、テストだけでなく仕様書との一致確認も含める。テスト緑だけでは完了にしない（`tests-not-proof.mdc` / [test-policy.md](../../docs/ai-handoff/test-policy.md)）。
 - テストは「確定仕様どおりか」の観点で書く。CombatModule（R12g 兵科 M1/M2）は [combat-module-test-policy.md](../../docs/ai-handoff/combat-module-test-policy.md) に従い、JSON / registry 件数だけでは Backend 完了にしない。
+- プロンプト末尾に、完了条件ごとの「確認経路・証拠・判定」を報告させる。必須条件に未確認があれば完了宣言を禁止する。
+- production 経路の確認を求める場合、到達不能時の fallback 成功、対象0件のループ、主要 assertion 前の return を禁止すると明記する。
 
 
 ## バグ修正

@@ -387,6 +387,7 @@ describe('statusEffectDisplay', () => {
       ['lastStandGuts', 'lastStandGuts', 'buff'],
       ['arenaDominance', 'arenaDominance', 'buff'],
       ['duelistPride', 'duelistPride', 'debuff'],
+      ['emberIgnition', 'emberIgnition', 'debuff'],
       ['ballistaMark', 'ballistaMark', 'debuff'],
       ['allyAttackFollowUp', 'allyAttackFollowUp', 'buff'],
       ['poisonWeapon', 'poisonWeapon', 'buff'],
@@ -403,6 +404,13 @@ describe('statusEffectDisplay', () => {
             multiplier: 1,
             durationSec: 5,
             remainingSec: 4,
+            ...(overlay === 'emberIgnition'
+              ? {
+                  stacks: 2,
+                  durationSec: Number.POSITIVE_INFINITY,
+                  remainingSec: Number.POSITIVE_INFINITY,
+                }
+              : {}),
           },
         ],
         { baseMaxHp: 100, atk: 10, def: 10, res: 0 },
@@ -465,6 +473,29 @@ describe('statusEffectDisplay', () => {
     expect(badges[0]?.category).toBe('arenaMark');
     expect(badges[0]?.kind).toBe('debuff');
     expect(badges[0]?.stackCount).toBe(2);
+  });
+
+  it('emberIgnition shows stacks with timeless remainingRatio 1 (no NaN)', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        {
+          id: 'ember_ignition_x',
+          kind: 'debuff',
+          overlay: 'emberIgnition',
+          stacks: 4,
+          multiplier: 1,
+          durationSec: Number.POSITIVE_INFINITY,
+          remainingSec: Number.POSITIVE_INFINITY,
+          displayName: '種火',
+        },
+      ],
+      { baseMaxHp: 100, atk: 10, def: 10, res: 0 },
+    );
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.category).toBe('emberIgnition');
+    expect(badges[0]?.stackCount).toBe(4);
+    expect(badges[0]?.remainingRatio).toBe(1);
+    expect(Number.isNaN(badges[0]!.remainingRatio)).toBe(false);
   });
 });
 

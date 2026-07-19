@@ -34,6 +34,7 @@ export type StatusDisplayCategory =
   | "arenaMark"
   | "seedFlame"
   | "blazingFlame"
+  | "emberIgnition"
   | "ballistaMark"
   | "allyAttackFollowUp"
   | "poisonWeapon"
@@ -65,6 +66,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "arenaMark",
   "seedFlame",
   "blazingFlame",
+  "emberIgnition",
   "ballistaMark",
   "allyAttackFollowUp",
   "poisonWeapon",
@@ -130,6 +132,7 @@ const STACK_OVERLAY_CATEGORIES = new Set<StatusEffect["overlay"]>([
   "earthMark",
   "arenaMark",
   "wardBarrier",
+  "emberIgnition",
 ]);
 
 function effectStackContribution(effect: StatusEffect): number {
@@ -172,6 +175,13 @@ function isPassiveDisplayedStatusEffect(effect: StatusEffect): boolean {
 }
 
 function statusEffectRemainingRatio(effect: StatusEffect): number {
+  // 非時間制（種火等）: Infinity/Infinity → NaN を避け、減衰ゲージを出さない
+  if (
+    !Number.isFinite(effect.durationSec) ||
+    !Number.isFinite(effect.remainingSec)
+  ) {
+    return 1;
+  }
   const duration =
     effect.durationSec > 0 ? effect.durationSec : effect.remainingSec;
   if (duration <= 0) return 1;
@@ -350,6 +360,13 @@ function statusEffectBadgeForOverlay(
     case "duelistPride":
       return {
         category: "duelistPride",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "emberIgnition":
+      return {
+        category: "emberIgnition",
         kind: "debuff",
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
@@ -548,6 +565,9 @@ function effectsForCategory(
         effect.overlay === "dot" && effect.dotFlavor === "blazingFlame"
     );
   }
+  if (category === "emberIgnition") {
+    return effects.filter((effect) => effect.overlay === "emberIgnition");
+  }
   if (category === "hp") {
     return effects.filter((effect) => effect.stat === "hp");
   }
@@ -651,6 +671,12 @@ export function categoryRemainingRatio(
 
   let minRatio = 1;
   for (const effect of relevant) {
+    if (
+      !Number.isFinite(effect.durationSec) ||
+      !Number.isFinite(effect.remainingSec)
+    ) {
+      continue;
+    }
     const duration =
       effect.durationSec > 0 ? effect.durationSec : effect.remainingSec;
     if (duration <= 0) continue;
@@ -848,6 +874,7 @@ const COMPACT_TIER3_DOT: ReadonlySet<StatusDisplayCategory> = new Set([
   "poison",
   "seedFlame",
   "blazingFlame",
+  "emberIgnition",
 ]);
 
 function statusBadgeSlotOrderIndex(category: StatusDisplayCategory): number {

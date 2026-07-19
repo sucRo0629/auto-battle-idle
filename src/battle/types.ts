@@ -408,7 +408,8 @@ export interface StatusEffect {
     | "poisonWeapon"
     | "duelistPride"
     | "dfPaladinM1Protection"
-    | "dfPaladinM2Protection";
+    | "dfPaladinM2Protection"
+    | "emberIgnition";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
@@ -729,10 +730,17 @@ export interface CombatantState extends Combatant {
 export type PassiveEffectKind =
   | "targetRuleOverride"
   | "heal"
+  | "healOnBlock"
+  | "knockbackOnBlock"
   | "excessHealToBarrier"
   | "aoeCrowdBonus"
   | "specialEffect"
   | "defenseIgnore"
+  | "emberIgnition"
+  | "ignitionDamageBonus"
+  | "ignitionThresholdReduction"
+  | "outgoingHitDamageIncrease"
+  | "attackIntervalScale"
   | "periodicDispel"
   | "damageReduction"
   | "buff"
@@ -1015,6 +1023,8 @@ export interface PassiveSkillDef {
   excessHealSources?: Array<"outgoing" | "incoming">;
   /** excessHealRedirect: 余剰回復の転送割合（0〜1） */
   redirectScale?: number;
+  /** excessHealRedirect: 複数対象 heal 1 action の集計余剰に適用する転送割合（0〜1） */
+  redirectScaleMulti?: number;
   /** @deprecated 読み込み互換（正規化後は buff + chance） */
   evasionChance?: number;
   /** @deprecated 読み込み互換（正規化後は buff + chance） */
@@ -1104,6 +1114,26 @@ export interface PassiveSkillDef {
   blazingFlameDetonateMultiplier?: number;
   /** blazingFlameDetonate: 熾火 stack 上限解除（P4） */
   blazingFlameUncap?: boolean;
+  /** healOnBlock: ブロック成功時の自己回復量 */
+  healOnBlockAmount?: ResourceAmountSpec;
+  /** knockbackOnBlock: ブロック成功時の周囲半径（px） */
+  knockbackOnBlockRadiusPx?: number;
+  /** knockbackOnBlock: ブロック成功時のノックバック距離（px） */
+  knockbackOnBlockDistancePx?: number;
+  /** emberIgnition: 発火に必要な種火 stack 数（未指定 = 5） */
+  emberIgnitionThreshold?: number;
+  /** emberIgnition: 発火ダメージの ATK 係数（未指定 = 1.0） */
+  emberIgnitionAtkScale?: number;
+  /** ignitionDamageBonus: 発火ダメージ倍率（未指定 = 1.0） */
+  ignitionDamageBonusScale?: number;
+  /** ignitionThresholdReduction: 発火閾値を何 stack 下げるか（未指定 = 1） */
+  ignitionThresholdReduction?: number;
+  /** outgoingHitDamageIncrease: direct hit / derived hit の被補正前最終倍率加算（0.05 = +5%） */
+  outgoingHitDamageIncrease?: number;
+  /** outgoingHitDamageIncrease: 適用する damageType。未指定 = 全属性 */
+  outgoingHitDamageType?: DamageType;
+  /** attackIntervalScale: 基本攻撃 interval 乗算（0.95 = 5% 短縮） */
+  attackIntervalScale?: number;
   /** seedFlameOnActiveHit: 種火 stack 上限（未指定 = 5） */
   seedFlameMaxStacks?: number;
   /** seedFlameOnActiveHit: 種火 overlay 持続（秒。未指定 = 10） */
@@ -1901,11 +1931,13 @@ export interface SkillRegistry {
 
 /** 作戦内パッシブ候補 catalog（`data/operation-passive-catalog.json`） */
 export interface OperationPassiveCatalogDef {
-  /** Fallback base cost when passive missing from costUnlockLevelByPassiveId */
+  /** Fallback base cost when passive missing from both cost maps */
   passiveAcquireCost: number;
   waveClearResourceGrant: number;
   /** Added cost per already-acquired operation passive on the same class/slot */
   sameClassStackStep: number;
+  /** Preferred R12l+ fixed cost per passive id */
+  fixedCostByPassiveId?: Record<string, number>;
   /** unlockLevel band → base cost. Keys "0","10","20" */
   unlockLevelCostTable: Record<string, number>;
   /** Cost-tier unlockLevel per passive id (NOT a party Lv gate) */

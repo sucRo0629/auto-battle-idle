@@ -1,10 +1,17 @@
 import type {
   ActiveSkillDef,
   CombatantState,
+  PassiveSkillDef,
   SkillCooldown,
   SkillTrigger,
   SkillTriggerKind,
 } from './types.ts';
+import { getPassiveAttackIntervalScale } from './passiveEffects.ts';
+
+interface CooldownResolveOptions {
+  unit?: CombatantState;
+  passives?: Record<string, PassiveSkillDef>;
+}
 
 export function resolveSkillTrigger(skill: ActiveSkillDef): SkillTrigger {
   if (skill.trigger) return skill.trigger;
@@ -21,8 +28,14 @@ export function isNoChargeTimeTrigger(skill: ActiveSkillDef): boolean {
   return trigger.kind === 'time' && trigger.value === 0;
 }
 
-export function resolveCooldownRemainingForSkill(skill: ActiveSkillDef): number {
-  return resolveSkillTrigger(skill).value;
+export function resolveCooldownRemainingForSkill(
+  skill: ActiveSkillDef,
+  options: CooldownResolveOptions = {},
+): number {
+  const base = resolveSkillTrigger(skill).value;
+  if (!options.unit || !options.passives) return base;
+  if (skill.slotKind !== 'basic') return base;
+  return base * getPassiveAttackIntervalScale(options.unit, options.passives);
 }
 
 /** finalWaveStart 等のイベント発動直前に CD を強制リセット */
@@ -95,19 +108,24 @@ export function findReadyCountTriggerCooldowns(
 export function resetCooldownAfterFire(
   cd: SkillCooldown,
   skill: ActiveSkillDef,
+  options: CooldownResolveOptions = {},
 ): void {
-  cd.remaining = resolveCooldownRemainingForSkill(skill);
+  cd.remaining = resolveCooldownRemainingForSkill(skill, options);
 }
 
 /** ステージ開始時: 全スキル CD を未充填（remaining = trigger.value、0 は即 ready）にする */
 export function initializeSkillCooldowns(
   unit: CombatantState,
   actives: Record<string, ActiveSkillDef>,
+  options: Omit<CooldownResolveOptions, 'unit'> = {},
 ): void {
   for (const cd of unit.cooldowns) {
     const skill = actives[cd.skillId];
     if (!skill) continue;
-    cd.remaining = resolveCooldownRemainingForSkill(skill);
+    cd.remaining = resolveCooldownRemainingForSkill(skill, {
+      unit,
+      passives: options.passives,
+    });
     if (cd.slotKind === 'active') {
       cd.storedCharges = 0;
       cd.fireHoldSinceSec = undefined;

@@ -24,7 +24,7 @@
 
 **R12f 注記（2026-07-16）:** A〜G の兵科・CombatModule・作戦内パッシブへの正式分配は [§R12f](#r12f--必要能力の分配確定) および [operation-loop.md §20](operation-loop.md#20-必要能力の兵科combatmodule作戦内パッシブ分配r12f) を正本とする。下記「M1 兵科 — 新仕様候補（R2）」表および R11b 候補 ID は **legacy / 候補記録** であり、R12f 確定値ではない。データ再設計は **R12g**。
 
-**R12l 再編予定（2026-07-17）:** 現行 production の `Lv0 / Lv10 / Lv20` パッシブと旧 active は新仕様の完成データではなく、再分類する素材である。まず R5 対象 4 兵科（鉄衛士・剣術士・魔術師・療養師）だけを、兵科本体 / Module A / Module B / 作戦内パッシブ / 廃止候補へ再編する。初期試作は各兵科 **cost 1 を 3 件、cost 10 を 2 件、cost 20 を Module ごとに 1 件ずつの 2 件（計 7 件）**とし、候補は全表示する。方向確認後の目標量は cost 1 が 5〜10、cost 10 が 2〜5、cost 20 が 1〜2。残り兵科への展開は後続フェーズとする。
+**R12l 確定メモ（2026-07-19）:** 現行 production の `Lv0 / Lv10 / Lv20` パッシブと旧 active は新仕様の完成データではなく、再分類する素材である。R5 対象 4 兵科（鉄衛士・剣術士・魔術師・療養師）の **unit 1** は、各兵科 **兵科本体 1 + cost 1 を 3 件 + cost 10 を 2 件（計 6 件）**に確定し、候補は全表示する。**cost 20 は今回 scope 外**。4兵科の新 path では `unlockLevel` ではなく `fixedCostByPassiveId` を正本にし、`classes.json` の passive 習得は **兵科本体のみ常時習得**へ切り替える。旧 `seedFlame` / `blazingFlame` 系 passive・旧 `op_*` は **移行待ち legacy material** として JSON に残す。
 
 ### 兵科の主要構造
 
@@ -48,7 +48,7 @@
 | 兵科の基礎特性 | 鉄衛士の block 思想、療養師の低 HP 回復特化 |
 | 戦闘方式 | 剣術士の叩き付け / 薙ぎ払い相当の形状差、弩砲の溜め射 |
 | 作戦内パッシブ候補 | 迎撃態勢、毒の武器、援護反撃 |
-| 廃止 | RES 無視、種火 / 熾火連鎖、gauge 前提 active、細か stat +10% |
+| 廃止 | 旧兵科本体の RES 無視（旧猛火の術 10%）、種火 / 熾火 DoT 連鎖、gauge 前提 active、細か stat +10%。**R12l cost1「魔法耐性無視率増加」は廃止対象外** |
 
 ### 作戦内パッシブ（設計アイデア — 未確定）
 
@@ -66,19 +66,20 @@
 
 | 廃止方向 | 内容 |
 | -------- | ---- |
-| RES 無視 | 正本から **外す**（旧 P1 猛火の術） |
-| 複雑な耐性貫通 | 廃止方向 |
-| Lv 段階の種火 / 熾火完成 | active 連鎖前提の構造を廃止方向 |
-| active 連鎖 | P3 連なる炎等 |
+| 旧兵科本体の RES 無視 | 旧 P1「猛火の術」の RES 10% 無視を外す。**R12l cost1「魔法耐性無視率増加」（+5pt）は採用** |
+| 複雑な耐性貫通 | 旧構造の廃止方向 |
+| Lv 段階の種火 / 熾火完成 | active 連鎖前提の旧 DoT 構造を廃止方向 |
+| active 連鎖 | P3 連なる炎等（移行待ち） |
 
-**R2 整理方向（R12f と整合する部分）:**
+**R2 整理方向（R12f / R12l と整合する部分）:**
 
 - 単純な **魔法攻撃兵科**
 - 優先ターゲット: **最近傍候補**
-- **2 戦闘方式** で攻撃形状を変える（方式名・倍率・Hit 数は **未確定** → R12g）
-- **RES の影響を通常どおり受ける**
+- **2 戦闘方式**（`chain`）で攻撃形状を変える
+- 兵科本体は **種火蓄積 → 発火**（DoT / 熾火ではない）
+- RES は通常どおり受ける。追加の無視は作戦内 cost1 でのみ
 
-**R12g-e4 Backend 完了（Module 形状）:** M1/M2 とも既存 `targetShape: chain`（新形状・`multiLock` なし）。M1「収束」は `chainCount: 1`、M2「連鎖」は `chainCount: 2`（単体即応型と少数分散型を分ける攻撃構造。強度値ではない。R12i へ送らない）。方式名・ID は [§R12f 魔術師](#at_sorcerer-魔術師)。構造成立用の暫定値（`attackIntervalSec` / `atkScale` / `chainMaxDistancePx` / `chainPowerStepMultiplier` 等）は同節に記載。正式バランスはすべて **R12i**。種火 / 熾火の Passive 再設計は同節の後続メモ（e4 Module 実装範囲外・未着手）。**Player 未完了**。
+**R12g-e4 Backend 完了（Module 形状）:** M1/M2 とも既存 `targetShape: chain`（新形状・`multiLock` なし）。M1「収束」は `chainCount: 1`、M2「連鎖」は `chainCount: 2`。方式名・ID は [§R12f 魔術師](#at_sorcerer-魔術師)。構造成立用の暫定値は同節。正式バランスは **R12n**（旧 R12i 表記からの更新含む）。**Player 未完了**。
 
 ### 双刃士（`at_assassin`）— 新仕様候補（R2 記録）
 
@@ -273,7 +274,7 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | 項目 | 内容 |
 | ---- | ---- |
 | 分類 | Kill |
-| 固定役割 | 最近傍へ DEF に左右されない魔法圧力を与える。**RES 無視は持たない** |
+| 固定役割 | 最近傍へ DEF に左右されない魔法圧力を与える。**CombatModule 自体に RES 無視は内蔵しない**（cost1「魔法耐性無視率増加」+5pt は作戦内パッシブとして取得可能） |
 | 主担当 | C |
 | 副担当 | A の属性上の代替出力、前線突破後・対象露出後の F、G |
 | B2 | **担当しない** |
@@ -281,22 +282,21 @@ Defender / Supporter は無理に単体 / 複数へ揃えず、兵科に合う 2
 | M2 少数分散型「連鎖」 | 正式 ID `at_sorcerer_mod_chain`。最近傍の敵を anchor。既存 `targetShape: chain`・確定構造値 `chainCount: 2`（距離内の別の敵一体へ連鎖）。波及 Hit は主対象より減衰。既存 chain の未命中優先・再訪・距離不足時終了の規則は変更しない。前線区域や密集全体を覆う広域攻撃にはしない。構造成立用の暫定値: `attackIntervalSec: 3.5`、`atkScale: 0.65`、`targetShape: chain`、`chainCount: 2`、`chainMaxDistancePx: 80`、`chainPowerStepMultiplier: 0.8`、`chainPowerStepMode: multiply`。主対象倍率 0.65・波及対象倍率 0.52（`0.65 × 0.8`）・2 体合計 1.17 |
 | Module 共通 | 新しい攻撃形状は追加しない。`multiLock` は使わない。対象選定に乱数を導入しない。`chainCount: 1 / 2` は引き続き確定済みの構造値であり、R12i へ送らない（単体即応型と少数分散型を分ける攻撃構造）。M1 は単体で M2 を上回り、M2 は 2 体へ連鎖した場合に総出力の価値を持つ。`attackIntervalSec` と `atkScale` は現行 R5b プレースホルダー値を維持した仮値。`chainMaxDistancePx` と `chainPowerStepMultiplier` は既存 chain を成立させるための仮値。これらは正式なバランス値ではなく、すべて **R12i** で再調整する。追加 Passive による `chainCount` 増加は導入しない |
 | Passive（兵科方向） | 初動処理、同一対象への継続、分散時の主対象維持 |
-| 持たせない | RES 無視、支援役優先、遠隔攻撃役優先、前線区域への広域魔法、単体と分散の同時完成。これらを Module へ持たせない |
+| 持たせない | Module への RES 無視内蔵、支援役優先、遠隔攻撃役優先、前線区域への広域魔法、単体と分散の同時完成。**cost1「魔法耐性無視率増加」はパッシブ候補として取得可能**（Module 本体とは別責務） |
 | 旧プレースホルダー | `at_sorcerer_mod_single_bolt` / `at_sorcerer_mod_twin_bolt`（R5b）は R12g-e4 で上記正式 ID へ置換済み |
 | R12g-e4 data | `data/combat-modules/at_sorcerer.json` — M1 `at_sorcerer_mod_focus`（収束・`chain`・`chainCount: 1`）、M2 `at_sorcerer_mod_chain`（連鎖・`chain`・`chainCount: 2`・波及 0.8）。既存 chain runtime 再利用。`validateAtSorcererCombatModule`。`src/battle/atSorcererModules.test.ts`。数値は仮（R12i）。**Backend 完了 / Player 未完了** |
 
-**後続 Passive 設計向け確定メモ（R12g-e4 Module 実装範囲外・未着手）:**
+**R12l unit 1 確定メモ（魔術師・production path）:**
 
-- 初期取得 Passive の仮名称は **爆ぜる種火**
+- 初期取得 Passive は `at_sorcerer_passive_1` **猛火の術**
 - 種火自体は DoT・被ダメージ増加・能力低下を持たない **stack 状態**
-- 種火は時間経過で消滅せず、**起爆・対象死亡・Wave 終了**で消える
+- 種火は時間経過で消滅せず、**発火・対象死亡・Wave 終了**で消える
 - 魔術師の CombatModule damage Hit 後、対象が生存していれば種火を付与する
-- 規定 stack 到達時、種火を全消費して対象単体へ魔法起爆ダメージを与える
-- 起爆から種火付与や再帰起爆は発生しない
+- 規定 stack（既定 5、cost10「火勢」で 4）到達時、種火を全消費して対象単体へ **発火** 魔法ダメージを与える
+- 発火から種火付与や再帰発火は発生しない
 - 種火最大 stack から熾火へ変換する現行挙動は **廃止**
-- P4「花開く炎」の現行 `blazingFlameDetonate`・熾火消費爆発・周囲への種火拡散は **廃止**。P4 の代替効果は **未確定**（今回補完しない）
-- 起爆に必要な stack 数・起爆倍率などの数値は **未確定**
-- 上記 Passive 変更を Module JSON・runtime へ混ぜない（e4 Backend でも未着手）
+- 旧 P2/P3/P4 と旧 `op_*` の `seedFlame` / `blazingFlame` / active 連鎖は **移行待ち legacy material**
+- 発火基礎式は暫定で `floor(ATK × emberIgnitionAtkScale)`、cost10「爆炎」で 1.5 倍、cost1「魔法ダメージ増加」は発火にも乗る。正式バランスは **R12n**
 
 #### `df_guardian` 鉄衛士
 
@@ -1147,7 +1147,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                                       | 連射／連ね矢                               |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的                             | 破城矢装填／重矢                           |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | DoT 圧縮補助 + 味方物理 basic 毒 proc                            | 毒罠／粘着罠／追い込み／毒収穫             |
-| `at_sorcerer`  | 魔術師 | Sorcerer  | back  | 遠隔魔法 | 猛火の術 / 焼き尽くす熾火（Lv0）+ 連なる炎 / 花開く炎（Lv10/20） | 炎術 / 双炎（Lv0）+ 散火 / 燎原（Lv10/20） |
+| `at_sorcerer`  | 魔術師 | Sorcerer  | back  | 遠隔魔法 | **R12l:** 猛火の術（種火→発火）。旧 Lv 種火/熾火 DoT は移行待ち | CombatModule `chain`（収束/連鎖）。旧 active は移行待ち |
 | `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | 印術 / 刻み返し（Lv0）+ 共鳴する印 / 印術の完成（Lv10/20）       | 刻み直し / 重ね刻み（Lv0）+ 重ね鳴り / 早鳴りの印（Lv10/20） |
 | `at_conductor` | 法陣師 | Conductor | back  | 遠隔魔法 | —（未実装）                                                      | （未実装・JSON 廃棄）                      |
 
@@ -1805,14 +1805,15 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 - 単体・範囲の安定魔法ダメージ
 - 魔法耐性前提の基準火力供給
 - 継続的な DPS 維持
-- 損失のないマルチロックによる少数殲滅性能
+- CombatModule の継続 Hit による種火蓄積と発火
 
 #### 特徴
 
 - 状況に左右されない安定出力
 - 最もシンプルなダメージ構造
 - キャスター火力の**基準ライン**
-- **マルチロック** — 対象数不足時でもロック枠が無駄にならず、既存対象へ再配分される。少数戦でも火力ロスが発生しない
+- **chain 攻撃構造** — M1「収束」`chainCount: 1`、M2「連鎖」`chainCount: 2`。`multiLock` は使わない
+- **種火 → 発火** — CombatModule damage Hit で種火を蓄積し、閾値で対象単体へ発火ダメージ（Module 自体に RES 無視は内蔵しない。cost1「魔法耐性無視率増加」はパッシブ取得）
 
 #### 立ち位置
 
@@ -1826,17 +1827,12 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 
 | 枠      | id                         | 名称           | 概要                                 |
 | ------- | -------------------------- | -------------- | ------------------------------------ |
-| basic   | `at_sorcerer_basic_attack` | （名称なし）   | magic single。P2/P3/P4 非対象        |
-| P1 Lv0  | `at_sorcerer_passive_1`    | 猛火の術       | REG 20% 無視                         |
-| P2 Lv0  | `at_sorcerer_passive_2`    | 焼き尽くす熾火 | active Hit ごとに種火 +1             |
-| P3 Lv10 | `at_sorcerer_passive_3`    | 連なる炎       | active Hit 後 A1 追撃（非再帰）      |
-| P4 Lv20 | `at_sorcerer_passive_4`    | 花開く炎       | 熾火起爆 + 熾火上限解除              |
-| A1 Lv0  | `at_sorcerer_active_1`     | 炎術           | magic single（CD 8s）                |
-| A2 Lv0  | `at_sorcerer_active_2`     | 双炎           | multiLock×2（CD 10s）                |
-| A3 Lv10 | `at_sorcerer_active_3`     | 散火           | multiLock×3（CD 14s）                |
-| A4 Lv20 | `at_sorcerer_active_4`     | 燎原           | 種火 overlay 敵へ poolEach（CD 18s） |
+| Module  | `at_sorcerer_mod_focus` / `_chain` | 収束 / 連鎖 | `targetShape: chain`（M1 count1 / M2 count2） |
+| 本体    | `at_sorcerer_passive_1`    | 猛火の術       | CombatModule Hit で種火+1。閾値で発火（全消費） |
+| cost1   | `at_sorcerer_op_*`         | 間隔短縮 / 魔法ダメ増加 / 魔法耐性無視率増加 | 固定 cost 1 |
+| cost10  | `at_sorcerer_op_ignition_*` | 爆炎 / 火勢   | 発火+50% / 必要 stack -1 |
 
-種火 / 熾火 / P4 爆発 / dotCompress 除外の combat ルールは [combat.md](combat.md) §種火 / 熾火を正とする。実装: `src/battle/sorcererFlame.ts`。
+**移行待ち legacy（通常候補外）:** 旧 P2〜P4・旧 active・旧 `op_*`（種火 DoT / 熾火 / active 連鎖）。combat ルールの legacy 節は [combat.md](combat.md) §種火 / 熾火（legacy）。実装残: `src/battle/sorcererFlame.ts`。production path は `emberIgnition.ts`。
 
 ---
 
@@ -2016,7 +2012,7 @@ Conductor は自身でダメージを与えるキャスターではない。
 
 | classId        | 個性     | 設計の柱                                                 | 他系統との差分                                                                    |
 | -------------- | -------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `at_sorcerer`  | 純出力   | 安定 DPS・基準火力・マルチロック再配分                   | 条件分岐・領域再定義なし                                                          |
+| `at_sorcerer`  | 純出力   | 安定 DPS・基準火力・chain（M1 count1 / M2 count2）+ 種火→発火 | 条件分岐・領域再定義なし。Module に RES 無視は内蔵しない（cost1 パッシブで取得可） |
 | `at_sigilist`  | 印起爆   | 乾印 / 坤印の付与・手動起爆・自動起爆の拡散 / 収束       | 直接ダメージは印の手動起爆のみ。敵数で乾印 / 坤印を切替。印は `windMark` / `earthMark` の 2 種 |
 | `at_conductor` | 構造操作 | 戦場 damage の観測・蓄積・法陣による集中 / 分散 / 再循環 | 自身 damage なし。軽減 / ATK/DEF buff ではなく routing / distribution / recycling |
 

@@ -9,6 +9,12 @@ describe('at_swordsman passive / active unlock structure', () => {
   const { passives, actives } = gameData.skillRegistry;
 
   it('loads class skills with expected roles', () => {
+    expect(warriorClass.passiveIds).toEqual(['at_swordsman_passive_2']);
+    expect(
+      warriorClass.skills.flatMap((entry) => entry.skillIds).filter((id) =>
+        id.startsWith('at_swordsman_passive_'),
+      ),
+    ).toEqual([]);
     for (const id of warriorClass.passiveIds ?? []) {
       expect(passives[id]?.id).toBe(id);
     }
@@ -17,6 +23,8 @@ describe('at_swordsman passive / active unlock structure', () => {
     }
 
     expect(actives['at_swordsman_basic_attack']?.effect[0]?.type).toBe('damage');
+    expect(passives['at_swordsman_passive_1']?.defenseIgnore?.def?.amount).toBe(0.05);
+    expect(passives['at_swordsman_passive_2']?.effect).toBe('targetRuleOverride');
     expect(passives['at_swordsman_passive_3']?.effect).toBe('defenseIgnore');
     expect(passives['at_swordsman_passive_4']?.effect).toBe('ignoredDefBonusDamage');
     expect(actives['at_swordsman_active_3']?.trigger?.kind).toBe('basicAttackCount');

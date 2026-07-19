@@ -12,6 +12,12 @@ describe('sp_cleric passive / active unlock structure', () => {
   const { passives, actives } = gameData.skillRegistry;
 
   it('loads class skills with non-empty display names', () => {
+    expect(clericClass.passiveIds).toEqual(['sp_cleric_passive_1']);
+    expect(
+      clericClass.skills.flatMap((entry) => entry.skillIds).filter((id) =>
+        id.startsWith('sp_cleric_passive_'),
+      ),
+    ).toEqual([]);
     for (const id of getClassSkillIds(clericClass.skills)) {
       const skill = passives[id] ?? actives[id];
       expect(skill?.name).toBeTruthy();

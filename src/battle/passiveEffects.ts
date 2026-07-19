@@ -92,6 +92,8 @@ export interface PassiveDamageContext {
   slotKind?: SkillCooldown['slotKind'];
   crowdHitCount?: number;
   targetShape?: TargetShape;
+  /** direct hit / derived hit のみ true。DoT tick では false。 */
+  isHitDamage?: boolean;
   /** bonusBasicAttackOnHit 追加 Hit — 再帰発火を抑止 */
   suppressBonusBasicAttack?: boolean;
   /** allyAttackFollowUp 追撃 Hit — 再帰追撃を抑止 */
@@ -180,6 +182,37 @@ export function getPassiveOutgoingDamageMultiplier(
   }
 
   return mul;
+}
+
+export function getPassiveOutgoingHitDamageMultiplier(
+  attacker: CombatantState,
+  damageType: 'physical' | 'magic',
+  passives: Record<string, PassiveSkillDef>,
+  context: PassiveDamageContext = {},
+): number {
+  if (context.isHitDamage !== true) return 1;
+  let mul = 1;
+  for (const passive of getPassiveDefs(attacker, passives)) {
+    if (passive.effect !== 'outgoingHitDamageIncrease') continue;
+    if ((passive.outgoingHitDamageType ?? 'physical') !== damageType) continue;
+    mul *= 1 + (passive.outgoingHitDamageIncrease ?? 0);
+  }
+  return mul;
+}
+
+export function getPassiveAttackIntervalScale(
+  unit: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  let scale = 1;
+  for (const passive of getPassiveDefs(unit, passives)) {
+    if (passive.effect !== 'attackIntervalScale') continue;
+    const value = passive.attackIntervalScale ?? 1;
+    if (value > 0) {
+      scale *= value;
+    }
+  }
+  return Math.max(0.01, scale);
 }
 
 export function resolveEffectDamageIncreaseMultiplier(

@@ -75,6 +75,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   arenaMark: arenaMarkIconUrl,
   seedFlame: seedFlameIconUrl,
   blazingFlame: blazingFlameIconUrl,
+  emberIgnition: seedFlameIconUrl,
   ballistaMark: ballistaMarkIconUrl,
   allyAttackFollowUp: allyAttackFollowUpIconUrl,
   poisonWeapon: poisonWeaponIconUrl,

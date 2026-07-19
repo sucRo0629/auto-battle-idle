@@ -157,7 +157,7 @@ Wave ごとに各兵科へ **2 方式** を選択する。全兵科を「単体 
 - UI 表示
 - 同種 DoT と異種 DoT の扱い
 
-§Legacy [DoT 圧縮・延長](#dot-圧縮延長持続罠狩猟士-field-flow)・[種火 / 熾火](#種火--熾火魔術師-at_sorcerer) は現行実装の説明。魔術師の種火 / 熾火を完全廃止するかは **未確定**。
+§Legacy [DoT 圧縮・延長](#dot-圧縮延長持続罠狩猟士-field-flow)・[種火 / 熾火（legacy / 移行待ち）](#種火--熾火legacy-移行待ち魔術師-at_sorcerer) は現行実装の説明。R12l の production path は下記 **種火 / 発火** を正本とする。
 
 ### 一時バフ / デバフ
 
@@ -268,12 +268,13 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
    それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
 7. `bonus = floor(ignoredDef × ignoredDefBonusScale)` — パッシブ `ignoredDefBonusDamage`（例: 剣術士 P4 剛剣の冴え）。未習得なら 0
 8. `subtotal = afterDefense + bonus`
-9. `afterDR = max(1, floor(subtotal × damageTakenMul))` — `ignoreDamageTakenReduction: true` の直接 `damage` は `damageTakenMul` を 1 として計算（⑨）
-10. **直接 `damage` パイプライン（SkillExecutor / `applyIncomingDamage`、ターゲット確定後）:** 回避判定（⑩）→ `resolveDamage`（①〜⑨）→ ブロック判定（⑪）→ 障壁（wardBarrier）軽減（⑫）→ `barrierHp` 吸収（⑬）→ HP 減少
-    - 回避成功時は以降（①〜⑬・BAC 充填）をスキップ
-    - `pierceBlock: true` — ⑪ block をスキップ
-    - `pierceWard: true` — ⑫ wardBarrier をスキップ
-    - `pierceBarrier: true` — ⑬ barrierHp 吸収をスキップ
+9. **direct hit 専用乗算** `afterHitMul = floor(subtotal × outgoingHitDamageMul)` — 例: 剣術士 cost1「物理ダメージ増加」、魔術師 cost1「魔法ダメージ増加」。**ignoredDef bonus の後、damageTaken の前**
+10. `afterDR = max(1, floor(afterHitMul × damageTakenMul))` — `ignoreDamageTakenReduction: true` の直接 `damage` は `damageTakenMul` を 1 として計算（⑩）
+11. **直接 `damage` パイプライン（SkillExecutor / `applyIncomingDamage`、ターゲット確定後）:** 回避判定（⑪）→ `resolveDamage`（①〜⑩）→ ブロック判定（⑫）→ 障壁（wardBarrier）軽減（⑬）→ `barrierHp` 吸収（⑭）→ HP 減少
+    - 回避成功時は以降（①〜⑭・BAC 充填）をスキップ
+    - `pierceBlock: true` — ⑫ block をスキップ
+    - `pierceWard: true` — ⑬ wardBarrier をスキップ
+    - `pierceBarrier: true` — ⑭ barrierHp 吸収をスキップ
     - 回避は v1 では貫通対象外（⑩は常に判定）
       10b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定（⑪相当）。成功時 `blocked = floor(afterDR × 0.15)`（定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
 
@@ -282,6 +283,8 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 **ブロック（物理）:** 直接 `damage` かつ `damageType: physical`。⑨の後・⑪で判定（DoT 非対象）。`overlay: block` の `blockChance` を合算して 1 回ロール。成功時 `blocked = floor(afterDR × mitigationRatio)`。`mitigationRatio = min(1, 0.25 + effectiveAtk / 1000)`（25% ベース + 有効攻撃力 1 あたり 0.1%、上限 100%）。実装: `blockMitigation.ts`。
 
 **ブロック（魔法）:** 直接 `damage` かつ `damageType: magic`。`blocksMagic: true` の overlay の `blockChance` のみ合算して 1 回ロール。軽減率は固定 15%。`frontBlockAura`（護法士 P3 真言加護）で前列に付与。
+
+**R12l block 成功時パッシブ:** 鉄衛士 cost1「戦線維持」は block 成功直後に自己即時回復 10、cost10「城塞の構え」は block 成功直後に半径 50px 内の敵を 50px knockback する。どちらも **派生回復 / 派生ダメージ再帰を起こさない**。
 
 7. **DamageDelay 有効時（直接 `damage` / 反撃 `damage` のみ）:** Block 後の確定ダメージ `final` を `ratio` で分割。即時分は Barrier → HP。遅延分はプールに加算し、`buffDurationSec` 中 1 秒ごとに HP へ tick。遅延 tick は DEF/REG/Barrier/Block/Evasion を再適用しない（確定済みダメージ）。DoT 非対象。遅延プール tick は `sourceKind: delayedPoolTick` の `DamageAppliedEvent` を発火する（R12g-b1）。
 
@@ -416,6 +419,8 @@ Wave 進行の詳細は **R3**。ここでは戦闘状態のリセット **候�
 **アクティブ heal / hot の発動保留（要約）:** 上表の PHT 基準。パッシブ由来 HoT aura / 定期 tick は対象外。**heal の味方 stat / distance 対象は使用者自身も候補に含める**（支援 buff 等の非 heal 味方 stat は従来どおり使用者除外）。`order: ratio` の同率タイブレークは本節 PHT 定義に従う。verify モード battleX debug の approach 表は deltaX=0 でも PHT / withhold を `details` 列に表示（`battleXDebugTraceTable.ts`）。
 
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
+
+**R12l excess 処理順:** `excessHealRedirect` / `excessHealToBarrier` を両方持つときは **excess → redirect → 残りを barrier**。`redirectScaleMulti` は multi-target / AoE heal の **1 回の action 全体 excess** に対して 1 回だけ使う。redirect / barrier / healReservation で生じた **派生 heal** は、再度 redirect / barrier / reservation を発火しない。
 
 **特効ダメージ**（パッシブ `damageIncrease` + effect `damageIncrease`）: **直接 `heal` のみ**に乗算（`damage` と同式の条件判定）。**HoT tick には非適用**（`damage` 直接のみ / DoT tick あり、という攻撃側の対比と同様）。
 
@@ -952,7 +957,20 @@ A4 **早鳴りの印** は戦場の全乾印・坤印の残り時間を短縮し
 
 視界妨害・命中干渉・フィールド端貫通は v1 対象外。
 
-### 種火 / 熾火（魔術師 `at_sorcerer`）
+### 種火 / 発火（R12l production・魔術師 `at_sorcerer`）
+
+実装: `src/battle/emberIgnition.ts`。overlay は `emberIgnition`。**旧 `seedFlameOnActiveHit` / `blazingFlameDetonate` は production path では使わず、JSON にのみ移行待ち legacy material として残す。**
+
+| 状態 | stack 上限 | その他 |
+| ---- | ---------- | ------ |
+| **種火** | 既定 5 / `ignitionThresholdReduction` で減少 | CombatModule basic damage Hit ごとに +1。**非時間制**（`Number.POSITIVE_INFINITY`。有限の巨大秒数は使わない）。対象死亡 / Wave 終了 / 発火で消える。Player HUD は overlay `emberIgnition` を stack 付き badge で表示し、時間減衰ゲージや `NaN` を出さない |
+| **発火** | — | 閾値到達時、種火を全消費して同一対象へ魔法 direct hit を 1 回発生。基礎式は暫定で `floor(ATK × emberIgnitionAtkScale)`。cost10「爆炎」は発火基礎量を 1.5 倍、cost1「魔法ダメージ増加」は発火にも乗る（乗算） |
+
+**再帰禁止:** 発火から新しい種火付与、連続発火、redirect 的派生処理は起こさない。敵対関係の対象にのみ付与（味方→敵 / 敵→味方）。
+
+**余剰転送（療養師）:** `excessHealRedirect` の単体率 / 範囲率は **回復行動の形状**（`targetShape` / `effectRange.form`）で決める。有効対象が 1 人でも範囲行動なら `redirectScaleMulti`。1 行動の余剰を集約して 1 回だけ転送。
+
+### 種火 / 熾火（legacy / 移行待ち・魔術師 `at_sorcerer`）
 
 実装: `src/battle/sorcererFlame.ts`。overlay は `dot` + `dotFlavor: seedFlame | blazingFlame`。DoT 数値の既定はコード内定数。`seedFlameOnActiveHit` passive の各フィールドで上書き可（エディタ編集可）。
 

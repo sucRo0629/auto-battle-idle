@@ -12,7 +12,6 @@ import {
   applyDamageToTarget,
   applyHealToTarget,
   clampHpToEffectiveMax,
-  currentHpRatio,
   getEffectiveAttackSpeedMultiplier,
   getEffectiveMaxHp,
   getPassiveDefs,
@@ -115,6 +114,10 @@ import type { PlacedFieldInstance } from "./types.ts";
 import { tickNextOutgoingDamageArming } from "./nextOutgoingDamage.ts";
 import { syncBallistaMarks } from "./ballistaMark.ts";
 import {
+  clearAllEmberIgnition,
+  clearEmberIgnition,
+} from "./emberIgnition.ts";
+import {
   resolveBlockResonanceConfigForUnit,
   syncBlockResonanceAuras,
   tickBlockResonanceDecay,
@@ -137,7 +140,7 @@ import {
   initActiveStageTriggerLimits,
   isAllySupportBlockedDuringArenaDominance,
 } from "./arenaDominance.ts";
-import { tryTriggerHealReservation, grantHealReservationStacks, HEAL_RESERVATION_BUFF_DISPLAY_NAME } from "./healReservation.ts";
+import { tryTriggerHealReservation, HEAL_RESERVATION_BUFF_DISPLAY_NAME } from "./healReservation.ts";
 import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
 import { tryTriggerBarrierDepletionHeal } from "./barrierDepletionHeal.ts";
 import { applyWardBarrierToIncomingDamage } from "./wardBarrier.ts";
@@ -510,42 +513,6 @@ export class BattleEngine {
           effect: "heal",
           amount: reservation.healed,
         });
-        if (
-          reservation.redirectTarget &&
-          reservation.redirectHealed &&
-          reservation.redirectHealed > 0
-        ) {
-          const healer = this.findCombatant(reservation.healerId);
-          if (healer) {
-            this.notifyHealRecorded(
-              healer,
-              reservation.redirectTarget,
-              reservation.redirectHealed,
-            );
-            grantHealReservationStacks(
-              healer,
-              reservation.redirectTarget,
-              reservation.redirectHpRatioBeforeHeal ??
-                currentHpRatio(reservation.redirectTarget),
-              this.gameData.skillRegistry.passives,
-            );
-          }
-          this.emit({
-            type: "skill",
-            actorId: reservation.healerId,
-            targetId: reservation.redirectTarget.id,
-            skillId: reservation.passiveId ?? "",
-            skillName:
-              reservation.buffDisplayName ??
-              (reservation.passiveId
-                ? this.gameData.skillRegistry.passives[reservation.passiveId]
-                    ?.name
-                : undefined) ??
-              HEAL_RESERVATION_BUFF_DISPLAY_NAME,
-            effect: "heal",
-            amount: reservation.redirectAmount ?? reservation.redirectHealed,
-          });
-        }
       }
     }
     if (
@@ -801,7 +768,9 @@ export class BattleEngine {
           ...previousStageTriggers.remaining,
         };
       }
-      initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives);
+      initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives, {
+        passives: this.gameData.skillRegistry.passives,
+      });
     }
     this.syncContinuousPassiveAuras();
     this.clearEngagedVisualState();
@@ -914,7 +883,9 @@ export class BattleEngine {
       this.gameData,
     );
     for (const unit of [...this.players, ...this.enemies]) {
-      initializeSkillCooldowns(unit, actives);
+      initializeSkillCooldowns(unit, actives, {
+        passives: this.gameData.skillRegistry.passives,
+      });
     }
   }
 
@@ -1422,6 +1393,8 @@ export class BattleEngine {
     if (hasNextWave) {
       this.waveAdvanceDelayTimer = ENEMY_DEATH_SETTLE_DELAY_SEC;
     } else {
+      // 最終 Wave 終了でも種火を消去する
+      clearAllEmberIgnition([...this.players, ...this.enemies]);
       this.pendingVictoryTimer = ENEMY_DEATH_SETTLE_DELAY_SEC;
     }
   }
@@ -1434,6 +1407,8 @@ export class BattleEngine {
 
     this.waveExitMarchActive = false;
     if (this.pendingNextWaveIndex !== null) {
+      // Wave 終了: 種火は時間では消えないため、ここで明示消去する
+      clearAllEmberIgnition([...this.players, ...this.enemies]);
       this.awaitingNextWave = true;
       this.emit({
         type: "waveCleared",
@@ -1731,7 +1706,9 @@ export class BattleEngine {
     this.applyEnemyFieldFromBattle();
     const actives = this.gameData.skillRegistry.actives;
     for (const enemy of this.enemies) {
-      initializeSkillCooldowns(enemy, actives);
+      initializeSkillCooldowns(enemy, actives, {
+        passives: this.gameData.skillRegistry.passives,
+      });
     }
   }
 
@@ -1886,7 +1863,9 @@ export class BattleEngine {
         member.build,
         activeSkillIds,
       );
-      initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives);
+      initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives, {
+        passives: this.gameData.skillRegistry.passives,
+      });
       syncIronGuardianModuleStatusEffects(
         ally,
         this.gameData.combatModuleRegistry,
@@ -2321,6 +2300,15 @@ export class BattleEngine {
       const kept: StatusEffect[] = [];
 
       for (const effect of unit.statusEffects) {
+        // 非時間制 status（種火 / 鉄衛士永続 DR 等）: Infinity は減算しても消えない
+        if (
+          effect.overlay === "emberIgnition" ||
+          !Number.isFinite(effect.durationSec) ||
+          !Number.isFinite(effect.remainingSec)
+        ) {
+          kept.push(effect);
+          continue;
+        }
         const wasActive = effect.remainingSec > 0;
         effect.remainingSec -= deltaTime;
         if (effect.remainingSec <= 0) {
@@ -2427,6 +2415,7 @@ export class BattleEngine {
 
     this.emit({ type: "hurt", targetId: unit.id });
     if (damageResult.lethal) {
+      clearEmberIgnition(unit);
       unit.isAlive = false;
       if (!unit.isEnemy) {
         stripPassivesAurasFromSource(unit.id, [...this.players, ...this.enemies]);
@@ -2550,6 +2539,7 @@ export class BattleEngine {
       });
       this.emit({ type: "hurt", targetId: target.id });
       if (lethal) {
+        clearEmberIgnition(target);
         target.isAlive = false;
         clearPlayerRearAssaultAccess(target);
         this.skillSequenceRunner.clearForActor(target.id);

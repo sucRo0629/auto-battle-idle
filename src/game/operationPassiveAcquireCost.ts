@@ -1,13 +1,16 @@
 import type { OperationPassiveCatalogDef } from '../battle/types.ts';
 
 /**
- * R11c: 候補の unlockLevel 帯 → base cost。
- * catalog に無い / 表に無い場合は `passiveAcquireCost` フォールバック。
+ * R12l: fixedCostByPassiveId を優先し、未設定時のみ legacy unlockLevel 帯へフォールバック。
  */
 export function resolveOperationPassiveBaseCost(
   catalog: OperationPassiveCatalogDef,
   passiveId: string,
 ): number {
+  const fixedCost = catalog.fixedCostByPassiveId?.[passiveId];
+  if (typeof fixedCost === 'number' && Number.isInteger(fixedCost) && fixedCost >= 1) {
+    return fixedCost;
+  }
   const unlockLevel = catalog.costUnlockLevelByPassiveId[passiveId];
   if (typeof unlockLevel !== 'number' || !Number.isInteger(unlockLevel)) {
     return catalog.passiveAcquireCost;

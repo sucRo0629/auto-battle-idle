@@ -80,12 +80,12 @@ describe('lastStandInvulnerable', () => {
   it('grants invulnerable overlay on trigger', () => {
     const unit = mockUnit({ id: 'g4', hp: 20, maxHp: 100 });
     tryLastStandInvulnerable(unit, 25, passives);
-    expect(
-      unit.statusEffects.some(
-        (effect) =>
-          effect.overlay === 'invulnerable' && effect.remainingSec > 0,
-      ),
-    ).toBe(true);
+    const invuln = unit.statusEffects.find(
+      (effect) => effect.overlay === 'invulnerable',
+    );
+    expect(invuln).toBeDefined();
+    expect(invuln?.remainingSec).toBe(3);
+    expect(invuln?.durationSec).toBe(3);
   });
 });
 

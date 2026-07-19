@@ -527,6 +527,7 @@ export function resolveStatusIconFallbackColor(
     arenaMark: theme.statusIconDamageIncrease,
     seedFlame: theme.statusIconDot,
     blazingFlame: theme.statusIconDamageIncrease,
+    emberIgnition: theme.statusIconDot,
     ballistaMark: theme.statusIconDamageIncrease,
     allyAttackFollowUp: theme.statusIconCounter,
     poisonWeapon: theme.statusIconDot,

@@ -18,6 +18,7 @@ import {
 } from './defenseIgnore.ts';
 import {
   getPassiveOutgoingDamageMultiplier,
+  getPassiveOutgoingHitDamageMultiplier,
   resolveEffectDamageIncreaseMultiplier,
   resolveOutgoingHealSpecialMultiplier,
   resolveIncomingHealAmount,
@@ -490,6 +491,12 @@ export function resolveDamage(
   }
 
   const subtotal = afterDefense + ignoredDefBonus;
+  const hitDamageMul = getPassiveOutgoingHitDamageMultiplier(
+    attacker,
+    damageType,
+    passives,
+    context,
+  );
   const finisherMul =
     target.isEnemy && context.allies && context.allies.length > 0
       ? resolvePartyFinisherDamageMultiplier(
@@ -505,7 +512,7 @@ export function resolveDamage(
         ? resolveBlazingFlameMagicDamageTakenMultiplier(target) *
           resolveDfPaladinM2MagicExtraDamageTakenMultiplier(target)
         : 1);
-  return Math.max(1, Math.floor(subtotal * takenMul * finisherMul));
+  return Math.max(1, Math.floor(subtotal * hitDamageMul * takenMul * finisherMul));
 }
 
 export function resolveDotTick(

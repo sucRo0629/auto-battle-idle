@@ -345,9 +345,13 @@ export function resolveTargetSpec(
 ): TargetSpec {
   for (let i = passives.length - 1; i >= 0; i--) {
     const passive = passives[i]!;
+    // effect が targetRuleOverride 以外でも、兵科本体などへ併記した上書きを許可する
+    if (!passive.targetRuleOverride) {
+      continue;
+    }
     if (
-      passive.effect !== "targetRuleOverride" ||
-      !passive.targetRuleOverride
+      passive.effect !== "targetRuleOverride" &&
+      passive.effect !== "specialEffect"
     ) {
       continue;
     }

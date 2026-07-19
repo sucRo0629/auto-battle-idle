@@ -229,6 +229,11 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
       "Magic DoT.\n\n· Magic damage equal to 5% ATK per second\n· Lasts 10s\n· Max 5 stacks\n\nAt max stacks, further applications convert to Blazing Flame instead.",
     aliases: ["Seed Flame"],
   },
+  emberIgnition: {
+    title: "Seed Flame",
+    description:
+      "Stack status from the Sorcerer's CombatModule hits (R12l).\n\n· Does not expire over time\n· At the required stacks, converts into Ignition damage and consumes all stacks\n· Clears on target death, Wave end, or Ignition",
+  },
   blazingFlame: {
     title: "Blazing Flame",
     description:

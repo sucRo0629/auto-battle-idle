@@ -321,10 +321,17 @@ export const POWER_STEP_MODES = [
 export const PASSIVE_EFFECT_KINDS = [
   "targetRuleOverride",
   "heal",
+  "healOnBlock",
+  "knockbackOnBlock",
   "excessHealToBarrier",
   "aoeCrowdBonus",
   "specialEffect",
   "defenseIgnore",
+  "emberIgnition",
+  "ignitionDamageBonus",
+  "ignitionThresholdReduction",
+  "outgoingHitDamageIncrease",
+  "attackIntervalScale",
   "periodicDispel",
   "damageReduction",
   "buff",
@@ -368,11 +375,18 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
 > = {
   targetRuleOverride: "ターゲット上書き",
   heal: "回復",
+  healOnBlock: "ブロック時回復",
+  knockbackOnBlock: "ブロック時ノックバック",
   excessHealToBarrier: "余剰回復バリア変換",
   excessHealRedirect: "余剰回復転送",
   aoeCrowdBonus: "密集ボーナス",
   specialEffect: "特効効果",
   defenseIgnore: "防御無視",
+  emberIgnition: "種火 / 発火",
+  ignitionDamageBonus: "発火ダメージ増加",
+  ignitionThresholdReduction: "発火閾値減少",
+  outgoingHitDamageIncrease: "命中ダメージ増加",
+  attackIntervalScale: "攻撃間隔補正",
   periodicDispel: "デバフ解除",
   damageReduction: "ダメージ軽減",
   buff: "バフ",
@@ -754,8 +768,15 @@ export const PASSIVE_EFFECT_KIND_OPTIONS: PassiveEffectKind[] = [
 
 /** エディタ「効果種別」— クラス固有パッシブ */
 export const EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS = [
+  "healOnBlock",
+  "knockbackOnBlock",
   "excessHealToBarrier",
   "excessHealRedirect",
+  "emberIgnition",
+  "ignitionDamageBonus",
+  "ignitionThresholdReduction",
+  "outgoingHitDamageIncrease",
+  "attackIntervalScale",
   "ignoredDefBonusDamage",
   "bonusBasicAttackOnHit",
   "selfHpRatioBuff",
@@ -908,7 +929,7 @@ export const TARGET_SPEC_KIND_LABELS: Record<TargetSpecKind, string> = {
 
 export const TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS = [
   "enemy",
-  "player",
+  "ally",
 ] as const;
 
 export const TARGET_RULE_OVERRIDE_APPLY_TO_LABELS: Record<
@@ -916,7 +937,7 @@ export const TARGET_RULE_OVERRIDE_APPLY_TO_LABELS: Record<
   string
 > = {
   enemy: "敵向け effect",
-  player: "味方向け effect",
+  ally: "味方向け effect",
 };
 
 export const TARGET_SIDE_OPTIONS = ["ally", "enemy"] as const;

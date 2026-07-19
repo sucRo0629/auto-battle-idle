@@ -14,7 +14,7 @@ import {
   listOperationPassiveAuthoringClassIds,
   listPassiveIdsForClassStem,
   setOperationPassiveCandidatesForClassDraft,
-  setOperationPassiveCostUnlockLevelDraft,
+  setOperationPassiveFixedCostDraft,
 } from './editorApi.ts';
 import {
   appendGrid,
@@ -134,28 +134,6 @@ export class OperationPassiveCatalogEditorStep {
         ),
       ),
     );
-    for (const band of ['0', '10', '20'] as const) {
-      grantGrid.appendChild(
-        createFieldRow(
-          `コスト帯 unlockLevel ${band}`,
-          createNumberInput(
-            draft.unlockLevelCostTable[band] ?? 1,
-            (value) => {
-              if (!Number.isInteger(value) || value < 1) return;
-              const current = this.options.getDraft();
-              this.options.onDraftChange({
-                ...current,
-                unlockLevelCostTable: {
-                  ...current.unlockLevelCostTable,
-                  [band]: value,
-                },
-              });
-            },
-            { min: 1, step: 1, readonly: this.options.saving },
-          ),
-        ),
-      );
-    }
     root.appendChild(grantSection);
 
     const candidatesSection = createSection('兵科ごとの取得候補');
@@ -292,22 +270,22 @@ export class OperationPassiveCatalogEditorStep {
       row.appendChild(label);
 
       if (selected.has(passiveId)) {
-        const unlockInput = createNumberInput(
-          draft.costUnlockLevelByPassiveId[passiveId] ?? 0,
-          (unlockLevel) => {
-            if (!Number.isInteger(unlockLevel) || unlockLevel < 0) return;
+        const fixedCostInput = createNumberInput(
+          draft.fixedCostByPassiveId?.[passiveId] ?? 1,
+          (fixedCost) => {
+            if (!Number.isInteger(fixedCost) || fixedCost < 1) return;
             this.options.onDraftChange(
-              setOperationPassiveCostUnlockLevelDraft(
+              setOperationPassiveFixedCostDraft(
                 this.options.getDraft(),
                 passiveId,
-                unlockLevel,
+                fixedCost,
               ),
             );
           },
-          { min: 0, step: 10, readonly: this.options.saving || !isR5Class },
+          { min: 1, step: 1, readonly: this.options.saving || !isR5Class },
         );
         row.appendChild(
-          createFieldRow('コスト帯 unlockLevel', unlockInput),
+          createFieldRow('固定コスト', fixedCostInput),
         );
       }
       list.appendChild(row);

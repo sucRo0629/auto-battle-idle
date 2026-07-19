@@ -4038,12 +4038,20 @@ function requirePassiveEffectParams(
           : parseTargetSpec(rawOverride, `${context}.targetRuleOverride`);
       const targetRuleOverride =
         sanitizeHostileTargetSpecForJson(parsedOverride);
+      const defenseIgnore =
+        obj.defenseIgnore === undefined
+          ? undefined
+          : parseDefenseIgnoreSpec(
+              obj.defenseIgnore,
+              `${context}.defenseIgnore`,
+            );
       return {
         ...base,
         ...(targetRuleOverride !== undefined ? { targetRuleOverride } : {}),
         ...(targetRuleOverrideApplyTo !== undefined
           ? { targetRuleOverrideApplyTo }
           : {}),
+        ...(defenseIgnore !== undefined ? { defenseIgnore } : {}),
       };
     }
     case 'specialEffect': {
@@ -4063,6 +4071,22 @@ function requirePassiveEffectParams(
               obj.defenseIgnore,
               `${context}.defenseIgnore`,
             );
+      const targetRuleOverrideApplyTo =
+        obj.targetRuleOverrideApplyTo === undefined
+          ? undefined
+          : requireEnum(
+              obj,
+              'targetRuleOverrideApplyTo',
+              context,
+              TARGET_RULE_OVERRIDE_APPLY_TO_SET,
+            );
+      const targetRuleOverride =
+        obj.targetRuleOverride === undefined
+          ? undefined
+          : parseTargetSpec(
+              obj.targetRuleOverride,
+              `${context}.targetRuleOverride`,
+            );
       return {
         ...base,
         specialEffectApplyTo,
@@ -4071,6 +4095,10 @@ function requirePassiveEffectParams(
           `${context}.specialEffect`,
         ),
         ...(defenseIgnore !== undefined ? { defenseIgnore } : {}),
+        ...(targetRuleOverride !== undefined ? { targetRuleOverride } : {}),
+        ...(targetRuleOverrideApplyTo !== undefined
+          ? { targetRuleOverrideApplyTo }
+          : {}),
       };
     }
     case 'defenseIgnore':
@@ -4081,6 +4109,149 @@ function requirePassiveEffectParams(
           `${context}.defenseIgnore`,
         ),
       };
+    case 'healOnBlock':
+      return {
+        ...base,
+        healOnBlockAmount: parseResourceAmountSpec(
+          obj.healOnBlockAmount ?? obj.healAmount ?? { kind: 'flat', flatAmount: 10 },
+          `${context}.healOnBlockAmount`,
+        ),
+      };
+    case 'knockbackOnBlock': {
+      const knockbackOnBlockRadiusPx = requireNumber(
+        obj,
+        'knockbackOnBlockRadiusPx',
+        context,
+      );
+      const knockbackOnBlockDistancePx = requireNumber(
+        obj,
+        'knockbackOnBlockDistancePx',
+        context,
+      );
+      if (knockbackOnBlockRadiusPx < 0) {
+        invalidField(
+          context,
+          'knockbackOnBlockRadiusPx',
+          'must be a non-negative number',
+        );
+      }
+      if (knockbackOnBlockDistancePx < 0) {
+        invalidField(
+          context,
+          'knockbackOnBlockDistancePx',
+          'must be a non-negative number',
+        );
+      }
+      return {
+        ...base,
+        knockbackOnBlockRadiusPx,
+        knockbackOnBlockDistancePx,
+      };
+    }
+    case 'emberIgnition': {
+      const emberIgnitionThreshold =
+        obj.emberIgnitionThreshold === undefined
+          ? 5
+          : requireNumber(obj, 'emberIgnitionThreshold', context);
+      const emberIgnitionAtkScale =
+        obj.emberIgnitionAtkScale === undefined
+          ? 1
+          : requireNumber(obj, 'emberIgnitionAtkScale', context);
+      if (emberIgnitionThreshold < 1) {
+        invalidField(
+          context,
+          'emberIgnitionThreshold',
+          'must be an integer >= 1',
+        );
+      }
+      if (emberIgnitionAtkScale <= 0) {
+        invalidField(
+          context,
+          'emberIgnitionAtkScale',
+          'must be a positive number',
+        );
+      }
+      return {
+        ...base,
+        emberIgnitionThreshold,
+        emberIgnitionAtkScale,
+      };
+    }
+    case 'ignitionDamageBonus': {
+      const ignitionDamageBonusScale =
+        obj.ignitionDamageBonusScale === undefined
+          ? 1
+          : requireNumber(obj, 'ignitionDamageBonusScale', context);
+      if (ignitionDamageBonusScale <= 0) {
+        invalidField(
+          context,
+          'ignitionDamageBonusScale',
+          'must be a positive number',
+        );
+      }
+      return {
+        ...base,
+        ignitionDamageBonusScale,
+      };
+    }
+    case 'ignitionThresholdReduction': {
+      const ignitionThresholdReduction =
+        obj.ignitionThresholdReduction === undefined
+          ? 1
+          : requireNumber(obj, 'ignitionThresholdReduction', context);
+      if (!Number.isInteger(ignitionThresholdReduction) || ignitionThresholdReduction < 1) {
+        invalidField(
+          context,
+          'ignitionThresholdReduction',
+          'must be an integer >= 1',
+        );
+      }
+      return {
+        ...base,
+        ignitionThresholdReduction,
+      };
+    }
+    case 'outgoingHitDamageIncrease': {
+      const outgoingHitDamageIncrease =
+        obj.outgoingHitDamageIncrease === undefined
+          ? requireNumber(obj, 'ratio', context)
+          : requireNumber(obj, 'outgoingHitDamageIncrease', context);
+      if (outgoingHitDamageIncrease <= -1) {
+        invalidField(
+          context,
+          'outgoingHitDamageIncrease',
+          'must be greater than -1',
+        );
+      }
+      const outgoingHitDamageType =
+        obj.outgoingHitDamageType === undefined
+          ? undefined
+          : requireEnum(obj, 'outgoingHitDamageType', context, DAMAGE_TYPES_SET);
+      return {
+        ...base,
+        outgoingHitDamageIncrease,
+        ...(outgoingHitDamageType !== undefined
+          ? { outgoingHitDamageType }
+          : {}),
+      };
+    }
+    case 'attackIntervalScale': {
+      const attackIntervalScale =
+        obj.attackIntervalScale === undefined
+          ? requireNumber(obj, 'ratio', context)
+          : requireNumber(obj, 'attackIntervalScale', context);
+      if (!(attackIntervalScale > 0)) {
+        invalidField(
+          context,
+          'attackIntervalScale',
+          'must be a positive number',
+        );
+      }
+      return {
+        ...base,
+        attackIntervalScale,
+      };
+    }
     case 'ignoredDefBonusDamage': {
       const ignoredDefBonusScale = requireNumber(
         obj,
@@ -4898,10 +5069,22 @@ function requirePassiveEffectParams(
       if (redirectScale <= 0 || redirectScale > 1) {
         invalidField(context, 'redirectScale', 'must be between 0 and 1');
       }
+      const redirectScaleMulti = parseOptionalNumber(
+        obj,
+        'redirectScaleMulti',
+        context,
+      );
+      if (
+        redirectScaleMulti !== undefined &&
+        (redirectScaleMulti <= 0 || redirectScaleMulti > 1)
+      ) {
+        invalidField(context, 'redirectScaleMulti', 'must be between 0 and 1');
+      }
       const excessHealSources = parseExcessHealSources(obj, context);
       return {
         ...base,
         redirectScale,
+        ...(redirectScaleMulti !== undefined ? { redirectScaleMulti } : {}),
         ...(excessHealSources !== undefined ? { excessHealSources } : {}),
       };
     }
@@ -7387,6 +7570,7 @@ const DEFAULT_OPERATION_PASSIVE_CATALOG: OperationPassiveCatalogDef = {
   passiveAcquireCost: 1,
   waveClearResourceGrant: 1,
   sameClassStackStep: 0,
+  fixedCostByPassiveId: {},
   unlockLevelCostTable: { '0': 1, '10': 10, '20': 20 },
   costUnlockLevelByPassiveId: {},
   candidatesByClass: {},
@@ -7466,6 +7650,29 @@ function parseCostUnlockLevelByPassiveId(
   return levels;
 }
 
+function parseFixedCostByPassiveId(
+  raw: unknown,
+  context: string,
+): Record<string, number> {
+  if (raw === undefined) {
+    return {};
+  }
+  const record = requireRecord(raw, `${context}.fixedCostByPassiveId`);
+  const costs: Record<string, number> = {};
+  for (const [passiveId, value] of Object.entries(record)) {
+    if (!passiveId.trim()) {
+      throw new Error(`${context}.fixedCostByPassiveId: empty passive id`);
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+      throw new Error(
+        `${context}.fixedCostByPassiveId["${passiveId}"] must be a positive integer`,
+      );
+    }
+    costs[passiveId] = value;
+  }
+  return costs;
+}
+
 export function parseOperationPassiveCatalog(
   raw: unknown,
 ): OperationPassiveCatalogDef {
@@ -7493,6 +7700,10 @@ export function parseOperationPassiveCatalog(
     record.unlockLevelCostTable,
     context,
   );
+  const fixedCostByPassiveId = parseFixedCostByPassiveId(
+    record.fixedCostByPassiveId,
+    context,
+  );
   const costUnlockLevelByPassiveId = parseCostUnlockLevelByPassiveId(
     record.costUnlockLevelByPassiveId,
     context,
@@ -7504,6 +7715,7 @@ export function parseOperationPassiveCatalog(
       passiveAcquireCost,
       waveClearResourceGrant,
       sameClassStackStep,
+      fixedCostByPassiveId,
       unlockLevelCostTable,
       costUnlockLevelByPassiveId,
       candidatesByClass: {},
@@ -7549,6 +7761,7 @@ export function parseOperationPassiveCatalog(
     passiveAcquireCost,
     waveClearResourceGrant,
     sameClassStackStep,
+    fixedCostByPassiveId,
     unlockLevelCostTable,
     costUnlockLevelByPassiveId,
     candidatesByClass,
@@ -7596,8 +7809,14 @@ export function normalizeOperationPassiveCatalogForSave(
   }
 
   const referencedIds = new Set(Object.values(candidatesByClass).flat());
+  const fixedCostByPassiveId: Record<string, number> = {};
+  for (const passiveId of Object.keys(catalog.fixedCostByPassiveId ?? {}).sort()) {
+    if (!referencedIds.has(passiveId)) continue;
+    fixedCostByPassiveId[passiveId] = catalog.fixedCostByPassiveId![passiveId]!;
+  }
   const costUnlockLevelByPassiveId: Record<string, number> = {};
   for (const passiveId of Object.keys(catalog.costUnlockLevelByPassiveId).sort()) {
+    if ((catalog.fixedCostByPassiveId ?? {})[passiveId] !== undefined) continue;
     if (!referencedIds.has(passiveId)) continue;
     costUnlockLevelByPassiveId[passiveId] =
       catalog.costUnlockLevelByPassiveId[passiveId]!;
@@ -7607,6 +7826,7 @@ export function normalizeOperationPassiveCatalogForSave(
     passiveAcquireCost: catalog.passiveAcquireCost,
     waveClearResourceGrant: catalog.waveClearResourceGrant,
     sameClassStackStep: catalog.sameClassStackStep,
+    fixedCostByPassiveId,
     unlockLevelCostTable,
     costUnlockLevelByPassiveId,
     candidatesByClass,

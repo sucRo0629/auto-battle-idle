@@ -1,46 +1,60 @@
 {
   "passiveAcquireCost": 1,
   "waveClearResourceGrant": 12,
-  "sameClassStackStep": 1,
-  "unlockLevelCostTable": {
-    "0": 1,
-    "10": 10,
-    "20": 20
+  "sameClassStackStep": 0,
+  "fixedCostByPassiveId": {
+    "df_guardian_op_block_rate_up": 1,
+    "df_guardian_op_frontline_maintenance": 1,
+    "df_guardian_passive_2": 1,
+    "df_guardian_op_fortress_stance": 10,
+    "df_guardian_passive_4": 10,
+    "at_swordsman_op_interval_reduction": 1,
+    "at_swordsman_op_physical_damage_up": 1,
+    "at_swordsman_passive_1": 1,
+    "at_swordsman_passive_3": 10,
+    "at_swordsman_passive_4": 10,
+    "at_sorcerer_op_interval_reduction": 1,
+    "at_sorcerer_op_magic_damage_up": 1,
+    "at_sorcerer_op_res_ignore_up": 1,
+    "at_sorcerer_op_ignition_damage": 10,
+    "at_sorcerer_op_ignition_threshold": 10,
+    "sp_cleric_op_heal_amount_up": 1,
+    "sp_cleric_op_interval_reduction": 1,
+    "sp_cleric_passive_2": 1,
+    "sp_cleric_passive_3": 10,
+    "sp_cleric_passive_4": 10
   },
+  "unlockLevelCostTable": {},
   "costUnlockLevelByPassiveId": {
-    "df_guardian_op_brace": 0,
-    "df_guardian_op_wall_aura": 10,
-    "df_guardian_op_last_stand": 20,
-    "at_swordsman_op_armor_break": 0,
-    "at_swordsman_op_high_def_focus": 10,
-    "at_swordsman_op_finish_cut": 20,
-    "at_sorcerer_op_arc_bolt": 0,
-    "at_sorcerer_op_ember_dot": 10,
-    "at_sorcerer_op_resonant_hit": 20,
-    "sp_cleric_op_triage": 0,
-    "sp_cleric_op_excess_ward": 10,
-    "sp_cleric_op_heal_reserve": 20
   },
   "candidatesByClass": {
     "df_guardian": [
-      "df_guardian_op_brace",
-      "df_guardian_op_wall_aura",
-      "df_guardian_op_last_stand"
+      "df_guardian_op_block_rate_up",
+      "df_guardian_op_frontline_maintenance",
+      "df_guardian_passive_2",
+      "df_guardian_op_fortress_stance",
+      "df_guardian_passive_4"
     ],
     "at_swordsman": [
-      "at_swordsman_op_armor_break",
-      "at_swordsman_op_high_def_focus",
-      "at_swordsman_op_finish_cut"
+      "at_swordsman_op_interval_reduction",
+      "at_swordsman_op_physical_damage_up",
+      "at_swordsman_passive_1",
+      "at_swordsman_passive_3",
+      "at_swordsman_passive_4"
     ],
     "at_sorcerer": [
-      "at_sorcerer_op_arc_bolt",
-      "at_sorcerer_op_ember_dot",
-      "at_sorcerer_op_resonant_hit"
+      "at_sorcerer_op_interval_reduction",
+      "at_sorcerer_op_magic_damage_up",
+      "at_sorcerer_op_res_ignore_up",
+      "at_sorcerer_op_ignition_damage",
+      "at_sorcerer_op_ignition_threshold"
     ],
     "sp_cleric": [
-      "sp_cleric_op_triage",
-      "sp_cleric_op_excess_ward",
-      "sp_cleric_op_heal_reserve"
+      "sp_cleric_op_heal_amount_up",
+      "sp_cleric_op_interval_reduction",
+      "sp_cleric_passive_2",
+      "sp_cleric_passive_3",
+      "sp_cleric_passive_4"
     ]
   }
 }

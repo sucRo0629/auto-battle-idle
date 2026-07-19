@@ -12,7 +12,14 @@
           "maxHpRatio": 0.5
         }
       ]
-    }
+    },
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "ally",
+      "stat": "hp",
+      "order": "ratio"
+    },
+    "targetRuleOverrideApplyTo": "ally"
   },
   {
     "id": "sp_cleric_passive_2",
@@ -28,6 +35,7 @@
     "name": "巡る生命",
     "effect": "excessHealRedirect",
     "redirectScale": 0.5,
+    "redirectScaleMulti": 0.25,
     "excessHealSources": [
       "outgoing"
     ]
@@ -44,6 +52,22 @@
       "atkScale": 0.75
     },
     "buffDisplayName": "治癒の残響"
+  },
+  {
+    "id": "sp_cleric_op_heal_amount_up",
+    "name": "回復量増加",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "heal",
+    "specialEffect": {
+      "scale": 1.1,
+      "conditions": []
+    }
+  },
+  {
+    "id": "sp_cleric_op_interval_reduction",
+    "name": "回復間隔短縮",
+    "effect": "attackIntervalScale",
+    "attackIntervalScale": 0.95
   },
   {
     "id": "sp_cleric_op_triage",

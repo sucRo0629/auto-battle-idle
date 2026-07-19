@@ -27,6 +27,7 @@
 | `vfxAnimRegistry.ts`, `VfxPlaybackManager`, `presentation/`, `sheets/vfx/`        | [spec/classes-and-skills.md](spec/classes-and-skills.md#スプライト演出アセット) |
 | SE / BGM（`src/assets/sounds/`、再生制御・音量設定）                              | [combat-architecture.md](combat-architecture.md#88-sound初期版体験版)（設定 UI: [party-formation-ui.md §16](spec/party-formation-ui.md#16-音声設定体験版)） |
 | `data/stages.json`, セーブ, 作戦ループ, 作戦外進行              | [spec/progression.md](spec/progression.md), [spec/operation-loop.md](spec/operation-loop.md) |
+| `data/operation-passive-catalog.json`, 作戦内パッシブ取得コスト（R12l: `fixedCostByPassiveId`） | [spec/operation-loop.md](spec/operation-loop.md), [spec/classes-and-skills.md](spec/classes-and-skills.md)（R12l メモ）, [spec/combat.md](spec/combat.md) |
 | マップ選択・ステージ詳細・リザルト履歴 DOM（Phase 6d 予定）                    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md)                        |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語表: [classes-and-skills.md §ゲーム用語表](spec/classes-and-skills.md#ゲーム用語表表示分類)） |
 | `fonts.css`, UI `font-family`, 戦闘 HUD フォントテーマ | [spec/ui-fonts.md](spec/ui-fonts.md) |

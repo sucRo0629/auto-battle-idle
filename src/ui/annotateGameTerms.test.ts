@@ -163,6 +163,25 @@ describe("segmentTextByGameTerms", () => {
     ]);
   });
 
+  it("does not give emberIgnition the shared「種火」alias (HUD uses statusCategory)", async () => {
+    const { getGameTermEntry, resolveGameTermIdForStatusCategory } =
+      await import("./gameTermGlossary.ts");
+    const ember = getGameTermEntry("emberIgnition");
+    expect(ember?.aliases?.ja ?? []).not.toContain("種火");
+    expect(resolveGameTermIdForStatusCategory("emberIgnition")).toBe(
+      "emberIgnition",
+    );
+    // 文中「種火」は legacy seedFlame のみ。登録順で emberIgnition に奪われない
+    const termSeg = segmentTextByGameTerms("種火", "ja").find(
+      (s) => s.kind === "term",
+    );
+    expect(termSeg).toEqual({
+      kind: "term",
+      termId: "seedFlame",
+      matchedText: "種火",
+    });
+  });
+
   it("registers seedFlame with description and aliases", async () => {
     const { getGameTermEntry } = await import("./gameTermGlossary.ts");
     const entry = getGameTermEntry("seedFlame");
@@ -270,7 +289,14 @@ describe("gameTermGlossary locale shape", () => {
     const { GAME_TERM_ENTRIES } = await import("./gameTermGlossary.ts");
     for (const entry of GAME_TERM_ENTRIES) {
       if (entry.description === undefined) continue;
-      expect(entry.aliases?.ja.length).toBeGreaterThan(0);
+      const jaAliases = entry.aliases?.ja ?? [];
+      if (jaAliases.length === 0) {
+        // 文中 alias なしは HUD statusCategory 経路専用（例: R12l emberIgnition）
+        // 旧 DoT と共通 alias「種火」を共有しないための意図的な欠落
+        expect(entry.statusCategory).toBeDefined();
+        continue;
+      }
+      expect(jaAliases.length).toBeGreaterThan(0);
       if (entry.description.en !== undefined) {
         expect(entry.aliases?.en?.length).toBeGreaterThan(0);
       }

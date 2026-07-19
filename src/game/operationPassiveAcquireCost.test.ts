@@ -9,6 +9,7 @@ const catalog: OperationPassiveCatalogDef = {
   passiveAcquireCost: 1,
   waveClearResourceGrant: 12,
   sameClassStackStep: 1,
+  fixedCostByPassiveId: {},
   unlockLevelCostTable: { '0': 1, '10': 10, '20': 20 },
   costUnlockLevelByPassiveId: {
     cheap: 0,
@@ -48,5 +49,14 @@ describe('operationPassiveAcquireCost (R11c)', () => {
       sameClassStackStep: 0,
     };
     expect(resolveOperationPassiveAcquireCost(flat, 'pricey', 5)).toBe(20);
+  });
+
+  it('prefers fixedCostByPassiveId over unlockLevel bands', () => {
+    const fixed: OperationPassiveCatalogDef = {
+      ...catalog,
+      fixedCostByPassiveId: { pricey: 10 },
+    };
+    expect(resolveOperationPassiveBaseCost(fixed, 'pricey')).toBe(10);
+    expect(resolveOperationPassiveAcquireCost(fixed, 'pricey', 2)).toBe(12);
   });
 });

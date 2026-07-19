@@ -1,13 +1,10 @@
 import {
+  applyHealToTarget,
   currentHpRatio,
   getPassiveDefs,
   resolveHealAmount,
 } from './combatMath.ts';
 import { isAllySupportBlockedDuringArenaDominance } from './arenaDominance.ts';
-import {
-  applyDirectHealWithExcess,
-  sameSideAlliesFrom,
-} from './instantHealExcess.ts';
 import type {
   CombatantState,
   PassiveSkillDef,
@@ -59,10 +56,6 @@ export interface HealReservationTriggerResult {
   healerId?: string;
   passiveId?: string;
   buffDisplayName?: string;
-  redirectTarget?: CombatantState;
-  redirectHealed?: number;
-  redirectAmount?: number;
-  redirectHpRatioBeforeHeal?: number;
 }
 
 export function tryTriggerHealReservation(
@@ -106,32 +99,13 @@ export function tryTriggerHealReservation(
       return { healed: 0, healerId: healer.id, passiveId };
     }
 
-    const healResult = applyDirectHealWithExcess(
-      healer,
-      target,
-      amount,
-      sameSideAlliesFrom(allUnits, healer),
-      passives,
-      { allowRedirect: true },
-    );
-    if (healResult.redirectTarget && healResult.redirectHealed > 0) {
-      grantHealReservationStacks(
-        healer,
-        healResult.redirectTarget,
-        healResult.redirectHpRatioBeforeHeal ??
-          currentHpRatio(healResult.redirectTarget),
-        passives,
-      );
-    }
+    // 予約発動は派生回復。余剰転送・バリア化・再予約は発生させない
+    const healed = applyHealToTarget(target, amount);
     return {
-      healed: healResult.healed,
+      healed,
       healerId: healer.id,
       passiveId,
       buffDisplayName: effect.displayName,
-      redirectTarget: healResult.redirectTarget,
-      redirectHealed: healResult.redirectHealed,
-      redirectAmount: healResult.redirectAmount,
-      redirectHpRatioBeforeHeal: healResult.redirectHpRatioBeforeHeal,
     };
   }
 

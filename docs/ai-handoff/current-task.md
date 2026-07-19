@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12k 完了 / 公式次 R12l**。R12a〜j は固定 `r12_prototype` の技術材料として維持するが、旧 Lv パッシブ未再編により、R12j のゲーム全体成立判定は **無効 / 未完了**。メイン反復構造は [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)（seed 付き作者設計 3 Wave 問題系列）。handoff 正本は **§105.22**。
+- **新ロードマップ現在地:** **R12l 作業単位2 レビュー修正済み（Backend 成立確認完了 / Player WavePrep 部分確認）。** 作業単位3（旧仕様隔離）未着手。正本 handoff は **§105.24**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12l 4兵科パッシブ再編** → R12m 反復試作（系列 A/B）→ R12n 数値調整 → R12o 手元成立 → R13。
+- **次の再開タスク:** R12l 作業単位3（旧仕様隔離）→ R12m → R12n → R12o → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -9128,3 +9128,99 @@ R13への現在の対応表:
 - 作戦外クリア記録の具体 Save 形状
 
 **公式次:** **R12l** — R5対象4兵科のパッシブ・旧active再編。
+
+## §105.23 R12l unit1 runtime + data（2026-07-19）
+
+**状態:** runtime / data / focused test まで実装。レビュー指摘修正込み。**Player 完了ではない。** 作業単位3（旧仕様隔離）には未着手。
+
+### 今回反映
+
+- 4兵科 `df_guardian` / `at_swordsman` / `at_sorcerer` / `sp_cleric` の passives を **兵科本体 1 + cost1 3件 + cost10 2件** に再編
+- `data/operation-passive-catalog.json` を `fixedCostByPassiveId` 正本へ切替、`sameClassStackStep: 0`、4兵科新 path では `unlockLevel` を不使用
+- `classes.json` は 4兵科だけ **兵科本体 passive のみ常時習得**へ変更し、旧 passive の Lv gate を除去。Player 向け `summary` / `featureTags` も新仕様へ同期
+- runtime へ `emberIgnition`（非時間制）、block 成功時 `healOnBlock` / `knockbackOnBlock`、`targetRuleOverride` 併記の `defenseIgnore`、`attackIntervalScale`、行動形状ベースの `redirectScaleMulti` を接続
+- 魔術師の旧 `seedFlame` / `blazingFlame` 系 passive / op 定義は **移行待ち legacy material** として JSON に温存
+
+### レビュー修正（unit1 完了判定前）
+
+- 種火: 有限 99999 秒を廃止。鉄衛士永続 status と同じ `POSITIVE_INFINITY` + tick スキップ。Wave 終了で明示消去
+- 種火付与: `damageTarget.isEnemy` 固定をやめ、敵対関係（`actor.isEnemy !== damageTarget.isEnemy`）
+- 余剰転送率: `targets.length > 1` をやめ、`healActionScope`（targetShape / effectRange.form）で単体50% / 範囲25%
+- `r12lExpectedValue.ts` は単位不一致のため **削除**。穿甲 vs 魔術師 cost10 の比較は **R12n** で、同一条件・同一単位（DPS 増加率または総ダメージ増加率）で行う
+
+### R12n へ渡す比較条件（穿甲 vs 爆炎/火勢）
+
+- 同じ敵の防御力・魔法耐性、基礎 ATK、CombatModule 攻撃間隔、観測時間を使う
+- 最終的な **DPS 増加率** または **総ダメージ増加率** という同一単位で比較する
+- 現時点で不完全な期待値フックは置かない
+
+### 確認済み
+
+- focused test（unit1 + レビュー修正）
+- 転送回復・予約発動の派生回復から予約再付与を止めた（確定仕様）
+
+### 未完了
+
+- 旧 active / 旧基盤の通常経路隔離は **作業単位3**
+- Player 画面での全候補表示・効果確認は **Player 完了**として未達
+
+### 次の正式タスク入口
+
+- 作業単位2: 新仕様成立確認（focused + 実戦経路）
+- 作業単位3: 旧仕様隔離・廃止
+
+## §105.24 R12l unit2 新仕様成立確認（2026-07-19）
+
+**状態（レビュー修正後）:** Backend production 経路の成立確認は完了。Player は **GameSession WavePrep 到達＋4兵科候補 DOM** まで確認。実ブラウザ手動確認は未実施。**作業単位3（旧仕様隔離）は未着手。** R12l 全体の Player 完了にはしない。
+
+### 今回反映（unit2 + レビュー修正）
+
+- production 経路統合: `src/battle/r12lEstablishment.integration.test.ts`（BattleEngine + 実 GameData）
+- Player production: `src/game/r12lPlayerDisplay.test.ts` — Wave クリア → WavePrep 到達 → R12l 4兵科編成 → WavePrep 候補 DOM（空振り return / 検査0件成功を禁止）
+- catalog / 単独 DOM 生成は同ファイル内で **補助** として分離表記（Player 画面証明に使わない）
+- 種火 HUD: `statusEffectDisplay` / `StatusIconRegistry` / glossary `emberIgnition`（statusCategory 経路）
+- 種火用語競合解消: `emberIgnition` は共通 alias「種火」を持たない。文中「種火」は legacy `seedFlame` のみ。HUD は `resolveStatusBadgeGameTermId(emberIgnition)`
+- 正本同期: `classes-and-skills.md` / `combat.md`（現行正本節）
+
+### Backend production 経路で確認できたもの
+
+- 4兵科本体パッシブ常時 + 作戦取得は対象 slot のみ注入
+- CombatModule Hit → 種火 / 発火、敵側対称、発火からの再付与なし、旧 active / 非 module basic では新種火なし
+- Wave 終了（wipe→exit march→awaitingNextWave）で種火消去、`startNextWave` で不撓フラグ再利用可
+- 範囲回復 Module の `healActionScope=multi` → 転送 25%（実対象1でも）
+
+### Player production 経路で確認できたもの
+
+- GameSession verify 経路で中間 Wave クリア後に WavePrep 画面へ到達
+- 同一作戦で R12l 4兵科をスロットに配置し、WavePrep 候補カード DOM が catalog どおり（5件・日本語名・旧 op 非表示）
+- HUD badge の `emberIgnition` → 用語 ID `emberIgnition`（旧 DoT 説明を開かない）
+
+### 補助のみ（Player 画面証明にしない）
+
+- `buildOperationPassivePrepViews` / 単独 `createOperationPassivePrepSection` DOM
+- catalog API 単体の cost / 件数 assert
+
+### 単体テストのみ
+
+- 転送・予約回復の派生再発防止（`healReservation` / `instantHealExcess`）
+- 不撓の同一 Wave 再発火禁止（`lastStandInvulnerable`）— Wave 再利用は Backend production 経路で確認
+- glossary alias 競合固定（`annotateGameTerms` / `r12lPlayerDisplay`）
+
+### 未確認 / 未完了
+
+- 実ブラウザでの手元プレイ観察
+- 旧 active / 旧基盤 / 旧炎 DoT の通常経路隔離（**作業単位3**）
+- `npm run build` は大量の既存 TS エラーで失敗する。今回差分との因果は未分類（「今回差分に致命なし」とは断定しない）
+
+### 完了判定（レビュー修正後）
+
+| 層 | 判定 |
+| -- | ---- |
+| Backend（作業単位2の成立確認） | **完了**（BattleEngine production 経路） |
+| Player（WavePrep 候補表示の production 経路） | **部分完了**（happy-dom GameSession まで。実ブラウザ未確認） |
+| R12l Phase / 作業単位3 | **未完了** |
+
+### 次の正式タスク入口
+
+- 作業単位3: 旧仕様隔離・廃止
+- その後 R12m

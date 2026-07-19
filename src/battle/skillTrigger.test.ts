@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ActiveSkillDef, SkillCooldown } from './types.ts';
+import type { ActiveSkillDef, PassiveSkillDef, SkillCooldown } from './types.ts';
 import type { CombatantState } from './types.ts';
 import {
   chargeCountTrigger,
@@ -160,6 +160,34 @@ describe('skillTrigger', () => {
     const cd: SkillCooldown = { skillId: 'test', remaining: 0, slotKind: 'active' };
     resetCooldownAfterFire(cd, skill({ trigger: { kind: 'hitsTaken', value: 4 } }));
     expect(cd.remaining).toBe(4);
+  });
+
+  it('scales basic cooldowns by attackIntervalScale passives', () => {
+    const registry = {
+      basic: skill({ id: 'basic', trigger: { kind: 'time', value: 2 }, slotKind: 'basic' }),
+    };
+    const passives: Record<string, PassiveSkillDef> = {
+      fast: {
+        id: 'fast',
+        name: '攻撃間隔短縮',
+        effect: 'attackIntervalScale',
+        attackIntervalScale: 0.95,
+      },
+    };
+    const unit = {
+      build: {
+        learnedPassiveIds: ['fast'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      cooldowns: [{ skillId: 'basic', remaining: 0, slotKind: 'basic' as const }],
+    } as CombatantState;
+
+    initializeSkillCooldowns(unit, registry, { passives });
+    expect(unit.cooldowns[0]!.remaining).toBeCloseTo(1.9);
+
+    resetCooldownAfterFire(unit.cooldowns[0]!, registry.basic, { unit, passives });
+    expect(unit.cooldowns[0]!.remaining).toBeCloseTo(1.9);
   });
 
   it('chargeCountTrigger decrements only while remaining > 0', () => {

@@ -1,12 +1,12 @@
 [
   {
     "id": "at_swordsman_passive_1",
-    "name": "鎧砕き",
+    "name": "防御力無視率増加",
     "effect": "defenseIgnore",
     "defenseIgnore": {
       "def": {
         "mode": "percent",
-        "amount": 0.15
+        "amount": 0.05
       }
     }
   },
@@ -20,17 +20,23 @@
       "stat": "def",
       "order": "highest"
     },
-    "targetRuleOverrideApplyTo": "enemy"
+    "targetRuleOverrideApplyTo": "enemy",
+    "defenseIgnore": {
+      "def": {
+        "mode": "percent",
+        "amount": 0.1
+      }
+    }
   },
   {
     "id": "at_swordsman_passive_3",
     "name": "穿甲の一撃",
     "effect": "defenseIgnore",
     "defenseIgnore": {
-      "chance": 0.1,
+      "chance": 0.3,
       "def": {
         "mode": "percent",
-        "amount": 1
+        "amount": 0.5
       }
     }
   },
@@ -39,6 +45,19 @@
     "name": "剛剣の冴え",
     "effect": "ignoredDefBonusDamage",
     "ignoredDefBonusScale": 0.5
+  },
+  {
+    "id": "at_swordsman_op_interval_reduction",
+    "name": "攻撃間隔短縮",
+    "effect": "attackIntervalScale",
+    "attackIntervalScale": 0.95
+  },
+  {
+    "id": "at_swordsman_op_physical_damage_up",
+    "name": "物理ダメージ増加",
+    "effect": "outgoingHitDamageIncrease",
+    "outgoingHitDamageIncrease": 0.05,
+    "outgoingHitDamageType": "physical"
   },
   {
     "id": "at_swordsman_op_armor_break",

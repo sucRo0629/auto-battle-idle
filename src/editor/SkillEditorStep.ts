@@ -574,6 +574,30 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case "defenseIgnore":
       passive.defenseIgnore ??= { def: { mode: "percent", amount: 0.2 } };
       break;
+    case "healOnBlock":
+      passive.healOnBlockAmount ??= { kind: "flat", flatAmount: 10 };
+      break;
+    case "knockbackOnBlock":
+      passive.knockbackOnBlockRadiusPx ??= 50;
+      passive.knockbackOnBlockDistancePx ??= 50;
+      break;
+    case "emberIgnition":
+      passive.emberIgnitionThreshold ??= 5;
+      passive.emberIgnitionAtkScale ??= 1;
+      break;
+    case "ignitionDamageBonus":
+      passive.ignitionDamageBonusScale ??= 1.5;
+      break;
+    case "ignitionThresholdReduction":
+      passive.ignitionThresholdReduction ??= 1;
+      break;
+    case "outgoingHitDamageIncrease":
+      passive.outgoingHitDamageIncrease ??= 0.05;
+      passive.outgoingHitDamageType ??= "physical";
+      break;
+    case "attackIntervalScale":
+      passive.attackIntervalScale ??= 0.95;
+      break;
     case "ignoredDefBonusDamage":
       passive.ignoredDefBonusScale ??= 0.5;
       break;
@@ -615,6 +639,11 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       break;
     case "excessHealToBarrier":
       passive.barrierScale ??= 1;
+      passive.excessHealSources ??= ["outgoing"];
+      break;
+    case "excessHealRedirect":
+      passive.redirectScale ??= 0.5;
+      passive.redirectScaleMulti ??= 0.25;
       passive.excessHealSources ??= ["outgoing"];
       break;
     case "selfHpRatioBuff":
@@ -3428,6 +3457,206 @@ export class SkillEditorStep {
           )
         );
         break;
+      case "healOnBlock":
+        appendResourceAmountFields(
+          effectGrid,
+          passive.healOnBlockAmount ?? defaultResourceAmount(10, "flat"),
+          (healOnBlockAmount, options) => {
+            this.patchPassive(
+              index,
+              (current) => {
+                current.healOnBlockAmount = healOnBlockAmount;
+              },
+              options
+            );
+          }
+        );
+        break;
+      case "knockbackOnBlock":
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("knockbackOnBlockRadiusPx"),
+            createNumberInput(
+              passive.knockbackOnBlockRadiusPx ?? 50,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.knockbackOnBlockRadiusPx = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 5, min: 0 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("knockbackOnBlockDistancePx"),
+            createNumberInput(
+              passive.knockbackOnBlockDistancePx ?? 50,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.knockbackOnBlockDistancePx = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 5, min: 0 }
+            )
+          )
+        );
+        break;
+      case "emberIgnition":
+        effectGrid.appendChild(
+          createEl(
+            "p",
+            "editor-hint",
+            "CombatModule basic Hit ごとに種火を 1 stack し、閾値到達で全消費して同一対象へ発火ダメージ。"
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("emberIgnitionThreshold"),
+            createNumberInput(
+              passive.emberIgnitionThreshold ?? 5,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.emberIgnitionThreshold = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 1, min: 1 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("emberIgnitionAtkScale"),
+            createNumberInput(
+              passive.emberIgnitionAtkScale ?? 1,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.emberIgnitionAtkScale = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 0.05, min: 0.05 }
+            )
+          )
+        );
+        break;
+      case "ignitionDamageBonus":
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("ignitionDamageBonusScale"),
+            createNumberInput(
+              passive.ignitionDamageBonusScale ?? 1.5,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.ignitionDamageBonusScale = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 0.05, min: 0.05 }
+            )
+          )
+        );
+        break;
+      case "ignitionThresholdReduction":
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("ignitionThresholdReduction"),
+            createNumberInput(
+              passive.ignitionThresholdReduction ?? 1,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.ignitionThresholdReduction = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 1, min: 1 }
+            )
+          )
+        );
+        break;
+      case "outgoingHitDamageIncrease":
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("outgoingHitDamageIncrease"),
+            createNumberInput(
+              passive.outgoingHitDamageIncrease ?? 0.05,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.outgoingHitDamageIncrease = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 0.01, min: -0.99 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("outgoingHitDamageType"),
+            createSelect(
+              passive.outgoingHitDamageType ?? "physical",
+              [
+                { value: "physical", label: "physical" },
+                { value: "magic", label: "magic" },
+              ],
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.outgoingHitDamageType =
+                      value === "magic" ? "magic" : "physical";
+                  },
+                  { rerender: false }
+                );
+              }
+            )
+          )
+        );
+        break;
+      case "attackIntervalScale":
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("attackIntervalScale"),
+            createNumberInput(
+              passive.attackIntervalScale ?? 0.95,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.attackIntervalScale = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 0.01, min: 0.01 }
+            )
+          )
+        );
+        break;
       case "bonusActiveOnHit":
         effectGrid.appendChild(
           createFieldRow(
@@ -3889,6 +4118,24 @@ export class SkillEditorStep {
                   index,
                   (current) => {
                     current.redirectScale = redirectScale;
+                  },
+                  { rerender: false }
+                );
+              },
+              { min: 0.01, max: 1, step: 0.01 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            editorFieldLabel("redirectScaleMulti"),
+            createNumberInput(
+              passive.redirectScaleMulti ?? 0.25,
+              (redirectScaleMulti) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.redirectScaleMulti = redirectScaleMulti;
                   },
                   { rerender: false }
                 );

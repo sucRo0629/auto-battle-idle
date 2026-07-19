@@ -24,9 +24,9 @@ import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
 import { GameSession } from './GameSession.ts';
 
-const R8D_PASSIVE_ID = 'df_guardian_op_wall_aura';
+const R8D_PASSIVE_ID = 'df_guardian_passive_2';
 const R8D_GUARDIAN_SLOT = 0;
-const R8D_DEF_MULTIPLIER = 1.08;
+const R8D_DEF_MULTIPLIER = 1.05;
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -89,11 +89,11 @@ function triggerDefeat(session: GameSession, survivingIndices: number[] = []): v
   getEngine(session).applyDefeatTransition(survivingIndices);
 }
 
-function guardianMemberWithoutPassive2(gameData: GameData): PartyMemberState {
+function guardianMemberWithoutAcquiredDefPassive(gameData: GameData): PartyMemberState {
   const member = createMemberFromClass('df_guardian', gameData);
-  // Isolate R11b wall_aura DEF from legacy passive_2 (same effect family).
+  // R12l: 防御力増加は作戦取得。兵科本体は大盾使いのみ。
   member.build.learnedPassiveIds = member.build.learnedPassiveIds.filter(
-    (id) => id !== 'df_guardian_passive_2' && id !== R8D_PASSIVE_ID,
+    (id) => id !== R8D_PASSIVE_ID,
   );
   return member;
 }
@@ -120,7 +120,7 @@ function stripGuardianPassive2InOperation(session: GameSession, gameData: GameDa
   setOperationPartySlot(
     session,
     R8D_GUARDIAN_SLOT,
-    guardianMemberWithoutPassive2(gameData),
+    guardianMemberWithoutAcquiredDefPassive(gameData),
   );
   getEngine(session).restartBattle();
   commitOperationCheckpoint(session);
@@ -398,7 +398,7 @@ describe('createAlliesFromPartyState operation passive callback (R8d)', () => {
   it('injects only for ally slots with matching callback entries', () => {
     const gameData = loaded.data;
     const party: PartySlotState[] = [
-      guardianMemberWithoutPassive2(gameData),
+      guardianMemberWithoutAcquiredDefPassive(gameData),
       createMemberFromClass('at_swordsman', gameData),
       null,
       null,

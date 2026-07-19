@@ -130,4 +130,42 @@ describe('healReservation', () => {
     expect(result.healed).toBe(0);
     expect(target.hp).toBe(50);
   });
+
+  it('consumes at most one reservation per damage processing call', () => {
+    const healer = withPassives(unit({ id: 'cleric' }), ['reservation_passive']);
+    const target = unit({
+      id: 'ally',
+      hp: 20,
+      maxHp: 100,
+      statusEffects: [
+        {
+          id: 'stack_1',
+          kind: 'buff',
+          overlay: 'healReservation',
+          multiplier: 1,
+          durationSec: 8,
+          remainingSec: 8,
+          sourceId: 'cleric',
+          skillId: 'reservation_passive',
+          amount: { kind: 'flat', flatAmount: 40 },
+        },
+        {
+          id: 'stack_2',
+          kind: 'buff',
+          overlay: 'healReservation',
+          multiplier: 1,
+          durationSec: 8,
+          remainingSec: 8,
+          sourceId: 'cleric',
+          skillId: 'reservation_passive',
+          amount: { kind: 'flat', flatAmount: 40 },
+        },
+      ],
+    });
+    const result = tryTriggerHealReservation(target, [healer, target], passives);
+    expect(result.healed).toBe(40);
+    expect(
+      target.statusEffects.filter((e) => e.overlay === 'healReservation'),
+    ).toHaveLength(1);
+  });
 });

@@ -11,7 +11,7 @@
   },
   {
     "id": "df_guardian_passive_2",
-    "name": "立ちはだかる壁",
+    "name": "防御力増加",
     "effect": "buff",
     "buffSubKind": "stat",
     "buffStat": [
@@ -35,6 +35,32 @@
     "id": "df_guardian_passive_4",
     "name": "不撓の誓い",
     "effect": "lastStandInvulnerable"
+  },
+  {
+    "id": "df_guardian_op_block_rate_up",
+    "name": "ブロック率増加",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.05,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "df_guardian_op_frontline_maintenance",
+    "name": "戦線維持",
+    "effect": "healOnBlock",
+    "healOnBlockAmount": {
+      "kind": "flat",
+      "flatAmount": 10
+    }
+  },
+  {
+    "id": "df_guardian_op_fortress_stance",
+    "name": "城塞の構え",
+    "effect": "knockbackOnBlock",
+    "knockbackOnBlockRadiusPx": 50,
+    "knockbackOnBlockDistancePx": 50
   },
   {
     "id": "df_guardian_op_brace",

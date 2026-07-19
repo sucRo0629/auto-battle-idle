@@ -117,6 +117,7 @@ export class EditorApp {
     passiveAcquireCost: 1,
     waveClearResourceGrant: 1,
     sameClassStackStep: 0,
+    fixedCostByPassiveId: {},
     unlockLevelCostTable: { '0': 1, '10': 10, '20': 20 },
     costUnlockLevelByPassiveId: {},
     candidatesByClass: {},

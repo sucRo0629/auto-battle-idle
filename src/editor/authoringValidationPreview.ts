@@ -280,6 +280,18 @@ export function collectOperationPassiveCatalogAuthoringIssues(
           message: `${path}: 未知の passiveId "${passiveId}"`,
         });
       }
+      const fixedCost = catalog.fixedCostByPassiveId?.[passiveId];
+      if (fixedCost !== undefined) {
+        if (!Number.isInteger(fixedCost) || fixedCost < 1) {
+          issues.push({
+            kind: 'error',
+            code: 'invalid_fixed_cost',
+            path: `fixedCostByPassiveId["${passiveId}"]`,
+            message: `fixedCostByPassiveId["${passiveId}"]: 1 以上の整数を設定してください`,
+          });
+        }
+        continue;
+      }
       const unlockLevel = catalog.costUnlockLevelByPassiveId?.[passiveId];
       if (
         typeof unlockLevel !== 'number' ||
@@ -288,9 +300,9 @@ export function collectOperationPassiveCatalogAuthoringIssues(
       ) {
         issues.push({
           kind: 'error',
-          code: 'missing_cost_unlock_level',
-          path: `costUnlockLevelByPassiveId["${passiveId}"]`,
-          message: `costUnlockLevelByPassiveId["${passiveId}"]: 候補のコスト帯 unlockLevel が未設定です`,
+          code: 'missing_passive_cost',
+          path: `fixedCostByPassiveId["${passiveId}"]`,
+          message: `fixedCostByPassiveId["${passiveId}"] または costUnlockLevelByPassiveId["${passiveId}"] にコストを設定してください`,
         });
       } else if (
         catalog.unlockLevelCostTable &&

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyDirectHealBatchWithExcess,
   applyDirectHealWithExcess,
   resolveExcessHealRedirectTarget,
   resolveRedirectHealAmount,
@@ -87,6 +88,7 @@ describe('excessHealRedirect pipeline', () => {
     name: 'redirect',
     effect: 'excessHealRedirect',
     redirectScale: 0.5,
+    redirectScaleMulti: 0.25,
     excessHealSources: ['outgoing'],
   };
   const barrierPassive: PassiveSkillDef = {
@@ -175,5 +177,84 @@ describe('excessHealRedirect pipeline', () => {
     );
     expect(result.redirectAmount).toBe(0);
     expect(ally.hp).toBe(40);
+  });
+
+  it('aggregates multi-heal excess into one redirect and barriers the remainder', () => {
+    const passives = {
+      redirect: redirectPassive,
+      barrier: barrierPassive,
+    };
+    const healer = withPassives(unit({ id: 'healer' }), ['redirect', 'barrier']);
+    const primaryA = unit({ id: 'a', hp: 90, maxHp: 100, barrierHp: 0 });
+    const primaryB = unit({ id: 'b', hp: 95, maxHp: 100, barrierHp: 0 });
+    const redirectAlly = unit({ id: 'ally', hp: 20, maxHp: 100 });
+    const result = applyDirectHealBatchWithExcess(
+      healer,
+      [
+        { target: primaryA, attemptedHeal: 30 },
+        { target: primaryB, attemptedHeal: 20 },
+      ],
+      [healer, primaryA, primaryB, redirectAlly],
+      passives,
+      { allowRedirect: true, healActionScope: 'multi' },
+    );
+    expect(result.redirectTarget?.id).toBe('ally');
+    expect(result.redirectAmount).toBe(8);
+    expect(result.redirectHealed).toBe(8);
+    expect(redirectAlly.hp).toBe(28);
+    expect(primaryA.barrierHp + primaryB.barrierHp).toBe(
+      Math.floor((20 + 15 - 8) * 0.8),
+    );
+  });
+
+  it('uses 25% multi rate even when only one effective target in a multi action', () => {
+    const passives = {
+      redirect: redirectPassive,
+      barrier: barrierPassive,
+    };
+    const healer = withPassives(unit({ id: 'healer' }), ['redirect', 'barrier']);
+    const primary = unit({ id: 'primary', hp: 90, maxHp: 100, barrierHp: 0 });
+    const ally = unit({ id: 'ally', hp: 40, maxHp: 100 });
+    const result = applyDirectHealBatchWithExcess(
+      healer,
+      [{ target: primary, attemptedHeal: 30 }],
+      [healer, primary, ally],
+      passives,
+      { allowRedirect: true, healActionScope: 'multi' },
+    );
+    // excess 20 → 25% = 5 redirect, remaining 15 → barrier 12
+    expect(result.redirectAmount).toBe(5);
+    expect(primary.barrierHp).toBe(12);
+  });
+
+  it('uses 50% single rate for single-scope action', () => {
+    const passives = { redirect: redirectPassive, barrier: barrierPassive };
+    const healer = withPassives(unit({ id: 'healer' }), ['redirect', 'barrier']);
+    const primary = unit({ id: 'primary', hp: 90, maxHp: 100, barrierHp: 0 });
+    const ally = unit({ id: 'ally', hp: 40, maxHp: 100 });
+    const result = applyDirectHealBatchWithExcess(
+      healer,
+      [{ target: primary, attemptedHeal: 30 }],
+      [healer, primary, ally],
+      passives,
+      { allowRedirect: true, healActionScope: 'single' },
+    );
+    expect(result.redirectAmount).toBe(10);
+    expect(primary.barrierHp).toBe(8);
+  });
+
+  it('barriers full excess when no redirect target exists', () => {
+    const passives = { redirect: redirectPassive, barrier: barrierPassive };
+    const healer = withPassives(unit({ id: 'healer' }), ['redirect', 'barrier']);
+    const primary = unit({ id: 'primary', hp: 90, maxHp: 100, barrierHp: 0 });
+    const result = applyDirectHealBatchWithExcess(
+      healer,
+      [{ target: primary, attemptedHeal: 30 }],
+      [healer, primary],
+      passives,
+      { allowRedirect: true, healActionScope: 'single' },
+    );
+    expect(result.redirectAmount).toBe(0);
+    expect(primary.barrierHp).toBe(16);
   });
 });

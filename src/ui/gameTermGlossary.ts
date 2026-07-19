@@ -56,6 +56,7 @@ export type GameTermId =
   | "duelistPride"
   | "seedFlame"
   | "blazingFlame"
+  | "emberIgnition"
   | "ballistaMark"
   | "allyAttackFollowUp"
   | "poisonWeapon"
@@ -480,6 +481,16 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     },
     aliases: { ja: ["種火"] },
     statusCategory: "seedFlame",
+  },
+  {
+    id: "emberIgnition",
+    title: { ja: "種火" },
+    description: {
+      ja: "魔術師の CombatModule Hit で付くスタック状態（R12l）。\n\n・時間では消えない\n・規定スタックで発火ダメージへ変換して全消費\n・対象死亡 / Wave 終了 / 発火で消える",
+    },
+    // 旧 DoT「種火」(seedFlame) と共通 alias を持たない。
+    // Player HUD は statusCategory → resolveStatusBadgeGameTermId で開く。
+    statusCategory: "emberIgnition",
   },
   {
     id: "blazingFlame",

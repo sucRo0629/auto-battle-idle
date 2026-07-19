@@ -82,6 +82,17 @@ export function getPassiveDefenseIgnoreSpec(
       if (rollDefenseIgnoreChance(chance)) {
         specs.push(passive.defenseIgnore);
       }
+      continue;
+    }
+    if (
+      passive.effect === 'targetRuleOverride' &&
+      passive.defenseIgnore &&
+      passive.targetRuleOverrideApplyTo === 'enemy'
+    ) {
+      const chance = passive.defenseIgnore.chance ?? passive.chance ?? 1;
+      if (rollDefenseIgnoreChance(chance)) {
+        specs.push(passive.defenseIgnore);
+      }
     }
   }
   if (specs.length === 0) return undefined;

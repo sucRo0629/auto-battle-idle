@@ -19,37 +19,30 @@
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_guardian_basic_attack",
     "passiveIds": [
-      "df_guardian_passive_1",
-      "df_guardian_passive_2",
-      "df_guardian_passive_3",
-      "df_guardian_passive_4"
+      "df_guardian_passive_1"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "df_guardian_passive_1",
           "df_guardian_active_1"
         ]
       },
       {
         "level": 1,
         "skillIds": [
-          "df_guardian_passive_2",
           "df_guardian_active_2"
         ]
       },
       {
         "level": 10,
         "skillIds": [
-          "df_guardian_passive_3",
           "df_guardian_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
-          "df_guardian_passive_4",
           "df_guardian_active_4"
         ]
       }
@@ -60,13 +53,12 @@
       "def": 3
     },
     "summary": {
-      "ja": "物理攻撃に対する高い防御力と高いブロック率、高いHPで前線を維持する耐久型ディフェンダー。\n足を止めて攻撃を受け止めることを得意とする。\n成長するとブロックやダメージ軽減の能力が伸び、最終的に一時的にすべてのダメージを無効化できるようになる"
+      "ja": "高いブロック率で前線を維持する。\nブロック成功時の効果と組み合わせて戦線を支える。"
     },
     "featureTags": {
       "ja": [
-        "block",
-        "前線維持",
-        "被弾押し上げ"
+        "ブロック",
+        "前線維持"
       ]
     },
     "combatModuleIds": [
@@ -230,28 +222,24 @@
       {
         "level": 0,
         "skillIds": [
-          "at_swordsman_passive_1",
           "at_swordsman_active_1"
         ]
       },
       {
         "level": 1,
         "skillIds": [
-          "at_swordsman_passive_2",
           "at_swordsman_active_2"
         ]
       },
       {
         "level": 10,
         "skillIds": [
-          "at_swordsman_passive_3",
           "at_swordsman_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
-          "at_swordsman_passive_4",
           "at_swordsman_active_4"
         ]
       }
@@ -262,19 +250,15 @@
       "def": 2
     },
     "passiveIds": [
-      "at_swordsman_passive_1",
-      "at_swordsman_passive_2",
-      "at_swordsman_passive_3",
-      "at_swordsman_passive_4"
+      "at_swordsman_passive_2"
     ],
     "summary": {
-      "ja": "両手剣を振るい、敵の防御力の一部を無視して安定したダメージを与える重戦士型ファイター。\n主な役割は防御力の高い敵の処理。\n成長するとより防御力を無視する能力が伸び、敵の装甲を火力源に変換できるようになる。"
+      "ja": "防御力が高い敵を優先し、防御力無視で処理する。"
     },
     "featureTags": {
       "ja": [
-        "高DEF特効",
-        "防御無視",
-        "近接"
+        "高防御優先",
+        "防御力無視"
       ]
     },
     "combatModuleIds": [
@@ -634,37 +618,30 @@
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_sorcerer_basic_attack",
     "passiveIds": [
-      "at_sorcerer_passive_1",
-      "at_sorcerer_passive_2",
-      "at_sorcerer_passive_3",
-      "at_sorcerer_passive_4"
+      "at_sorcerer_passive_1"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "at_sorcerer_passive_1",
           "at_sorcerer_active_1"
         ]
       },
       {
         "level": 1,
         "skillIds": [
-          "at_sorcerer_passive_2",
           "at_sorcerer_active_2"
         ]
       },
       {
         "level": 10,
         "skillIds": [
-          "at_sorcerer_passive_3",
           "at_sorcerer_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
-          "at_sorcerer_passive_4",
           "at_sorcerer_active_4"
         ]
       }
@@ -676,13 +653,12 @@
     },
     "growthPresetKey": "caster",
     "summary": {
-      "ja": "火の魔法を扱い、攻撃の際に敵に固有のDoT「種火」と「熾火」を与えつつ火力で制圧するシンプルなマルチロック型キャスター。\n少数の敵の処理を得意とする。\n成長すると固有DoTの付与速度が上がり、「熾火」でさらにダメージを与えられるようになる。"
+      "ja": "CombatModuleのHitで種火を蓄積し、必要数に達すると発火する継続攻撃型。"
     },
     "featureTags": {
       "ja": [
-        "種火蓄積",
-        "マルチロック",
-        "魔法火力"
+        "種火",
+        "発火"
       ]
     },
     "combatModuleIds": [
@@ -785,28 +761,24 @@
       {
         "level": 0,
         "skillIds": [
-          "sp_cleric_passive_1",
           "sp_cleric_active_1"
         ]
       },
       {
         "level": 1,
         "skillIds": [
-          "sp_cleric_passive_2",
           "sp_cleric_active_2"
         ]
       },
       {
         "level": 10,
         "skillIds": [
-          "sp_cleric_passive_3",
           "sp_cleric_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
-          "sp_cleric_passive_4",
           "sp_cleric_active_4"
         ]
       }
@@ -817,18 +789,15 @@
       "def": 2
     },
     "passiveIds": [
-      "sp_cleric_passive_1",
-      "sp_cleric_passive_2",
-      "sp_cleric_passive_3",
-      "sp_cleric_passive_4"
+      "sp_cleric_passive_1"
     ],
     "summary": {
-      "ja": "即時回復を扱うシンプルなヒーラー。\n大きく減ったHPを即時に回復させることを得意とする。余剰の回復分はバリアとして利用する器用さも持ち合わせる。\n成長すると余剰分の利用先と即時回復能力が強化される。"
+      "ja": "負傷の大きい味方を優先して回復し、余剰回復を活用する。"
     },
     "featureTags": {
       "ja": [
-        "低HP回復",
-        "余剰→バリア"
+        "優先回復",
+        "余剰回復"
       ]
     },
     "combatModuleIds": [
