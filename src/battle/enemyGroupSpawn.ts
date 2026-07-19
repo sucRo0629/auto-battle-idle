@@ -2,6 +2,7 @@ import type {
   CombatStats,
   ResolvedEnemySpawnSpec,
   StageDef,
+  StageEnemyGroup,
 } from './types.ts';
 
 /**
@@ -42,13 +43,15 @@ export function applyEnemyStatScales(
 }
 
 /**
- * stage.enemyGroups を敵生成用の中間スペック配列へ展開する。
- * - enemyGroups 未設定時は空配列（legacy waves へのフォールバックは行わない）
- * - stats 計算・配置・CombatantState 生成は Phase B2 以降
+ * StageEnemyGroup[] を敵生成用の中間スペック配列へ展開する（StageDef 非依存）。
+ * - 空配列は空配列を返す
+ * - 入力配列・group object は変更しない
+ * - stats 計算・配置・CombatantState 生成は別責務
  */
-export function expandEnemyGroups(stage: StageDef): ResolvedEnemySpawnSpec[] {
-  const groups = stage.enemyGroups;
-  if (!groups || groups.length === 0) {
+export function expandEnemyGroupsList(
+  groups: readonly StageEnemyGroup[],
+): ResolvedEnemySpawnSpec[] {
+  if (groups.length === 0) {
     return [];
   }
 
@@ -74,4 +77,17 @@ export function expandEnemyGroups(stage: StageDef): ResolvedEnemySpawnSpec[] {
     }
   }
   return specs;
+}
+
+/**
+ * stage.enemyGroups を敵生成用の中間スペック配列へ展開する互換 wrapper。
+ * - enemyGroups 未設定時は空配列（legacy waves へのフォールバックは行わない）
+ * - 本体の展開は expandEnemyGroupsList
+ */
+export function expandEnemyGroups(stage: StageDef): ResolvedEnemySpawnSpec[] {
+  const groups = stage.enemyGroups;
+  if (!groups || groups.length === 0) {
+    return [];
+  }
+  return expandEnemyGroupsList(groups);
 }

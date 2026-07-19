@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyEnemyStatScales,
   expandEnemyGroups,
+  expandEnemyGroupsList,
   resolveEnemyStatScale,
 } from './enemyGroupSpawn.ts';
 import type { StageDef } from './types.ts';
@@ -137,6 +138,18 @@ describe('expandEnemyGroups', () => {
     };
 
     expect(expandEnemyGroups(stage)).toEqual([]);
+  });
+
+  it('delegates to expandEnemyGroupsList with the same groups', () => {
+    const enemyGroups = [
+      { classId: 'df_paladin' as const, count: 2 },
+      { classId: 'at_hunter' as const, count: 1, atkScale: 1.5 },
+    ];
+    const fromStage = expandEnemyGroups(stageWithEnemyGroups(enemyGroups));
+    const fromList = expandEnemyGroupsList(enemyGroups);
+
+    expect(fromStage).toHaveLength(3);
+    expect(fromStage).toEqual(fromList);
   });
 });
 
