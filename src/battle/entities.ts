@@ -17,7 +17,7 @@ import { copyNormalizedTraits } from './data/entityTraits.ts';
 import type { NormalizedEntityTraits } from './types.ts';
 import {
   applyEnemyStatScales,
-  expandEnemyGroups,
+  expandEnemyGroupsList,
 } from './enemyGroupSpawn.ts';
 import { resolveEnemyGroupSpawnX } from './enemyFormation.ts';
 import {
@@ -353,15 +353,21 @@ export function createEnemyFromClassGroup(
   return combatant;
 }
 
-function createEnemiesFromEnemyGroups(
-  stage: NonNullable<GameData['stages'][number]>,
+/**
+ * enemyGroups 配列から CombatantState[] を生成する（StageDef / stageId 非依存）。
+ * - 空配列は空配列を返す
+ * - 入力配列・group object は変更しない
+ * - 展開は expandEnemyGroupsList、配置・Combatant 生成は既存経路を再利用
+ */
+export function createEnemiesFromEnemyGroups(
   gameData: GameData,
-  curves: LevelCurvesConfig,
-  enemyGroups?: StageEnemyGroup[],
+  groups: readonly StageEnemyGroup[],
+  levelCurves: LevelCurvesConfig,
 ): CombatantState[] {
-  const specs = expandEnemyGroups(
-    enemyGroups !== undefined ? { ...stage, enemyGroups } : stage,
-  );
+  const specs = expandEnemyGroupsList(groups);
+  if (specs.length === 0) {
+    return [];
+  }
   const spawnXByKey = resolveEnemyGroupSpawnX(specs, (classId) => {
     const preset = gameData.classRegistry[classId];
     if (!preset) {
@@ -379,7 +385,7 @@ function createEnemiesFromEnemyGroups(
       spec,
       preset,
       gameData,
-      curves,
+      levelCurves,
       spawnOffset,
     );
   });
@@ -408,10 +414,9 @@ export function createEnemiesForStage(
       );
     }
     return createEnemiesFromEnemyGroups(
-      stage,
       gameData,
-      levelCurves,
       waveEnemyGroups,
+      levelCurves,
     );
   }
 
@@ -424,7 +429,11 @@ export function createEnemiesForStage(
         `levelCurves is required for enemyGroups spawn (stage: ${stageId})`,
       );
     }
-    return createEnemiesFromEnemyGroups(stage, gameData, levelCurves);
+    return createEnemiesFromEnemyGroups(
+      gameData,
+      stage.enemyGroups,
+      levelCurves,
+    );
   }
 
   if (!wave) {
