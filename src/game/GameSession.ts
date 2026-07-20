@@ -1368,9 +1368,17 @@ export class GameSession {
   }
 
   private handleVictory(survivingPartyIndices: number[]): void {
-    const problemSeriesSnapshot = this.problemSeriesOperationStartSnapshot;
-    if (problemSeriesSnapshot !== null) {
-      const waveCount = problemSeriesSnapshot.waves.length;
+    const activeSource = this.operationState?.source ?? null;
+
+    if (activeSource?.kind === 'problemSeries') {
+      const snapshot = this.problemSeriesOperationStartSnapshot;
+      if (snapshot === null) {
+        throw new Error(
+          'problemSeries victory requires operation start snapshot, but snapshot is 欠落',
+        );
+      }
+
+      const waveCount = snapshot.waves.length;
       const finalWaveIndex = Math.max(0, waveCount - 1);
 
       if (this.operationState !== null) {

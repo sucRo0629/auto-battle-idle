@@ -1,9 +1,10 @@
 /**
  * @vitest-environment happy-dom
  *
- * R12m 1C 作業単位13: 問題系列の最終 Wave 勝利時に作戦を終了し、
+ * R12m 1C 作業単位13 / 14D4: 問題系列の最終 Wave 勝利時に作戦を終了し、
  * snapshot と作戦内状態を破棄する production 経路のテスト。
- * 正式な結果画面・Player 入口・固定 Stage 報酬は対象外。
+ * 14D4: handleVictory の active OperationState.source gate。
+ * 正式な結果画面・Player 入口は対象外（fixedStage 回帰除く）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -28,9 +29,11 @@ import { GameSession } from './GameSession.ts';
 const FIXTURE_SEED_A = 'fixture-a';
 const GENERATOR_VERSION = 'r12m-v1';
 const SERIES_A_WAVE_COUNT = 3;
+const FIXED_STAGE_ID = '1';
 const GUARDIAN_SLOT = 0;
 const OPERATION_PASSIVE_ID = 'df_guardian_op_block_rate_up';
 const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
+const FIXED_STAGE_SOURCE = { kind: 'fixedStage', stageId: FIXED_STAGE_ID } as const;
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -93,6 +96,44 @@ function setGameScreen(session: GameSession, screen: GameScreen): void {
   ).setGameScreen(screen);
 }
 
+function sortieToStage(session: GameSession, stageId: string): void {
+  const host = (
+    session as unknown as {
+      handleStageSortie: (id: string) => void;
+    }
+  ).handleStageSortie.bind(session);
+  host(stageId);
+}
+
+function clearHeldSnapshotOnly(session: GameSession): void {
+  (
+    session as unknown as {
+      problemSeriesOperationStartSnapshot: null;
+    }
+  ).problemSeriesOperationStartSnapshot = null;
+}
+
+function invokeHandleVictory(
+  session: GameSession,
+  survivingPartyIndices: number[] = [0, 1, 2, 3],
+): void {
+  (
+    session as unknown as {
+      handleVictory: (survivingPartyIndices: number[]) => void;
+    }
+  ).handleVictory(survivingPartyIndices);
+}
+
+function getFixedStageFinalWaveIndex(stageId: string): number {
+  const loaded = tryLoadGameData();
+  if (!loaded.ok) throw new Error(loaded.error);
+  const stage = loaded.data.stages.find((entry) => entry.id === stageId);
+  expect(stage).toBeDefined();
+  const waveCount = stage!.waves.length;
+  expect(waveCount).not.toBe(SERIES_A_WAVE_COUNT);
+  return Math.max(0, waveCount - 1);
+}
+
 function livingEnemyCount(engine: BattleEngine): number {
   return engine.getSnapshot().enemies.filter((enemy) => enemy.hp > 0).length;
 }
@@ -129,6 +170,33 @@ function reachVictoryAfterKill(engine: BattleEngine): void {
     }
   }
   throw new Error('victory phase not reached');
+}
+
+function reachFixedStageVictoryThroughEngine(
+  session: GameSession,
+  engine: BattleEngine,
+): void {
+  waitForEngaged(engine);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    killAllEnemies(engine);
+    for (let i = 0; i < 90_000; i++) {
+      engine.tick(TICK_DT);
+      const snap = engine.getSnapshot();
+      if (snap.phase === 'victory') return;
+      if (snap.phase === 'defeat') {
+        throw new Error('battle ended in defeat instead of victory');
+      }
+      if (snap.awaitingNextWave) break;
+    }
+    if (engine.getSnapshot().phase === 'victory') return;
+    if (session.getCurrentScreen() === 'wavePrep') {
+      expect(session.confirmWavePrepAndStartNextWave()).toBe(true);
+      expect(session.getCurrentScreen()).toBe('battle');
+      continue;
+    }
+    throw new Error('fixed-stage victory not reached after wave clear');
+  }
+  throw new Error('fixed-stage victory loop exhausted');
 }
 
 function expandWaveExpectations(
@@ -235,7 +303,7 @@ function advanceThroughWavePrep(
   expect(livingEnemyBasicSkillIds(engine)).toEqual(expected.moduleIds);
 }
 
-describe('GameSession problem series final victory teardown (R12m 1C unit13)', () => {
+describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14D4)', () => {
   let context: ProblemSeriesOperationContext | null = null;
 
   beforeEach(() => {
@@ -295,6 +363,12 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13)', (
     const saveBeforeVictory = structuredClone(session.getSaveState());
     expect(saveBeforeVictory).toEqual(structuredClone(saveBeforeVictory));
 
+    expect(session.getOperationState()?.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getOperationState()?.source).not.toHaveProperty('stageId');
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(engine.getSnapshot().waveIndex).toBe(2);
+    assertLivingEnemies(engine);
+
     reachVictoryAfterKill(engine);
 
     expect(engine.getSnapshot().phase).toBe('victory');
@@ -318,5 +392,113 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13)', (
     expect(applyRewardsSpy).not.toHaveBeenCalled();
     expect(resolveSpy).not.toHaveBeenCalled();
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('fixedStage source with retained snapshot uses fixed-stage victory path and OperationResult', () => {
+    const fixedStageFinalWaveIndex = getFixedStageFinalWaveIndex(FIXED_STAGE_ID);
+    expect(fixedStageFinalWaveIndex).not.toBe(SERIES_A_WAVE_COUNT - 1);
+
+    const session = createSession();
+    const engine = getEngine(session);
+
+    const computeExpSpy = vi.spyOn(stageProgressionModule, 'computeStageExpReward');
+    const applyRewardsSpy = vi.spyOn(victoryRewardsModule, 'applyVictoryRewards');
+    const resolveSpy = vi.spyOn(seedResolveModule, 'resolveProblemSeriesFromSeed');
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+    expect(prepared).not.toBeNull();
+    expect(prepared!.waves).toHaveLength(SERIES_A_WAVE_COUNT);
+    expect(session.getProblemSeriesOperationStartSnapshot()).not.toBeNull();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    sortieToStage(session, FIXED_STAGE_ID);
+
+    expect(session.getOperationState()?.source).toStrictEqual(FIXED_STAGE_SOURCE);
+    expect(session.getOperationState()?.source).not.toEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.hasActiveOperation()).toBe(true);
+
+    session.start();
+    engine.restartBattleAtWave(0);
+    setGameScreen(session, 'battle');
+
+    expect(engine.getSnapshot().waveCount).not.toBe(SERIES_A_WAVE_COUNT);
+    assertLivingEnemies(engine);
+
+    reachFixedStageVictoryThroughEngine(session, engine);
+
+    expect(engine.getSnapshot().phase).toBe('victory');
+    expect(engine.getSnapshot().waveIndex).toBe(fixedStageFinalWaveIndex);
+    expect(engine.getSnapshot().waveIndex).not.toBe(SERIES_A_WAVE_COUNT - 1);
+
+    expect(session.getOperationResult()).toEqual({
+      stageId: FIXED_STAGE_ID,
+      outcome: 'victory',
+      reachedWaveIndex: fixedStageFinalWaveIndex,
+    });
+    expect(session.getOperationResult()?.reachedWaveIndex).not.toBe(SERIES_A_WAVE_COUNT - 1);
+    expect(session.shouldShowVictoryResult()).toBe(true);
+
+    expect(computeExpSpy).toHaveBeenCalled();
+    expect(applyRewardsSpy).toHaveBeenCalled();
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    session.destroy();
+  });
+
+  it('problemSeries source with missing snapshot throws on handleVictory without fixed-stage fallback', () => {
+    const session = createSession();
+
+    const computeExpSpy = vi.spyOn(stageProgressionModule, 'computeStageExpReward');
+    const applyRewardsSpy = vi.spyOn(victoryRewardsModule, 'applyVictoryRewards');
+
+    const prepared = session.beginProblemSeriesOperation(FIXTURE_SEED_A);
+    expect(prepared).not.toBeNull();
+    expect(session.getOperationState()?.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+
+    clearHeldSnapshotOnly(session);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()?.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+
+    expect(() => invokeHandleVictory(session)).toThrow(/problemSeries/i);
+    expect(() => invokeHandleVictory(session)).toThrow(/snapshot/i);
+    expect(() => invokeHandleVictory(session)).toThrow(/欠落/);
+
+    expect(session.getOperationResult()).toBeNull();
+    expect(computeExpSpy).not.toHaveBeenCalled();
+    expect(applyRewardsSpy).not.toHaveBeenCalled();
+
+    session.destroy();
+  });
+
+  it('OperationState absent with retained snapshot uses fixed-stage victory path, not problem series', () => {
+    const session = createSession();
+    const computeExpSpy = vi.spyOn(stageProgressionModule, 'computeStageExpReward');
+    const applyRewardsSpy = vi.spyOn(victoryRewardsModule, 'applyVictoryRewards');
+
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+    expect(prepared).not.toBeNull();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.getOperationState()).toBeNull();
+
+    session.start();
+    invokeHandleVictory(session);
+
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.getOperationResult()).toBeNull();
+    expect(session.shouldShowVictoryResult()).toBe(false);
+    expect(computeExpSpy).toHaveBeenCalled();
+    expect(applyRewardsSpy).toHaveBeenCalled();
+
+    session.destroy();
   });
 });
