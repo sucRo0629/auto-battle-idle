@@ -360,6 +360,33 @@ export class GameSession {
   }
 
   /**
+   * R12m 1C: seed から問題系列作戦を正式に開始する。
+   * 未完了作戦がある場合は拒否し、既存 OperationState / checkpoint / snapshot は不変。
+   * 失敗時は生成した snapshot を破棄して null を返す。
+   */
+  beginProblemSeriesOperation(
+    seed: string,
+  ): ProblemSeriesOperationStartSnapshot | null {
+    if (this.operationState !== null && !this.operationState.isCompleted) {
+      return null;
+    }
+
+    const resolved = resolveProblemSeriesFromSeed(
+      this.gameData.problemSeriesCatalog,
+      seed,
+    );
+    const snapshot = createProblemSeriesOperationStartSnapshot(resolved);
+    this.problemSeriesOperationStartSnapshot = snapshot;
+
+    if (!this.beginOperationFromSource({ kind: 'problemSeries' }, 0)) {
+      this.clearProblemSeriesOperationStartSnapshot();
+      return null;
+    }
+
+    return snapshot;
+  }
+
+  /**
    * R12m 1C: seed から問題系列を一度選出し、作戦開始スナップショットをメモリ保持する。
    * OperationState 開始・戦闘開始/再読込・Save 書き込みは行わない。
    * BattleEngine への waves 供給は保持後の provider 参照のみ（再選出・再変換しない）。
