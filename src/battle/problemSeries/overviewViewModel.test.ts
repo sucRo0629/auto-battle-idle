@@ -8,7 +8,9 @@ import {
 import { resolveProblemSeriesFromSeed } from './seedResolve.ts';
 
 const FIXTURE_SEED_A = 'fixture-a';
+const FIXTURE_SEED_B = 'fixture-b';
 const SERIES_A_ID = 'r12m_series_a';
+const SERIES_B_ID = 'r12m_series_b';
 const GENERATOR_VERSION = 'r12m-v1';
 
 const FORBIDDEN_OVERVIEW_KEYS = [
@@ -56,6 +58,13 @@ const SERIES_A_INTERNAL_CLASS_STRINGS = [
   'single_protection',
   'multi_protection',
   'protection_scatter_pressure_composite',
+] as const;
+
+/** 系列 B の internalProblemClass（JSON 非露出 assertion 用） */
+const SERIES_B_INTERNAL_CLASS_STRINGS = [
+  'concentrated_pressure',
+  'scattered_pressure',
+  'concentrated_scattered_simultaneous_pressure',
 ] as const;
 
 function expectOverviewShapeOnly(overview: ProblemSeriesOverviewCore): void {
@@ -161,6 +170,89 @@ describe('R12m createProblemSeriesOverviewCore (fixture-a production path)', () 
     expect(json).not.toContain(SERIES_A_ID);
     expect(json).not.toContain(GENERATOR_VERSION);
     for (const internalClass of SERIES_A_INTERNAL_CLASS_STRINGS) {
+      expect(json).not.toContain(internalClass);
+    }
+  });
+});
+
+describe('R12m createProblemSeriesOverviewCore (fixture-b production path)', () => {
+  it('fixture-b: tryLoadGameData → resolve → snapshot → overview core', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    expect(loaded.data.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+
+    const catalog = loaded.data.problemSeriesCatalog;
+    const result = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_B);
+    expect(result.series.seriesId).toBe(SERIES_B_ID);
+
+    const snapshot = createProblemSeriesOperationStartSnapshot(result);
+    expect(snapshot.waves).toHaveLength(3);
+
+    const totalSnapshotGroups = snapshot.waves.reduce(
+      (sum, wave) => sum + wave.enemyGroups.length,
+      0,
+    );
+    expect(totalSnapshotGroups).toBeGreaterThan(0);
+
+    const overview = createProblemSeriesOverviewCore(snapshot);
+
+    expect(overview.seed).toBe('fixture-b');
+    expect(overview.waves).toHaveLength(3);
+    expect(overview.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
+
+    let totalOverviewGroups = 0;
+    for (let waveIndex = 0; waveIndex < snapshot.waves.length; waveIndex++) {
+      const snapshotWave = snapshot.waves[waveIndex]!;
+      const overviewWave = overview.waves[waveIndex]!;
+
+      expect(overviewWave.enemyGroups.length).toBeGreaterThan(0);
+      expect(overviewWave.enemyGroups.length).toBe(snapshotWave.enemyGroups.length);
+      expect(overviewWave.prepResourceGrant).toBe(snapshotWave.prepResourceGrant);
+      expect(overviewWave.waveNumber).toBe(waveIndex + 1);
+
+      for (
+        let groupIndex = 0;
+        groupIndex < snapshotWave.enemyGroups.length;
+        groupIndex++
+      ) {
+        totalOverviewGroups += 1;
+        const snapshotGroup = snapshotWave.enemyGroups[groupIndex]!;
+        const overviewGroup = overviewWave.enemyGroups[groupIndex]!;
+
+        expect(overviewGroup.classId).toBe(snapshotGroup.classId);
+        expect(overviewGroup.count).toBe(snapshotGroup.count);
+        expect(overviewGroup.count).toBeGreaterThan(0);
+        expect(overviewGroup.selectedCombatModuleId).toBe(
+          snapshotGroup.selectedCombatModuleId,
+        );
+        expect(overviewGroup.selectedCombatModuleId.length).toBeGreaterThan(0);
+      }
+    }
+    expect(totalOverviewGroups).toBeGreaterThan(0);
+    expect(totalOverviewGroups).toBe(totalSnapshotGroups);
+
+    expect(overview.waves).not.toBe(snapshot.waves);
+    for (let waveIndex = 0; waveIndex < snapshot.waves.length; waveIndex++) {
+      expect(overview.waves[waveIndex]).not.toBe(snapshot.waves[waveIndex]);
+      expect(overview.waves[waveIndex]!.enemyGroups).not.toBe(
+        snapshot.waves[waveIndex]!.enemyGroups,
+      );
+      const groupCount = snapshot.waves[waveIndex]!.enemyGroups.length;
+      for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
+        expect(overview.waves[waveIndex]!.enemyGroups[groupIndex]).not.toBe(
+          snapshot.waves[waveIndex]!.enemyGroups[groupIndex],
+        );
+      }
+    }
+
+    expectOverviewShapeOnly(overview);
+
+    const json = JSON.stringify(overview);
+    expect(json).not.toContain(SERIES_B_ID);
+    expect(json).not.toContain(GENERATOR_VERSION);
+    for (const internalClass of SERIES_B_INTERNAL_CLASS_STRINGS) {
       expect(json).not.toContain(internalClass);
     }
   });
