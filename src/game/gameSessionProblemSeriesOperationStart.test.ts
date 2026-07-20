@@ -3,20 +3,26 @@
  *
  * R12m 1C 作業単位4: GameSession が問題系列開始スナップショットを
  * production catalog から選出・生成してメモリ保持する境界。
- * OperationState / BattleEngine / Save への接続は対象外。
+ * OperationState / Save への接続は対象外。
+ *
+ * R12m 1C 作業単位8: 保持済み waves を BattleEngine の
+ * getResolvedWavesCombatInput provider へ production 接続する。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
+import { expandEnemyGroupsList } from '../battle/enemyGroupSpawn.ts';
 import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
 import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
 import { toProblemSeriesBattleWaves } from '../battle/problemSeries/toBattleWaves.ts';
+import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import { GameSession } from './GameSession.ts';
 
 const FIXTURE_SEED_A = 'fixture-a';
 const FIXTURE_SEED_B = 'fixture-b';
 const GENERATOR_VERSION = 'r12m-v1';
+const SERIES_A_WAVE_COUNT = 3;
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -61,6 +67,48 @@ function createSession(): GameSession {
 
 function getEngine(session: GameSession): BattleEngine {
   return (session as unknown as { engine: BattleEngine }).engine;
+}
+
+function getEngineProvider(
+  engine: BattleEngine,
+): (() => ResolvedWavesCombatInput | null) | undefined {
+  return (
+    engine as unknown as {
+      getResolvedWavesCombatInput?: () => ResolvedWavesCombatInput | null;
+    }
+  ).getResolvedWavesCombatInput;
+}
+
+function livingEnemyClassIds(engine: BattleEngine): string[] {
+  return engine
+    .getSnapshot()
+    .enemies.filter((e) => e.hp > 0)
+    .map((e) => e.classId)
+    .filter((id): id is string => id !== undefined);
+}
+
+function livingEnemyBasicSkillIds(engine: BattleEngine): string[] {
+  return engine
+    .getSnapshot()
+    .enemies.filter((e) => e.hp > 0)
+    .map((e) => {
+      expect(e.basicSkillId).toBeDefined();
+      return e.basicSkillId!;
+    });
+}
+
+function expandWave0Expectations(
+  waves: ResolvedWavesCombatInput,
+): { classIds: string[]; moduleIds: string[] } {
+  const specs = expandEnemyGroupsList([...waves[0]!.enemyGroups]);
+  expect(specs.length).toBeGreaterThan(0);
+  return {
+    classIds: specs.map((s) => s.classId),
+    moduleIds: specs.map((s) => {
+      expect(s.selectedCombatModuleId).toBeDefined();
+      return s.selectedCombatModuleId!;
+    }),
+  };
 }
 
 describe('GameSession prepareProblemSeriesOperationStart (R12m 1C unit4)', () => {
@@ -222,5 +270,109 @@ describe('GameSession prepareProblemSeriesOperationStart (R12m 1C unit4)', () =>
     expect(JSON.stringify(session.getSaveState())).not.toContain(
       'r12m_series_a',
     );
+  });
+});
+
+describe('GameSession → BattleEngine resolved waves provider (R12m 1C unit8)', () => {
+  let session: GameSession | null = null;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+    setVerifyModeEnabled(false);
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('wires production provider: null before prepare, same waves ref after; reload uses series A', () => {
+    session = createSession();
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    expect(provider).toBeTypeOf('function');
+
+    const stageId = session.getSaveState().stageProgress.currentStageId;
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) throw new Error(loaded.error);
+    const fixedStage = loaded.data.stages.find((s) => s.id === stageId);
+    expect(fixedStage).toBeDefined();
+    const fixedWaveCount = fixedStage!.waves.length;
+    expect(fixedWaveCount).not.toBe(SERIES_A_WAVE_COUNT);
+
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(provider!()).toBeNull();
+
+    engine.restartBattleAtWave(0);
+    const fixedSnap = engine.getSnapshot();
+    expect(fixedSnap.waveCount).toBe(fixedWaveCount);
+    expect(fixedSnap.waveCount).not.toBe(SERIES_A_WAVE_COUNT);
+    const fixedClasses = livingEnemyClassIds(engine);
+    expect(fixedClasses.length).toBeGreaterThan(0);
+
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const startSpy = vi.spyOn(engine, 'startBattle');
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+    const saveBefore = structuredClone(session.getSaveState());
+
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+    expect(prepared.seriesId).toBe('r12m_series_a');
+    expect(prepared.waves).toHaveLength(SERIES_A_WAVE_COUNT);
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+
+    expect(session.getOperationState()).toBeNull();
+    expect(session.hasActiveOperation()).toBe(false);
+    expect(session.getSaveState()).toEqual(saveBefore);
+    expect(restartSpy).not.toHaveBeenCalled();
+    expect(restartAtWaveSpy).not.toHaveBeenCalled();
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(startNextWaveSpy).not.toHaveBeenCalled();
+
+    const held = session.getProblemSeriesOperationStartSnapshot();
+    expect(held).toBe(prepared);
+    expect(provider!()).toBe(prepared.waves);
+    expect(provider!()).toBe(held!.waves);
+
+    engine.getSnapshot();
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+
+    engine.restartBattleAtWave(0);
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+
+    const seriesSnap = engine.getSnapshot();
+    expect(seriesSnap.waveCount).toBe(SERIES_A_WAVE_COUNT);
+    expect(seriesSnap.waveCount).not.toBe(fixedWaveCount);
+    expect(seriesSnap.waveIndex).toBe(0);
+
+    const living = seriesSnap.enemies.filter((e) => e.hp > 0);
+    expect(living.length).toBeGreaterThan(0);
+
+    const expected = expandWave0Expectations(held!.waves);
+    expect(livingEnemyClassIds(engine)).toEqual(expected.classIds);
+    expect(livingEnemyBasicSkillIds(engine)).toEqual(expected.moduleIds);
+    expect(livingEnemyClassIds(engine)).not.toEqual(fixedClasses);
+
+    expect(provider!()).toBe(
+      session.getProblemSeriesOperationStartSnapshot()!.waves,
+    );
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getSaveState()).toEqual(saveBefore);
   });
 });

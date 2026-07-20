@@ -122,7 +122,8 @@ export class GameSession {
   private operationResult: OperationResult | null = null;
   /**
    * R12m 1C: 問題系列の作戦開始スナップショット（メモリのみ）。
-   * OperationState / BattleEngine / Save へはまだ渡さない。
+   * BattleEngine は getResolvedWavesCombatInput 経由で waves のみ参照する。
+   * OperationState / Save へはまだ渡さない。
    */
   private problemSeriesOperationStartSnapshot: ProblemSeriesOperationStartSnapshot | null =
     null;
@@ -250,6 +251,8 @@ export class GameSession {
         getAcquiredOperationPassiveIds: (slotIndex) =>
           this.getOperationAcquiredPassiveIds(slotIndex),
         onBattlefieldReload: () => this.handleBattlefieldReload(),
+        getResolvedWavesCombatInput: () =>
+          this.problemSeriesOperationStartSnapshot?.waves ?? null,
       },
     );
 
@@ -353,7 +356,8 @@ export class GameSession {
 
   /**
    * R12m 1C: seed から問題系列を一度選出し、作戦開始スナップショットをメモリ保持する。
-   * OperationState 開始・BattleEngine 起動・Save 書き込みは行わない。
+   * OperationState 開始・戦闘開始/再読込・Save 書き込みは行わない。
+   * BattleEngine への waves 供給は保持後の provider 参照のみ（再選出・再変換しない）。
    */
   prepareProblemSeriesOperationStart(
     seed: string,
