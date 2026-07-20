@@ -1564,7 +1564,16 @@ export class GameSession {
     return this.gameData.operationPassiveCatalog.waveClearResourceGrant;
   }
 
+  /**
+   * R12m 1C: 作戦 Wave 数の供給境界。
+   * 問題系列 snapshot 保持時は series waves.length を正本とし、stageId / StageDef は使わない。
+   * 未準備時のみ固定 Stage の waves.length（未知 stageId は 0）。
+   */
   private resolveOperationStageWaveCount(stageId: string): number {
+    const snapshot = this.problemSeriesOperationStartSnapshot;
+    if (snapshot !== null) {
+      return snapshot.waves.length;
+    }
     const stage = getStageById(this.gameData.stages, stageId);
     return stage?.waves.length ?? 0;
   }
