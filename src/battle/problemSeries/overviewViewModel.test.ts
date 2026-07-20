@@ -257,3 +257,100 @@ describe('R12m createProblemSeriesOverviewCore (fixture-b production path)', () 
     }
   });
 });
+
+describe('R12m createProblemSeriesOverviewCore (fixture-a vs fixture-b waves content)', () => {
+  it('fixture-a and fixture-b: production path → overview waves differ in content', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    expect(loaded.data.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+    const catalog = loaded.data.problemSeriesCatalog;
+
+    const resultA = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_A);
+    expect(resultA.series.seriesId).toBe(SERIES_A_ID);
+    const snapshotA = createProblemSeriesOperationStartSnapshot(resultA);
+    expect(snapshotA.waves).toHaveLength(3);
+    const overviewA = createProblemSeriesOverviewCore(snapshotA);
+    expect(overviewA.waves).toHaveLength(3);
+
+    const resultB = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_B);
+    expect(resultB.series.seriesId).toBe(SERIES_B_ID);
+    const snapshotB = createProblemSeriesOperationStartSnapshot(resultB);
+    expect(snapshotB.waves).toHaveLength(3);
+    const overviewB = createProblemSeriesOverviewCore(snapshotB);
+    expect(overviewB.waves).toHaveLength(3);
+
+    let totalGroupsA = 0;
+    for (const wave of overviewA.waves) {
+      expect(wave.enemyGroups.length).toBeGreaterThan(0);
+      for (const group of wave.enemyGroups) {
+        totalGroupsA += 1;
+        expect(group.count).toBeGreaterThan(0);
+        expect(group.selectedCombatModuleId.length).toBeGreaterThan(0);
+      }
+    }
+    expect(totalGroupsA).toBeGreaterThan(0);
+
+    let totalGroupsB = 0;
+    for (const wave of overviewB.waves) {
+      expect(wave.enemyGroups.length).toBeGreaterThan(0);
+      for (const group of wave.enemyGroups) {
+        totalGroupsB += 1;
+        expect(group.count).toBeGreaterThan(0);
+        expect(group.selectedCombatModuleId.length).toBeGreaterThan(0);
+      }
+    }
+    expect(totalGroupsB).toBeGreaterThan(0);
+
+    expect(overviewA.seed).not.toBe(overviewB.seed);
+    expect(overviewA.waves).not.toEqual(overviewB.waves);
+
+    const waveContentDiffs: Array<{
+      waveIndex: number;
+      fields: Array<
+        'classId' | 'count' | 'selectedCombatModuleId' | 'prepResourceGrant'
+      >;
+    }> = [];
+
+    for (let waveIndex = 0; waveIndex < overviewA.waves.length; waveIndex++) {
+      const waveA = overviewA.waves[waveIndex]!;
+      const waveB = overviewB.waves[waveIndex]!;
+      const fields: Array<
+        'classId' | 'count' | 'selectedCombatModuleId' | 'prepResourceGrant'
+      > = [];
+
+      const classIdsA = waveA.enemyGroups.map((group) => group.classId);
+      const classIdsB = waveB.enemyGroups.map((group) => group.classId);
+      if (JSON.stringify(classIdsA) !== JSON.stringify(classIdsB)) {
+        fields.push('classId');
+      }
+
+      const countsA = waveA.enemyGroups.map((group) => group.count);
+      const countsB = waveB.enemyGroups.map((group) => group.count);
+      if (JSON.stringify(countsA) !== JSON.stringify(countsB)) {
+        fields.push('count');
+      }
+
+      const moduleIdsA = waveA.enemyGroups.map(
+        (group) => group.selectedCombatModuleId,
+      );
+      const moduleIdsB = waveB.enemyGroups.map(
+        (group) => group.selectedCombatModuleId,
+      );
+      if (JSON.stringify(moduleIdsA) !== JSON.stringify(moduleIdsB)) {
+        fields.push('selectedCombatModuleId');
+      }
+
+      if (waveA.prepResourceGrant !== waveB.prepResourceGrant) {
+        fields.push('prepResourceGrant');
+      }
+
+      if (fields.length > 0) {
+        waveContentDiffs.push({ waveIndex, fields });
+      }
+    }
+
+    expect(waveContentDiffs.length).toBeGreaterThan(0);
+  });
+});
