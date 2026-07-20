@@ -1,0 +1,135 @@
+/**
+ * @vitest-environment happy-dom
+ *
+ * R12m Player 作業単位2B1: GameSession.beginPreparedProblemSeriesOperation の
+ * 準備済み snapshot 開始 production API（fixture-a 成功経路）。
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BattleEngine } from '../battle/BattleEngine.ts';
+import { tryLoadGameData } from '../battle/data/loadGameData.ts';
+import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
+import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
+import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
+import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
+import { GameSession } from './GameSession.ts';
+
+const FIXTURE_SEED_A = 'fixture-a';
+const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
+
+function mockCanvas2d(): void {
+  const ctx = {
+    imageSmoothingEnabled: true,
+    clearRect: vi.fn(),
+    fillRect: vi.fn(),
+    strokeRect: vi.fn(),
+    beginPath: vi.fn(),
+    closePath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    fillText: vi.fn(),
+    measureText: vi.fn(() => ({ width: 0 })),
+    save: vi.fn(),
+    restore: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
+    rotate: vi.fn(),
+    setTransform: vi.fn(),
+    drawImage: vi.fn(),
+    createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+    canvas: { width: 800, height: 600 },
+  };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+    ctx as unknown as CanvasRenderingContext2D,
+  );
+}
+
+function createSession(): GameSession {
+  const loaded = tryLoadGameData();
+  if (!loaded.ok) {
+    throw new Error(loaded.error);
+  }
+  expect(loaded.data.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  return new GameSession(loaded.data, container);
+}
+
+function getEngine(session: GameSession): BattleEngine {
+  return (session as unknown as { engine: BattleEngine }).engine;
+}
+
+function getEngineProvider(
+  engine: BattleEngine,
+): (() => ResolvedWavesCombatInput | null) | undefined {
+  return (
+    engine as unknown as {
+      getResolvedWavesCombatInput?: () => ResolvedWavesCombatInput | null;
+    }
+  ).getResolvedWavesCombatInput;
+}
+
+function totalEnemyGroupCount(
+  waves: readonly { enemyGroups: readonly unknown[] }[],
+): number {
+  return waves.reduce((sum, wave) => sum + wave.enemyGroups.length, 0);
+}
+
+describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)', () => {
+  let session: GameSession | null = null;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+    setVerifyModeEnabled(false);
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('fixture-a: begin from prepared snapshot without re-resolve or re-create', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+
+    expect(prepared.seriesId).toBe('r12m_series_a');
+    expect(prepared.waves).toHaveLength(3);
+    expect(totalEnemyGroupCount(prepared.waves)).toBeGreaterThan(0);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    const returned = session.beginPreparedProblemSeriesOperation();
+
+    expect(returned).toBe(prepared);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(session.getOperationState()?.isActive).toBe(true);
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getOperationCheckpoint()?.source).toEqual(
+      PROBLEM_SERIES_SOURCE,
+    );
+
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine)!;
+    expect(provider()).toBe(prepared.waves);
+  });
+});

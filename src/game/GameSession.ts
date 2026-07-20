@@ -412,6 +412,28 @@ export class GameSession {
   }
 
   /**
+   * R12m 2B1: 準備済み snapshot から問題系列作戦を開始する。
+   * prepared snapshot がなければ null。resolver / factory は呼ばない。
+   * 失敗時も prepared snapshot は破棄しない。
+   */
+  beginPreparedProblemSeriesOperation(): ProblemSeriesOperationStartSnapshot | null {
+    if (this.operationState !== null && !this.operationState.isCompleted) {
+      return null;
+    }
+
+    const snapshot = this.problemSeriesOperationStartSnapshot;
+    if (snapshot === null) {
+      return null;
+    }
+
+    if (!this.beginOperationFromSource({ kind: 'problemSeries' }, 0)) {
+      return null;
+    }
+
+    return snapshot;
+  }
+
+  /**
    * R12m 1C: 保持中の問題系列作戦開始スナップショット（未準備時は null）。
    * 再選出・再変換せず、準備時と同一参照を返す。
    */
