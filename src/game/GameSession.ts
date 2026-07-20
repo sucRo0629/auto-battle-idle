@@ -391,10 +391,17 @@ export class GameSession {
    * R12m 1C: seed から問題系列を一度選出し、作戦開始スナップショットをメモリ保持する。
    * OperationState 開始・戦闘開始/再読込・Save 書き込みは行わない。
    * BattleEngine への waves 供給は保持後の provider 参照のみ（再選出・再変換しない）。
+   * active 作戦中（未完了 OperationState あり）は再準備不可。
    */
   prepareProblemSeriesOperationStart(
     seed: string,
   ): ProblemSeriesOperationStartSnapshot {
+    if (this.operationState !== null && !this.operationState.isCompleted) {
+      throw new Error(
+        'prepareProblemSeriesOperationStart: cannot re-prepare problem series operation start snapshot while an active operation is in progress',
+      );
+    }
+
     const resolved = resolveProblemSeriesFromSeed(
       this.gameData.problemSeriesCatalog,
       seed,

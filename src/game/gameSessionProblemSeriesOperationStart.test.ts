@@ -8,6 +8,8 @@
  * R12m 1C 作業単位8 / 14D1: 保持済み waves を BattleEngine の
  * getResolvedWavesCombatInput provider へ production 接続する。
  * 14D1: active OperationState.source による source gate。
+ *
+ * R12m 1C 作業単位14E1: active 作戦中の snapshot 再準備禁止。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -435,6 +437,168 @@ describe('GameSession → BattleEngine resolved waves provider (R12m 1C unit8 / 
 
     const seriesWave0 = expandWave0Expectations(prepared.waves);
     expect(fixedClasses).not.toEqual(seriesWave0.classIds);
+  });
+
+  it('14E1: active problemSeries rejects prepare B; resolver/factory 0; snapshot/state/checkpoint unchanged', () => {
+    session = createSession();
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    const returned = session.beginProblemSeriesOperation(FIXTURE_SEED_A);
+    expect(returned).not.toBeNull();
+    expect(returned!.seriesId).toBe('r12m_series_a');
+
+    const snapshotBefore = session.getProblemSeriesOperationStartSnapshot();
+    expect(snapshotBefore).not.toBeNull();
+    expect(snapshotBefore).toBe(returned);
+    expect(snapshotBefore!.seriesId).toBe('r12m_series_a');
+
+    expect(session.getOperationState()).not.toBeNull();
+    expect(session.getOperationState()!.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.hasActiveOperation()).toBe(true);
+
+    const operationStateBefore = structuredClone(session.getOperationState());
+    expect(operationStateBefore).not.toBeNull();
+
+    const checkpointBefore = session.getOperationCheckpoint();
+    expect(checkpointBefore).not.toBeNull();
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    expect(() =>
+      session!.prepareProblemSeriesOperationStart(FIXTURE_SEED_B),
+    ).toThrow(/prepareProblemSeriesOperationStart/i);
+    expect(() =>
+      session!.prepareProblemSeriesOperationStart(FIXTURE_SEED_B),
+    ).toThrow(/active operation/i);
+
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    const snapshotAfter = session.getProblemSeriesOperationStartSnapshot();
+    expect(snapshotAfter).toBe(snapshotBefore);
+    expect(snapshotAfter!.seriesId).toBe('r12m_series_a');
+    expect(snapshotAfter!.seriesId).not.toBe('r12m_series_b');
+
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) throw new Error(loaded.error);
+    const seriesBResolved = seedResolveModule.resolveProblemSeriesFromSeed(
+      loaded.data.problemSeriesCatalog,
+      FIXTURE_SEED_B,
+    );
+    expect(seriesBResolved.series.seriesId).toBe('r12m_series_b');
+    expect(snapshotAfter!.seriesId).not.toBe(seriesBResolved.series.seriesId);
+
+    expect(session.getOperationState()).toEqual(operationStateBefore);
+    expect(session.getOperationCheckpoint()).toEqual(checkpointBefore);
+  });
+
+  it('14E1: active fixedStage without snapshot rejects prepare; state/checkpoint unchanged', () => {
+    session = createSession();
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    sortieToStage(session, FIXED_STAGE_ID);
+
+    expect(session.getOperationState()).not.toBeNull();
+    expect(session.getOperationState()!.source).toEqual({
+      kind: 'fixedStage',
+      stageId: FIXED_STAGE_ID,
+    });
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+
+    const operationStateBefore = structuredClone(session.getOperationState());
+    expect(operationStateBefore).not.toBeNull();
+
+    const checkpointBefore = session.getOperationCheckpoint();
+    expect(checkpointBefore).not.toBeNull();
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    expect(() =>
+      session!.prepareProblemSeriesOperationStart(FIXTURE_SEED_A),
+    ).toThrow(/prepareProblemSeriesOperationStart/i);
+    expect(() =>
+      session!.prepareProblemSeriesOperationStart(FIXTURE_SEED_A),
+    ).toThrow(/active operation/i);
+
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toEqual(operationStateBefore);
+    expect(session.getOperationCheckpoint()).toEqual(checkpointBefore);
+  });
+
+  it('14E1: active fixedStage with retained snapshot A rejects prepare B; snapshot/state/checkpoint unchanged', () => {
+    session = createSession();
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    const snapshotA = session.prepareProblemSeriesOperationStart(
+      FIXTURE_SEED_A,
+    );
+    expect(snapshotA.seriesId).toBe('r12m_series_a');
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshotA);
+    expect(session.getOperationState()).toBeNull();
+
+    sortieToStage(session, FIXED_STAGE_ID);
+
+    expect(session.getOperationState()).not.toBeNull();
+    expect(session.getOperationState()!.source).toEqual({
+      kind: 'fixedStage',
+      stageId: FIXED_STAGE_ID,
+    });
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshotA);
+
+    const operationStateBefore = structuredClone(session.getOperationState());
+    expect(operationStateBefore).not.toBeNull();
+
+    const checkpointBefore = session.getOperationCheckpoint();
+    expect(checkpointBefore).not.toBeNull();
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    expect(() =>
+      session!.prepareProblemSeriesOperationStart(FIXTURE_SEED_B),
+    ).toThrow(/prepareProblemSeriesOperationStart/i);
+    expect(() =>
+      session!.prepareProblemSeriesOperationStart(FIXTURE_SEED_B),
+    ).toThrow(/active operation/i);
+
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    const snapshotAfter = session.getProblemSeriesOperationStartSnapshot();
+    expect(snapshotAfter).toBe(snapshotA);
+    expect(snapshotAfter!.seriesId).toBe('r12m_series_a');
+    expect(snapshotAfter!.seriesId).not.toBe('r12m_series_b');
+
+    expect(session.getOperationState()).toEqual(operationStateBefore);
+    expect(session.getOperationCheckpoint()).toEqual(checkpointBefore);
   });
 
   it('problemSeries source with missing snapshot: provider throws instead of fixed-stage fallback', () => {
