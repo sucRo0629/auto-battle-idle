@@ -8,6 +8,12 @@ import {
 } from '../progression/partyCompose.ts';
 import type { OperationState } from './OperationState.ts';
 import {
+  cloneOperationSource,
+  isOperationSource,
+  operationSourcesEqual,
+  type OperationSource,
+} from './operationSource.ts';
+import {
   captureAcquiredPassiveEntries,
   OperationAcquiredPassives,
   type OperationAcquiredPassiveEntry,
@@ -31,7 +37,7 @@ function isValidResourceBalance(value: number): boolean {
  * operationExtras は将来拡張用（R8b では空オブジェクト）。
  */
 export interface OperationCheckpointSnapshot {
-  readonly stageId: string;
+  readonly source: OperationSource;
   readonly currentWaveIndex: number;
   readonly clearedWaveCount: number;
   readonly party: readonly (PartySlotState | null)[];
@@ -46,7 +52,7 @@ export interface OperationCheckpointSnapshot {
 }
 
 export interface OperationCheckpointValidationOptions {
-  expectedStageId?: string;
+  expectedSource?: OperationSource;
   waveCount: number;
 }
 
@@ -107,7 +113,7 @@ export function createCheckpointFromOperationState(
   state: OperationState,
 ): OperationCheckpointSnapshot {
   return {
-    stageId: state.stageId,
+    source: cloneOperationSource(state.source),
     currentWaveIndex: state.currentWaveIndex,
     clearedWaveCount: state.clearedWaveCount,
     party: clonePartySlots(state.getPartySnapshot()),
@@ -132,7 +138,7 @@ export function cloneCheckpointSnapshot(
   snapshot: OperationCheckpointSnapshot,
 ): OperationCheckpointSnapshot {
   return {
-    stageId: snapshot.stageId,
+    source: cloneOperationSource(snapshot.source),
     currentWaveIndex: snapshot.currentWaveIndex,
     clearedWaveCount: snapshot.clearedWaveCount,
     party: clonePartySlots(snapshot.party),
@@ -191,9 +197,12 @@ export function validateCheckpointSnapshot(
   gameData: GameData,
   options: OperationCheckpointValidationOptions,
 ): boolean {
+  if (!isOperationSource(snapshot.source)) {
+    return false;
+  }
   if (
-    options.expectedStageId !== undefined &&
-    snapshot.stageId !== options.expectedStageId
+    options.expectedSource !== undefined &&
+    !operationSourcesEqual(snapshot.source, options.expectedSource)
   ) {
     return false;
   }
@@ -263,7 +272,7 @@ export function restoreOperationStateFromCheckpoint(
   gameData: GameData,
   waveCount: number,
 ): OperationCheckpointRestoreResult {
-  if (snapshot.stageId !== state.stageId) {
+  if (!operationSourcesEqual(snapshot.source, state.source)) {
     return { ok: false };
   }
 

@@ -346,7 +346,10 @@ describe('Wave prep screen (R6e)', () => {
     session = createSession();
     sortieToStage(session, '1');
     sortieToStage(session, '2');
-    expect(session.getOperationState()?.stageId).toBe('2');
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: '2',
+    });
   });
 });
 
@@ -426,7 +429,7 @@ describe('OperationState wave prep API (R6e unit)', () => {
 
   it('rejects edits when wave prep editing is disabled', () => {
     const op = OperationState.begin({
-      stageId: '1',
+      source: { kind: 'fixedStage', stageId: '1' },
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -441,7 +444,7 @@ describe('OperationState wave prep API (R6e unit)', () => {
     const selection = new PartyCombatModuleSelection();
     selection.setSelectedCombatModuleId(0, 'df_guardian_mod_guard_focus');
     const op = OperationState.begin({
-      stageId: '1',
+      source: { kind: 'fixedStage', stageId: '1' },
       party: save.party,
       moduleSelection: selection,
     })!;

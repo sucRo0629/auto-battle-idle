@@ -168,7 +168,10 @@ describe('GameSession operationResult (R6h)', () => {
 
     sortieToStage(session, '2');
     expect(session.getOperationResult()).toBeNull();
-    expect(session.getOperationState()?.stageId).toBe('2');
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: '2',
+    });
   });
 
   it('returns defensive clone from getter', () => {

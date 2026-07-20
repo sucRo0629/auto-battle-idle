@@ -67,6 +67,11 @@ import {
   type OperationCheckpointSnapshot,
 } from './OperationCheckpoint.ts';
 import {
+  cloneOperationSource,
+  tryGetFixedStageIdFromSource,
+  type OperationSource,
+} from './operationSource.ts';
+import {
   createProblemSeriesOperationStartSnapshot,
   type ProblemSeriesOperationStartSnapshot,
 } from '../battle/problemSeries/operationStartSnapshot.ts';
@@ -430,10 +435,13 @@ export class GameSession {
   tryCommitOperationCheckpoint(
     candidate: OperationCheckpointSnapshot,
   ): boolean {
-    const waveCount = this.resolveOperationStageWaveCount(candidate.stageId);
+    if (this.operationState === null) return false;
+
+    const activeSource = this.operationState.source;
+    const waveCount = this.resolveOperationWaveCount(activeSource);
     if (
       !validateCheckpointSnapshot(candidate, this.gameData, {
-        expectedStageId: candidate.stageId,
+        expectedSource: activeSource,
         waveCount,
       })
     ) {
@@ -454,7 +462,7 @@ export class GameSession {
     const snapshot = source ?? this.operationCheckpoint;
     if (snapshot === null) return false;
 
-    const waveCount = this.resolveOperationStageWaveCount(snapshot.stageId);
+    const waveCount = this.resolveOperationWaveCount(this.operationState.source);
     const result = restoreOperationStateFromCheckpoint(
       this.operationState,
       snapshot,
@@ -521,18 +529,18 @@ export class GameSession {
   }
 
   /**
-   * R6i: 同 stageId の Wave 0 として OperationState を再初期化する。
+   * R6i: 同 source の Wave 0 として OperationState を再初期化する。
    * 作戦未開始・完了時は false。
    */
   restartOperationFromWaveZero(): boolean {
     if (!this.canUseOperationRetry()) return false;
 
-    const stageId = this.operationState!.stageId;
+    const source = cloneOperationSource(this.operationState!.source);
     this.wavePrepSuspended = false;
     this.clearOperationResult();
     this.operationState?.endWavePrepEditing();
 
-    if (!this.beginOperation(stageId, 0)) return false;
+    if (!this.beginOperationFromSource(source, 0)) return false;
     this.suppressOperationWaveReload = true;
     try {
       this.engine.restartBattleAtWave(0);
@@ -1269,11 +1277,14 @@ export class GameSession {
     const failedStageName = failedStage?.displayName ?? failedStageId;
 
     if (this.operationState !== null) {
-      this.tryFinalizeOperationResult({
-        stageId: this.operationState.stageId,
-        outcome: 'defeat',
-        reachedWaveIndex: this.operationState.currentWaveIndex,
-      });
+      const fixedStageId = tryGetFixedStageIdFromSource(this.operationState.source);
+      if (fixedStageId !== null) {
+        this.tryFinalizeOperationResult({
+          stageId: fixedStageId,
+          outcome: 'defeat',
+          reachedWaveIndex: this.operationState.currentWaveIndex,
+        });
+      }
       this.operationState.markDefeated();
     }
 
@@ -1326,11 +1337,14 @@ export class GameSession {
     const finalWaveIndex = Math.max(0, waveCount - 1);
 
     if (this.operationState !== null) {
-      this.tryFinalizeOperationResult({
-        stageId: this.operationState.stageId,
-        outcome: 'victory',
-        reachedWaveIndex: finalWaveIndex,
-      });
+      const fixedStageId = tryGetFixedStageIdFromSource(this.operationState.source);
+      if (fixedStageId !== null) {
+        this.tryFinalizeOperationResult({
+          stageId: fixedStageId,
+          outcome: 'victory',
+          reachedWaveIndex: finalWaveIndex,
+        });
+      }
       this.operationState.markCompleted(finalWaveIndex, waveCount);
       this.clearOperation();
     }
@@ -1535,10 +1549,7 @@ export class GameSession {
     if (this.operationState === null || !this.isAwaitingNextWave()) return;
     const targetWaveIndex = this.operationState.clearedWaveCount;
     this.operationState.tryGrantWavePrepResource(
-      this.resolveWavePrepResourceGrant(
-        this.operationState.stageId,
-        targetWaveIndex,
-      ),
+      this.resolveWavePrepResourceGrantForActiveOperation(targetWaveIndex),
       targetWaveIndex,
     );
     this.operationState.beginWavePrepEditing();
@@ -1553,15 +1564,36 @@ export class GameSession {
     ) {
       return false;
     }
-    const grant = this.resolveWavePrepResourceGrant(
-      this.operationState.stageId,
-      0,
-    );
+    const grant = this.resolveWavePrepResourceGrantForActiveOperation(0);
     if (grant <= 0) return false;
     this.operationState.tryGrantWavePrepResource(grant, 0);
     this.operationState.beginWavePrepEditing();
     this.commitCheckpointFromCurrentOperationState();
     return true;
+  }
+
+  private resolveWavePrepResourceGrantForActiveOperation(
+    waveIndex: number,
+  ): number {
+    const snapshot = this.problemSeriesOperationStartSnapshot;
+    if (snapshot !== null) {
+      const waveCount = snapshot.waves.length;
+      if (waveIndex < 0 || waveIndex >= waveCount) {
+        throw new Error(
+          `problem series operation start snapshot has no wave at index ${waveIndex} (waveCount=${waveCount})`,
+        );
+      }
+      return snapshot.waves[waveIndex]!.prepResourceGrant;
+    }
+
+    if (this.operationState === null) {
+      return 0;
+    }
+    const stageId = tryGetFixedStageIdFromSource(this.operationState.source);
+    if (stageId === null) {
+      return 0;
+    }
+    return this.resolveWavePrepResourceGrant(stageId, waveIndex);
   }
 
   private resolveWavePrepResourceGrant(
@@ -1588,13 +1620,17 @@ export class GameSession {
 
   /**
    * R12m 1C: 作戦 Wave 数の供給境界。
-   * 問題系列 snapshot 保持時は series waves.length を正本とし、stageId / StageDef は使わない。
-   * 未準備時のみ固定 Stage の waves.length（未知 stageId は 0）。
+   * 問題系列 snapshot 保持時は series waves.length を正本とし、source / StageDef は使わない。
+   * 未準備時は fixedStage source の stageId から waves.length（未知 stageId は 0）。
    */
-  private resolveOperationStageWaveCount(stageId: string): number {
+  private resolveOperationWaveCount(source: OperationSource): number {
     const snapshot = this.problemSeriesOperationStartSnapshot;
     if (snapshot !== null) {
       return snapshot.waves.length;
+    }
+    const stageId = tryGetFixedStageIdFromSource(source);
+    if (stageId === null) {
+      return 0;
     }
     const stage = getStageById(this.gameData.stages, stageId);
     return stage?.waves.length ?? 0;
@@ -1609,10 +1645,21 @@ export class GameSession {
 
   /** R6f: 出撃確定時に OperationState 初期化 + checkpoint commit */
   private beginOperation(stageId: string, initialWaveIndex = 0): boolean {
+    return this.beginOperationFromSource(
+      { kind: 'fixedStage', stageId },
+      initialWaveIndex,
+    );
+  }
+
+  private beginOperationFromSource(
+    source: OperationSource,
+    initialWaveIndex = 0,
+  ): boolean {
     this.clearOperationResult();
     this.clearOperationCheckpoint();
+    const clonedSource = cloneOperationSource(source);
     const next = OperationState.begin({
-      stageId,
+      source: clonedSource,
       party: this.save.party,
       moduleSelection: this.preOperationModuleSelection,
       initialWaveIndex,
@@ -1624,10 +1671,10 @@ export class GameSession {
     }
     this.operationState = next;
     const candidate = createCheckpointFromOperationState(next);
-    const waveCount = this.resolveOperationStageWaveCount(stageId);
+    const waveCount = this.resolveOperationWaveCount(clonedSource);
     if (
       !validateCheckpointSnapshot(candidate, this.gameData, {
-        expectedStageId: stageId,
+        expectedSource: clonedSource,
         waveCount,
       })
     ) {

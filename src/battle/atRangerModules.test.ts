@@ -548,7 +548,7 @@ describe('at_ranger CombatModule runtime (R12g-e3)', () => {
     const selection = new PartyCombatModuleSelection();
     selection.setSelectedCombatModuleId(0, M1_ID);
     const op = OperationState.begin({
-      stageId: 'ranger_module_switch',
+      source: { kind: 'fixedStage', stageId: 'ranger_module_switch' },
       party,
       moduleSelection: selection,
     });

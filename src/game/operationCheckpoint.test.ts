@@ -14,9 +14,12 @@ import type { GameData } from '../battle/types.ts';
 import {
   cloneCheckpointSnapshot,
   createCheckpointFromOperationState,
+  restoreOperationStateFromCheckpoint,
   validateCheckpointSnapshot,
+  type OperationCheckpointSnapshot,
 } from './OperationCheckpoint.ts';
 import { OperationState } from './OperationState.ts';
+import type { OperationSource } from './operationSource.ts';
 import { GameSession } from './GameSession.ts';
 import {
   asBattleEngineInternals,
@@ -99,6 +102,9 @@ function triggerDefeat(session: GameSession, survivingIndices: number[] = []): v
   getEngine(session).applyDefeatTransition(survivingIndices);
 }
 
+const FIXED_SOURCE: OperationSource = { kind: 'fixedStage', stageId: '1' };
+const PROBLEM_SERIES_SOURCE: OperationSource = { kind: 'problemSeries' };
+
 describe('Operation checkpoint (R6f)', () => {
   let session: GameSession | null = null;
   const loaded = tryLoadGameData();
@@ -133,7 +139,7 @@ describe('Operation checkpoint (R6f)', () => {
     session.setPartySlotCombatModule(0, moduleId);
     sortieToStage(session, '1');
     const checkpoint = session.getOperationCheckpoint();
-    expect(checkpoint?.stageId).toBe('1');
+    expect(checkpoint?.source).toEqual({ kind: 'fixedStage', stageId: '1' });
     expect(checkpoint?.currentWaveIndex).toBe(0);
     expect(checkpoint?.clearedWaveCount).toBe(0);
     expect(checkpoint?.party[0]?.classId).toBe(session.getSaveState().party[0]?.classId);
@@ -243,9 +249,9 @@ describe('Operation checkpoint (R6f)', () => {
     sortieToStage(session, '1');
     const before = session.getOperationState();
     const invalid = cloneCheckpointSnapshot(session.getOperationCheckpoint()!);
-    const tampered = {
+    const tampered: OperationCheckpointSnapshot = {
       ...invalid,
-      stageId: '999',
+      source: { kind: 'fixedStage', stageId: '999' },
     };
     expect(session.tryRestoreOperationFromCheckpoint(tampered)).toBe(false);
     expect(session.getOperationState()).toEqual(before);
@@ -284,7 +290,7 @@ describe('Operation checkpoint (R6f)', () => {
     const first = session.getOperationCheckpoint();
     sortieToStage(session, '2');
     const second = session.getOperationCheckpoint();
-    expect(second?.stageId).toBe('2');
+    expect(second?.source).toEqual({ kind: 'fixedStage', stageId: '2' });
     expect(second).not.toEqual(first);
   });
 
@@ -343,7 +349,10 @@ describe('Operation checkpoint (R6f)', () => {
     session = createSession();
     sortieToStage(session, '1');
     sortieToStage(session, '2');
-    expect(session.getOperationState()?.stageId).toBe('2');
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: '2',
+    });
   });
 
   it('R8b wave prep edits to passives do not update checkpoint until confirm', () => {
@@ -389,7 +398,7 @@ describe('OperationCheckpoint unit (R6f)', () => {
     const selection = new PartyCombatModuleSelection();
     selection.setSelectedCombatModuleId(0, 'df_guardian_mod_guard_focus');
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: selection,
     })!;
@@ -403,7 +412,7 @@ describe('OperationCheckpoint unit (R6f)', () => {
   it('validateCheckpointSnapshot rejects inconsistent wave progress', () => {
     const selection = new PartyCombatModuleSelection();
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: selection,
     })!;
@@ -414,7 +423,7 @@ describe('OperationCheckpoint unit (R6f)', () => {
     };
     expect(
       validateCheckpointSnapshot(invalid, gameData, {
-        expectedStageId: '1',
+        expectedSource: FIXED_SOURCE,
         waveCount: 2,
       }),
     ).toBe(false);
@@ -422,7 +431,7 @@ describe('OperationCheckpoint unit (R6f)', () => {
 
   it('R8b checkpoint commit and restore round-trips passives and resource', () => {
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -443,7 +452,7 @@ describe('OperationCheckpoint unit (R6f)', () => {
 
   it('validateCheckpointSnapshot rejects invalid passive and resource fields', () => {
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -452,7 +461,7 @@ describe('OperationCheckpoint unit (R6f)', () => {
       validateCheckpointSnapshot(
         { ...snapshot, unspentResource: -1 },
         gameData,
-        { expectedStageId: '1', waveCount: 2 },
+        { expectedSource: FIXED_SOURCE, waveCount: 2 },
       ),
     ).toBe(false);
     expect(
@@ -462,16 +471,266 @@ describe('OperationCheckpoint unit (R6f)', () => {
           acquiredOperationPassives: [{ slotIndex: 0, passiveIds: ['dup', 'dup'] }],
         },
         gameData,
-        { expectedStageId: '1', waveCount: 2 },
+        { expectedSource: FIXED_SOURCE, waveCount: 2 },
       ),
     ).toBe(false);
     expect(
       validateCheckpointSnapshot(
         { ...snapshot, lastResourceGrantClearedWaveCount: 99 },
         gameData,
-        { expectedStageId: '1', waveCount: 2 },
+        { expectedSource: FIXED_SOURCE, waveCount: 2 },
       ),
     ).toBe(false);
+  });
+});
+
+describe('GameSession checkpoint source validation (R12m 1C 14B)', () => {
+  let session: GameSession | null = null;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+    setVerifyModeEnabled(false);
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+  });
+
+  it('commits candidate when source matches active OperationState', () => {
+    session = createSession();
+    sortieToStage(session, '1');
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: '1',
+    });
+
+    const candidate = session.buildOperationCheckpointCandidate();
+    expect(candidate).not.toBeNull();
+    expect(session.tryCommitOperationCheckpoint(candidate!)).toBe(true);
+
+    const committed = session.getOperationCheckpoint();
+    expect(committed).toEqual(candidate);
+    expect(committed).not.toBe(candidate);
+    expect(committed?.party).not.toBe(candidate!.party);
+  });
+
+  it('rejects commit when candidate fixedStage ID mismatches active source', () => {
+    session = createSession();
+    sortieToStage(session, '1');
+    const beforeCheckpoint = session.getOperationCheckpoint();
+    const beforeOperation = session.getOperationState();
+
+    const candidate = cloneCheckpointSnapshot(
+      session.buildOperationCheckpointCandidate()!,
+    );
+    const tampered: OperationCheckpointSnapshot = {
+      ...candidate,
+      source: { kind: 'fixedStage', stageId: '2' },
+    };
+
+    expect(session.tryCommitOperationCheckpoint(tampered)).toBe(false);
+    expect(session.getOperationCheckpoint()).toEqual(beforeCheckpoint);
+    expect(session.getOperationState()).toEqual(beforeOperation);
+  });
+
+  it('rejects commit when candidate kind mismatches active source', () => {
+    session = createSession();
+    sortieToStage(session, '1');
+    const beforeCheckpoint = session.getOperationCheckpoint();
+
+    const candidate = cloneCheckpointSnapshot(
+      session.buildOperationCheckpointCandidate()!,
+    );
+    const tampered: OperationCheckpointSnapshot = {
+      ...candidate,
+      source: { kind: 'problemSeries' },
+    };
+
+    expect(session.tryCommitOperationCheckpoint(tampered)).toBe(false);
+    expect(session.getOperationCheckpoint()).toEqual(beforeCheckpoint);
+  });
+
+  it('rejects commit when no active OperationState exists', () => {
+    const donor = createSession();
+    sortieToStage(donor, '1');
+    const candidate = donor.buildOperationCheckpointCandidate();
+    expect(candidate).not.toBeNull();
+    donor.destroy();
+
+    session = createSession();
+    expect(session.hasOperationCheckpoint()).toBe(false);
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.tryCommitOperationCheckpoint(candidate!)).toBe(false);
+    expect(session.hasOperationCheckpoint()).toBe(false);
+    expect(session.getOperationCheckpoint()).toBeNull();
+  });
+
+  it('rejects restore when snapshot source mismatches active OperationState', () => {
+    session = createSession();
+    sortieToStage(session, '1');
+    const beforeOperation = session.getOperationState();
+
+    const base = cloneCheckpointSnapshot(session.getOperationCheckpoint()!);
+    const stageMismatch: OperationCheckpointSnapshot = {
+      ...base,
+      source: { kind: 'fixedStage', stageId: '2' },
+    };
+    const kindMismatch: OperationCheckpointSnapshot = {
+      ...base,
+      source: { kind: 'problemSeries' },
+    };
+
+    expect(session.tryRestoreOperationFromCheckpoint(stageMismatch)).toBe(false);
+    expect(session.getOperationState()).toEqual(beforeOperation);
+    expect(session.tryRestoreOperationFromCheckpoint(kindMismatch)).toBe(false);
+    expect(session.getOperationState()).toEqual(beforeOperation);
+  });
+});
+
+describe('OperationCheckpoint source identity (R12m 1C 14B)', () => {
+  const loaded = tryLoadGameData();
+  if (!loaded.ok) throw new Error(loaded.error);
+  const gameData = loaded.data;
+  const save = createDefaultSave(gameData, 'demo');
+
+  it('fixedStage create→clone→validate→restore round-trips', () => {
+    const op = OperationState.begin({
+      source: { kind: 'fixedStage', stageId: '1' },
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    op.tryAddAcquiredOperationPassiveId(0, 'op_passive_a');
+    op.tryAddUnspentResource(3);
+
+    const created = createCheckpointFromOperationState(op);
+    expect(created.source).toEqual({ kind: 'fixedStage', stageId: '1' });
+    expect(created.source).not.toBe(op.source);
+
+    const cloned = cloneCheckpointSnapshot(created);
+    expect(cloned.source).toEqual(created.source);
+    expect(cloned.source).not.toBe(created.source);
+
+    expect(
+      validateCheckpointSnapshot(cloned, gameData, {
+        expectedSource: { kind: 'fixedStage', stageId: '1' },
+        waveCount: 2,
+      }),
+    ).toBe(true);
+
+    op.tryAddAcquiredOperationPassiveId(1, 'op_passive_b');
+    expect(
+      restoreOperationStateFromCheckpoint(op, cloned, gameData, 2).ok,
+    ).toBe(true);
+    expect(op.getAcquiredOperationPassiveIds(0)).toEqual(['op_passive_a']);
+    expect(op.getAcquiredOperationPassiveIds(1)).toEqual([]);
+    expect(op.getUnspentResource()).toBe(3);
+  });
+
+  it('problemSeries create→clone→validate→restore round-trips', () => {
+    const op = OperationState.begin({
+      source: PROBLEM_SERIES_SOURCE,
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    const created = createCheckpointFromOperationState(op);
+    expect(created.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(created)).not.toContain('seed');
+    expect(Object.keys(created)).not.toContain('seriesId');
+    expect(Object.keys(created.source)).not.toContain('waves');
+
+    const cloned = cloneCheckpointSnapshot(created);
+    expect(
+      validateCheckpointSnapshot(cloned, gameData, {
+        expectedSource: PROBLEM_SERIES_SOURCE,
+        waveCount: 3,
+      }),
+    ).toBe(true);
+    expect(
+      restoreOperationStateFromCheckpoint(op, cloned, gameData, 3).ok,
+    ).toBe(true);
+    expect(op.source).toEqual(PROBLEM_SERIES_SOURCE);
+  });
+
+  it('rejects fixedStage ID mismatch on validate and restore', () => {
+    const op = OperationState.begin({
+      source: { kind: 'fixedStage', stageId: '1' },
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    const snapshot = createCheckpointFromOperationState(op);
+    expect(
+      validateCheckpointSnapshot(snapshot, gameData, {
+        expectedSource: { kind: 'fixedStage', stageId: '2' },
+        waveCount: 2,
+      }),
+    ).toBe(false);
+    expect(
+      restoreOperationStateFromCheckpoint(
+        OperationState.begin({
+          source: { kind: 'fixedStage', stageId: '2' },
+          party: save.party,
+          moduleSelection: new PartyCombatModuleSelection(),
+        })!,
+        snapshot,
+        gameData,
+        2,
+      ).ok,
+    ).toBe(false);
+  });
+
+  it('rejects kind mismatch and malformed source', () => {
+    const op = OperationState.begin({
+      source: FIXED_SOURCE,
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    const snapshot = createCheckpointFromOperationState(op);
+    expect(
+      validateCheckpointSnapshot(
+        { ...snapshot, source: { kind: 'problemSeries' } },
+        gameData,
+        { expectedSource: FIXED_SOURCE, waveCount: 2 },
+      ),
+    ).toBe(false);
+    expect(
+      validateCheckpointSnapshot(
+        { ...snapshot, source: { kind: 'fixedStage', stageId: '1', seed: 'x' } },
+        gameData,
+        { waveCount: 2 },
+      ),
+    ).toBe(false);
+    expect(
+      restoreOperationStateFromCheckpoint(op, {
+        ...cloneCheckpointSnapshot(snapshot),
+        source: { kind: 'problemSeries' },
+      }, gameData, 2).ok,
+    ).toBe(false);
+  });
+
+  it('source mutation after create does not affect state or checkpoint', () => {
+    const input: OperationSource = { kind: 'fixedStage', stageId: '1' };
+    const op = OperationState.begin({
+      source: input,
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    const checkpoint = createCheckpointFromOperationState(op);
+    if (input.kind === 'fixedStage') {
+      (input as { stageId: string }).stageId = 'mutated';
+    }
+    expect(op.source).toEqual({ kind: 'fixedStage', stageId: '1' });
+    expect(checkpoint.source).toEqual({ kind: 'fixedStage', stageId: '1' });
+    if (checkpoint.source.kind === 'fixedStage') {
+      (checkpoint.source as { stageId: string }).stageId = 'tampered';
+    }
+    expect(op.source).toEqual({ kind: 'fixedStage', stageId: '1' });
+    expect(createCheckpointFromOperationState(op).source).toEqual({
+      kind: 'fixedStage',
+      stageId: '1',
+    });
   });
 });
 

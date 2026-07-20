@@ -91,9 +91,12 @@ function resolveOperationStageWaveCount(
 ): number {
   return (
     session as unknown as {
-      resolveOperationStageWaveCount: (stageId: string) => number;
+      resolveOperationWaveCount: (source: {
+        kind: 'fixedStage';
+        stageId: string;
+      }) => number;
     }
-  ).resolveOperationStageWaveCount(stageId);
+  ).resolveOperationWaveCount({ kind: 'fixedStage', stageId });
 }
 
 function replaceHeldSnapshotWaves(

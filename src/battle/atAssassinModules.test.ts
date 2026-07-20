@@ -630,7 +630,7 @@ describe('at_assassin CombatModule runtime (R12g-e2)', () => {
     const selection = new PartyCombatModuleSelection();
     selection.setSelectedCombatModuleId(0, M1_ID);
     const op = OperationState.begin({
-      stageId: 'assassin_module_switch',
+      source: { kind: 'fixedStage', stageId: 'assassin_module_switch' },
       party,
       moduleSelection: selection,
     });

@@ -126,7 +126,7 @@ describe('Kill CombatModule integration (R12g-e5)', () => {
   it('Wave prep recreates all four attackers with M2 and does not carry combat state', () => {
     const selection = new PartyCombatModuleSelection();
     setModules(selection, M1);
-    const operation = OperationState.begin({ stageId: 'kill_integration', party, moduleSelection: selection })!;
+    const operation = OperationState.begin({ source: { kind: 'fixedStage', stageId: 'kill_integration' }, party, moduleSelection: selection })!;
     const wave1 = createParty(operation.getCombatModuleSelection());
     wave1[0]!.hp = 1;
     wave1[1]!.barrierHp = 50;

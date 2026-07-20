@@ -904,7 +904,7 @@ describe('Survival CombatModule integration (R12g-d5)', () => {
         ward: MODULES.wardM1,
       });
       const op = OperationState.begin({
-        stageId: 'survival_integration',
+        source: { kind: 'fixedStage', stageId: 'survival_integration' },
         party,
         moduleSelection: selection,
       });

@@ -18,6 +18,11 @@ import {
   applyCheckpointPassivesAndResource,
   type OperationCheckpointSnapshot,
 } from './OperationCheckpoint.ts';
+import {
+  cloneOperationSource,
+  operationSourcesEqual,
+  type OperationSource,
+} from './operationSource.ts';
 
 function isValidResourceDelta(value: number): boolean {
   return Number.isFinite(value) && Number.isInteger(value) && value > 0;
@@ -28,7 +33,7 @@ function isValidResourceBalance(value: number): boolean {
 }
 
 export interface OperationStateReadonlyView {
-  readonly stageId: string;
+  readonly source: OperationSource;
   readonly party: readonly PartySlotState[];
   readonly currentWaveIndex: number;
   readonly clearedWaveCount: number;
@@ -39,7 +44,7 @@ export interface OperationStateReadonlyView {
 }
 
 export interface BeginOperationParams {
-  stageId: string;
+  source: OperationSource;
   party: PartySlotState[];
   moduleSelection: PartyCombatModuleSelection;
   initialWaveIndex?: number;
@@ -50,7 +55,7 @@ export interface BeginOperationParams {
  * 所有者: GameSession。
  */
 export class OperationState {
-  readonly stageId: string;
+  readonly source: OperationSource;
   private readonly partySlots: PartySlotState[];
   private readonly combatModuleSelection: PartyCombatModuleSelection;
   private currentWaveIndexValue: number;
@@ -67,13 +72,13 @@ export class OperationState {
   private initialResourceGrantAppliedValue = false;
 
   private constructor(
-    stageId: string,
+    source: OperationSource,
     party: PartySlotState[],
     moduleSelection: PartyCombatModuleSelection,
     initialWaveIndex: number,
     isActive: boolean,
   ) {
-    this.stageId = stageId;
+    this.source = source;
     this.partySlots = party;
     this.combatModuleSelection = moduleSelection;
     this.acquiredOperationPassives = new OperationAcquiredPassives();
@@ -90,7 +95,7 @@ export class OperationState {
     }
 
     return new OperationState(
-      params.stageId,
+      cloneOperationSource(params.source),
       party,
       params.moduleSelection.clone(),
       params.initialWaveIndex ?? 0,
@@ -211,7 +216,7 @@ export class OperationState {
 
   toReadonlyView(): OperationStateReadonlyView {
     return {
-      stageId: this.stageId,
+      source: cloneOperationSource(this.source),
       party: this.getPartySnapshot(),
       currentWaveIndex: this.currentWaveIndexValue,
       clearedWaveCount: this.clearedWaveCountValue,
@@ -441,7 +446,7 @@ export class OperationState {
    * 再戦可能な active 状態へ正規化する。呼出前に validate が通っていること。
    */
   tryRestoreFromCheckpoint(snapshot: OperationCheckpointSnapshot): boolean {
-    if (snapshot.stageId !== this.stageId) {
+    if (!operationSourcesEqual(snapshot.source, this.source)) {
       return false;
     }
 

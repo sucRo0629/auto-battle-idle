@@ -11,7 +11,16 @@ import { setDebugLoopStageId, setDebugLoopWaveIndex } from '../dev/debugLoopStag
 import { SaveManager } from '../save/SaveManager.ts';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import type { GameData, PartySlotState } from '../battle/types.ts';
+import {
+  cloneCheckpointSnapshot,
+  createCheckpointFromOperationState,
+  type OperationCheckpointSnapshot,
+} from './OperationCheckpoint.ts';
 import { OperationState } from './OperationState.ts';
+import {
+  cloneOperationSource,
+  type OperationSource,
+} from './operationSource.ts';
 import { GameSession } from './GameSession.ts';
 import {
   asBattleEngineInternals,
@@ -85,25 +94,65 @@ function sortieToStage(session: GameSession, stageId: string): void {
   host(stageId);
 }
 
+const FIXED_SOURCE: OperationSource = { kind: 'fixedStage', stageId: '1' };
+const PROBLEM_SERIES_SOURCE: OperationSource = { kind: 'problemSeries' };
+
 describe('OperationState unit (R6c)', () => {
   const loaded = tryLoadGameData();
   if (!loaded.ok) throw new Error(loaded.error);
   const gameData = loaded.data;
   const save = createDefaultSave(gameData, 'demo');
 
-  it('1. keeps stageId', () => {
+  it('1. keeps fixedStage source', () => {
     const selection = new PartyCombatModuleSelection();
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: selection,
     });
-    expect(op?.stageId).toBe('1');
+    expect(op?.source).toEqual(FIXED_SOURCE);
+  });
+
+  it('1b. begins with problemSeries source', () => {
+    const op = OperationState.begin({
+      source: PROBLEM_SERIES_SOURCE,
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    });
+    expect(op?.source).toEqual(PROBLEM_SERIES_SOURCE);
+  });
+
+  it('1c. does not share source reference with input', () => {
+    const input = { kind: 'fixedStage', stageId: '1' } as OperationSource;
+    const op = OperationState.begin({
+      source: input,
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    expect(op.source).toEqual(input);
+    expect(op.source).not.toBe(input);
+    if (input.kind === 'fixedStage' && op.source.kind === 'fixedStage') {
+      (input as { stageId: string }).stageId = 'mutated';
+      expect(op.source.stageId).toBe('1');
+    }
+  });
+
+  it('1d. readonly view keeps cloned source without seed fields', () => {
+    const op = OperationState.begin({
+      source: FIXED_SOURCE,
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    const view = op.toReadonlyView();
+    expect(view.source).toEqual(FIXED_SOURCE);
+    expect(view.source).not.toBe(op.source);
+    expect(Object.keys(view.source)).not.toContain('seed');
+    expect(Object.keys(view.source)).not.toContain('seriesId');
   });
 
   it('2. keeps party snapshot', () => {
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     });
@@ -115,7 +164,7 @@ describe('OperationState unit (R6c)', () => {
     const selection = new PartyCombatModuleSelection();
     selection.setSelectedCombatModuleId(0, 'df_guardian_mod_guard_focus');
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: selection,
     });
@@ -126,7 +175,7 @@ describe('OperationState unit (R6c)', () => {
 
   it('4. initializes currentWaveIndex', () => {
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
       initialWaveIndex: 2,
@@ -136,7 +185,7 @@ describe('OperationState unit (R6c)', () => {
 
   it('5. initializes clearedWaveCount', () => {
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     });
@@ -145,7 +194,7 @@ describe('OperationState unit (R6c)', () => {
 
   it('6. initializes active/completed/defeated flags', () => {
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     });
@@ -157,7 +206,7 @@ describe('OperationState unit (R6c)', () => {
   it('7. party snapshot is not the same reference as source party', () => {
     const source = save.party;
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: source,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -171,7 +220,7 @@ describe('OperationState unit (R6c)', () => {
     const selection = new PartyCombatModuleSelection();
     selection.setSelectedCombatModuleId(1, 'at_assassin_mod_shadow');
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: selection,
     })!;
@@ -184,7 +233,7 @@ describe('OperationState unit (R6c)', () => {
 
   it('9. ignores invalid slot module writes during wave prep', () => {
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -201,7 +250,7 @@ describe('OperationState unit (R6c)', () => {
     if (!classId) throw new Error('missing class');
     dupParty[1] = structuredClone(dupParty[0]!);
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: dupParty,
       moduleSelection: new PartyCombatModuleSelection(),
     });
@@ -211,7 +260,7 @@ describe('OperationState unit (R6c)', () => {
   it('party snapshot does not auto-sync from save changes', () => {
     const source = structuredClone(save.party);
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: source,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -222,7 +271,7 @@ describe('OperationState unit (R6c)', () => {
   it('party snapshot changes do not mutate source', () => {
     const source = structuredClone(save.party);
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: source,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -255,7 +304,10 @@ describe('GameSession OperationState integration (R6c)', () => {
     sortieToStage(session, '1');
     expect(session.getOperationState()).not.toBeNull();
     expect(session.hasActiveOperation()).toBe(true);
-    expect(session.getOperationState()?.stageId).toBe('1');
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: '1',
+    });
   });
 
   it('12. new sortie replaces OperationState', () => {
@@ -265,7 +317,7 @@ describe('GameSession OperationState integration (R6c)', () => {
     sortieToStage(session, '2');
     const second = session.getOperationState();
     expect(second).not.toBeNull();
-    expect(second?.stageId).toBe('2');
+    expect(second?.source).toEqual({ kind: 'fixedStage', stageId: '2' });
     expect(second).not.toBe(first);
   });
 
@@ -389,7 +441,7 @@ describe('OperationState wave sync (R6c)', () => {
     if (!loaded.ok) throw new Error(loaded.error);
     const save = createDefaultSave(loaded.data, 'demo');
     const op = OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -478,6 +530,8 @@ describe('OperationState defeat and restart (R6c)', () => {
   });
 
   it('27. restart resets wave progress', () => {
+    setVerifyModeEnabled(true);
+    setDebugLoopStageId('1');
     session = createSession();
     sortieToStage(session, '1');
     session.start();
@@ -491,7 +545,10 @@ describe('OperationState defeat and restart (R6c)', () => {
     session = createSession();
     sortieToStage(session, '1');
     sortieToStage(session, '2');
-    expect(session.getOperationState()?.stageId).toBe('2');
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: '2',
+    });
   });
 });
 
@@ -563,7 +620,7 @@ describe('OperationState operation passives and resource (R8b)', () => {
 
   function beginOp(): OperationState {
     return OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -651,7 +708,7 @@ describe('OperationState wave prep resource grant (R8c)', () => {
 
   function beginOp(): OperationState {
     return OperationState.begin({
-      stageId: '1',
+      source: FIXED_SOURCE,
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
@@ -687,5 +744,40 @@ describe('OperationState wave prep resource grant (R8c)', () => {
     expect(op.tryGrantWavePrepResource(0, 0)).toBe(true);
     expect(op.getUnspentResource()).toBe(0);
     expect(op.tryGrantWavePrepResource(1, 0)).toBe(false);
+  });
+});
+
+describe('OperationState checkpoint restore source (R12m 1C 14B)', () => {
+  const loaded = tryLoadGameData();
+  if (!loaded.ok) throw new Error(loaded.error);
+  const save = createDefaultSave(loaded.data, 'demo');
+
+  it('rejects restore when checkpoint source mismatches operation source', () => {
+    const op = OperationState.begin({
+      source: { kind: 'fixedStage', stageId: '1' },
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    const checkpoint = createCheckpointFromOperationState(op);
+    const mismatched: OperationCheckpointSnapshot = {
+      ...cloneCheckpointSnapshot(checkpoint),
+      source: { kind: 'fixedStage', stageId: '2' },
+    };
+    expect(op.tryRestoreFromCheckpoint(mismatched)).toBe(false);
+    expect(op.source).toEqual({ kind: 'fixedStage', stageId: '1' });
+  });
+
+  it('rejects restore on fixedStage vs problemSeries kind mismatch', () => {
+    const op = OperationState.begin({
+      source: { kind: 'fixedStage', stageId: '1' },
+      party: save.party,
+      moduleSelection: new PartyCombatModuleSelection(),
+    })!;
+    const checkpoint = createCheckpointFromOperationState(op);
+    const mismatched = {
+      ...cloneCheckpointSnapshot(checkpoint),
+      source: { kind: 'problemSeries' as const },
+    };
+    expect(op.tryRestoreFromCheckpoint(mismatched)).toBe(false);
   });
 });
