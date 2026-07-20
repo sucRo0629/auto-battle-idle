@@ -76,6 +76,7 @@ import {
   type ProblemSeriesOperationStartSnapshot,
 } from '../battle/problemSeries/operationStartSnapshot.ts';
 import { resolveProblemSeriesFromSeed } from '../battle/problemSeries/seedResolve.ts';
+import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import { WavePrepScreenHost } from './WavePrepScreenHost.ts';
 import {
@@ -257,7 +258,7 @@ export class GameSession {
           this.getOperationAcquiredPassiveIds(slotIndex),
         onBattlefieldReload: () => this.handleBattlefieldReload(),
         getResolvedWavesCombatInput: () =>
-          this.problemSeriesOperationStartSnapshot?.waves ?? null,
+          this.getResolvedWavesCombatInputForActiveOperation(),
       },
     );
 
@@ -409,6 +410,32 @@ export class GameSession {
    */
   getProblemSeriesOperationStartSnapshot(): ProblemSeriesOperationStartSnapshot | null {
     return this.problemSeriesOperationStartSnapshot;
+  }
+
+  /**
+   * R12m 1C: active OperationState.source に基づき BattleEngine へ渡す解決済み Wave を返す。
+   * - active なし / fixedStage: null（固定 Stage 経路）
+   * - problemSeries: 保持 snapshot.waves（欠落時は例外、fallback しない）
+   */
+  private getResolvedWavesCombatInputForActiveOperation(): ResolvedWavesCombatInput | null {
+    const operation = this.operationState;
+    if (operation === null || !operation.isActive) {
+      return null;
+    }
+
+    const source = operation.source;
+    if (source.kind === 'fixedStage') {
+      return null;
+    }
+
+    const snapshot = this.problemSeriesOperationStartSnapshot;
+    if (snapshot === null) {
+      throw new Error(
+        'active problemSeries operation requires problemSeriesOperationStartSnapshot but snapshot is missing',
+      );
+    }
+
+    return snapshot.waves;
   }
 
   hasActiveOperation(): boolean {
