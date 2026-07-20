@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** システム縦切り（R5〜R11）の上に、固定 Stage 1 本ではなく、**繰り返すたびに異なる問題と構築判断が生まれるメイン試作**を成立させる（R12）。R12k で **シード付き・作者設計の線形 3 Wave 問題系列**を採用確定。R12l（4兵科パッシブ再編・旧仕様隔離 Backend）の次は **R12m**（系列 A/B の反復試作）→ R12n → R12o の後に「繰り返し遊びたいか」を人間が評価する（R13）。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R13 完了後**に再開する。
 
-**現在地:** **R12m 作業単位 1B Backend 完了**（問題系列 catalog・seed resolver・production load・validation）。Player / BattleEngine 接続は未着手。**公式次は R12m 1C**。R12l は unit3 Backend 隔離完了（Player は部分のみ）。R12a〜j の固定 `r12_prototype` は技術材料として維持。正本: [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)。
+**現在地:** **R12m 作業単位 1B / 1C Backend 完了**（問題系列 catalog・seed resolver・production load・validation + 選出済み系列の GameSession / OperationState / BattleEngine 接続）。Player 入口・概要開示・画面遷移は未完了。R12m Phase 全体は未完了。**公式次は R12m Player 作業単位 2A — 入口・画面状態・全3 Wave 概要開示境界の実装前調査**。R12l は unit3 Backend 隔離完了（Player は部分のみ）。R12a〜j の固定 `r12_prototype` は技術材料として維持。正本: [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)。handoff: [current-task.md §105.27](../ai-handoff/current-task.md)。
 
 ---
 
@@ -66,7 +66,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R12j** | 固定 Stage の手元プレイ成立ゲート（旧計画） | **判定無効 / 未完了** — 一部経路の実画面クリアは技術記録として維持。旧パッシブと反復構造欠落のためゲーム全体の成立根拠にしない |
 | **R12k** | **メイン反復構造の設計** — seed 付き作者設計 3 Wave 問題系列、固定クエスト分離、情報開示、再試行、系列 A/B | **完了**（doc / 設計） |
 | **R12l** | **R5対象4兵科のパッシブ・旧active再編** — 各兵科 本体1 + cost 1×3 / 10×2、全候補表示（cost 20 は今回外） | **unit3 Backend 完了 / Player 部分完了**（happy-dom。実ブラウザ未確認。Phase Player 完了ではない）。次 **R12m** |
-| **R12m** | **4兵科だけの反復可能メイン試作** — 系列 A（突破→複数処理）と系列 B（集中被害→分散被害）の 2 問題系列 | **作業単位 1B Backend 完了**（catalog / seed resolver / production load / validation）。Player・1C 以降未着手。Phase 全体は未完了 |
+| **R12m** | **4兵科だけの反復可能メイン試作** — 系列 A（突破→複数処理）と系列 B（集中被害→分散被害）の 2 問題系列 | **作業単位 1B / 1C Backend 完了**（catalog / seed / load / validation + 選出済み系列の作戦 runtime 接続）。Player 未完了。Phase 全体は未完了。公式次 **Player 2A 調査** |
 | **R12n** | **新構造後の数値強度調整** | 未着手 |
 | **R12o** | **反復試作の手元プレイ成立ゲート** — 評価可能なゲームになったか | 未着手 |
 

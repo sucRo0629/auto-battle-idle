@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12m 作業単位 1B Backend 完了**（問題系列 catalog / deterministic seed resolver / production load / validation）。Player・BattleEngine 接続は未着手。**公式次は R12m 1C**。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない）。正本 handoff は **§105.26**。
+- **新ロードマップ現在地:** **R12m 作業単位 1B / 1C Backend 完了**（catalog / seed resolver / production load / validation + 選出済み系列の作戦 runtime 接続）。Player 未完了。R12m Phase 全体は未完了。**公式次は R12m Player 作業単位 2A — 入口・画面状態・全3 Wave 概要開示境界の実装前調査**。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない）。正本 handoff は **§105.27**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12m 1C**（BattleEngine / 作戦状態への系列接続）→ 以降の R12m 作業単位 → R12n → R12o → R13。
+- **次の再開タスク:** **R12m Player 作業単位 2A**（入口・画面状態・全3 Wave 概要開示境界の read-only 調査）→ 以降の R12m Player 作業単位 → R12n → R12o → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -9315,3 +9315,73 @@ R13への現在の対応表:
 ### 次の正式作業単位
 
 - **R12m 1C** — 選出済み系列の BattleEngine / 作戦状態接続（1B のスコープ外）
+
+## §105.27 R12m 作業単位 1C — 選出済み系列の作戦runtime接続（2026-07-20・Backend完了）
+
+**状態:** 作業単位 1C の **Backend 完了**。Player 未完了。R12m Phase 全体は未完了。
+
+### production接続
+
+```text
+seed
+→ resolveProblemSeriesFromSeed
+→ createProblemSeriesOperationStartSnapshot
+→ GameSession.beginProblemSeriesOperation
+→ OperationState / checkpoint（source kindのみ）
+→ BattleEngine resolved-waves provider
+→ Wave数 / enemyGroups / CombatModule / prepResourceGrant
+→ retry / abort / final victory
+```
+
+### identity所有
+
+- seed
+- generatorVersion
+- seriesId
+- 解決済み3 Waves
+
+は **GameSession の作戦開始 snapshot だけ**が保持する。
+
+OperationState と checkpoint は `{ kind: 'problemSeries' }` だけを保持する。
+
+Save には上記 identity・waves・OperationState・checkpoint を保存しない。
+
+固定 Stage 報酬経路は既存経路を維持する。
+
+### 確認済み（Backend）
+
+- 系列 A/B の正式開始 API（`GameSession.beginProblemSeriesOperation`）
+- A/B 各 3 Wave の BattleEngine 入力（resolved-waves provider）
+- 実 Combatant 生成
+- selected CombatModule 反映
+- prepResourceGrant
+- 現在 Wave 再試行
+- 準備へ戻る
+- Wave 1 から再開始
+- 敗北後の snapshot 維持
+- 中断時消去
+- 最終勝利時消去
+- 固定 Stage 報酬経路との分離
+- 残留 snapshot 下の固定 Stage retry 分離
+- Save 非永続化
+
+**focused test（2026-07-20 実行）:** 14 test files / **157 tests passed**（`gameSessionProblemSeries*.test.ts`、`battleEngine.resolvedWaveCombatInput.test.ts`、`toBattleWaves.test.ts`、`operationStartSnapshot.test.ts`、`operationState.test.ts`、`operationCheckpoint.test.ts`、`operationSource.test.ts`）
+
+### 未完了（Player）
+
+- Player から `beginProblemSeriesOperation` を呼ぶ入口
+- seed 入力または生成
+- 新しい作戦開始
+- 全 3 Wave 概要の開示
+- 正解を直接教えない Player 向け表示
+- 初期編成・Wave 1 準備への遷移
+- 同 seed 再開始
+- 新 seed 開始
+- Player 操作による中断・結果確認
+- 実ブラウザ確認
+
+### 次作業
+
+**R12m Player 作業単位 2A — 入口・画面状態・全3 Wave 概要開示境界の実装前調査**
+
+2A は read-only 調査であり、Player UI を一括実装する作業ではない。
