@@ -4,10 +4,13 @@
  * R12m 1C 作業単位11: 同 seed 再試行操作が問題系列 snapshot を
  * 同一参照のまま維持する production 経路の回帰テスト。
  * 中断・最終勝利時の破棄・Player 入口は対象外。
+ *
+ * R12m 1C 作業単位14E3: 残留 snapshot 下の固定 Stage 再試行分離。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
+import { createEnemiesForStage } from '../battle/entities.ts';
 import { expandEnemyGroupsList } from '../battle/enemyGroupSpawn.ts';
 import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
 import type { ProblemSeriesOperationStartSnapshot } from '../battle/problemSeries/operationStartSnapshot.ts';
@@ -22,8 +25,12 @@ import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import type { GameScreen } from './gameScreen.ts';
 import type { OperationCheckpointSnapshot } from './OperationCheckpoint.ts';
 import { OperationState } from './OperationState.ts';
-import type { SaveGameState } from '../battle/types.ts';
+import type { GameData, SaveGameState } from '../battle/types.ts';
+import levelCurvesJson from '../../data/levelCurves.json';
+import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import { GameSession } from './GameSession.ts';
+
+const levelCurves = loadLevelCurves(levelCurvesJson);
 
 const FIXTURE_SEED_A = 'fixture-a';
 const GENERATOR_VERSION = 'r12m-v1';
@@ -90,6 +97,94 @@ function setGameScreen(session: GameSession, screen: GameScreen): void {
   (
     session as unknown as { setGameScreen: (screen: GameScreen) => void }
   ).setGameScreen(screen);
+}
+
+function sortieToStage(session: GameSession, stageId: string): void {
+  const host = (
+    session as unknown as {
+      handleStageSortie: (id: string) => void;
+    }
+  ).handleStageSortie.bind(session);
+  host(stageId);
+}
+
+function enemyClassIdsForFixedStageWave(
+  gameData: GameData,
+  stageId: string,
+  waveIndex: number,
+): string[] {
+  const enemies = createEnemiesForStage(
+    gameData,
+    stageId,
+    waveIndex,
+    levelCurves,
+  );
+  expect(enemies.length).toBeGreaterThan(0);
+  return enemies
+    .map((enemy) => enemy.classId)
+    .filter((id): id is string => id !== undefined);
+}
+
+function resolveEligibleFixedStageId(
+  gameData: GameData,
+  seriesAWave0ClassIds: readonly string[],
+): { stageId: string; waveCount: number; wave0ClassIds: string[] } {
+  const sortedSeriesClassIds = [...seriesAWave0ClassIds].sort();
+  const eligibleStages = gameData.stages.filter((stage) => {
+    if (stage.waves.length === SERIES_A_WAVE_COUNT) {
+      return false;
+    }
+    const wave0ClassIds = enemyClassIdsForFixedStageWave(gameData, stage.id, 0);
+    if (wave0ClassIds.length === 0) {
+      return false;
+    }
+    return (
+      JSON.stringify([...wave0ClassIds].sort()) !==
+      JSON.stringify(sortedSeriesClassIds)
+    );
+  });
+
+  expect(
+    eligibleStages.length,
+    'no fixed stage satisfies: exists, non-empty wave 0 enemies, waveCount != 3, classIds differ from series A wave 0',
+  ).toBeGreaterThan(0);
+
+  const stage = eligibleStages[0]!;
+  const wave0ClassIds = enemyClassIdsForFixedStageWave(gameData, stage.id, 0);
+  return {
+    stageId: stage.id,
+    waveCount: stage.waves.length,
+    wave0ClassIds,
+  };
+}
+
+function assertFixedStageSource(
+  session: GameSession,
+  stageId: string,
+): void {
+  const fixedSource = { kind: 'fixedStage', stageId } as const;
+  const operation = session.getOperationState();
+  expect(operation).not.toBeNull();
+  expect(operation!.source).toStrictEqual(fixedSource);
+  expect(Object.keys(operation!.source)).toEqual(['kind', 'stageId']);
+  expect(Object.keys(operation!)).not.toContain('seed');
+  expect(Object.keys(operation!)).not.toContain('generatorVersion');
+  expect(Object.keys(operation!)).not.toContain('seriesId');
+  expect(Object.keys(operation!)).not.toContain('waves');
+
+  const checkpoint = session.getOperationCheckpoint();
+  expect(checkpoint).not.toBeNull();
+  expect(checkpoint!.source).toStrictEqual(fixedSource);
+  expect(Object.keys(checkpoint!.source)).toEqual(['kind', 'stageId']);
+  expect(Object.keys(checkpoint!)).not.toContain('seed');
+  expect(Object.keys(checkpoint!)).not.toContain('generatorVersion');
+  expect(Object.keys(checkpoint!)).not.toContain('seriesId');
+  expect(Object.keys(checkpoint!)).not.toContain('waves');
+
+  const checkpointJson = JSON.stringify(checkpoint);
+  expect(checkpointJson).not.toContain(FIXTURE_SEED_A);
+  expect(checkpointJson).not.toContain('r12m_series_a');
+  expect(checkpointJson).not.toContain(GENERATOR_VERSION);
 }
 
 function reachAwaitingNextWaveAfterKill(engine: BattleEngine): void {
@@ -387,5 +482,105 @@ describe('GameSession same-seed retry preserves problem series snapshot (R12m 1C
       expect(session.getOperationAcquiredPassiveIds(slot)).toEqual([]);
     }
     expect(session.getOperationUnspentResource()).toBe(0);
+  });
+});
+
+describe('GameSession fixed-stage retry with retained problem series snapshot (R12m 1C unit14E3)', () => {
+  let session: GameSession | null = null;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+    setVerifyModeEnabled(false);
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('retryCurrentWaveFromCheckpoint keeps fixed-stage input when snapshot A remains in memory', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    const gameData = loaded.data;
+
+    session = createSession();
+    const resolveSpy = vi.spyOn(seedResolveModule, 'resolveProblemSeriesFromSeed');
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+    expect(prepared).not.toBeNull();
+    expect(prepared.seriesId).toBe('r12m_series_a');
+    expect(prepared.waves).toHaveLength(SERIES_A_WAVE_COUNT);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    const seriesAWave0ClassIds = expandWaveExpectations(
+      prepared.waves,
+      0,
+    ).classIds;
+    const eligible = resolveEligibleFixedStageId(
+      gameData,
+      seriesAWave0ClassIds,
+    );
+    const fixedStageId = eligible.stageId;
+    const fixedStageWaveCount = eligible.waveCount;
+    const fixedStageWave0ClassIds = eligible.wave0ClassIds;
+    expect(fixedStageWaveCount).not.toBe(SERIES_A_WAVE_COUNT);
+    expect(fixedStageWave0ClassIds.length).toBeGreaterThan(0);
+    expect(fixedStageWave0ClassIds).not.toEqual(seriesAWave0ClassIds);
+
+    sortieToStage(session, fixedStageId);
+    assertFixedStageSource(session, fixedStageId);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+
+    const engine = getEngine(session);
+    expect(getEngineProvider(engine)!()).toBeNull();
+
+    session.start();
+    engine.restartBattleAtWave(0);
+    setGameScreen(session, 'battle');
+    waitForEngaged(engine);
+
+    const enemiesBeforeDefeat = livingEnemyClassIds(engine);
+    expect(enemiesBeforeDefeat.length).toBeGreaterThan(0);
+    expect(enemiesBeforeDefeat).toEqual(fixedStageWave0ClassIds);
+    expect(enemiesBeforeDefeat).not.toEqual(seriesAWave0ClassIds);
+
+    const checkpointBeforeDefeat = session.getOperationCheckpoint();
+    expect(checkpointBeforeDefeat).not.toBeNull();
+    assertFixedStageSource(session, fixedStageId);
+
+    triggerDefeat(session);
+    expect(session.getOperationState()?.isDefeated).toBe(true);
+    assertFixedStageSource(session, fixedStageId);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+
+    expect(session.retryCurrentWaveFromCheckpoint()).toBe(true);
+
+    assertFixedStageSource(session, fixedStageId);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(getEngineProvider(engine)!()).toBeNull();
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    expect(session.getOperationState()?.isDefeated).toBe(false);
+    expect(engine.getSnapshot().waveCount).toBe(fixedStageWaveCount);
+    expect(engine.getSnapshot().waveCount).not.toBe(SERIES_A_WAVE_COUNT);
+
+    const enemiesAfterRetry = livingEnemyClassIds(engine);
+    expect(enemiesAfterRetry.length).toBeGreaterThan(0);
+    expect(enemiesAfterRetry).toEqual(fixedStageWave0ClassIds);
+    expect(enemiesAfterRetry).not.toEqual(seriesAWave0ClassIds);
   });
 });
