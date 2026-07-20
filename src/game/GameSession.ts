@@ -1674,20 +1674,22 @@ export class GameSession {
 
   /**
    * R12m 1C: 作戦 Wave 数の供給境界。
-   * 問題系列 snapshot 保持時は series waves.length を正本とし、source / StageDef は使わない。
-   * 未準備時は fixedStage source の stageId から waves.length（未知 stageId は 0）。
+   * source.kind を正本として解決する。
+   * - fixedStage: StageDef.waves.length（未知 stageId は 0）
+   * - problemSeries: 保持 snapshot.waves.length（欠落時は明示例外）
    */
   private resolveOperationWaveCount(source: OperationSource): number {
+    if (source.kind === 'fixedStage') {
+      const stage = getStageById(this.gameData.stages, source.stageId);
+      return stage?.waves.length ?? 0;
+    }
     const snapshot = this.problemSeriesOperationStartSnapshot;
-    if (snapshot !== null) {
-      return snapshot.waves.length;
+    if (snapshot === null) {
+      throw new Error(
+        'problemSeries source requires operation start snapshot, but snapshot is missing',
+      );
     }
-    const stageId = tryGetFixedStageIdFromSource(source);
-    if (stageId === null) {
-      return 0;
-    }
-    const stage = getStageById(this.gameData.stages, stageId);
-    return stage?.waves.length ?? 0;
+    return snapshot.waves.length;
   }
 
   /** R6f: 現在 OperationState から checkpoint を生成して commit */
