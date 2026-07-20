@@ -1,8 +1,8 @@
 /**
  * @vitest-environment happy-dom
  *
- * R12m Player 作業単位2B1: GameSession.beginPreparedProblemSeriesOperation の
- * 準備済み snapshot 開始 production API（fixture-a 成功経路）。
+ * R12m Player 作業単位2B1/2B2: GameSession.beginPreparedProblemSeriesOperation の
+ * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -14,6 +14,7 @@ import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import { GameSession } from './GameSession.ts';
 
 const FIXTURE_SEED_A = 'fixture-a';
+const FIXTURE_SEED_B = 'fixture-b';
 const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
 
 function mockCanvas2d(): void {
@@ -107,6 +108,47 @@ describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)'
     const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
 
     expect(prepared.seriesId).toBe('r12m_series_a');
+    expect(prepared.waves).toHaveLength(3);
+    expect(totalEnemyGroupCount(prepared.waves)).toBeGreaterThan(0);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    const returned = session.beginPreparedProblemSeriesOperation();
+
+    expect(returned).toBe(prepared);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(session.getOperationState()?.isActive).toBe(true);
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getOperationCheckpoint()?.source).toEqual(
+      PROBLEM_SERIES_SOURCE,
+    );
+
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine)!;
+    expect(provider()).toBe(prepared.waves);
+  });
+
+  it('fixture-b: begin from prepared snapshot without re-resolve or re-create', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_B);
+
+    expect(prepared.seriesId).toBe('r12m_series_b');
+    expect(prepared.seed).toBe(FIXTURE_SEED_B);
     expect(prepared.waves).toHaveLength(3);
     expect(totalEnemyGroupCount(prepared.waves)).toBeGreaterThan(0);
     expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
