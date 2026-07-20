@@ -1,8 +1,8 @@
 /**
  * @vitest-environment happy-dom
  *
- * R12m Player 作業単位2B1/2B2: GameSession.beginPreparedProblemSeriesOperation の
- * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路）。
+ * R12m Player 作業単位2B1/2B2/2B3: GameSession.beginPreparedProblemSeriesOperation の
+ * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路、prepared なし拒否）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -173,5 +173,37 @@ describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)'
     const engine = getEngine(session);
     const provider = getEngineProvider(engine)!;
     expect(provider()).toBe(prepared.waves);
+  });
+
+  it('2B3: rejects begin when no prepared snapshot; resolver/factory 0; state unchanged', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine)!;
+    const battleSnapshotBefore = engine.getSnapshot();
+
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(provider()).toBeNull();
+
+    const returned = session.beginPreparedProblemSeriesOperation();
+
+    expect(returned).toBeNull();
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(provider()).toBeNull();
+    expect(engine.getSnapshot()).toEqual(battleSnapshotBefore);
   });
 });
