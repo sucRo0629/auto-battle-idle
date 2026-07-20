@@ -1,9 +1,9 @@
 /**
  * @vitest-environment happy-dom
  *
- * R12m 1C 作業単位9: GameSession.resolveWavePrepResourceGrant が
- * 保持済み問題系列 snapshot の prepResourceGrant を正本として読む境界。
- * Wave 数・OperationState・checkpoint・再試行・Player は対象外。
+ * R12m 1C 作業単位14D3: GameSession の prepResourceGrant 解決が
+ * active OperationSource を正本とし、fixedStage と problemSeries を分離する境界。
+ * Wave 数・victory/defeat・retry/abort・Player は対象外。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
@@ -15,6 +15,7 @@ import { GameSession } from './GameSession.ts';
 const FIXTURE_SEED_A = 'fixture-a';
 const SERIES_A_WAVE_COUNT = 3;
 const FIXED_STAGE_ID = 'r12_prototype';
+const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
 /** 系列 A の [0, 12, 12] と意図的に異なる技術的 fixture（production JSON 非変更） */
 const FIXED_STAGE_DIVERGENT_GRANTS = [101, 202, 303] as const;
 
@@ -89,7 +90,20 @@ function createSessionWithFixedStageGrants(
   return new GameSession({ ...loaded.data, stages }, container);
 }
 
-function resolveWavePrepResourceGrant(
+function resolveActiveGrantForTest(
+  session: GameSession,
+  waveIndex: number,
+): number {
+  return (
+    session as unknown as {
+      resolveWavePrepResourceGrantForActiveOperation: (
+        waveIndex: number,
+      ) => number;
+    }
+  ).resolveWavePrepResourceGrantForActiveOperation(waveIndex);
+}
+
+function resolveFixedStageGrantForTest(
   session: GameSession,
   stageId: string,
   waveIndex: number,
@@ -104,7 +118,23 @@ function resolveWavePrepResourceGrant(
   ).resolveWavePrepResourceGrant(stageId, waveIndex);
 }
 
-describe('GameSession resolveWavePrepResourceGrant (R12m 1C unit9)', () => {
+function sortieToStage(session: GameSession, stageId: string): void {
+  (
+    session as unknown as {
+      handleStageSortie: (id: string) => void;
+    }
+  ).handleStageSortie(stageId);
+}
+
+function clearHeldSnapshotOnly(session: GameSession): void {
+  (
+    session as unknown as {
+      problemSeriesOperationStartSnapshot: null;
+    }
+  ).problemSeriesOperationStartSnapshot = null;
+}
+
+describe('GameSession prepResourceGrant source gate (R12m 1C unit14D3)', () => {
   let session: GameSession | null = null;
 
   beforeEach(() => {
@@ -120,24 +150,22 @@ describe('GameSession resolveWavePrepResourceGrant (R12m 1C unit9)', () => {
     vi.restoreAllMocks();
   });
 
-  it('A: without snapshot returns fixed-stage configured grant', () => {
+  it('1: fixedStage without snapshot uses explicit grant; Wave 0 omitted is 0; later omitted uses catalog', () => {
     session = createSessionWithFixedStageGrants(FIXED_STAGE_ID, [
       ...FIXED_STAGE_DIVERGENT_GRANTS,
     ]);
     expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
 
     expect(
-      resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 0),
+      resolveFixedStageGrantForTest(session, FIXED_STAGE_ID, 0),
     ).toBe(FIXED_STAGE_DIVERGENT_GRANTS[0]);
     expect(
-      resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 1),
+      resolveFixedStageGrantForTest(session, FIXED_STAGE_ID, 1),
     ).toBe(FIXED_STAGE_DIVERGENT_GRANTS[1]);
     expect(
-      resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 2),
+      resolveFixedStageGrantForTest(session, FIXED_STAGE_ID, 2),
     ).toBe(FIXED_STAGE_DIVERGENT_GRANTS[2]);
-  });
 
-  it('A: without snapshot Wave 0 omitted returns 0; later omitted uses catalog', () => {
     session = createSessionWithFixedStageGrants(FIXED_STAGE_ID, [
       undefined,
       undefined,
@@ -152,60 +180,109 @@ describe('GameSession resolveWavePrepResourceGrant (R12m 1C unit9)', () => {
       ).gameData.operationPassiveCatalog.waveClearResourceGrant;
     expect(catalogGrant).toBeGreaterThan(0);
 
-    expect(resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 0)).toBe(0);
-    expect(resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 1)).toBe(
+    expect(resolveFixedStageGrantForTest(session, FIXED_STAGE_ID, 0)).toBe(0);
+    expect(resolveFixedStageGrantForTest(session, FIXED_STAGE_ID, 1)).toBe(
       catalogGrant,
     );
-    expect(resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 2)).toBe(
+    expect(resolveFixedStageGrantForTest(session, FIXED_STAGE_ID, 2)).toBe(
       catalogGrant,
     );
   });
 
-  it('B+C: prepare fixture-a then grants match snapshot and differ from fixed stage', () => {
+  it('2: fixedStage with retained snapshot uses fixed-stage grants via active resolver', () => {
     session = createSessionWithFixedStageGrants(FIXED_STAGE_ID, [
       ...FIXED_STAGE_DIVERGENT_GRANTS,
     ]);
 
-    const before0 = resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 0);
-    const before1 = resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 1);
-    const before2 = resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, 2);
-    expect(before0).toBe(FIXED_STAGE_DIVERGENT_GRANTS[0]);
-    expect(before1).toBe(FIXED_STAGE_DIVERGENT_GRANTS[1]);
-    expect(before2).toBe(FIXED_STAGE_DIVERGENT_GRANTS[2]);
-
     const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
-    expect(prepared.seriesId).toBe('r12m_series_a');
+    expect(session.getProblemSeriesOperationStartSnapshot()).not.toBeNull();
     expect(prepared.waves).toHaveLength(SERIES_A_WAVE_COUNT);
     expect(prepared.waves.length).toBeGreaterThan(0);
 
     const snapshotGrants = prepared.waves.map((w) => w.prepResourceGrant);
-    expect(snapshotGrants).toHaveLength(SERIES_A_WAVE_COUNT);
     expect(snapshotGrants).not.toEqual([...FIXED_STAGE_DIVERGENT_GRANTS]);
 
+    sortieToStage(session, FIXED_STAGE_ID);
+
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: FIXED_STAGE_ID,
+    });
+    expect(session.getProblemSeriesOperationStartSnapshot()).not.toBeNull();
+
     for (let waveIndex = 0; waveIndex < prepared.waves.length; waveIndex++) {
-      const expected = prepared.waves[waveIndex]!.prepResourceGrant;
-      const actual = resolveWavePrepResourceGrant(
-        session,
-        FIXED_STAGE_ID,
-        waveIndex,
-      );
-      expect(actual).toBe(expected);
-      expect(actual).not.toBe(FIXED_STAGE_DIVERGENT_GRANTS[waveIndex]);
+      const activeGrant = resolveActiveGrantForTest(session, waveIndex);
+      expect(activeGrant).toBe(FIXED_STAGE_DIVERGENT_GRANTS[waveIndex]);
+      expect(activeGrant).not.toBe(prepared.waves[waveIndex]!.prepResourceGrant);
     }
     expect(prepared.waves.length).toBe(SERIES_A_WAVE_COUNT);
   });
 
-  it('D: out-of-range waveIndex throws and does not return fixed-stage grant', () => {
+  it('3: no OperationState with retained snapshot returns 0 from active resolver', () => {
     session = createSessionWithFixedStageGrants(FIXED_STAGE_ID, [
       ...FIXED_STAGE_DIVERGENT_GRANTS,
     ]);
+
     const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
-    const outOfRange = prepared.waves.length;
+    expect(session.getProblemSeriesOperationStartSnapshot()).not.toBeNull();
+    expect(prepared.waves).toHaveLength(SERIES_A_WAVE_COUNT);
+    expect(session.getOperationState()).toBeNull();
+
+    for (let waveIndex = 0; waveIndex < prepared.waves.length; waveIndex++) {
+      expect(resolveActiveGrantForTest(session, waveIndex)).toBe(0);
+    }
+    expect(prepared.waves[1]!.prepResourceGrant).toBeGreaterThan(0);
+    expect(prepared.waves[2]!.prepResourceGrant).toBeGreaterThan(0);
+    expect(resolveActiveGrantForTest(session, 1)).not.toBe(
+      prepared.waves[1]!.prepResourceGrant,
+    );
+    expect(resolveActiveGrantForTest(session, 2)).not.toBe(
+      prepared.waves[2]!.prepResourceGrant,
+    );
+    expect(prepared.waves.length).toBe(SERIES_A_WAVE_COUNT);
+  });
+
+  it('4: problemSeries formal begin uses snapshot grants for waves 0–2', () => {
+    session = createSessionWithFixedStageGrants(FIXED_STAGE_ID, [
+      ...FIXED_STAGE_DIVERGENT_GRANTS,
+    ]);
+
+    const started = session.beginProblemSeriesOperation(FIXTURE_SEED_A);
+    expect(started).not.toBeNull();
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(session.getOperationState()!.source)).toEqual(['kind']);
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    expect(snapshot).not.toBeNull();
+    expect(snapshot!.waves).toHaveLength(SERIES_A_WAVE_COUNT);
+    expect(snapshot!.waves.length).toBeGreaterThan(0);
+
+    const snapshotGrants = snapshot!.waves.map((w) => w.prepResourceGrant);
+    expect(snapshotGrants).not.toEqual([...FIXED_STAGE_DIVERGENT_GRANTS]);
+
+    for (let waveIndex = 0; waveIndex < snapshot!.waves.length; waveIndex++) {
+      const expected = snapshot!.waves[waveIndex]!.prepResourceGrant;
+      const actual = resolveActiveGrantForTest(session, waveIndex);
+      expect(actual).toBe(expected);
+      expect(actual).not.toBe(FIXED_STAGE_DIVERGENT_GRANTS[waveIndex]);
+    }
+    expect(snapshot!.waves.length).toBe(SERIES_A_WAVE_COUNT);
+  });
+
+  it('5: problemSeries out-of-range waveIndex throws with index and waveCount', () => {
+    session = createSession();
+    const started = session.beginProblemSeriesOperation(FIXTURE_SEED_A);
+    expect(started).not.toBeNull();
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    expect(snapshot).not.toBeNull();
+    const outOfRange = snapshot!.waves.length;
     expect(outOfRange).toBe(SERIES_A_WAVE_COUNT);
 
     let thrown: unknown;
     try {
-      resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, outOfRange);
+      resolveActiveGrantForTest(session, outOfRange);
     } catch (error) {
       thrown = error;
     }
@@ -216,11 +293,35 @@ describe('GameSession resolveWavePrepResourceGrant (R12m 1C unit9)', () => {
     for (const fixedGrant of FIXED_STAGE_DIVERGENT_GRANTS) {
       expect(message).not.toContain(String(fixedGrant));
     }
-    // Must throw — never return a number (fixed stage / catalog fallback).
     expect(typeof thrown).not.toBe('number');
   });
 
-  it('E: after prepare, grant reads and out-of-range do not re-call resolver/factory', () => {
+  it('6: problemSeries with cleared snapshot throws instead of fallback', () => {
+    session = createSession();
+    const started = session.beginProblemSeriesOperation(FIXTURE_SEED_A);
+    expect(started).not.toBeNull();
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getProblemSeriesOperationStartSnapshot()).not.toBeNull();
+
+    clearHeldSnapshotOnly(session);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+
+    let thrown: unknown;
+    try {
+      resolveActiveGrantForTest(session, 0);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    const message = (thrown as Error).message;
+    expect(message).toMatch(/problemSeries/i);
+    expect(message).toMatch(/snapshot/i);
+    expect(message).toMatch(/missing/i);
+    expect(message).not.toContain('0');
+  });
+
+  it('7: formal begin resolves once; grant reads and out-of-range do not re-call resolver/factory', () => {
     session = createSession();
     const resolveSpy = vi.spyOn(
       seedResolveModule,
@@ -231,25 +332,25 @@ describe('GameSession resolveWavePrepResourceGrant (R12m 1C unit9)', () => {
       'createProblemSeriesOperationStartSnapshot',
     );
 
-    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+    const started = session.beginProblemSeriesOperation(FIXTURE_SEED_A);
+    expect(started).not.toBeNull();
     expect(resolveSpy).toHaveBeenCalledTimes(1);
     expect(createSpy).toHaveBeenCalledTimes(1);
     resolveSpy.mockClear();
     createSpy.mockClear();
 
-    expect(prepared.waves).toHaveLength(SERIES_A_WAVE_COUNT);
-    for (let waveIndex = 0; waveIndex < prepared.waves.length; waveIndex++) {
-      expect(
-        resolveWavePrepResourceGrant(session, FIXED_STAGE_ID, waveIndex),
-      ).toBe(prepared.waves[waveIndex]!.prepResourceGrant);
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    expect(snapshot).not.toBeNull();
+    expect(snapshot!.waves).toHaveLength(SERIES_A_WAVE_COUNT);
+
+    for (let waveIndex = 0; waveIndex < snapshot!.waves.length; waveIndex++) {
+      expect(resolveActiveGrantForTest(session, waveIndex)).toBe(
+        snapshot!.waves[waveIndex]!.prepResourceGrant,
+      );
     }
 
     expect(() =>
-      resolveWavePrepResourceGrant(
-        session!,
-        FIXED_STAGE_ID,
-        prepared.waves.length,
-      ),
+      resolveActiveGrantForTest(session!, snapshot!.waves.length),
     ).toThrow(/waveCount=3/);
 
     expect(resolveSpy).not.toHaveBeenCalled();

@@ -1629,42 +1629,34 @@ export class GameSession {
   private resolveWavePrepResourceGrantForActiveOperation(
     waveIndex: number,
   ): number {
-    const snapshot = this.problemSeriesOperationStartSnapshot;
-    if (snapshot !== null) {
-      const waveCount = snapshot.waves.length;
-      if (waveIndex < 0 || waveIndex >= waveCount) {
-        throw new Error(
-          `problem series operation start snapshot has no wave at index ${waveIndex} (waveCount=${waveCount})`,
-        );
-      }
-      return snapshot.waves[waveIndex]!.prepResourceGrant;
-    }
-
     if (this.operationState === null) {
       return 0;
     }
-    const stageId = tryGetFixedStageIdFromSource(this.operationState.source);
-    if (stageId === null) {
-      return 0;
+
+    const source = this.operationState.source;
+    if (source.kind === 'fixedStage') {
+      return this.resolveWavePrepResourceGrant(source.stageId, waveIndex);
     }
-    return this.resolveWavePrepResourceGrant(stageId, waveIndex);
+
+    const snapshot = this.problemSeriesOperationStartSnapshot;
+    if (snapshot === null) {
+      throw new Error(
+        'problemSeries source requires operation start snapshot, but snapshot is missing',
+      );
+    }
+    const waveCount = snapshot.waves.length;
+    if (waveIndex < 0 || waveIndex >= waveCount) {
+      throw new Error(
+        `problem series operation start snapshot has no wave at index ${waveIndex} (waveCount=${waveCount})`,
+      );
+    }
+    return snapshot.waves[waveIndex]!.prepResourceGrant;
   }
 
   private resolveWavePrepResourceGrant(
     stageId: string,
     waveIndex: number,
   ): number {
-    const snapshot = this.problemSeriesOperationStartSnapshot;
-    if (snapshot !== null) {
-      const waveCount = snapshot.waves.length;
-      if (waveIndex < 0 || waveIndex >= waveCount) {
-        throw new Error(
-          `problem series operation start snapshot has no wave at index ${waveIndex} (waveCount=${waveCount})`,
-        );
-      }
-      return snapshot.waves[waveIndex]!.prepResourceGrant;
-    }
-
     const stage = getStageById(this.gameData.stages, stageId);
     const configured = stage?.waves[waveIndex]?.prepResourceGrant;
     if (configured !== undefined) return configured;
