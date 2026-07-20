@@ -1,9 +1,10 @@
 /**
  * @vitest-environment happy-dom
  *
- * R12m Player 作業単位2B1/2B2/2B3/2B4/2B5/2B6: GameSession.beginPreparedProblemSeriesOperation の
+ * R12m Player 作業単位2B1/2B2/2B3/2B4/2B5/2B6/2B7: GameSession.beginPreparedProblemSeriesOperation の
  * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路、prepared なし拒否、
- * active problemSeries 二重開始拒否、active fixedStage 開始拒否、invalid party 内部失敗拒否）。
+ * active problemSeries 二重開始拒否、active fixedStage 開始拒否、invalid party 内部失敗拒否、
+ * 成功時 Save 非混入）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -388,5 +389,58 @@ describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)'
     expect(serialized).not.toContain('r12m_series_a');
     expect(serialized).not.toContain(GENERATOR_VERSION);
     expect(serialized).not.toContain('waves');
+  });
+
+  it('2B7: success does not mix operation data into Save; resolver/factory only at prepare', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const saveBefore = structuredClone(session.getSaveState());
+
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+
+    expect(prepared.seriesId).toBe('r12m_series_a');
+    expect(prepared.waves).toHaveLength(3);
+    expect(totalEnemyGroupCount(prepared.waves)).toBeGreaterThan(0);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    const returned = session.beginPreparedProblemSeriesOperation();
+
+    expect(returned).toBe(prepared);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(session.getOperationState()?.isActive).toBe(true);
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getOperationCheckpoint()).not.toBeNull();
+    expect(session.getOperationCheckpoint()?.source).toEqual(
+      PROBLEM_SERIES_SOURCE,
+    );
+
+    expect(session.getSaveState()).toEqual(saveBefore);
+
+    const serialized = JSON.stringify(session.getSaveState());
+    expect(serialized).not.toContain(FIXTURE_SEED_A);
+    expect(serialized).not.toContain('r12m_series_a');
+    expect(serialized).not.toContain(GENERATOR_VERSION);
+    expect(serialized).not.toContain('"problemSeries"');
+    expect(serialized).not.toContain('"operationState"');
+    expect(serialized).not.toContain('"operationCheckpoint"');
+    expect(serialized).not.toContain('"waves"');
   });
 });
