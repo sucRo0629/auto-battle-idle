@@ -1,8 +1,9 @@
 /**
  * @vitest-environment happy-dom
  *
- * R12m Player 作業単位2B1/2B2/2B3/2B4: GameSession.beginPreparedProblemSeriesOperation の
- * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路、prepared なし拒否、active 二重開始拒否）。
+ * R12m Player 作業単位2B1/2B2/2B3/2B4/2B5: GameSession.beginPreparedProblemSeriesOperation の
+ * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路、prepared なし拒否、
+ * active problemSeries 二重開始拒否、active fixedStage 開始拒否）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -16,6 +17,7 @@ import { GameSession } from './GameSession.ts';
 const FIXTURE_SEED_A = 'fixture-a';
 const FIXTURE_SEED_B = 'fixture-b';
 const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
+const FIXED_STAGE_ID = '1';
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -76,6 +78,15 @@ function totalEnemyGroupCount(
   waves: readonly { enemyGroups: readonly unknown[] }[],
 ): number {
   return waves.reduce((sum, wave) => sum + wave.enemyGroups.length, 0);
+}
+
+function sortieToStage(session: GameSession, stageId: string): void {
+  const host = (
+    session as unknown as {
+      handleStageSortie: (id: string) => void;
+    }
+  ).handleStageSortie.bind(session);
+  host(stageId);
 }
 
 describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)', () => {
@@ -256,5 +267,62 @@ describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)'
     expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
     expect(provider()).toBe(prepared.waves);
     expect(engine.getSnapshot()).toEqual(battleSnapshotBeforeSecond);
+  });
+
+  it('2B5: rejects begin while active fixedStage; resolver/factory 0; state unchanged', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+
+    expect(prepared.seriesId).toBe('r12m_series_a');
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+
+    sortieToStage(session, FIXED_STAGE_ID);
+
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(session.getOperationState()?.isActive).toBe(true);
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: FIXED_STAGE_ID,
+    });
+    expect(session.getOperationCheckpoint()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: FIXED_STAGE_ID,
+    });
+
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine)!;
+    expect(provider()).toBeNull();
+
+    const operationStateBeforeBegin = session.getOperationState();
+    const checkpointBeforeBegin = session.getOperationCheckpoint();
+    const battleSnapshotBeforeBegin = engine.getSnapshot();
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    const returned = session.beginPreparedProblemSeriesOperation();
+
+    expect(returned).toBeNull();
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.getOperationState()).toEqual(operationStateBeforeBegin);
+    expect(session.getOperationCheckpoint()).toEqual(checkpointBeforeBegin);
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: FIXED_STAGE_ID,
+    });
+    expect(provider()).toBeNull();
+    expect(engine.getSnapshot()).toEqual(battleSnapshotBeforeBegin);
   });
 });
