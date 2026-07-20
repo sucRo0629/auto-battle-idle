@@ -3,10 +3,15 @@ import {
   createAlliesFromPartyState,
   createCooldowns,
   createEnemiesForStage,
+  createEnemiesFromEnemyGroups,
   hideFallenAllyCorpses,
   resetEntityIdCounter,
   resetPerWaveCombatantFlags,
 } from "./entities.ts";
+import type {
+  ResolvedWavesCombatInput,
+  ResolvedWavesCombatInputProvider,
+} from "./resolvedWaveCombatInput.ts";
 import { mergeOperationPassivesIntoBuild } from "./mergeOperationPassivesIntoBuild.ts";
 import {
   applyDamageToTarget,
@@ -247,7 +252,19 @@ export interface BattleEngineOptions {
   onDfPaladinM2ProtectionResult?: (
     result: DfPaladinM2ProtectionResult,
   ) => void;
+  /**
+   * R12m: 解決済み Wave 戦闘入力。
+   * 未指定 / null → 固定 Stage。配列（空含む）→ その配列が正本（Stage へ fallback しない）。
+   */
+  getResolvedWavesCombatInput?: ResolvedWavesCombatInputProvider;
 }
+
+export type {
+  ResolvedWaveCombatInput,
+  ResolvedWavesCombatInput,
+  ResolvedWavesCombatInputProvider,
+} from "./resolvedWaveCombatInput.ts";
+
 
 export type BattleEngineAcquiredOperationPassiveIdsResolver = (
   slotIndex: number,
@@ -326,6 +343,7 @@ export class BattleEngine {
   private readonly onDfPaladinM2ProtectionResult?: (
     result: DfPaladinM2ProtectionResult,
   ) => void;
+  private readonly getResolvedWavesCombatInput?: ResolvedWavesCombatInputProvider;
 
   constructor(
     private readonly gameData: GameData,
@@ -344,6 +362,7 @@ export class BattleEngine {
     this.getAcquiredOperationPassiveIds = options.getAcquiredOperationPassiveIds;
     this.onBattlefieldReload = options.onBattlefieldReload;
     this.onDfPaladinM2ProtectionResult = options.onDfPaladinM2ProtectionResult;
+    this.getResolvedWavesCombatInput = options.getResolvedWavesCombatInput;
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
       getBattleTimeSec: () => this.battleTimeSec,
       enqueuePendingHits: (hits) => {
@@ -771,9 +790,30 @@ export class BattleEngine {
     this.clearEngagedVisualState();
   }
 
+  /**
+   * 解決済み Wave 配列。provider 未指定 / null → null（固定 Stage）。
+   * 空配列も正本として返し、Stage へ fallback しない。入力は変更しない。
+   */
+  private resolveWavesCombatInput(): ResolvedWavesCombatInput | null {
+    const provider = this.getResolvedWavesCombatInput;
+    if (!provider) return null;
+    const waves = provider();
+    if (waves == null) return null;
+    return waves;
+  }
+
+  /** provider 経路の Wave 数。固定 Stage 時は undefined（呼び出し側で Stage を見る）。 */
+  private resolveProviderWaveCount(): number | undefined {
+    const resolved = this.resolveWavesCombatInput();
+    return resolved === null ? undefined : resolved.length;
+  }
+
   private resolveStartWaveIndex(): number {
-    const stage = this.gameData.stages.find((s) => s.id === this.stageId);
-    const waveCount = stage?.waves.length ?? 0;
+    const providerWaveCount = this.resolveProviderWaveCount();
+    const waveCount =
+      providerWaveCount ??
+      this.gameData.stages.find((s) => s.id === this.stageId)?.waves.length ??
+      0;
     if (waveCount === 0) return 0;
 
     const loopWave = this.getLoopWaveIndex?.() ?? null;
@@ -1309,8 +1349,10 @@ export class BattleEngine {
     skill: import("./types.ts").ActiveSkillDef,
     cd?: SkillCooldown,
   ): FireGateContext {
-    const stage = this.gameData.stages.find((s) => s.id === this.stageId);
-    const waveCount = stage?.waves.length ?? 1;
+    const waveCount =
+      this.resolveProviderWaveCount() ??
+      this.gameData.stages.find((s) => s.id === this.stageId)?.waves.length ??
+      1;
     return {
       actor,
       allies: this.players,
@@ -1629,8 +1671,10 @@ export class BattleEngine {
   }
 
   private tryAutoFireFinalWaveStageSkills(): void {
-    const stage = this.gameData.stages.find((s) => s.id === this.stageId);
-    const waveCount = stage?.waves.length ?? 1;
+    const waveCount =
+      this.resolveProviderWaveCount() ??
+      this.gameData.stages.find((s) => s.id === this.stageId)?.waves.length ??
+      1;
     if (this.waveIndex !== waveCount - 1) return;
 
     const actives = this.gameData.skillRegistry.actives;
@@ -1684,12 +1728,27 @@ export class BattleEngine {
   }
 
   private spawnWaveEnemies(): void {
-    this.enemies = createEnemiesForStage(
-      this.gameData,
-      this.stageId,
-      this.waveIndex,
-      this.levelCurves,
-    );
+    const resolved = this.resolveWavesCombatInput();
+    if (resolved !== null) {
+      const wave = resolved[this.waveIndex];
+      if (wave === undefined) {
+        throw new Error(
+          `Resolved wave combat input out of range: waveIndex=${this.waveIndex}, waveCount=${resolved.length}`,
+        );
+      }
+      this.enemies = createEnemiesFromEnemyGroups(
+        this.gameData,
+        wave.enemyGroups,
+        this.levelCurves,
+      );
+    } else {
+      this.enemies = createEnemiesForStage(
+        this.gameData,
+        this.stageId,
+        this.waveIndex,
+        this.levelCurves,
+      );
+    }
     this.resetEnemyBattlePositions();
     this.applyEnemyFieldFromBattle();
     const actives = this.gameData.skillRegistry.actives;
@@ -1766,8 +1825,11 @@ export class BattleEngine {
 
   /** R6i: 指定 Wave index で戦闘フィールドを再生成する（作戦 checkpoint 再戦用）。 */
   restartBattleAtWave(waveIndex: number): void {
-    const stage = this.gameData.stages.find((item) => item.id === this.getStageId());
-    const waveCount = stage?.waves.length ?? 0;
+    const waveCount =
+      this.resolveProviderWaveCount() ??
+      this.gameData.stages.find((item) => item.id === this.getStageId())?.waves
+        .length ??
+      0;
     if (waveCount <= 0) {
       this.restartBattle();
       return;
@@ -1798,14 +1860,25 @@ export class BattleEngine {
     if (this.pendingNextWaveIndex === null) return false;
 
     const nextWaveIndex = this.pendingNextWaveIndex;
-    const stage = this.gameData.stages.find((item) => item.id === this.stageId);
-    if (
-      stage === undefined ||
-      nextWaveIndex !== this.waveIndex + 1 ||
-      nextWaveIndex < 0 ||
-      nextWaveIndex >= stage.waves.length
-    ) {
-      return false;
+    const providerWaveCount = this.resolveProviderWaveCount();
+    if (providerWaveCount !== undefined) {
+      if (
+        nextWaveIndex !== this.waveIndex + 1 ||
+        nextWaveIndex < 0 ||
+        nextWaveIndex >= providerWaveCount
+      ) {
+        return false;
+      }
+    } else {
+      const stage = this.gameData.stages.find((item) => item.id === this.stageId);
+      if (
+        stage === undefined ||
+        nextWaveIndex !== this.waveIndex + 1 ||
+        nextWaveIndex < 0 ||
+        nextWaveIndex >= stage.waves.length
+      ) {
+        return false;
+      }
     }
 
     this.prepareAlliesForNextWave();
@@ -1894,8 +1967,10 @@ export class BattleEngine {
   }
 
   getSnapshot(): BattleSnapshot {
-    const stage = this.gameData.stages.find((s) => s.id === this.stageId);
-    const waveCount = stage?.waves.length ?? 1;
+    const waveCount =
+      this.resolveProviderWaveCount() ??
+      this.gameData.stages.find((s) => s.id === this.stageId)?.waves.length ??
+      1;
     const victoryAwaitExitMarch =
       this.phase === "victory" && !this.hasFallenAllies();
     return {
@@ -2730,11 +2805,17 @@ export class BattleEngine {
       .map((ally) => ally.partySlotIndex!);
 
     if (!enemiesAlive) {
-      const stage = this.gameData.stages.find((s) => s.id === this.stageId);
-      const hasNextWave =
-        !this.isPinnedWaveComplete() &&
-        stage !== undefined &&
-        this.waveIndex + 1 < stage.waves.length;
+      const providerWaveCount = this.resolveProviderWaveCount();
+      let hasNextWave = false;
+      if (!this.isPinnedWaveComplete()) {
+        if (providerWaveCount !== undefined) {
+          hasNextWave = this.waveIndex + 1 < providerWaveCount;
+        } else {
+          const stage = this.gameData.stages.find((s) => s.id === this.stageId);
+          hasNextWave =
+            stage !== undefined && this.waveIndex + 1 < stage.waves.length;
+        }
+      }
       if (hasNextWave) {
         if (
           this.awaitingNextWave ||
