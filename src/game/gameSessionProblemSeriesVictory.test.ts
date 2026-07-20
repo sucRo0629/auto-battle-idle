@@ -30,6 +30,7 @@ const GENERATOR_VERSION = 'r12m-v1';
 const SERIES_A_WAVE_COUNT = 3;
 const GUARDIAN_SLOT = 0;
 const OPERATION_PASSIVE_ID = 'df_guardian_op_block_rate_up';
+const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -84,18 +85,6 @@ function getEngineProvider(
       getResolvedWavesCombatInput?: () => ResolvedWavesCombatInput | null;
     }
   ).getResolvedWavesCombatInput;
-}
-
-function beginOperation(
-  session: GameSession,
-  stageId: string,
-  initialWaveIndex = 0,
-): boolean {
-  return (
-    session as unknown as {
-      beginOperation: (stageId: string, initialWaveIndex?: number) => boolean;
-    }
-  ).beginOperation(stageId, initialWaveIndex);
 }
 
 function setGameScreen(session: GameSession, screen: GameScreen): void {
@@ -197,18 +186,32 @@ function bootProblemSeriesOperation(): ProblemSeriesOperationContext {
     'createProblemSeriesOperationStartSnapshot',
   );
 
-  const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+  const prepared = session.beginProblemSeriesOperation(FIXTURE_SEED_A);
+  expect(prepared).not.toBeNull();
+  expect(prepared!.seriesId).toBe('r12m_series_a');
+  expect(prepared!.waves).toHaveLength(SERIES_A_WAVE_COUNT);
   expect(resolveSpy).toHaveBeenCalledTimes(1);
   expect(createSpy).toHaveBeenCalledTimes(1);
+
+  const operationState = session.getOperationState();
+  expect(operationState).not.toBeNull();
+  expect(operationState!.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+  expect(operationState!.source).not.toHaveProperty('stageId');
+  expect(operationState!.currentWaveIndex).toBe(0);
+
+  const checkpoint = session.getOperationCheckpoint();
+  expect(checkpoint).not.toBeNull();
+  expect(checkpoint!.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+  expect(checkpoint!.source).not.toHaveProperty('stageId');
+  expect(checkpoint!.currentWaveIndex).toBe(0);
+
   resolveSpy.mockClear();
   createSpy.mockClear();
 
-  const stageId = session.getSaveState().stageProgress.currentStageId;
-  expect(beginOperation(session, stageId, 0)).toBe(true);
   getEngine(session).restartBattleAtWave(0);
   setGameScreen(session, 'battle');
 
-  return { session, prepared, resolveSpy, createSpy };
+  return { session, prepared: prepared!, resolveSpy, createSpy };
 }
 
 function advanceThroughWavePrep(
