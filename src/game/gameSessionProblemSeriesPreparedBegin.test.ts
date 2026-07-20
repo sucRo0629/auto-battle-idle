@@ -1,8 +1,8 @@
 /**
  * @vitest-environment happy-dom
  *
- * R12m Player 作業単位2B1/2B2/2B3: GameSession.beginPreparedProblemSeriesOperation の
- * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路、prepared なし拒否）。
+ * R12m Player 作業単位2B1/2B2/2B3/2B4: GameSession.beginPreparedProblemSeriesOperation の
+ * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路、prepared なし拒否、active 二重開始拒否）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -205,5 +205,56 @@ describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)'
     expect(session.getOperationCheckpoint()).toBeNull();
     expect(provider()).toBeNull();
     expect(engine.getSnapshot()).toEqual(battleSnapshotBefore);
+  });
+
+  it('2B4: rejects second begin while active problemSeries; resolver/factory 0; state unchanged', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    const firstReturned = session.beginPreparedProblemSeriesOperation();
+
+    expect(firstReturned).toBe(prepared);
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(session.getOperationState()?.isActive).toBe(true);
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getOperationCheckpoint()).not.toBeNull();
+    expect(session.getOperationCheckpoint()?.source).toEqual(
+      PROBLEM_SERIES_SOURCE,
+    );
+
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine)!;
+    expect(provider()).toBe(prepared.waves);
+
+    const operationStateBeforeSecond = session.getOperationState();
+    const checkpointBeforeSecond = session.getOperationCheckpoint();
+    const battleSnapshotBeforeSecond = engine.getSnapshot();
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    const secondReturned = session.beginPreparedProblemSeriesOperation();
+
+    expect(secondReturned).toBeNull();
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.getOperationState()).toEqual(operationStateBeforeSecond);
+    expect(session.getOperationCheckpoint()).toEqual(checkpointBeforeSecond);
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+    expect(provider()).toBe(prepared.waves);
+    expect(engine.getSnapshot()).toEqual(battleSnapshotBeforeSecond);
   });
 });
