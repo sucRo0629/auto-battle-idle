@@ -635,6 +635,7 @@ export class GameSession {
    * 確認ダイアログなし。
    */
   private abortIncompleteOperationToStageSelect(): boolean {
+    this.clearProblemSeriesOperationStartSnapshot();
     this.wavePrepSuspended = false;
     if (this.menuHost.isOpen()) {
       this.menuHost.close();
@@ -642,6 +643,11 @@ export class GameSession {
     this.view.setBattlePaused(false);
     this.setGameScreen('stageSelect');
     return true;
+  }
+
+  /** R12m 1C: 未完了作戦中断時のみ呼ぶ。他経路（再試行・作戦開始等）では呼ばない。 */
+  private clearProblemSeriesOperationStartSnapshot(): void {
+    this.problemSeriesOperationStartSnapshot = null;
   }
 
   /** 戦闘ポーズ中に作戦を中断してステージ選択へ戻れるか */
