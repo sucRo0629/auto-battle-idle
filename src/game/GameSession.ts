@@ -1546,6 +1546,17 @@ export class GameSession {
     stageId: string,
     waveIndex: number,
   ): number {
+    const snapshot = this.problemSeriesOperationStartSnapshot;
+    if (snapshot !== null) {
+      const waveCount = snapshot.waves.length;
+      if (waveIndex < 0 || waveIndex >= waveCount) {
+        throw new Error(
+          `problem series operation start snapshot has no wave at index ${waveIndex} (waveCount=${waveCount})`,
+        );
+      }
+      return snapshot.waves[waveIndex]!.prepResourceGrant;
+    }
+
     const stage = getStageById(this.gameData.stages, stageId);
     const configured = stage?.waves[waveIndex]?.prepResourceGrant;
     if (configured !== undefined) return configured;
