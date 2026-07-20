@@ -1,9 +1,9 @@
 /**
  * @vitest-environment happy-dom
  *
- * R12m Player 作業単位2B1/2B2/2B3/2B4/2B5: GameSession.beginPreparedProblemSeriesOperation の
+ * R12m Player 作業単位2B1/2B2/2B3/2B4/2B5/2B6: GameSession.beginPreparedProblemSeriesOperation の
  * 準備済み snapshot 開始 production API（fixture-a / fixture-b 成功経路、prepared なし拒否、
- * active problemSeries 二重開始拒否、active fixedStage 開始拒否）。
+ * active problemSeries 二重開始拒否、active fixedStage 開始拒否、invalid party 内部失敗拒否）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -12,10 +12,12 @@ import * as operationStartSnapshotModule from '../battle/problemSeries/operation
 import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
 import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
+import { validatePartyClassIds } from '../progression/partyCompose.ts';
 import { GameSession } from './GameSession.ts';
 
 const FIXTURE_SEED_A = 'fixture-a';
 const FIXTURE_SEED_B = 'fixture-b';
+const GENERATOR_VERSION = 'r12m-v1';
 const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
 const FIXED_STAGE_ID = '1';
 
@@ -324,5 +326,67 @@ describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)'
     });
     expect(provider()).toBeNull();
     expect(engine.getSnapshot()).toEqual(battleSnapshotBeforeBegin);
+  });
+
+  it('2B6: rejects begin when save party has duplicate classId; resolver/factory 0; state unchanged', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const prepared = session.prepareProblemSeriesOperationStart(FIXTURE_SEED_A);
+
+    expect(prepared).not.toBeNull();
+    expect(prepared.seriesId).toBe('r12m_series_a');
+    expect(prepared.waves).toHaveLength(3);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+
+    const party = session.getSaveState().party;
+    const firstNonNullIndex = party.findIndex((slot) => slot !== null);
+    expect(firstNonNullIndex).toBeGreaterThanOrEqual(0);
+    const secondNonNullIndex = party.findIndex(
+      (slot, index) => slot !== null && index !== firstNonNullIndex,
+    );
+    expect(secondNonNullIndex).toBeGreaterThanOrEqual(0);
+    const duplicateClassId = party[firstNonNullIndex]!.classId;
+    expect(duplicateClassId).toBeTruthy();
+    party[secondNonNullIndex]!.classId = duplicateClassId;
+
+    expect(validatePartyClassIds(party).ok).toBe(false);
+
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine)!;
+    expect(provider()).toBeNull();
+
+    const saveBeforeBegin = structuredClone(session.getSaveState());
+    const battleSnapshotBeforeBegin = engine.getSnapshot();
+
+    resolveSpy.mockClear();
+    createSpy.mockClear();
+
+    const returned = session.beginPreparedProblemSeriesOperation();
+
+    expect(returned).toBeNull();
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(provider()).toBeNull();
+    expect(engine.getSnapshot()).toEqual(battleSnapshotBeforeBegin);
+    expect(session.getSaveState()).toEqual(saveBeforeBegin);
+
+    const serialized = JSON.stringify(session.getSaveState());
+    expect(serialized).not.toContain(FIXTURE_SEED_A);
+    expect(serialized).not.toContain('r12m_series_a');
+    expect(serialized).not.toContain(GENERATOR_VERSION);
+    expect(serialized).not.toContain('waves');
   });
 });
