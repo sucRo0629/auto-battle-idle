@@ -1,0 +1,184 @@
+import { describe, expect, it } from 'vitest';
+import { tryLoadGameData } from '../data/loadGameData.ts';
+import { createProblemSeriesOperationStartSnapshot } from './operationStartSnapshot.ts';
+import {
+  createProblemSeriesOverviewCore,
+  createProblemSeriesOverviewNamed,
+  type ProblemSeriesOverviewNamed,
+} from './overviewViewModel.ts';
+import { resolveProblemSeriesFromSeed } from './seedResolve.ts';
+
+const FIXTURE_SEED_A = 'fixture-a';
+const SERIES_A_ID = 'r12m_series_a';
+const GENERATOR_VERSION = 'r12m-v1';
+
+const SERIES_A_INTERNAL_CLASS_STRINGS = [
+  'single_protection',
+  'multi_protection',
+  'protection_scatter_pressure_composite',
+] as const;
+
+const FORBIDDEN_NAMED_KEYS = [
+  'seriesId',
+  'generatorVersion',
+  'internalProblemClass',
+  'expectedFailureModes',
+  'connection',
+  'waveLinks',
+  'waveRelationSummary',
+  'allowedClassIds',
+  'recommendedLevel',
+  'formationHintJa',
+  'operationConditions',
+  'hpScale',
+  'atkScale',
+  'defScale',
+  'resScale',
+  'id',
+  'series',
+  'enemies',
+  'party',
+  'selectedCombatModuleIds',
+  'combatModuleSelection',
+  'operationPassives',
+  'passives',
+  'remainingPoints',
+  'operationPoints',
+  'prepResourceRemaining',
+  'currentWaveIndex',
+  'waveIndex',
+  'checkpoint',
+  'combatants',
+  'save',
+  'saveData',
+  'selectionIndex',
+  'selectionHash',
+  'finalWaveCompositeOf',
+  'unlockClassIdsOnClear',
+] as const;
+
+function expectNamedOverviewShapeOnly(named: ProblemSeriesOverviewNamed): void {
+  expect(Object.keys(named).sort()).toEqual(['seed', 'waves'].sort());
+  for (const forbidden of FORBIDDEN_NAMED_KEYS) {
+    expect(named).not.toHaveProperty(forbidden);
+  }
+
+  for (const wave of named.waves) {
+    expect(Object.keys(wave).sort()).toEqual(
+      ['enemyGroups', 'prepResourceGrant', 'waveNumber'].sort(),
+    );
+    for (const forbidden of FORBIDDEN_NAMED_KEYS) {
+      expect(wave).not.toHaveProperty(forbidden);
+    }
+
+    for (const group of wave.enemyGroups) {
+      expect(Object.keys(group).sort()).toEqual(
+        [
+          'classDisplayName',
+          'classId',
+          'combatModuleDisplayName',
+          'count',
+          'selectedCombatModuleId',
+        ].sort(),
+      );
+      for (const forbidden of FORBIDDEN_NAMED_KEYS) {
+        expect(group).not.toHaveProperty(forbidden);
+      }
+    }
+  }
+}
+
+describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', () => {
+  it('fixture-a: tryLoadGameData → resolve → snapshot → core → named', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    expect(loaded.data.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+
+    const gameData = loaded.data;
+    const catalog = gameData.problemSeriesCatalog;
+    const result = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_A);
+    expect(result.series.seriesId).toBe(SERIES_A_ID);
+
+    const snapshot = createProblemSeriesOperationStartSnapshot(result);
+    expect(snapshot.waves).toHaveLength(3);
+
+    const totalSnapshotGroups = snapshot.waves.reduce(
+      (sum, wave) => sum + wave.enemyGroups.length,
+      0,
+    );
+    expect(totalSnapshotGroups).toBeGreaterThan(0);
+
+    const core = createProblemSeriesOverviewCore(snapshot);
+    expect(core.waves).toHaveLength(3);
+
+    const totalCoreGroups = core.waves.reduce(
+      (sum, wave) => sum + wave.enemyGroups.length,
+      0,
+    );
+    expect(totalCoreGroups).toBeGreaterThan(0);
+
+    const named = createProblemSeriesOverviewNamed(core, gameData);
+
+    expect(named.seed).toBe('fixture-a');
+    expect(named.waves).toHaveLength(3);
+    expect(named.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
+
+    let totalNamedGroups = 0;
+    for (let waveIndex = 0; waveIndex < core.waves.length; waveIndex++) {
+      const coreWave = core.waves[waveIndex]!;
+      const namedWave = named.waves[waveIndex]!;
+
+      expect(namedWave.enemyGroups.length).toBeGreaterThan(0);
+      expect(namedWave.enemyGroups.length).toBe(coreWave.enemyGroups.length);
+      expect(namedWave.prepResourceGrant).toBe(coreWave.prepResourceGrant);
+      expect(namedWave.waveNumber).toBe(coreWave.waveNumber);
+
+      for (let groupIndex = 0; groupIndex < coreWave.enemyGroups.length; groupIndex++) {
+        totalNamedGroups += 1;
+        const coreGroup = coreWave.enemyGroups[groupIndex]!;
+        const namedGroup = namedWave.enemyGroups[groupIndex]!;
+
+        expect(namedGroup.classId).toBe(coreGroup.classId);
+        expect(namedGroup.count).toBe(coreGroup.count);
+        expect(namedGroup.count).toBeGreaterThan(0);
+        expect(namedGroup.selectedCombatModuleId).toBe(coreGroup.selectedCombatModuleId);
+        expect(namedGroup.selectedCombatModuleId.length).toBeGreaterThan(0);
+
+        expect(namedGroup.classDisplayName.length).toBeGreaterThan(0);
+        expect(namedGroup.combatModuleDisplayName.length).toBeGreaterThan(0);
+        expect(namedGroup.classDisplayName).toBe(
+          gameData.classRegistry[coreGroup.classId as keyof typeof gameData.classRegistry]!
+            .displayName,
+        );
+        expect(namedGroup.combatModuleDisplayName).toBe(
+          gameData.combatModuleRegistry[coreGroup.selectedCombatModuleId]!.displayName,
+        );
+      }
+    }
+    expect(totalNamedGroups).toBeGreaterThan(0);
+    expect(totalNamedGroups).toBe(totalCoreGroups);
+
+    expect(named.waves).not.toBe(core.waves);
+    for (let waveIndex = 0; waveIndex < core.waves.length; waveIndex++) {
+      expect(named.waves[waveIndex]).not.toBe(core.waves[waveIndex]);
+      expect(named.waves[waveIndex]!.enemyGroups).not.toBe(core.waves[waveIndex]!.enemyGroups);
+      const groupCount = core.waves[waveIndex]!.enemyGroups.length;
+      for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
+        expect(named.waves[waveIndex]!.enemyGroups[groupIndex]).not.toBe(
+          core.waves[waveIndex]!.enemyGroups[groupIndex],
+        );
+      }
+    }
+
+    expectNamedOverviewShapeOnly(named);
+
+    const json = JSON.stringify(named);
+    expect(json).not.toContain(SERIES_A_ID);
+    expect(json).not.toContain(GENERATOR_VERSION);
+    for (const internalClass of SERIES_A_INTERNAL_CLASS_STRINGS) {
+      expect(json).not.toContain(internalClass);
+    }
+  });
+});
