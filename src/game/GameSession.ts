@@ -1303,6 +1303,22 @@ export class GameSession {
   }
 
   private handleVictory(survivingPartyIndices: number[]): void {
+    const problemSeriesSnapshot = this.problemSeriesOperationStartSnapshot;
+    if (problemSeriesSnapshot !== null) {
+      const waveCount = problemSeriesSnapshot.waves.length;
+      const finalWaveIndex = Math.max(0, waveCount - 1);
+
+      if (this.operationState !== null) {
+        this.operationState.markCompleted(finalWaveIndex, waveCount);
+        this.clearOperation();
+      }
+
+      this.clearProblemSeriesOperationStartSnapshot();
+      this.view.setBattlePaused(true);
+      this.view.refreshVictoryResultOverlay();
+      return;
+    }
+
     const clearedStageId = this.save.stageProgress.currentStageId;
     const stage = getStageById(this.gameData.stages, clearedStageId);
     const stageName = stage?.displayName ?? clearedStageId;
