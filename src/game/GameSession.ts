@@ -80,9 +80,17 @@ import {
 } from '../battle/problemSeries/operationStartSnapshot.ts';
 import { resolveProblemSeriesFromSeed } from '../battle/problemSeries/seedResolve.ts';
 import {
+  createProblemSeriesWavePrepDisclosureContext,
+} from '../battle/problemSeries/wavePrepDisclosure.ts';
+import { createProblemSeriesWavePrepEnemyChanges } from '../battle/problemSeries/wavePrepEnemyChanges.ts';
+import {
   createProblemSeriesVictoryResult,
   type ProblemSeriesVictoryResult,
 } from '../battle/problemSeries/victoryResult.ts';
+import {
+  createProblemSeriesWavePrepDisclosureDisplay,
+  type ProblemSeriesWavePrepDisclosureDisplay,
+} from '../ui/problemSeriesWavePrepDisclosureViewModel.ts';
 import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import { WavePrepScreenHost } from './WavePrepScreenHost.ts';
@@ -223,6 +231,8 @@ export class GameSession {
       gameData,
       {
         getOperationView: () => this.getOperationState(),
+        getProblemSeriesDisclosureDisplay: () =>
+          this.resolveProblemSeriesWavePrepDisclosureDisplay(),
         getAllowedClassIds: () =>
           this.getFormationAllowedClassIdsForCurrentOperation(),
         getUnlockedClassIds: () => this.save.unlockedClassIds,
@@ -513,6 +523,42 @@ export class GameSession {
    * - active なし / fixedStage: null（固定 Stage 経路）
    * - problemSeries: 保持 snapshot.waves（欠落時は例外、fallback しない）
    */
+  private resolveProblemSeriesWavePrepDisclosureDisplay():
+    ProblemSeriesWavePrepDisclosureDisplay | null {
+    const operation = this.operationState;
+    if (operation === null) {
+      return null;
+    }
+
+    const source = operation.source;
+    if (source.kind === 'fixedStage') {
+      return null;
+    }
+
+    if (
+      operation.isWavePrepEditable !== true ||
+      operation.clearedWaveCount <= 0
+    ) {
+      return null;
+    }
+
+    const snapshot = this.problemSeriesOperationStartSnapshot;
+    if (snapshot === null) {
+      throw new Error(
+        'problemSeries WavePrep disclosure requires operation start snapshot',
+      );
+    }
+
+    const targetWaveIndex = operation.currentWaveIndex + 1;
+    const context = createProblemSeriesWavePrepDisclosureContext(
+      snapshot,
+      targetWaveIndex,
+      this.gameData,
+    );
+    const enemyChanges = createProblemSeriesWavePrepEnemyChanges(context);
+    return createProblemSeriesWavePrepDisclosureDisplay(context, enemyChanges);
+  }
+
   private getResolvedWavesCombatInputForActiveOperation(): ResolvedWavesCombatInput | null {
     const operation = this.operationState;
     if (operation === null || !operation.isActive) {
