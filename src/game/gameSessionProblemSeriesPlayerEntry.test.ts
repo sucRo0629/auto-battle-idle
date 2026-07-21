@@ -8,6 +8,8 @@
  *
  * R12m Player 作業単位2M1: formation 確定から problemSeries Wave 0 戦闘へ接続する。
  *
+ * R12m Player 作業単位2T5B: 問題系列初期 Formation の OperationState party / 4 兵科 production 接続。
+ *
  * R12m Player 作業単位2M2: 系列A Wave 0 クリアから Wave 1 準備（WavePrep）への production 回帰。
  *
  * R12m Player 作業単位2M3: WavePrep 確定から系列A Wave 1 戦闘への production 回帰。
@@ -30,6 +32,8 @@ import { expandEnemyGroupsList } from '../battle/enemyGroupSpawn.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { expectVictoryOverlayVisuallyHidden, expectVictoryOverlayVisuallyVisible } from '../ui/battleResultOverlayTestUtils.ts';
 import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
+import type { ClassId } from '../battle/types.ts';
+import { PARTY_SLOT_COUNT } from '../battle/types.ts';
 import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
 import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
 import * as victoryResultModule from '../battle/problemSeries/victoryResult.ts';
@@ -63,6 +67,10 @@ const INITIAL_DUMMY_ENEMY_CLASS_IDS = [
   'test_dummy',
   'test_dummy',
 ] as const;
+
+const OUT_OF_SCOPE_CLASS_ID: ClassId = 'at_ranger';
+const LEGACY_LEVEL = 7;
+const LEGACY_EXP = 999;
 
 const TICK_MS = 1000 / 60;
 const MAX_ENGAGE_TICKS = 5000;
@@ -129,6 +137,123 @@ function livingEnemyClassIds(engine: BattleEngine): string[] {
     .enemies.filter((enemy) => enemy.hp > 0)
     .map((enemy) => enemy.classId)
     .filter((classId): classId is string => classId !== undefined);
+}
+
+function livingAllyClassIds(engine: BattleEngine): string[] {
+  return engine
+    .getSnapshot()
+    .allies.filter((ally) => ally.hp > 0)
+    .map((ally) => ally.classId)
+    .filter((classId): classId is string => classId !== undefined);
+}
+
+function getSavePartyClassIds(session: GameSession): ClassId[] {
+  return session
+    .getSaveState()
+    .party.filter((member) => member !== null)
+    .map((member) => member!.classId);
+}
+
+function getOperationPartyClassIds(session: GameSession): ClassId[] {
+  const party = session.getOperationParty();
+  if (party === null) {
+    throw new Error('operation party is null');
+  }
+  return party
+    .filter((member) => member !== null)
+    .map((member) => member!.classId);
+}
+
+function getPickerClassIdsFromDom(): ClassId[] {
+  return [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '.skill-menu-picker-list-item[data-picker-class-id]',
+    ),
+  ].map((item) => item.dataset.pickerClassId!);
+}
+
+function getRosterSummaryClassIdsFromDom(): ClassId[] {
+  return [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '.skill-menu-roster-card[data-summary-class-id]',
+    ),
+  ].map((card) => card.dataset.summaryClassId!);
+}
+
+function findPickerItem(classId: string): HTMLButtonElement {
+  const item = document.querySelector<HTMLButtonElement>(
+    `.skill-menu-picker-list-item[data-picker-class-id="${classId}"]`,
+  );
+  if (!item) {
+    throw new Error(`picker item not found: ${classId}`);
+  }
+  return item;
+}
+
+function activatePickerItem(item: HTMLButtonElement): void {
+  item.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, cancelable: true }),
+  );
+  item.click();
+}
+
+function polluteSavePartyBeforeProblemSeries(
+  session: GameSession,
+  allowedClassIds: readonly ClassId[],
+): {
+  outOfScopeSlotIndex: number;
+  legacySlotIndex: number;
+} {
+  const saveParty = session.getSaveState().party;
+  const outOfScopeSlotIndex = saveParty.findIndex(
+    (slot) => slot !== null && slot.classId === OUT_OF_SCOPE_CLASS_ID,
+  );
+  expect(outOfScopeSlotIndex).toBeGreaterThanOrEqual(0);
+  expect(allowedClassIds).not.toContain(OUT_OF_SCOPE_CLASS_ID);
+
+  const legacySlotIndex = saveParty.findIndex(
+    (slot, index) =>
+      slot !== null &&
+      index !== outOfScopeSlotIndex &&
+      allowedClassIds.includes(slot.classId),
+  );
+  expect(legacySlotIndex).toBeGreaterThanOrEqual(0);
+  saveParty[legacySlotIndex]!.progress.level = LEGACY_LEVEL;
+  saveParty[legacySlotIndex]!.progress.exp = LEGACY_EXP;
+
+  return { outOfScopeSlotIndex, legacySlotIndex };
+}
+
+function expectOperationPartyMatchesAllowed(
+  session: GameSession,
+  allowedClassIds: readonly ClassId[],
+): void {
+  const operationParty = session.getOperationParty();
+  if (operationParty === null) {
+    throw new Error('operation party is null');
+  }
+  expect(operationParty).toHaveLength(PARTY_SLOT_COUNT);
+  const members = operationParty.filter((slot) => slot !== null);
+  expect(members).toHaveLength(PARTY_SLOT_COUNT);
+  const classIds = members.map((member) => member!.classId);
+  expect(new Set(classIds).size).toBe(PARTY_SLOT_COUNT);
+  for (const classId of classIds) {
+    expect(allowedClassIds).toContain(classId);
+    expect(classId).not.toBe(OUT_OF_SCOPE_CLASS_ID);
+  }
+
+  const checkpoint = session.getOperationCheckpoint();
+  if (checkpoint === null) {
+    throw new Error('operation checkpoint is null');
+  }
+  const checkpointClassIds = checkpoint.party
+    .filter((slot) => slot !== null)
+    .map((slot) => slot!.classId);
+  expect(new Set(checkpointClassIds).size).toBe(PARTY_SLOT_COUNT);
+  for (const classId of checkpointClassIds) {
+    expect(allowedClassIds).toContain(classId);
+    expect(classId).not.toBe(OUT_OF_SCOPE_CLASS_ID);
+  }
 }
 
 function livingEnemyCount(engine: BattleEngine): number {
@@ -594,6 +719,152 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(sortieSpy).not.toHaveBeenCalled();
     expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
     expect(beginPreparedSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('2T5B: problemSeries initial Formation uses OperationState party and snapshot allowed 4 classes only', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    const seriesA = loaded.data.problemSeriesCatalog.series.find(
+      (entry) => entry.seriesId === SERIES_A_ID,
+    );
+    if (seriesA === undefined) {
+      throw new Error(`Expected problem series ${SERIES_A_ID}`);
+    }
+    const allowedClassIdsFromCatalog = seriesA.allowedClassIds;
+    expect(allowedClassIdsFromCatalog).toHaveLength(PARTY_SLOT_COUNT);
+
+    session = createSession();
+    const sortieSpy = vi.spyOn(
+      session as unknown as { handleStageSortie: (stageId: string) => void },
+      'handleStageSortie',
+    );
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    if (provider === undefined) {
+      throw new Error('BattleEngine resolved waves provider is missing');
+    }
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+
+    expect(getSavePartyClassIds(session)).toContain(OUT_OF_SCOPE_CLASS_ID);
+    const { outOfScopeSlotIndex, legacySlotIndex } =
+      polluteSavePartyBeforeProblemSeries(session, allowedClassIdsFromCatalog);
+    const saveBefore = structuredClone(session.getSaveState());
+
+    const container = getStageSelectContainer(session);
+
+    requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    ).click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    const prepareButton = requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (snapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+    const allowedClassIds = snapshot.allowedClassIds;
+    expect(allowedClassIds).toEqual(allowedClassIdsFromCatalog);
+
+    requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    ).click();
+
+    const operation = session.getOperationState();
+    expect(operation).not.toBeNull();
+    expect(operation!.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
+
+    expect(session.getCurrentScreen()).toBe('formation');
+    expect(session.getSaveState()).toEqual(saveBefore);
+
+    const pickerClassIds = getPickerClassIdsFromDom();
+    expect(pickerClassIds).toHaveLength(PARTY_SLOT_COUNT);
+    expect(new Set(pickerClassIds).size).toBe(PARTY_SLOT_COUNT);
+    for (const classId of pickerClassIds) {
+      expect(allowedClassIds).toContain(classId);
+      expect(classId).not.toBe(OUT_OF_SCOPE_CLASS_ID);
+    }
+    expect(
+      document.querySelector(
+        `.skill-menu-picker-list-item[data-picker-class-id="${OUT_OF_SCOPE_CLASS_ID}"]`,
+      ),
+    ).toBeNull();
+
+    const rosterClassIds = getRosterSummaryClassIdsFromDom();
+    expect(rosterClassIds).toHaveLength(PARTY_SLOT_COUNT);
+    for (const classId of rosterClassIds) {
+      expect(allowedClassIds).toContain(classId);
+      expect(classId).not.toBe(OUT_OF_SCOPE_CLASS_ID);
+    }
+
+    expectOperationPartyMatchesAllowed(session, allowedClassIds);
+    expect(getSavePartyClassIds(session)).toContain(OUT_OF_SCOPE_CLASS_ID);
+    expect(session.getSaveState().party[outOfScopeSlotIndex]?.classId).toBe(
+      OUT_OF_SCOPE_CLASS_ID,
+    );
+    expect(session.getSaveState().party[legacySlotIndex]?.progress.level).toBe(
+      LEGACY_LEVEL,
+    );
+
+    const swappedClassId = allowedClassIds[1]!;
+    const operationClassIdsBeforeEdit = getOperationPartyClassIds(session);
+    expect(operationClassIdsBeforeEdit).toContain(swappedClassId);
+
+    activatePickerItem(findPickerItem(swappedClassId));
+    activatePickerItem(findPickerItem(swappedClassId));
+    expect(getOperationPartyClassIds(session)).not.toContain(swappedClassId);
+    expect(session.getSaveState()).toEqual(saveBefore);
+
+    activatePickerItem(findPickerItem(swappedClassId));
+    expect(getOperationPartyClassIds(session)).toContain(swappedClassId);
+    expect(session.getSaveState()).toEqual(saveBefore);
+    expectOperationPartyMatchesAllowed(session, allowedClassIds);
+
+    const returnButton = requireButton(
+      getGameAppContainer(),
+      '.skill-menu-return-to-battle-button',
+      'formation confirm button',
+    );
+    expect(returnButton.disabled).toBe(false);
+    returnButton.click();
+
+    expect(restartAtWaveSpy).toHaveBeenCalledTimes(1);
+    expect(restartAtWaveSpy).toHaveBeenCalledWith(0);
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(sortieSpy).not.toHaveBeenCalled();
+    expect(provider()).toBe(snapshot.waves);
+
+    expectOperationPartyMatchesAllowed(session, allowedClassIds);
+
+    const livingAllies = livingAllyClassIds(engine);
+    expect(livingAllies).toHaveLength(PARTY_SLOT_COUNT);
+    expect(livingAllies.sort()).toEqual(getOperationPartyClassIds(session).sort());
+    expect(livingAllies).not.toContain(OUT_OF_SCOPE_CLASS_ID);
+
+    const livingEnemies = livingEnemyClassIds(engine);
+    expect(livingEnemies.length).toBeGreaterThan(0);
+    expect(livingEnemies).not.toEqual([...INITIAL_DUMMY_ENEMY_CLASS_IDS]);
+
+    expect(session.getSaveState()).toEqual(saveBefore);
+    expect(getSavePartyClassIds(session)).toContain(OUT_OF_SCOPE_CLASS_ID);
   });
 
   it('2M1: stageSelect DOM → prepare → overview confirm → formation confirm → problemSeries Wave 0 battle', () => {

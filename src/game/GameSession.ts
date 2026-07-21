@@ -1,8 +1,10 @@
 import { BattleEngine } from '../battle/BattleEngine.ts';
 import { PartyCombatModuleSelection } from '../battle/partyCombatModuleSelection.ts';
 import { StageDamageStatsTracker } from '../battle/stageDamageStats.ts';
+import { resolveSelectedCombatModuleId } from '../battle/data/resolveCombatModuleBasic.ts';
 import type {
   CharacterBuild,
+  ClassId,
   GameData,
   PartySlotState,
   SaveGameState,
@@ -152,6 +154,11 @@ export class GameSession {
     null;
   /** R12m 2N3: 問題系列最終勝利時に確定する結果（メモリのみ・Save 非統合） */
   private problemSeriesVictoryResult: ProblemSeriesVictoryResult | null = null;
+  /**
+   * R12m 2T5B: 問題系列 Formation 中の mutable party draft。
+   * MetaMenuOverlay が save.party と同様に slot 単位更新するため、getParty は安定参照を返す。
+   */
+  private problemSeriesFormationPartyDraft: PartySlotState[] | null = null;
   /** R6i: checkpoint 再戦中は onBattlefieldReload による Wave 進行巻き戻しを抑止 */
   private suppressOperationWaveReload = false;
   /** R7b: battle simulation 倍率（Save 非永続・初期 1 倍） */
@@ -349,12 +356,13 @@ export class GameSession {
       gameData,
       levelCurves: this.levelCurves,
       formationHost: this.formationHost,
-      getParty: () => this.save.party,
+      getParty: () => this.getFormationPartyForMenuHost(),
       isVerifyMode: () => this.verifyMode,
-      onBuildChanged: (partyIndex, build) => this.updateMemberBuild(partyIndex, build),
+      onBuildChanged: (partyIndex, build) =>
+        this.handleFormationBuildChanged(partyIndex, build),
       getUnlockedClassIds: () => this.save.unlockedClassIds,
       onPartySlotChanged: (slotIndex, member) =>
-        this.updatePartySlot(slotIndex, member),
+        this.handleFormationPartySlotChanged(slotIndex, member),
       getPartySlotCombatModule: (slotIndex) =>
         this.getPartySlotCombatModule(slotIndex),
       onPartySlotCombatModuleChanged: (slotIndex, moduleId) =>
@@ -362,6 +370,8 @@ export class GameSession {
       onScreenChange: (screen) => this.setGameScreen(screen),
       resolveFormationCloseScreen: () => this.resolveFormationCloseScreen(),
       getFormationReturnOptions: () => this.getFormationReturnOptions(),
+      getFormationAllowedClassIds: () =>
+        this.getFormationAllowedClassIdsForCurrentOperation(),
     });
     this.setGameScreen(this.verifyMode ? 'battle' : 'stageSelect');
 
@@ -1083,6 +1093,7 @@ export class GameSession {
     }
     if (screen !== 'formation') {
       this.menuHost.dismiss();
+      this.clearProblemSeriesFormationPartyDraft();
     }
     if (this.currentScreen === screen) {
       this.view.refreshVictoryResultOverlay();
@@ -1166,13 +1177,291 @@ export class GameSession {
     this.engine.syncPartyBuilds();
   }
 
+  /** R12m 2T5B: Formation 表示 party（problemSeries = mutable draft、それ以外 = Save）。 */
+  private getFormationPartyForMenuHost(): PartySlotState[] {
+    if (this.isActiveIncompleteProblemSeriesOperation() && this.operationState !== null) {
+      if (this.problemSeriesFormationPartyDraft === null) {
+        this.problemSeriesFormationPartyDraft =
+          this.operationState.getPartySnapshot();
+      }
+      return this.problemSeriesFormationPartyDraft;
+    }
+    return this.save.party;
+  }
+
+  private clearProblemSeriesFormationPartyDraft(): void {
+    this.problemSeriesFormationPartyDraft = null;
+  }
+
+  private syncProblemSeriesFormationPartyDraftToOperationState(
+    classChangedSlotIndex?: number,
+    previousClassId?: ClassId | null,
+    nextClassId?: ClassId | null,
+  ): boolean {
+    const draft = this.problemSeriesFormationPartyDraft;
+    if (draft === null || this.operationState === null) {
+      return false;
+    }
+
+    const allowedClassIds = this.getFormationAllowedClassIdsForCurrentOperation();
+    if (allowedClassIds === undefined) {
+      return false;
+    }
+
+    for (const slot of draft) {
+      if (!slot?.classId) {
+        continue;
+      }
+      if (!allowedClassIds.includes(slot.classId)) {
+        return false;
+      }
+      if (!this.gameData.classRegistry[slot.classId]) {
+        return false;
+      }
+    }
+
+    if (!validatePartyClassIds(draft).ok) {
+      return false;
+    }
+
+    const candidateParty = draft.map((slot) =>
+      slot ? structuredClone(slot) : null,
+    );
+    if (
+      !this.operationState.trySyncPartyFromSave(candidateParty, this.gameData).ok
+    ) {
+      return false;
+    }
+
+    if (
+      classChangedSlotIndex !== undefined &&
+      previousClassId !== nextClassId
+    ) {
+      this.operationState
+        .getCombatModuleSelection()
+        .clearSelectedCombatModuleId(classChangedSlotIndex);
+    }
+
+    return true;
+  }
+
+  /**
+   * R12m 2T5B: Formation Class Select 許可兵科。
+   * problemSeries 作戦中のみ snapshot.allowedClassIds。欠落時は fallback せず例外。
+   */
+  private getFormationAllowedClassIdsForCurrentOperation():
+    | readonly ClassId[]
+    | undefined {
+    if (!this.isActiveIncompleteProblemSeriesOperation()) {
+      return undefined;
+    }
+
+    const snapshot = this.problemSeriesOperationStartSnapshot;
+    if (snapshot === null) {
+      throw new Error(
+        'active problemSeries operation requires problemSeriesOperationStartSnapshot but snapshot is missing',
+      );
+    }
+    return [...snapshot.allowedClassIds];
+  }
+
+  private isActiveIncompleteProblemSeriesOperation(): boolean {
+    const operation = this.operationState;
+    return (
+      operation !== null &&
+      !operation.isCompleted &&
+      operation.source.kind === 'problemSeries'
+    );
+  }
+
+  private handleFormationPartySlotChanged(
+    slotIndex: number,
+    member: PartySlotState,
+  ): void {
+    if (this.isActiveIncompleteProblemSeriesOperation()) {
+      this.tryUpdateProblemSeriesFormationPartySlot(slotIndex, member);
+      return;
+    }
+    this.updatePartySlot(slotIndex, member);
+  }
+
+  private handleFormationBuildChanged(
+    partyIndex: number,
+    build: CharacterBuild,
+  ): void {
+    if (this.isActiveIncompleteProblemSeriesOperation()) {
+      this.updateProblemSeriesFormationMemberBuild(partyIndex, build);
+      return;
+    }
+    this.updateMemberBuild(partyIndex, build);
+  }
+
+  private tryUpdateProblemSeriesFormationPartySlot(
+    slotIndex: number,
+    member: PartySlotState,
+  ): PartyClassAssignmentResult {
+    if (this.operationState === null) {
+      return { ok: false };
+    }
+
+    const draft = this.getFormationPartyForMenuHost();
+    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) {
+      return { ok: false };
+    }
+
+    const previousClassId =
+      this.operationState.getPartySnapshot()[slotIndex]?.classId ?? null;
+    const nextClassId = member?.classId ?? null;
+
+    if (nextClassId !== null) {
+      const allowedClassIds = this.getFormationAllowedClassIdsForCurrentOperation();
+      if (allowedClassIds === undefined || !allowedClassIds.includes(nextClassId)) {
+        return { ok: false };
+      }
+      if (!this.gameData.classRegistry[nextClassId]) {
+        return { ok: false };
+      }
+    }
+
+    const validation = validatePartyClassAssignment(draft, slotIndex, nextClassId);
+    if (!validation.ok) {
+      return validation;
+    }
+
+    draft[slotIndex] = member ? structuredClone(member) : null;
+
+    if (
+      !this.syncProblemSeriesFormationPartyDraftToOperationState(
+        slotIndex,
+        previousClassId,
+        nextClassId,
+      )
+    ) {
+      return { ok: false };
+    }
+
+    return { ok: true };
+  }
+
+  private updateProblemSeriesFormationMemberBuild(
+    partyIndex: number,
+    build: CharacterBuild,
+  ): void {
+    if (this.operationState === null) {
+      return;
+    }
+
+    const draft = this.getFormationPartyForMenuHost();
+    const member = draft[partyIndex];
+    if (!member) {
+      return;
+    }
+
+    member.build = structuredClone(normalizeActiveSlots(build));
+
+    if (!this.syncProblemSeriesFormationPartyDraftToOperationState()) {
+      return;
+    }
+
+    this.engine.syncPartyBuilds();
+  }
+
+  private validateProblemSeriesFormationParty(): boolean {
+    if (this.operationState === null) {
+      return false;
+    }
+
+    const allowedClassIds = this.getFormationAllowedClassIdsForCurrentOperation();
+    if (allowedClassIds === undefined) {
+      return false;
+    }
+
+    const party = this.operationState.getPartySnapshot();
+    if (party.length !== PARTY_SLOT_COUNT) {
+      return false;
+    }
+
+    const classIds: ClassId[] = [];
+    for (const slot of party) {
+      if (!slot?.classId) {
+        return false;
+      }
+      if (!allowedClassIds.includes(slot.classId)) {
+        return false;
+      }
+      if (!this.gameData.classRegistry[slot.classId]) {
+        return false;
+      }
+      classIds.push(slot.classId);
+    }
+
+    if (new Set(classIds).size !== PARTY_SLOT_COUNT) {
+      return false;
+    }
+
+    return validatePartyClassIds(party).ok;
+  }
+
+  private trySetProblemSeriesFormationCombatModule(
+    slotIndex: number,
+    moduleId: string,
+  ): boolean {
+    if (this.operationState === null) {
+      return false;
+    }
+
+    const member = this.operationState.getPartySnapshot()[slotIndex];
+    if (!member?.classId) {
+      return false;
+    }
+
+    const preset = this.gameData.classRegistry[member.classId];
+    if (!preset) {
+      return false;
+    }
+
+    const resolvedNext = resolveSelectedCombatModuleId(
+      preset,
+      this.gameData.combatModuleRegistry,
+      moduleId,
+    );
+    if (resolvedNext !== moduleId) {
+      return false;
+    }
+
+    const selection = this.operationState.getCombatModuleSelection();
+    const currentSelected = selection.getSelectedCombatModuleId(slotIndex);
+    const resolvedCurrent = resolveSelectedCombatModuleId(
+      preset,
+      this.gameData.combatModuleRegistry,
+      currentSelected,
+    );
+    if (resolvedCurrent === resolvedNext) {
+      return true;
+    }
+
+    const defaultId = preset.combatModuleIds?.[0];
+    if (defaultId !== undefined && moduleId === defaultId) {
+      selection.clearSelectedCombatModuleId(slotIndex);
+    } else {
+      selection.setSelectedCombatModuleId(slotIndex, moduleId);
+    }
+    return true;
+  }
+
   /** R5d: party slot の combat module 選択を更新（Save 非統合）。 */
   setPartySlotCombatModule(slotIndex: number, moduleId: string): void {
     if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) return;
-    this.resolveCombatModuleSelection().setSelectedCombatModuleId(
-      slotIndex,
-      moduleId,
-    );
+    if (this.isActiveIncompleteProblemSeriesOperation()) {
+      if (!this.trySetProblemSeriesFormationCombatModule(slotIndex, moduleId)) {
+        return;
+      }
+    } else {
+      this.resolveCombatModuleSelection().setSelectedCombatModuleId(
+        slotIndex,
+        moduleId,
+      );
+    }
     this.engine.syncPartyBuilds();
   }
 
@@ -1798,6 +2087,23 @@ export class GameSession {
       return;
     }
 
+    if (this.isActiveIncompleteProblemSeriesOperation()) {
+      if (!this.validateProblemSeriesFormationParty()) {
+        return;
+      }
+
+      this.commitCheckpointFromCurrentOperationState();
+
+      const waveIndex = this.operationState.currentWaveIndex;
+      this.suppressOperationWaveReload = true;
+      try {
+        this.engine.restartBattleAtWave(waveIndex);
+      } finally {
+        this.suppressOperationWaveReload = false;
+      }
+      return;
+    }
+
     if (!this.operationState.trySyncPartyFromSave(this.save.party, this.gameData).ok) {
       return;
     }
@@ -1821,8 +2127,10 @@ export class GameSession {
     if (this.operationState === null || !this.operationState.isDefeated) return;
 
     const waveIndex = this.operationState.currentWaveIndex;
-    if (!this.operationState.trySyncPartyFromSave(this.save.party, this.gameData).ok) {
-      return;
+    if (!this.isActiveIncompleteProblemSeriesOperation()) {
+      if (!this.operationState.trySyncPartyFromSave(this.save.party, this.gameData).ok) {
+        return;
+      }
     }
 
     this.operationState.resumeAfterDefeatFormationPrep();
