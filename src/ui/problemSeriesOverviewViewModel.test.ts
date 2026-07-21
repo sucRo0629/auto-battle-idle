@@ -11,11 +11,14 @@ import { resolveProblemSeriesFromSeed } from '../battle/problemSeries/seedResolv
 import {
   createProblemSeriesOverviewDisplay,
   createProblemSeriesOverviewEnemyGroupDisplay,
+  type ProblemSeriesOverviewDisplay,
 } from './problemSeriesOverviewViewModel.ts';
 import * as stageEnemyCompositionPreview from './stageEnemyCompositionPreview.ts';
 
 const FIXTURE_SEED_A = 'fixture-a';
+const FIXTURE_SEED_B = 'fixture-b';
 const SERIES_A_ID = 'r12m_series_a';
+const SERIES_B_ID = 'r12m_series_b';
 const GENERATOR_VERSION = 'r12m-v1';
 
 const DISPLAY_OUTPUT_KEYS = [
@@ -53,6 +56,109 @@ const FORBIDDEN_DISPLAY_JSON_SUBSTRINGS = [
   '推奨編成',
   '推奨撃破順',
 ] as const;
+
+const FORBIDDEN_DISPLAY_B_JSON_SUBSTRINGS = [
+  SERIES_B_ID,
+  GENERATOR_VERSION,
+  'internalProblemClass',
+  'expectedFailureModes',
+  'connection',
+  'operationConditions',
+  'concentrated_pressure',
+  'scattered_pressure',
+  'concentrated_scattered_simultaneous_pressure',
+  '推奨編成',
+  '推奨撃破順',
+] as const;
+
+type ProblemSeriesOverviewDisplayProductionPath = {
+  seriesId: string;
+  snapshot: ReturnType<typeof createProblemSeriesOperationStartSnapshot>;
+  named: ProblemSeriesOverviewNamed;
+  display: ProblemSeriesOverviewDisplay;
+  totalNamedGroups: number;
+};
+
+function runProblemSeriesOverviewDisplayProductionPath(
+  catalog: Parameters<typeof resolveProblemSeriesFromSeed>[0],
+  gameData: Parameters<typeof createProblemSeriesOverviewNamed>[1],
+  seed: string,
+): ProblemSeriesOverviewDisplayProductionPath {
+  const result = resolveProblemSeriesFromSeed(catalog, seed);
+  const snapshot = createProblemSeriesOperationStartSnapshot(result);
+  const core = createProblemSeriesOverviewCore(snapshot);
+  const named = createProblemSeriesOverviewNamed(core, gameData);
+  const display = createProblemSeriesOverviewDisplay(named);
+  const totalNamedGroups = named.waves.reduce(
+    (sum, wave) => sum + wave.enemyGroups.length,
+    0,
+  );
+  return {
+    seriesId: result.series.seriesId,
+    snapshot,
+    named,
+    display,
+    totalNamedGroups,
+  };
+}
+
+function projectDisplayWavesForComparison(display: ProblemSeriesOverviewDisplay) {
+  return display.waves.map((wave) => ({
+    waveNumber: wave.waveNumber,
+    prepResourceGrant: wave.prepResourceGrant,
+    enemyGroups: wave.enemyGroups.map((group) => ({
+      classId: group.classId,
+      count: group.count,
+      selectedCombatModuleId: group.selectedCombatModuleId,
+      scaleSummary: group.scaleSummary,
+    })),
+  }));
+}
+
+function assertDisplayMatchesNamedProductionPath(
+  named: ProblemSeriesOverviewNamed,
+  display: ProblemSeriesOverviewDisplay,
+): number {
+  const totalNamedGroups = named.waves.reduce(
+    (sum, wave) => sum + wave.enemyGroups.length,
+    0,
+  );
+  expect(totalNamedGroups).toBeGreaterThan(0);
+
+  const totalDisplayGroups = display.waves.reduce(
+    (sum, wave) => sum + wave.enemyGroups.length,
+    0,
+  );
+  expect(totalDisplayGroups).toBe(totalNamedGroups);
+
+  let inspectedGroupCount = 0;
+  for (let waveIndex = 0; waveIndex < named.waves.length; waveIndex++) {
+    const namedWave = named.waves[waveIndex]!;
+    const displayWave = display.waves[waveIndex]!;
+
+    expect(displayWave.waveNumber).toBe(namedWave.waveNumber);
+    expect(displayWave.prepResourceGrant).toBe(namedWave.prepResourceGrant);
+    expect(displayWave.enemyGroups.length).toBe(namedWave.enemyGroups.length);
+    expect(displayWave.enemyGroups.length).toBeGreaterThan(0);
+
+    for (
+      let groupIndex = 0;
+      groupIndex < namedWave.enemyGroups.length;
+      groupIndex++
+    ) {
+      inspectedGroupCount += 1;
+      const namedGroup = namedWave.enemyGroups[groupIndex]!;
+      const displayGroup = displayWave.enemyGroups[groupIndex]!;
+      const expectedGroup =
+        createProblemSeriesOverviewEnemyGroupDisplay(namedGroup);
+
+      expect(displayGroup).toEqual(expectedGroup);
+    }
+  }
+
+  expect(inspectedGroupCount).toBe(totalNamedGroups);
+  return inspectedGroupCount;
+}
 
 function createNamedGroup(
   scale: ProblemSeriesOverviewNamedEnemyGroup['scale'],
@@ -273,6 +379,71 @@ describe('R12m createProblemSeriesOverviewDisplay (fixture-a production path)', 
     const json = JSON.stringify(display);
     for (const forbidden of FORBIDDEN_DISPLAY_JSON_SUBSTRINGS) {
       expect(json).not.toContain(forbidden);
+    }
+  });
+});
+
+describe('R12m createProblemSeriesOverviewDisplay (fixture-a vs fixture-b production path)', () => {
+  it('fixture-a and fixture-b: tryLoadGameData → resolve → snapshot → core → named → display', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    expect(loaded.data.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+
+    const gameData = loaded.data;
+    const catalog = gameData.problemSeriesCatalog;
+
+    const pathA = runProblemSeriesOverviewDisplayProductionPath(
+      catalog,
+      gameData,
+      FIXTURE_SEED_A,
+    );
+    const pathB = runProblemSeriesOverviewDisplayProductionPath(
+      catalog,
+      gameData,
+      FIXTURE_SEED_B,
+    );
+
+    expect(pathA.seriesId).toBe(SERIES_A_ID);
+    expect(pathB.seriesId).toBe(SERIES_B_ID);
+    expect(pathA.seriesId).not.toBe(pathB.seriesId);
+
+    expect(pathA.snapshot.waves).toHaveLength(3);
+    expect(pathB.snapshot.waves).toHaveLength(3);
+
+    expect(pathA.named.waves).toHaveLength(3);
+    expect(pathB.named.waves).toHaveLength(3);
+
+    expect(pathA.display.seed).toBe(FIXTURE_SEED_A);
+    expect(pathB.display.seed).toBe(FIXTURE_SEED_B);
+    expect(pathA.display.waves).toHaveLength(3);
+    expect(pathB.display.waves).toHaveLength(3);
+    expect(pathA.display.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
+    expect(pathB.display.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
+
+    expect(pathA.totalNamedGroups).toBeGreaterThan(0);
+    expect(pathB.totalNamedGroups).toBeGreaterThan(0);
+
+    const inspectedGroupsA = assertDisplayMatchesNamedProductionPath(
+      pathA.named,
+      pathA.display,
+    );
+    const inspectedGroupsB = assertDisplayMatchesNamedProductionPath(
+      pathB.named,
+      pathB.display,
+    );
+
+    expect(inspectedGroupsA).toBe(pathA.totalNamedGroups);
+    expect(inspectedGroupsB).toBe(pathB.totalNamedGroups);
+
+    const projectedWavesA = projectDisplayWavesForComparison(pathA.display);
+    const projectedWavesB = projectDisplayWavesForComparison(pathB.display);
+    expect(projectedWavesA).not.toEqual(projectedWavesB);
+
+    const jsonB = JSON.stringify(pathB.display);
+    for (const forbidden of FORBIDDEN_DISPLAY_B_JSON_SUBSTRINGS) {
+      expect(jsonB).not.toContain(forbidden);
     }
   });
 });
