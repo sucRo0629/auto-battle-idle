@@ -3,14 +3,18 @@
  *
  * R12m Player 作業単位2L1: GameSession が StageSelectionScreenHost の
  * Prepare / snapshot getter / 概要戻る callback を production DOM 経路で接続する。
- * 概要確定・prepared 作戦開始は未接続。
+ *
+ * R12m Player 作業単位2L2: 概要確定から prepared 作戦開始・初期編成準備へ接続する。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BattleEngine } from '../battle/BattleEngine.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
 import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import { GameSession } from './GameSession.ts';
+
+const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
 
 const RAW_FIXTURE_SEED = '  fixture-a  ';
 const NORMALIZED_FIXTURE_SEED = 'fixture-a';
@@ -63,6 +67,26 @@ function countSnapshotEnemyGroups(
     (total, wave) => total + wave.enemyGroups.length,
     0,
   );
+}
+
+function getEngine(session: GameSession): BattleEngine {
+  return (session as unknown as { engine: BattleEngine }).engine;
+}
+
+function livingEnemyClassIds(engine: BattleEngine): string[] {
+  return engine
+    .getSnapshot()
+    .enemies.filter((enemy) => enemy.hp > 0)
+    .map((enemy) => enemy.classId)
+    .filter((classId): classId is string => classId !== undefined);
+}
+
+function getGameAppContainer(): HTMLElement {
+  const container = document.body.querySelector('.game-app');
+  if (!container) {
+    throw new Error('game-app container not found');
+  }
+  return container as HTMLElement;
 }
 
 function getStageSelectContainer(session: GameSession): HTMLElement {
@@ -248,5 +272,160 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(container.querySelector('.game-shell__battle')?.hidden).toBe(true);
     expect(container.querySelector('.game-shell__formation')?.hidden).toBe(true);
     expect(container.querySelector('.game-shell__wave-prep')?.hidden).toBe(true);
+  });
+
+  it('2L2: stageSelect DOM → prepare → overview confirm → formation without battle start', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const beginPreparedSpy = vi.spyOn(session, 'beginPreparedProblemSeriesOperation');
+    const sortieSpy = vi.spyOn(
+      session as unknown as { handleStageSortie: (stageId: string) => void },
+      'handleStageSortie',
+    );
+    const engine = getEngine(session);
+    const engineInternals = engine as unknown as {
+      spawnWaveEnemies: () => void;
+    };
+    const spawnWaveEnemiesSpy = vi.spyOn(engineInternals, 'spawnWaveEnemies');
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const startSpy = vi.spyOn(engine, 'startBattle');
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+
+    const saveBefore = structuredClone(session.getSaveState());
+    const currentStageIdBefore = saveBefore.stageProgress.currentStageId;
+    const clearedStageIdsBefore = [...(saveBefore.stageProgress.clearedStageIds ?? [])];
+
+    const container = getStageSelectContainer(session);
+
+    const mainButton = requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    );
+    mainButton.click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    const prepareButton = requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (snapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+
+    expect(snapshot.seed).toBe(NORMALIZED_FIXTURE_SEED);
+    expect(snapshot.waves).toHaveLength(3);
+    expect(countSnapshotEnemyGroups(snapshot)).toBeGreaterThan(0);
+
+    const resolveCallsAfterPrepare = resolveSpy.mock.calls.length;
+    const factoryCallsAfterPrepare = snapshotFactorySpy.mock.calls.length;
+    expect(resolveCallsAfterPrepare).toBe(1);
+    expect(factoryCallsAfterPrepare).toBe(1);
+
+    expect(container.querySelectorAll('.problem-series-overview-panel')).toHaveLength(1);
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+
+    const enemiesBeforeConfirm = livingEnemyClassIds(engine);
+    const enemySnapshotBeforeConfirm = structuredClone(engine.getSnapshot().enemies);
+
+    expect(enemySnapshotBeforeConfirm.length).toBeGreaterThan(0);
+    expect(enemiesBeforeConfirm).toEqual([
+      'test_dummy',
+      'test_dummy',
+      'test_dummy',
+      'test_dummy',
+      'test_dummy',
+    ]);
+
+    const confirmButton = requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    );
+    confirmButton.click();
+
+    expect(beginPreparedSpy).toHaveBeenCalledTimes(1);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsAfterPrepare);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(factoryCallsAfterPrepare);
+
+    expect(session.hasActiveOperation()).toBe(true);
+    const operation = session.getOperationState();
+    if (operation === null) {
+      throw new Error('operation state is null after overview confirm');
+    }
+    expect(operation.isActive).toBe(true);
+    expect(operation.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(operation.source)).toEqual(['kind']);
+
+    const checkpoint = session.getOperationCheckpoint();
+    if (checkpoint === null) {
+      throw new Error('operation checkpoint is null after overview confirm');
+    }
+    expect(checkpoint.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(checkpoint.source)).toEqual(['kind']);
+    expect(Object.keys(checkpoint)).not.toContain('stageId');
+    expect(Object.keys(checkpoint)).not.toContain('seed');
+    expect(Object.keys(checkpoint)).not.toContain('seriesId');
+
+    expect(session.getCurrentScreen()).toBe('formation');
+
+    const appContainer = getGameAppContainer();
+    const formationHost = appContainer.querySelector('.game-shell__formation');
+    if (!formationHost) {
+      throw new Error('formation host not found');
+    }
+    expect(formationHost.hidden).toBe(false);
+    expect(formationHost.querySelector('.meta-menu-overlay--formation-screen')).not.toBeNull();
+    expect(appContainer.querySelector('.game-shell__stage-select')?.hidden).toBe(true);
+    expect(appContainer.querySelector('.game-shell__battle')?.hidden).toBe(true);
+    expect(appContainer.querySelector('.game-shell__wave-prep')?.hidden).toBe(true);
+
+    expect(spawnWaveEnemiesSpy).not.toHaveBeenCalled();
+    expect(restartSpy).not.toHaveBeenCalled();
+    expect(restartAtWaveSpy).not.toHaveBeenCalled();
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(startNextWaveSpy).not.toHaveBeenCalled();
+    expect(engine.getSnapshot().enemies).toStrictEqual(enemySnapshotBeforeConfirm);
+    expect(livingEnemyClassIds(engine)).toEqual(enemiesBeforeConfirm);
+    expect(engine.getSnapshot().enemies).toHaveLength(5);
+    expect(enemySnapshotBeforeConfirm.length).toBeGreaterThan(0);
+
+    const saveAfter = session.getSaveState();
+    expect(saveAfter.stageProgress.currentStageId).toBe(currentStageIdBefore);
+    expect([...(saveAfter.stageProgress.clearedStageIds ?? [])]).toEqual(
+      clearedStageIdsBefore,
+    );
+
+    expect(sortieSpy).not.toHaveBeenCalled();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
+    expect(beginPreparedSpy).toHaveBeenCalledTimes(1);
   });
 });

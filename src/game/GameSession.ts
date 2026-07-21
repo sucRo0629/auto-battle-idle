@@ -186,6 +186,8 @@ export class GameSession {
           this.getProblemSeriesOperationStartSnapshot(),
         onBackFromMainOperationOverview: () =>
           this.discardPreparedProblemSeriesSnapshot(),
+        onConfirmMainOperation: () =>
+          this.handleConfirmPreparedProblemSeriesOperation(),
       },
       !this.verifyMode,
     );
@@ -939,6 +941,21 @@ export class GameSession {
       this.view.setBattlePaused(false);
     }
     this.view.refreshVictoryResultOverlay();
+  }
+
+  /**
+   * R12m 2L2: 概要確定から prepared 作戦開始と初期編成準備へ接続する。
+   * beginPreparedProblemSeriesOperation の成功時のみ formation を開く。失敗時は画面遷移しない。
+   */
+  private handleConfirmPreparedProblemSeriesOperation(): void {
+    const began = this.beginPreparedProblemSeriesOperation();
+    if (began === null) {
+      return;
+    }
+
+    this.view.setBattlePaused(false);
+    this.view.refreshVictoryResultOverlay();
+    this.menuHost.open('party');
   }
 
   private handleStageSortie(stageId: string): void {
