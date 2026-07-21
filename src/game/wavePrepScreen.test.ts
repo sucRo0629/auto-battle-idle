@@ -855,6 +855,13 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
   });
 
   it('UI exposes resource, acquired passives, and acquire button flow', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) throw new Error(loaded.error);
+    const passive = loaded.data.skillRegistry.passives[R8C_PASSIVE_ID];
+    expect(passive).toBeDefined();
+    expect(passive!.name).not.toBe('');
+    expect(passive!.name).toBe('ブロック率増加');
+
     session = bootVerifySession();
     reachAwaitingNextWave(getEngine(session));
 
@@ -873,11 +880,12 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     ]);
     expect(document.body.textContent).toContain(`作戦内リソース: ${WAVE_CLEAR_RESOURCE_GRANT - R8C_PASSIVE_ACQUIRE_COST}`);
     expect(document.body.textContent).toContain('取得済み');
-    expect(document.body.textContent).toContain('堅盾の構え');
+    expect(document.body.textContent).not.toContain('堅盾の構え');
     const acquiredCard = document.querySelector(
       `[data-passive-id="${R8C_PASSIVE_ID}"][data-acquired="true"]`,
     );
     expect(acquiredCard).not.toBeNull();
+    expect(acquiredCard?.textContent).toContain(passive!.name);
     expect(acquiredCard?.textContent).not.toContain('消費');
   });
 });
