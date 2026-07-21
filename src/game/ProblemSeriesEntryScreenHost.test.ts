@@ -111,4 +111,67 @@ describe('ProblemSeriesEntryScreenHost (R12m Player unit2J2)', () => {
 
     host.remove();
   });
+
+  it('back click で onBack を転送し host 状態と panel 件数を維持する', () => {
+    const host = document.createElement('div');
+    host.hidden = true;
+    document.body.appendChild(host);
+
+    const onPrepare = vi.fn();
+    const onBack = vi.fn();
+    const screenHost = new ProblemSeriesEntryScreenHost(host, { onPrepare, onBack });
+
+    screenHost.show();
+
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+    expect(host.querySelectorAll('.problem-series-entry-back')).toHaveLength(1);
+    expect(onBack).toHaveBeenCalledTimes(0);
+    expect(onPrepare).toHaveBeenCalledTimes(0);
+
+    const backButton = host.querySelector(
+      '.problem-series-entry-back',
+    ) as HTMLButtonElement;
+    backButton.click();
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onPrepare).toHaveBeenCalledTimes(0);
+    expect(host.hidden).toBe(false);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+    expect(document.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+    expect(document.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+    expect(document.querySelectorAll('.battle-view')).toHaveLength(0);
+
+    const input = host.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    const prepareButton = host.querySelector(
+      '.problem-series-entry-prepare',
+    ) as HTMLButtonElement;
+
+    input.value = RAW_FIXTURE_SEED;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    expect(onPrepare).toHaveBeenCalledTimes(1);
+    expect(onPrepare).toHaveBeenCalledWith(NORMALIZED_FIXTURE_SEED);
+    expect(onBack).toHaveBeenCalledTimes(1);
+
+    const hostWithoutOnBack = document.createElement('div');
+    hostWithoutOnBack.hidden = true;
+    document.body.appendChild(hostWithoutOnBack);
+
+    const screenHostWithoutOnBack = new ProblemSeriesEntryScreenHost(hostWithoutOnBack, {
+      onPrepare: vi.fn(),
+    });
+    screenHostWithoutOnBack.show();
+
+    const backButtonWithoutCallback = hostWithoutOnBack.querySelector(
+      '.problem-series-entry-back',
+    ) as HTMLButtonElement;
+
+    expect(() => backButtonWithoutCallback.click()).not.toThrow();
+
+    host.remove();
+    hostWithoutOnBack.remove();
+  });
 });
