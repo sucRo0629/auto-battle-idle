@@ -20,6 +20,8 @@ import '../styles/operation-prep-panels.css';
 
 export interface WavePrepScreenHostCallbacks {
   getOperationView: () => OperationStateReadonlyView | null;
+  /** problemSeries: snapshot.allowedClassIds。fixedStage: undefined（unlockedClassIds を使用）。 */
+  getAllowedClassIds?: () => readonly ClassId[] | undefined;
   getUnlockedClassIds: () => ClassId[];
   getSelectedModuleId: (slotIndex: number) => string | undefined;
   onPartySlotChanged: (
@@ -228,9 +230,14 @@ export class WavePrepScreenHost {
 
     const classSelect = document.createElement('select');
     classSelect.className = 'wave-prep-screen__class-select';
+    const allowedClassIds = this.callbacks.getAllowedClassIds?.();
+    const candidateClassIds =
+      allowedClassIds === undefined
+        ? this.callbacks.getUnlockedClassIds()
+        : [...allowedClassIds];
     const assignable = getAssignableClassIds(
       [...view.party],
-      this.callbacks.getUnlockedClassIds(),
+      candidateClassIds,
       slotIndex,
       this.gameData.classOrder,
     );

@@ -223,6 +223,8 @@ export class GameSession {
       gameData,
       {
         getOperationView: () => this.getOperationState(),
+        getAllowedClassIds: () =>
+          this.getFormationAllowedClassIdsForCurrentOperation(),
         getUnlockedClassIds: () => this.save.unlockedClassIds,
         getSelectedModuleId: (slotIndex) =>
           this.resolveCombatModuleSelection().getSelectedCombatModuleId(
@@ -1642,6 +1644,21 @@ export class GameSession {
     if (!this.canEditOperationFormation() || this.operationState === null) {
       return { ok: false };
     }
+
+    if (this.isActiveIncompleteProblemSeriesOperation()) {
+      const nextClassId = member?.classId ?? null;
+      if (nextClassId === null) {
+        return { ok: false };
+      }
+      const allowedClassIds = this.getFormationAllowedClassIdsForCurrentOperation();
+      if (allowedClassIds === undefined || !allowedClassIds.includes(nextClassId)) {
+        return { ok: false };
+      }
+      if (!this.gameData.classRegistry[nextClassId]) {
+        return { ok: false };
+      }
+    }
+
     return this.operationState.tryUpdatePartySlot(
       slotIndex,
       member,

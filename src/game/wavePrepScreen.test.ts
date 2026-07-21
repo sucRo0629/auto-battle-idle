@@ -10,7 +10,8 @@ import { createDefaultSave } from '../progression/victoryRewards.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import { setDebugLoopStageId, setDebugLoopWaveIndex } from '../dev/debugLoopStage.ts';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
-import type { GameData, PartySlotState } from '../battle/types.ts';
+import type { GameData, PartySlotState, ClassId } from '../battle/types.ts';
+import { PARTY_SLOT_COUNT } from '../battle/types.ts';
 import { OperationState } from './OperationState.ts';
 import { GameSession } from './GameSession.ts';
 import {
@@ -887,5 +888,113 @@ describe('Wave prep operation passive acquisition (R8c)', () => {
     expect(acquiredCard).not.toBeNull();
     expect(acquiredCard?.textContent).toContain(passive!.name);
     expect(acquiredCard?.textContent).not.toContain('消費');
+  });
+});
+
+function collectWavePrepSelectOptionClassIds(root: ParentNode): ClassId[] {
+  const classIds: ClassId[] = [];
+  for (const select of root.querySelectorAll<HTMLSelectElement>(
+    '.wave-prep-screen__class-select',
+  )) {
+    for (const option of select.options) {
+      classIds.push(option.value as ClassId);
+    }
+  }
+  return classIds;
+}
+
+describe('Wave prep allowed class ids (R12m 2T6 fixedStage regression)', () => {
+  let session: GameSession | null = null;
+  const loaded = tryLoadGameData();
+  if (!loaded.ok) throw new Error(loaded.error);
+  const gameData = loaded.data;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+    setVerifyModeEnabled(false);
+    setDebugLoopStageId(null);
+    setDebugLoopWaveIndex(null);
+  });
+
+  it('fixedStage WavePrep uses unlockedClassIds and exposes out-of-series-A unlocked classes', () => {
+    const seriesA = gameData.problemSeriesCatalog.series.find(
+      (series) => series.seriesId === 'r12m_series_a',
+    );
+    if (seriesA === undefined) {
+      throw new Error('Expected problem series r12m_series_a');
+    }
+    const allowedClassIds = seriesA.allowedClassIds;
+    expect(allowedClassIds).toHaveLength(PARTY_SLOT_COUNT);
+
+    session = bootVerifySession();
+    reachAwaitingNextWave(getEngine(session));
+
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(session.getOperationState()?.source).toEqual({
+      kind: 'fixedStage',
+      stageId: '1',
+    });
+
+    const wavePrepScreenHost = (
+      session as unknown as {
+        wavePrepScreenHost: {
+          callbacks: {
+            getAllowedClassIds?: () => readonly ClassId[] | undefined;
+            getUnlockedClassIds: () => ClassId[];
+          };
+        };
+      }
+    ).wavePrepScreenHost;
+
+    expect(wavePrepScreenHost.callbacks.getAllowedClassIds?.()).toBeUndefined();
+
+    const unlockedClassIds = wavePrepScreenHost.callbacks.getUnlockedClassIds();
+    const outOfSeriesAUnlockedClassId = unlockedClassIds.find(
+      (classId) =>
+        !allowedClassIds.includes(classId) &&
+        gameData.classRegistry[classId] !== undefined,
+    );
+    if (outOfSeriesAUnlockedClassId === undefined) {
+      throw new Error(
+        'No unlocked class found outside r12m_series_a allowedClassIds with registry entry',
+      );
+    }
+    expect(unlockedClassIds).toContain(outOfSeriesAUnlockedClassId);
+    for (const allowedClassId of allowedClassIds) {
+      expect(unlockedClassIds).toContain(allowedClassId);
+    }
+
+    const classSelects = document.body.querySelectorAll<HTMLSelectElement>(
+      '.wave-prep-screen__class-select',
+    );
+    expect(classSelects).toHaveLength(4);
+    for (const select of classSelects) {
+      expect(select.options.length).toBeGreaterThan(0);
+    }
+
+    const optionClassIds = collectWavePrepSelectOptionClassIds(document.body);
+    expect(optionClassIds.length).toBeGreaterThan(0);
+    expect(optionClassIds).toContain(outOfSeriesAUnlockedClassId);
+    for (const optionClassId of optionClassIds) {
+      expect(unlockedClassIds).toContain(optionClassId);
+    }
+
+    const beforeParty = structuredClone(session.getOperationParty());
+    const duplicateClass = beforeParty[1]?.classId;
+    if (!duplicateClass) throw new Error('missing duplicate class for regression');
+    const duplicateResult = session.tryUpdateOperationPartySlot(
+      0,
+      createMemberFromClass(duplicateClass, gameData),
+    );
+    expect(duplicateResult.ok).toBe(false);
+    expect(duplicateResult.reason).toBe('duplicateClass');
+    expect(session.getOperationParty()).toEqual(beforeParty);
   });
 });

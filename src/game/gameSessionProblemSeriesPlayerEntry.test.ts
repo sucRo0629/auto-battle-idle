@@ -10,6 +10,8 @@
  *
  * R12m Player 作業単位2T5B: 問題系列初期 Formation の OperationState party / 4 兵科 production 接続。
  *
+ * R12m Player 作業単位2T6: 問題系列 WavePrep の兵科候補 / 更新 API を allowedClassIds へ制限。
+ *
  * R12m Player 作業単位2M2: 系列A Wave 0 クリアから Wave 1 準備（WavePrep）への production 回帰。
  *
  * R12m Player 作業単位2M3: WavePrep 確定から系列A Wave 1 戦闘への production 回帰。
@@ -30,6 +32,7 @@ import {
 } from '../battle/test/battleFieldSpec.harness.ts';
 import { expandEnemyGroupsList } from '../battle/enemyGroupSpawn.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
+import { createMemberFromClass } from '../progression/partyCompose.ts';
 import { expectVictoryOverlayVisuallyHidden, expectVictoryOverlayVisuallyVisible } from '../ui/battleResultOverlayTestUtils.ts';
 import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import type { ClassId } from '../battle/types.ts';
@@ -178,6 +181,26 @@ function getRosterSummaryClassIdsFromDom(): ClassId[] {
       '.skill-menu-roster-card[data-summary-class-id]',
     ),
   ].map((card) => card.dataset.summaryClassId!);
+}
+
+function collectWavePrepSelectOptionClassIds(root: ParentNode): ClassId[] {
+  const classIds: ClassId[] = [];
+  for (const select of root.querySelectorAll<HTMLSelectElement>(
+    '.wave-prep-screen__class-select',
+  )) {
+    for (const option of select.options) {
+      classIds.push(option.value as ClassId);
+    }
+  }
+  return classIds;
+}
+
+function getWavePrepSelectOptionClassIdsBySlot(root: ParentNode): ClassId[][] {
+  return [...root.querySelectorAll<HTMLSelectElement>(
+    '.wave-prep-screen__class-select',
+  )].map((select) =>
+    [...select.options].map((option) => option.value as ClassId),
+  );
 }
 
 function findPickerItem(classId: string): HTMLButtonElement {
@@ -865,6 +888,134 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
 
     expect(session.getSaveState()).toEqual(saveBefore);
     expect(getSavePartyClassIds(session)).toContain(OUT_OF_SCOPE_CLASS_ID);
+  });
+
+  it('2T6: problemSeries Wave 1 prep limits class select options and update API to allowedClassIds', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    const gameData = loaded.data;
+    const seriesA = loaded.data.problemSeriesCatalog.series.find(
+      (entry) => entry.seriesId === SERIES_A_ID,
+    );
+    if (seriesA === undefined) {
+      throw new Error(`Expected problem series ${SERIES_A_ID}`);
+    }
+    const allowedClassIdsFromCatalog = seriesA.allowedClassIds;
+    expect(allowedClassIdsFromCatalog).toHaveLength(PARTY_SLOT_COUNT);
+
+    session = createSession();
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    if (provider === undefined) {
+      throw new Error('BattleEngine resolved waves provider is missing');
+    }
+    const engineInternals = engine as unknown as {
+      spawnWaveEnemies: () => void;
+    };
+    const spawnWaveEnemiesSpy = vi.spyOn(engineInternals, 'spawnWaveEnemies');
+
+    session.start();
+    expect(getSavePartyClassIds(session)).toContain(OUT_OF_SCOPE_CLASS_ID);
+    polluteSavePartyBeforeProblemSeries(session, allowedClassIdsFromCatalog);
+    const saveBeforeWavePrep = structuredClone(session.getSaveState());
+
+    const container = getStageSelectContainer(session);
+    requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    ).click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    const prepareButton = requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (snapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+    const allowedClassIds = snapshot.allowedClassIds;
+    expect(allowedClassIds).toEqual(allowedClassIdsFromCatalog);
+    expect(allowedClassIds).not.toContain(OUT_OF_SCOPE_CLASS_ID);
+
+    requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    ).click();
+
+    const appContainer = getGameAppContainer();
+    requireButton(
+      appContainer,
+      '.skill-menu-return-to-battle-button',
+      'formation confirm button',
+    ).click();
+
+    waitForEngagedViaSession(session, engine);
+    advanceSessionToWavePrepAfterKill(session, engine, spawnWaveEnemiesSpy);
+
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(session.getOperationState()?.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
+
+    const classSelects = appContainer.querySelectorAll<HTMLSelectElement>(
+      '.wave-prep-screen__class-select',
+    );
+    expect(classSelects).toHaveLength(4);
+
+    const optionClassIdsBySlot = getWavePrepSelectOptionClassIdsBySlot(appContainer);
+    expect(optionClassIdsBySlot).toHaveLength(4);
+    for (const slotOptionClassIds of optionClassIdsBySlot) {
+      expect(slotOptionClassIds.length).toBeGreaterThan(0);
+      for (const classId of slotOptionClassIds) {
+        expect(allowedClassIds).toContain(classId);
+        expect(classId).not.toBe(OUT_OF_SCOPE_CLASS_ID);
+      }
+    }
+
+    const allOptionClassIds = collectWavePrepSelectOptionClassIds(appContainer);
+    expect(allOptionClassIds.length).toBeGreaterThan(0);
+    expect(new Set(allOptionClassIds)).toEqual(new Set(allowedClassIds));
+    expect(allOptionClassIds).not.toContain(OUT_OF_SCOPE_CLASS_ID);
+
+    expectOperationPartyMatchesAllowed(session, allowedClassIds);
+    expect(session.getSaveState()).toEqual(saveBeforeWavePrep);
+    expect(getSavePartyClassIds(session)).toContain(OUT_OF_SCOPE_CLASS_ID);
+
+    const operationPartyBefore = structuredClone(session.getOperationParty());
+    const checkpointBefore = structuredClone(session.getOperationCheckpoint());
+    const moduleSelectionBefore = [...Array(PARTY_SLOT_COUNT)].map((_, slotIndex) =>
+      session!.getPartySlotCombatModule(slotIndex),
+    );
+    const saveBeforeReject = structuredClone(session.getSaveState());
+
+    expect(allowedClassIdsFromCatalog).not.toContain(OUT_OF_SCOPE_CLASS_ID);
+    const rejectResult = session.tryUpdateOperationPartySlot(
+      0,
+      createMemberFromClass(OUT_OF_SCOPE_CLASS_ID, gameData),
+    );
+    expect(rejectResult.ok).toBe(false);
+
+    expect(session.getOperationParty()).toEqual(operationPartyBefore);
+    expect(session.getOperationCheckpoint()).toEqual(checkpointBefore);
+    expect(
+      [...Array(PARTY_SLOT_COUNT)].map((_, slotIndex) =>
+        session!.getPartySlotCombatModule(slotIndex),
+      ),
+    ).toEqual(moduleSelectionBefore);
+    expect(session.getSaveState()).toEqual(saveBeforeReject);
   });
 
   it('2M1: stageSelect DOM → prepare → overview confirm → formation confirm → problemSeries Wave 0 battle', () => {
