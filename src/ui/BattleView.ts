@@ -120,6 +120,7 @@ export interface VerifyModeControls {
   onRematchSameStage?: () => boolean;
   onReturnToStageSelect?: () => boolean;
   onReturnToStageSelectAfterProblemSeriesVictory?: () => boolean;
+  onPrepareSameSeedProblemSeriesFromVictory?: () => boolean;
   /** Wave 戦闘中ポーズからリトライ 3 種を出せるか */
   canUsePauseOperationRetry?: () => boolean;
   canReturnToStageSelectFromPause?: () => boolean;
@@ -166,6 +167,7 @@ export class BattleView {
   private readonly victoryResultRematchButton: HTMLButtonElement;
   private readonly victoryResultStageSelectButton: HTMLButtonElement;
   private readonly victoryResultProblemSeriesStageSelectButton: HTMLButtonElement;
+  private readonly victoryResultSameSeedRestartButton: HTMLButtonElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
@@ -475,6 +477,12 @@ export class BattleView {
     this.victoryResultStageSelectButton = createVictoryResultButton(
       "ステージ選択へ",
       () => this.verifyModeControls?.onReturnToStageSelect?.() ?? false,
+    );
+    this.victoryResultSameSeedRestartButton = createVictoryResultButton(
+      "同じseedで再開始",
+      () =>
+        this.verifyModeControls?.onPrepareSameSeedProblemSeriesFromVictory?.() ??
+        false,
     );
     this.victoryResultProblemSeriesStageSelectButton = createVictoryResultButton(
       "作戦選択へ",
@@ -977,12 +985,14 @@ export class BattleView {
           `outcome: ${problemSeriesResult.outcome}\nseed: ${problemSeriesResult.seed}\ngeneratorVersion: ${problemSeriesResult.generatorVersion}\nseriesId: ${problemSeriesResult.seriesId}\nreachedWaveIndex: ${problemSeriesResult.reachedWaveIndex}`;
         this.victoryResultRematchButton.hidden = true;
         this.victoryResultStageSelectButton.hidden = true;
+        this.victoryResultSameSeedRestartButton.hidden = false;
         this.victoryResultProblemSeriesStageSelectButton.hidden = false;
       } else if (showFixedStage && fixedStageResult) {
         this.victoryResultSummaryEl.textContent =
           `outcome: ${fixedStageResult.outcome}\nstageId: ${fixedStageResult.stageId}\nreachedWaveIndex: ${fixedStageResult.reachedWaveIndex}`;
         this.victoryResultRematchButton.hidden = false;
         this.victoryResultStageSelectButton.hidden = false;
+        this.victoryResultSameSeedRestartButton.hidden = true;
         this.victoryResultProblemSeriesStageSelectButton.hidden = true;
       }
       if (!this.battlePaused) {
@@ -993,6 +1003,7 @@ export class BattleView {
       this.victoryResultSummaryEl.textContent = '';
       this.victoryResultRematchButton.hidden = false;
       this.victoryResultStageSelectButton.hidden = false;
+      this.victoryResultSameSeedRestartButton.hidden = true;
       this.victoryResultProblemSeriesStageSelectButton.hidden = true;
     }
     this.syncPauseOverlayVisibility();

@@ -327,6 +327,8 @@ export class GameSession {
         onReturnToStageSelect: () => this.returnToStageSelectAfterVictory(),
         onReturnToStageSelectAfterProblemSeriesVictory: () =>
           this.returnToStageSelectAfterProblemSeriesVictory(),
+        onPrepareSameSeedProblemSeriesFromVictory: () =>
+          this.prepareSameSeedProblemSeriesFromVictory(),
         canUsePauseOperationRetry: () => this.canUsePauseOperationRetry(),
         canReturnToStageSelectFromPause: () =>
           this.canReturnToStageSelectFromPause(),
@@ -894,6 +896,71 @@ export class GameSession {
     this.wavePrepSuspended = false;
     this.view.setBattlePaused(false);
     this.setGameScreen('stageSelect');
+    this.view.refreshVictoryResultOverlay();
+    return true;
+  }
+
+  /**
+   * R12m 2O2: 問題系列最終勝利結果の seed から同系列を再準備し、全 3 Wave 概要へ遷移する。
+   * 作戦内パッシブ・資源・進行・checkpoint は引き継がない。Save / BattleEngine restart は行わない。
+   */
+  prepareSameSeedProblemSeriesFromVictory(): boolean {
+    if (!this.shouldShowProblemSeriesVictoryResult()) {
+      return false;
+    }
+
+    const result = this.problemSeriesVictoryResult;
+    if (result === null) {
+      return false;
+    }
+
+    if (this.hasActiveOperation()) {
+      return false;
+    }
+
+    if (this.operationCheckpoint !== null) {
+      return false;
+    }
+
+    if (this.problemSeriesOperationStartSnapshot !== null) {
+      return false;
+    }
+
+    const expectedSeed = result.seed;
+    const expectedGeneratorVersion = result.generatorVersion;
+    const expectedSeriesId = result.seriesId;
+
+    let preparedSnapshot: ProblemSeriesOperationStartSnapshot;
+    try {
+      preparedSnapshot = this.prepareProblemSeriesOperationStart(expectedSeed);
+    } catch {
+      this.clearProblemSeriesOperationStartSnapshot();
+      return false;
+    }
+
+    if (
+      preparedSnapshot.seed !== expectedSeed ||
+      preparedSnapshot.generatorVersion !== expectedGeneratorVersion ||
+      preparedSnapshot.seriesId !== expectedSeriesId ||
+      preparedSnapshot.waves.length !== 3
+    ) {
+      this.clearProblemSeriesOperationStartSnapshot();
+      return false;
+    }
+
+    this.setGameScreen('stageSelect');
+
+    if (!this.stageSelectionHost.showPreparedMainOperationOverview()) {
+      this.clearProblemSeriesOperationStartSnapshot();
+      this.setGameScreen('battle');
+      this.view.setBattlePaused(true);
+      this.view.refreshVictoryResultOverlay();
+      return false;
+    }
+
+    this.problemSeriesVictoryResult = null;
+    this.wavePrepSuspended = false;
+    this.view.setBattlePaused(false);
     this.view.refreshVictoryResultOverlay();
     return true;
   }
