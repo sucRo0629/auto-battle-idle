@@ -5,19 +5,32 @@
  * Prepare / snapshot getter / 概要戻る callback を production DOM 経路で接続する。
  *
  * R12m Player 作業単位2L2: 概要確定から prepared 作戦開始・初期編成準備へ接続する。
+ *
+ * R12m Player 作業単位2M1: formation 確定から problemSeries Wave 0 戦闘へ接続する。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
+import { expandEnemyGroupsList } from '../battle/enemyGroupSpawn.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
+import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
 import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
 import { GameSession } from './GameSession.ts';
 
 const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
+const SERIES_A_ID = 'r12m_series_a';
 
 const RAW_FIXTURE_SEED = '  fixture-a  ';
 const NORMALIZED_FIXTURE_SEED = 'fixture-a';
+
+const INITIAL_DUMMY_ENEMY_CLASS_IDS = [
+  'test_dummy',
+  'test_dummy',
+  'test_dummy',
+  'test_dummy',
+  'test_dummy',
+] as const;
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -79,6 +92,29 @@ function livingEnemyClassIds(engine: BattleEngine): string[] {
     .enemies.filter((enemy) => enemy.hp > 0)
     .map((enemy) => enemy.classId)
     .filter((classId): classId is string => classId !== undefined);
+}
+
+function getEngineProvider(
+  engine: BattleEngine,
+): (() => ResolvedWavesCombatInput | null) | undefined {
+  return (
+    engine as unknown as {
+      getResolvedWavesCombatInput?: () => ResolvedWavesCombatInput | null;
+    }
+  ).getResolvedWavesCombatInput;
+}
+
+function expandWave0ExpectedClassIds(
+  snapshot: NonNullable<ReturnType<GameSession['getProblemSeriesOperationStartSnapshot']>>,
+): string[] {
+  const wave0 = snapshot.waves[0];
+  if (wave0 === undefined) {
+    throw new Error('prepared snapshot has no Wave 0');
+  }
+  expect(wave0.enemyGroups.length).toBeGreaterThan(0);
+  const specs = expandEnemyGroupsList([...wave0.enemyGroups]);
+  expect(specs.length).toBeGreaterThan(0);
+  return specs.map((spec) => spec.classId);
 }
 
 function getGameAppContainer(): HTMLElement {
@@ -427,5 +463,180 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(sortieSpy).not.toHaveBeenCalled();
     expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
     expect(beginPreparedSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('2M1: stageSelect DOM → prepare → overview confirm → formation confirm → problemSeries Wave 0 battle', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+    const sortieSpy = vi.spyOn(
+      session as unknown as { handleStageSortie: (stageId: string) => void },
+      'handleStageSortie',
+    );
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    if (provider === undefined) {
+      throw new Error('BattleEngine resolved waves provider is missing');
+    }
+    const engineInternals = engine as unknown as {
+      spawnWaveEnemies: () => void;
+    };
+    const spawnWaveEnemiesSpy = vi.spyOn(engineInternals, 'spawnWaveEnemies');
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const startSpy = vi.spyOn(engine, 'startBattle');
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+
+    const saveBefore = structuredClone(session.getSaveState());
+    const currentStageIdBefore = saveBefore.stageProgress.currentStageId;
+    const clearedStageIdsBefore = [...(saveBefore.stageProgress.clearedStageIds ?? [])];
+
+    const container = getStageSelectContainer(session);
+
+    const mainButton = requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    );
+    mainButton.click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    const prepareButton = requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (snapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+
+    const resolveCallsAfterPrepare = resolveSpy.mock.calls.length;
+    const factoryCallsAfterPrepare = snapshotFactorySpy.mock.calls.length;
+    expect(resolveCallsAfterPrepare).toBe(1);
+    expect(factoryCallsAfterPrepare).toBe(1);
+
+    const confirmButton = requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    );
+    confirmButton.click();
+
+    const appContainer = getGameAppContainer();
+
+    // formation 確定前 (1–13)
+    expect(session.getProblemSeriesOperationStartSnapshot()).not.toBeNull();
+    expect(snapshot.seed).toBe(NORMALIZED_FIXTURE_SEED);
+    expect(snapshot.seriesId).toBe(SERIES_A_ID);
+    expect(snapshot.waves).toHaveLength(3);
+
+    const wave0 = snapshot.waves[0];
+    if (wave0 === undefined) {
+      throw new Error('prepared snapshot has no Wave 0');
+    }
+    expect(wave0.enemyGroups.length).toBeGreaterThan(0);
+    expect(wave0.prepResourceGrant).toBe(0);
+
+    const operation = session.getOperationState();
+    if (operation === null) {
+      throw new Error('operation state is null before formation confirm');
+    }
+    expect(operation.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(operation.source)).toEqual(['kind']);
+
+    const checkpointBeforeConfirm = session.getOperationCheckpoint();
+    if (checkpointBeforeConfirm === null) {
+      throw new Error('operation checkpoint is null before formation confirm');
+    }
+    expect(checkpointBeforeConfirm.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(checkpointBeforeConfirm.source)).toEqual(['kind']);
+
+    expect(session.getCurrentScreen()).toBe('formation');
+
+    const returnButton = requireButton(
+      appContainer,
+      '.skill-menu-return-to-battle-button',
+      'formation confirm button',
+    );
+    expect(returnButton.disabled).toBe(false);
+
+    const enemiesBeforeConfirm = livingEnemyClassIds(engine);
+    expect(enemiesBeforeConfirm).toEqual([...INITIAL_DUMMY_ENEMY_CLASS_IDS]);
+
+    const expectedWave0ClassIds = expandWave0ExpectedClassIds(snapshot);
+    expect(expectedWave0ClassIds.length).toBeGreaterThan(0);
+    expect(expectedWave0ClassIds).not.toEqual([...INITIAL_DUMMY_ENEMY_CLASS_IDS]);
+
+    expect(provider()).toBe(snapshot.waves);
+
+    expect(spawnWaveEnemiesSpy).not.toHaveBeenCalled();
+    expect(restartSpy).not.toHaveBeenCalled();
+    expect(restartAtWaveSpy).not.toHaveBeenCalled();
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(startNextWaveSpy).not.toHaveBeenCalled();
+    expect(sortieSpy).not.toHaveBeenCalled();
+
+    // formation 確定操作 (14–19)
+    returnButton.click();
+
+    expect(restartAtWaveSpy).toHaveBeenCalledTimes(1);
+    expect(restartAtWaveSpy).toHaveBeenCalledWith(0);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(1);
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsAfterPrepare);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(factoryCallsAfterPrepare);
+
+    // formation 確定後 (20–33)
+    expect(session.getCurrentScreen()).toBe('battle');
+
+    const battleHost = appContainer.querySelector('.game-shell__battle');
+    if (battleHost === null) {
+      throw new Error('battle host not found');
+    }
+    expect(battleHost.hidden).toBe(false);
+    expect(appContainer.querySelector('.game-shell__formation')?.hidden).toBe(true);
+    expect(appContainer.querySelector('.game-shell__stage-select')?.hidden).toBe(true);
+    expect(appContainer.querySelector('.game-shell__wave-prep')?.hidden).toBe(true);
+
+    const livingAfterConfirm = livingEnemyClassIds(engine);
+    expect(livingAfterConfirm.length).toBeGreaterThan(0);
+    expect(livingAfterConfirm).toEqual(expectedWave0ClassIds);
+    expect(livingAfterConfirm).not.toEqual([...INITIAL_DUMMY_ENEMY_CLASS_IDS]);
+
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
+    expect(session.getOperationState()?.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(session.getOperationState()!.source)).toEqual(['kind']);
+    expect(session.getOperationCheckpoint()?.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(session.getOperationCheckpoint()!.source)).toEqual(['kind']);
+    expect(session.getOperationCheckpoint()?.source).not.toHaveProperty('stageId');
+    expect(session.getOperationState()?.source).not.toHaveProperty('stageId');
+
+    const saveAfter = session.getSaveState();
+    expect(saveAfter.stageProgress.currentStageId).toBe(currentStageIdBefore);
+    expect([...(saveAfter.stageProgress.clearedStageIds ?? [])]).toEqual(
+      clearedStageIdsBefore,
+    );
+
+    expect(sortieSpy).not.toHaveBeenCalled();
+    expect(restartSpy).not.toHaveBeenCalled();
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(startNextWaveSpy).not.toHaveBeenCalled();
+    expect(provider()).toBe(snapshot.waves);
   });
 });
