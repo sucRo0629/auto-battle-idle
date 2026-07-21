@@ -1117,4 +1117,246 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(session.hasActiveOperation()).toBe(true);
     expect(provider()).toBe(snapshot.waves);
   });
+
+  it('2M4: Wave 1 prep UI acquires one operation passive and commits it at Wave 1 checkpoint', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+
+    const sortieSpy = vi.spyOn(
+      session as unknown as { handleStageSortie: (stageId: string) => void },
+      'handleStageSortie',
+    );
+    const acquireSpy = vi.spyOn(session, 'tryAcquireOperationPassive');
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    if (provider === undefined) {
+      throw new Error('BattleEngine resolved waves provider is missing');
+    }
+    const engineInternals = engine as unknown as {
+      spawnWaveEnemies: () => void;
+    };
+    const spawnWaveEnemiesSpy = vi.spyOn(engineInternals, 'spawnWaveEnemies');
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const startSpy = vi.spyOn(engine, 'startBattle');
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+
+    session.start();
+
+    const saveBefore = structuredClone(session.getSaveState());
+
+    const container = getStageSelectContainer(session);
+
+    const mainButton = requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    );
+    mainButton.click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    const prepareButton = requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (snapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+
+    const resolveCallsAfterPrepare = resolveSpy.mock.calls.length;
+    const factoryCallsAfterPrepare = snapshotFactorySpy.mock.calls.length;
+    expect(resolveCallsAfterPrepare).toBe(1);
+    expect(factoryCallsAfterPrepare).toBe(1);
+
+    const confirmButton = requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    );
+    confirmButton.click();
+
+    const appContainer = getGameAppContainer();
+    const returnButton = requireButton(
+      appContainer,
+      '.skill-menu-return-to-battle-button',
+      'formation confirm button',
+    );
+    returnButton.click();
+
+    expect(restartAtWaveSpy).toHaveBeenCalledTimes(1);
+    expect(restartAtWaveSpy).toHaveBeenCalledWith(0);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(1);
+
+    const wave1 = snapshot.waves[1];
+    if (wave1 === undefined) {
+      throw new Error('prepared snapshot missing Wave 1');
+    }
+
+    const expectedWave1ClassIds = expandWaveExpectedClassIds(snapshot, 1);
+    const expectedWave2ClassIds = expandWaveExpectedClassIds(snapshot, 2);
+    const wave1PrepResourceGrant = wave1.prepResourceGrant;
+
+    waitForEngagedViaSession(session, engine);
+    advanceSessionToWavePrepAfterKill(session, engine, spawnWaveEnemiesSpy);
+
+    const operationBeforeAcquire = session.getOperationState();
+    if (operationBeforeAcquire === null) {
+      throw new Error('operation state is null before passive acquire');
+    }
+
+    const unspentBeforeAcquire = session.getOperationUnspentResource();
+    const slot0Candidates = [...session.getOperationPassiveCandidates(0)];
+    const selectedPassiveId = slot0Candidates.find((passiveId) => {
+      const cost = session!.resolveOperationPassiveAcquireCostForSlot(0, passiveId);
+      return Number.isInteger(cost) && cost > 0 && cost <= unspentBeforeAcquire;
+    });
+    if (!selectedPassiveId) {
+      throw new Error(
+        'Slot 0 has no affordable operation passive candidate for current resource',
+      );
+    }
+    const selectedPassiveCost = session.resolveOperationPassiveAcquireCostForSlot(
+      0,
+      selectedPassiveId,
+    );
+
+    // 取得前
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(operationBeforeAcquire.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(operationBeforeAcquire.source)).toEqual(['kind']);
+    expect(wave1PrepResourceGrant).toBeGreaterThan(0);
+    expect(unspentBeforeAcquire).toBe(wave1PrepResourceGrant);
+    expect(slot0Candidates.length).toBeGreaterThan(0);
+    expect(slot0Candidates).toContain(selectedPassiveId);
+    expect(Number.isInteger(selectedPassiveCost)).toBe(true);
+    expect(selectedPassiveCost).toBeGreaterThan(0);
+    expect(selectedPassiveCost).toBeLessThanOrEqual(unspentBeforeAcquire);
+
+    const slotRowsBeforeAcquire = appContainer.querySelectorAll('.wave-prep-screen__slot');
+    expect(slotRowsBeforeAcquire).toHaveLength(4);
+    const slot0RowBeforeAcquire = slotRowsBeforeAcquire[0];
+    if (!slot0RowBeforeAcquire) {
+      throw new Error('wave prep slot 0 row not found');
+    }
+    const selectedCardSelector = `.operation-passive-prep__candidate[data-passive-id="${selectedPassiveId}"]`;
+    const selectedCardsBeforeAcquire =
+      slot0RowBeforeAcquire.querySelectorAll(selectedCardSelector);
+    expect(selectedCardsBeforeAcquire).toHaveLength(1);
+    const selectedCardBeforeAcquire =
+      selectedCardsBeforeAcquire[0] as HTMLElement | undefined;
+    if (!selectedCardBeforeAcquire) {
+      throw new Error('selected passive card not found before acquire');
+    }
+    const selectedAcquireButton = selectedCardBeforeAcquire.querySelector<HTMLButtonElement>(
+      '.operation-passive-prep__acquire',
+    );
+    if (!selectedAcquireButton) {
+      throw new Error('selected passive acquire button not found');
+    }
+    expect(selectedAcquireButton.disabled).toBe(false);
+    expect(session.getOperationAcquiredPassiveIds(0)).toEqual([]);
+    for (let slotIndex = 1; slotIndex < 4; slotIndex += 1) {
+      expect(session.getOperationAcquiredPassiveIds(slotIndex)).toEqual([]);
+    }
+
+    // UI取得操作
+    expect(acquireSpy).not.toHaveBeenCalled();
+    selectedAcquireButton.click();
+
+    expect(acquireSpy).toHaveBeenCalledTimes(1);
+    expect(acquireSpy).toHaveBeenCalledWith(0, selectedPassiveId);
+    expect(session.getOperationAcquiredPassiveIds(0)).toEqual([selectedPassiveId]);
+    expect(session.getOperationUnspentResource()).toBe(
+      unspentBeforeAcquire - selectedPassiveCost,
+    );
+
+    const slotRowsAfterAcquire = appContainer.querySelectorAll('.wave-prep-screen__slot');
+    const slot0RowAfterAcquire = slotRowsAfterAcquire[0];
+    if (!slot0RowAfterAcquire) {
+      throw new Error('wave prep slot 0 row not found after acquire');
+    }
+    const acquiredCard = slot0RowAfterAcquire.querySelector<HTMLElement>(
+      `${selectedCardSelector}[data-acquired="true"]`,
+    );
+    expect(acquiredCard).not.toBeNull();
+    expect(
+      slot0RowAfterAcquire.querySelector(
+        `.operation-passive-prep__candidates ${selectedCardSelector}`,
+      ),
+    ).toBeNull();
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(engine.getSnapshot().awaitingNextWave).toBe(true);
+    expect(livingEnemyClassIds(engine)).toHaveLength(0);
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsAfterPrepare);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(factoryCallsAfterPrepare);
+
+    // WavePrep確定後
+    const wavePrepConfirmButton = requireButton(
+      appContainer,
+      '.wave-prep-screen__confirm',
+      'wave prep confirm button',
+    );
+    expect(wavePrepConfirmButton.disabled).toBe(false);
+    wavePrepConfirmButton.click();
+
+    expect(startNextWaveSpy).toHaveBeenCalledTimes(1);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(2);
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsAfterPrepare);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(factoryCallsAfterPrepare);
+
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(engine.getSnapshot().waveIndex).toBe(1);
+    expect(livingEnemyClassIds(engine)).toEqual(expectedWave1ClassIds);
+    expect(livingEnemyClassIds(engine)).not.toEqual(expectedWave2ClassIds);
+    expect(session.getOperationAcquiredPassiveIds(0)).toEqual([selectedPassiveId]);
+    expect(session.getOperationUnspentResource()).toBe(
+      unspentBeforeAcquire - selectedPassiveCost,
+    );
+
+    const checkpointAfterConfirm = session.getOperationCheckpoint();
+    if (checkpointAfterConfirm === null) {
+      throw new Error('operation checkpoint is null after WavePrep confirm');
+    }
+    expect(checkpointAfterConfirm.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(checkpointAfterConfirm.source)).toEqual(['kind']);
+    expect(checkpointAfterConfirm.currentWaveIndex).toBe(1);
+    expect(checkpointAfterConfirm.acquiredOperationPassives).toEqual([
+      { slotIndex: 0, passiveIds: [selectedPassiveId] },
+    ]);
+    expect(checkpointAfterConfirm.unspentResource).toBe(
+      unspentBeforeAcquire - selectedPassiveCost,
+    );
+    expect(checkpointAfterConfirm.lastResourceGrantClearedWaveCount).toBe(1);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
+    for (let slotIndex = 1; slotIndex < 4; slotIndex += 1) {
+      expect(session.getOperationAcquiredPassiveIds(slotIndex)).toEqual([]);
+    }
+    expect(session.getSaveState()).toEqual(saveBefore);
+    expect(sortieSpy).not.toHaveBeenCalled();
+    expect(session.getOperationResult()).toBeNull();
+    expect(session.shouldShowVictoryResult()).toBe(false);
+    expect(restartSpy).not.toHaveBeenCalled();
+    expect(startSpy).toHaveBeenCalled();
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(provider()).toBe(snapshot.waves);
+  });
 });
