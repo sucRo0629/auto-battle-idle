@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import classesJson from '../../data/classes.json';
 import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
@@ -10,6 +10,11 @@ import problemSeriesCatalogJson from '../../data/problem-series-catalog.json';
 import type { ActiveSkillDef, CombatModuleDef, GameData, PassiveSkillDef } from '../battle/types.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
+import { createProblemSeriesOperationStartSnapshot } from '../battle/problemSeries/operationStartSnapshot.ts';
+import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
+import { resolveProblemSeriesFromSeed } from '../battle/problemSeries/seedResolve.ts';
+import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
+import type { ProblemSeriesOperationStartSnapshot } from '../battle/problemSeries/operationStartSnapshot.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import { STAGE_FIRST_PLAY_GUIDANCE_CLASS } from '../ui/stageDetailDom.ts';
 
@@ -57,6 +62,10 @@ function loadDemoGameDataForTest(): GameData {
 }
 
 describe('StageSelectionScreenHost', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('syncs selected stage from getCurrentStageId on show', () => {
     const gameData = loadDemoGameDataForTest();
     const host = document.createElement('div');
@@ -298,6 +307,7 @@ describe('StageSelectionScreenHost', () => {
 
     expect(host.querySelector('.stage-selection-fixed-host')).toBeNull();
     expect(host.querySelector('.problem-series-entry-screen-host')).toBeNull();
+    expect(host.querySelector('.problem-series-overview-screen-host')).toBeNull();
     expect(host.querySelector('p')?.textContent).toBe('existing-host-child');
     expect(onOpenMainOperation.mock.calls.length).toBe(
       callbackCountsBeforeDestroy.onOpenMainOperation,
@@ -310,5 +320,186 @@ describe('StageSelectionScreenHost', () => {
     omissionScreenHost.destroy();
     host.remove();
     omissionHost.remove();
+  });
+
+  it('wires fixedStages → mainEntry → prepare → mainOverview → back → re-prepare → confirm (R12m unit2K4)', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const resolveSpy = vi.spyOn(seedResolveModule, 'resolveProblemSeriesFromSeed');
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    let preparedSnapshot: ProblemSeriesOperationStartSnapshot | null = null;
+
+    const onSortie = vi.fn();
+    const onOpenMainOperation = vi.fn();
+    const onPrepareMainOperation = vi.fn((normalizedSeed: string) => {
+      const resolved = resolveProblemSeriesFromSeed(
+        gameData.problemSeriesCatalog,
+        normalizedSeed,
+      );
+      preparedSnapshot = createProblemSeriesOperationStartSnapshot(resolved);
+    });
+    const getPreparedProblemSeriesOperationStartSnapshot = vi.fn(
+      () => preparedSnapshot,
+    );
+    const onBackFromMainOperationOverview = vi.fn(() => {
+      preparedSnapshot = null;
+    });
+    const onConfirmMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_05',
+      onSortie,
+      onOpenMainOperation,
+      onPrepareMainOperation,
+      getPreparedProblemSeriesOperationStartSnapshot,
+      onBackFromMainOperationOverview,
+      onConfirmMainOperation,
+    });
+
+    const fixedChild = host.querySelector('.stage-selection-fixed-host') as HTMLElement;
+    const entryChild = host.querySelector('.problem-series-entry-screen-host') as HTMLElement;
+    const overviewChild = host.querySelector(
+      '.problem-series-overview-screen-host',
+    ) as HTMLElement;
+
+    // 1. fixedStages → mainEntry
+    screenHost.show();
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+
+    const mainButton = host.querySelector<HTMLButtonElement>(
+      '.stage-selection-main-operation',
+    )!;
+    mainButton.click();
+
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+    expect(fixedChild.hidden).toBe(true);
+    expect(entryChild.hidden).toBe(false);
+    expect(overviewChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+
+    // 2–3. prepare → overview from getter snapshot
+    const seedInput = host.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    const prepareButton = host.querySelector(
+      '.problem-series-entry-prepare',
+    ) as HTMLButtonElement;
+
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(1);
+    expect(onPrepareMainOperation).toHaveBeenCalledWith(NORMALIZED_FIXTURE_SEED);
+    expect(getPreparedProblemSeriesOperationStartSnapshot).toHaveBeenCalledTimes(1);
+    expect(preparedSnapshot).not.toBeNull();
+
+    const resolveCallsAfterFirstPrepare = resolveSpy.mock.calls.length;
+    const factoryCallsAfterFirstPrepare = snapshotFactorySpy.mock.calls.length;
+    expect(resolveCallsAfterFirstPrepare).toBeGreaterThan(0);
+    expect(factoryCallsAfterFirstPrepare).toBeGreaterThan(0);
+
+    // 4–5. overview visible; fixed + entry panels absent
+    expect(fixedChild.hidden).toBe(true);
+    expect(entryChild.hidden).toBe(true);
+    expect(overviewChild.hidden).toBe(false);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(1);
+
+    const waveEls = host.querySelectorAll('.problem-series-overview-wave');
+    expect(waveEls).toHaveLength(3);
+
+    const groupEls = host.querySelectorAll('.problem-series-overview-enemy-group');
+    expect(groupEls.length).toBeGreaterThan(0);
+
+    // 6. Host did not re-run resolver/factory beyond prepare callback
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsAfterFirstPrepare);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(factoryCallsAfterFirstPrepare);
+
+    // 7–10. overview back → seed entry (not fixed stages)
+    const overviewBackButton = host.querySelector<HTMLButtonElement>(
+      '.problem-series-overview-back',
+    )!;
+    overviewBackButton.click();
+
+    expect(onBackFromMainOperationOverview).toHaveBeenCalledTimes(1);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(1);
+    expect(fixedChild.hidden).toBe(true);
+    expect(entryChild.hidden).toBe(false);
+    expect(overviewChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsAfterFirstPrepare);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(factoryCallsAfterFirstPrepare);
+
+    // 11. re-prepare → overview → confirm
+    const seedInputAfterBack = host.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    const prepareButtonAfterBack = host.querySelector(
+      '.problem-series-entry-prepare',
+    ) as HTMLButtonElement;
+
+    seedInputAfterBack.value = NORMALIZED_FIXTURE_SEED;
+    seedInputAfterBack.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButtonAfterBack.click();
+
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(2);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(1);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+
+    const confirmButton = host.querySelector<HTMLButtonElement>(
+      '.problem-series-overview-confirm',
+    )!;
+    confirmButton.click();
+
+    expect(onConfirmMainOperation).toHaveBeenCalledTimes(1);
+    expect(onSortie).toHaveBeenCalledTimes(0);
+
+    // 13–14. destroy ownership boundary
+    const existingChild = document.createElement('p');
+    existingChild.textContent = 'existing-host-child-2k4';
+    host.insertBefore(existingChild, host.firstChild);
+
+    const callbackCountsBeforeDestroy = {
+      onOpenMainOperation: onOpenMainOperation.mock.calls.length,
+      onPrepareMainOperation: onPrepareMainOperation.mock.calls.length,
+      onBackFromMainOperationOverview: onBackFromMainOperationOverview.mock.calls.length,
+      onConfirmMainOperation: onConfirmMainOperation.mock.calls.length,
+      onSortie: onSortie.mock.calls.length,
+    };
+
+    screenHost.destroy();
+
+    expect(host.querySelector('.stage-selection-fixed-host')).toBeNull();
+    expect(host.querySelector('.problem-series-entry-screen-host')).toBeNull();
+    expect(host.querySelector('.problem-series-overview-screen-host')).toBeNull();
+    expect(host.querySelector('p')?.textContent).toBe('existing-host-child-2k4');
+    expect(onOpenMainOperation.mock.calls.length).toBe(
+      callbackCountsBeforeDestroy.onOpenMainOperation,
+    );
+    expect(onPrepareMainOperation.mock.calls.length).toBe(
+      callbackCountsBeforeDestroy.onPrepareMainOperation,
+    );
+    expect(onBackFromMainOperationOverview.mock.calls.length).toBe(
+      callbackCountsBeforeDestroy.onBackFromMainOperationOverview,
+    );
+    expect(onConfirmMainOperation.mock.calls.length).toBe(
+      callbackCountsBeforeDestroy.onConfirmMainOperation,
+    );
+    expect(onSortie.mock.calls.length).toBe(callbackCountsBeforeDestroy.onSortie);
+
+    host.remove();
   });
 });
