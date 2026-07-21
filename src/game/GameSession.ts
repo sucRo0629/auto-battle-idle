@@ -329,6 +329,8 @@ export class GameSession {
           this.returnToStageSelectAfterProblemSeriesVictory(),
         onPrepareSameSeedProblemSeriesFromVictory: () =>
           this.prepareSameSeedProblemSeriesFromVictory(),
+        onOpenNewSeedProblemSeriesEntryFromVictory: () =>
+          this.openNewSeedProblemSeriesEntryFromVictory(),
         canUsePauseOperationRetry: () => this.canUsePauseOperationRetry(),
         canReturnToStageSelectFromPause: () =>
           this.canReturnToStageSelectFromPause(),

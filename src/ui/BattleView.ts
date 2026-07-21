@@ -121,6 +121,7 @@ export interface VerifyModeControls {
   onReturnToStageSelect?: () => boolean;
   onReturnToStageSelectAfterProblemSeriesVictory?: () => boolean;
   onPrepareSameSeedProblemSeriesFromVictory?: () => boolean;
+  onOpenNewSeedProblemSeriesEntryFromVictory?: () => boolean;
   /** Wave 戦闘中ポーズからリトライ 3 種を出せるか */
   canUsePauseOperationRetry?: () => boolean;
   canReturnToStageSelectFromPause?: () => boolean;
@@ -168,6 +169,7 @@ export class BattleView {
   private readonly victoryResultStageSelectButton: HTMLButtonElement;
   private readonly victoryResultProblemSeriesStageSelectButton: HTMLButtonElement;
   private readonly victoryResultSameSeedRestartButton: HTMLButtonElement;
+  private readonly victoryResultNewSeedRestartButton: HTMLButtonElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
@@ -482,6 +484,12 @@ export class BattleView {
       "同じseedで再開始",
       () =>
         this.verifyModeControls?.onPrepareSameSeedProblemSeriesFromVictory?.() ??
+        false,
+    );
+    this.victoryResultNewSeedRestartButton = createVictoryResultButton(
+      "新しいseedで開始",
+      () =>
+        this.verifyModeControls?.onOpenNewSeedProblemSeriesEntryFromVictory?.() ??
         false,
     );
     this.victoryResultProblemSeriesStageSelectButton = createVictoryResultButton(
@@ -986,6 +994,7 @@ export class BattleView {
         this.victoryResultRematchButton.hidden = true;
         this.victoryResultStageSelectButton.hidden = true;
         this.victoryResultSameSeedRestartButton.hidden = false;
+        this.victoryResultNewSeedRestartButton.hidden = false;
         this.victoryResultProblemSeriesStageSelectButton.hidden = false;
       } else if (showFixedStage && fixedStageResult) {
         this.victoryResultSummaryEl.textContent =
@@ -993,6 +1002,7 @@ export class BattleView {
         this.victoryResultRematchButton.hidden = false;
         this.victoryResultStageSelectButton.hidden = false;
         this.victoryResultSameSeedRestartButton.hidden = true;
+        this.victoryResultNewSeedRestartButton.hidden = true;
         this.victoryResultProblemSeriesStageSelectButton.hidden = true;
       }
       if (!this.battlePaused) {
@@ -1004,6 +1014,7 @@ export class BattleView {
       this.victoryResultRematchButton.hidden = false;
       this.victoryResultStageSelectButton.hidden = false;
       this.victoryResultSameSeedRestartButton.hidden = true;
+      this.victoryResultNewSeedRestartButton.hidden = true;
       this.victoryResultProblemSeriesStageSelectButton.hidden = true;
     }
     this.syncPauseOverlayVisibility();

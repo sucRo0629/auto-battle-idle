@@ -17,6 +17,8 @@
  * R12m Player 作業単位2M5: Wave 1 クリアから Wave 2 準備への production 回帰（パッシブ維持・grant加算）。
  *
  * R12m Player 作業単位2M6: Wave 2 準備確定から系列A Wave 2 戦闘への production 回帰。
+ *
+ * R12m Player 作業単位2P3: 問題系列最終勝利結果から新 seed 入力→異系列 3 Wave 概要への production 接続。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -38,9 +40,21 @@ import { GameSession } from './GameSession.ts';
 
 const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
 const SERIES_A_ID = 'r12m_series_a';
+const SERIES_B_ID = 'r12m_series_b';
 
 const RAW_FIXTURE_SEED = '  fixture-a  ';
 const NORMALIZED_FIXTURE_SEED = 'fixture-a';
+const RAW_FIXTURE_SEED_B = '  fixture-b  ';
+const NORMALIZED_FIXTURE_SEED_B = 'fixture-b';
+
+const FORBIDDEN_OVERVIEW_DOM_SUBSTRINGS = [
+  'internalProblemClass',
+  'expectedFailureModes',
+  'problemClassification',
+  'concentrated_pressure',
+  'scattered_pressure',
+  'concentrated_scattered_simultaneous_pressure',
+] as const;
 
 const INITIAL_DUMMY_ENEMY_CLASS_IDS = [
   'test_dummy',
@@ -2192,9 +2206,10 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(summary.textContent).not.toContain('stageId:');
 
     const visibleButtons = listVisibleVictoryResultButtons(appContainer);
-    expect(visibleButtons).toHaveLength(2);
+    expect(visibleButtons).toHaveLength(3);
     expect(visibleButtons.map((button) => button.textContent)).toEqual([
       '同じseedで再開始',
+      '新しいseedで開始',
       '作戦選択へ',
     ]);
     expect(
@@ -2426,12 +2441,18 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(overlayAfterVictory.getAttribute('aria-hidden')).toBe('false');
 
     const visibleButtons = listVisibleVictoryResultButtons(appContainer);
-    expect(visibleButtons).toHaveLength(2);
+    expect(visibleButtons).toHaveLength(3);
     const sameSeedButton = visibleButtons.find(
       (button) => button.textContent === '同じseedで再開始',
     );
     if (!sameSeedButton) {
       throw new Error('visible 同じseedで再開始 button missing');
+    }
+    const newSeedButton = visibleButtons.find(
+      (button) => button.textContent === '新しいseedで開始',
+    );
+    if (!newSeedButton) {
+      throw new Error('visible 新しいseedで開始 button missing');
     }
     expect(visibleButtons.some((button) => button.textContent === '作戦選択へ')).toBe(
       true,
@@ -2519,6 +2540,307 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
 
     const saveAfterSameSeed = structuredClone(session.getSaveState());
     expect(saveAfterSameSeed).toEqual(saveBefore);
+    expect(computeExpSpy).toHaveBeenCalledTimes(0);
+    expect(applyRewardsSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('2P3: final Wave victory new-seed restart opens empty entry then fixture-b 3-wave overview via production click', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+    const victoryResultFactorySpy = vi.spyOn(
+      victoryResultModule,
+      'createProblemSeriesVictoryResult',
+    );
+    const computeExpSpy = vi.spyOn(stageProgressionModule, 'computeStageExpReward');
+    const applyRewardsSpy = vi.spyOn(victoryRewardsModule, 'applyVictoryRewards');
+
+    session = createSession();
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    const catalogGeneratorVersion = loaded.data.problemSeriesCatalog.generatorVersion;
+
+    const openNewSeedSpy = vi.spyOn(
+      session,
+      'openNewSeedProblemSeriesEntryFromVictory',
+    );
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    if (provider === undefined) {
+      throw new Error('BattleEngine resolved waves provider is missing');
+    }
+    const engineInternals = engine as unknown as {
+      spawnWaveEnemies: () => void;
+    };
+    const spawnWaveEnemiesSpy = vi.spyOn(engineInternals, 'spawnWaveEnemies');
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+
+    session.start();
+
+    const saveBefore = structuredClone(session.getSaveState());
+
+    const container = getStageSelectContainer(session);
+    requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    ).click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    ).click();
+
+    const oldSnapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (oldSnapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+    expect(oldSnapshot.seriesId).toBe(SERIES_A_ID);
+
+    requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    ).click();
+
+    const appContainer = getGameAppContainer();
+    requireButton(
+      appContainer,
+      '.skill-menu-return-to-battle-button',
+      'formation confirm button',
+    ).click();
+
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(1);
+    expect(session.getCurrentScreen()).toBe('battle');
+
+    waitForEngagedViaSession(session, engine);
+    advanceSessionToWavePrepAfterKill(session, engine, spawnWaveEnemiesSpy);
+    requireButton(
+      appContainer,
+      '.wave-prep-screen__confirm',
+      'Wave 1 prep confirm button',
+    ).click();
+
+    expect(startNextWaveSpy).toHaveBeenCalledTimes(1);
+    waitForEngagedViaSession(session, engine);
+    advanceSessionToWavePrepAfterKill(session, engine, spawnWaveEnemiesSpy);
+    requireButton(
+      appContainer,
+      '.wave-prep-screen__confirm',
+      'Wave 2 prep confirm button',
+    ).click();
+
+    expect(startNextWaveSpy).toHaveBeenCalledTimes(2);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(3);
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(engine.getSnapshot().waveIndex).toBe(2);
+    expect(engine.getSnapshot().phase).not.toBe('victory');
+    expect(engine.getSnapshot().awaitingNextWave).toBe(false);
+    expect(livingEnemyCount(engine)).toBeGreaterThan(0);
+
+    killAllEnemies(engine);
+    for (let i = 0; i < MAX_WAVE_PREP_TICKS; i++) {
+      tickSession(session, 1);
+      if (engine.getSnapshot().phase === 'victory') {
+        break;
+      }
+      if (engine.getSnapshot().phase === 'defeat') {
+        throw new Error('battle ended in defeat instead of final victory');
+      }
+    }
+
+    expect(engine.getSnapshot().phase).toBe('victory');
+    expect(engine.getSnapshot().waveIndex).toBe(2);
+    expect(livingEnemyCount(engine)).toBe(0);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+
+    const problemSeriesResult = session.getProblemSeriesVictoryResult();
+    if (problemSeriesResult === null) {
+      throw new Error('problem series victory result is null after final victory');
+    }
+    expect(problemSeriesResult).toEqual({
+      outcome: 'victory',
+      seed: NORMALIZED_FIXTURE_SEED,
+      generatorVersion: oldSnapshot.generatorVersion,
+      seriesId: oldSnapshot.seriesId,
+      reachedWaveIndex: 2,
+    });
+    expect(problemSeriesResult.seriesId).toBe(SERIES_A_ID);
+    expect(session.getOperationResult()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(true);
+    expect(session.shouldShowVictoryResult()).toBe(false);
+    expect(provider()).toBeNull();
+    expect(victoryResultFactorySpy).toHaveBeenCalledTimes(1);
+
+    expectVictoryOverlayVisuallyVisible(appContainer);
+    const overlayAfterVictory = requireElement<HTMLElement>(
+      appContainer,
+      '.battle-victory-result-overlay',
+      'victory result overlay',
+    );
+    expect(overlayAfterVictory.getAttribute('aria-hidden')).toBe('false');
+
+    const visibleButtons = listVisibleVictoryResultButtons(appContainer);
+    expect(visibleButtons).toHaveLength(3);
+    expect(visibleButtons.map((button) => button.textContent)).toEqual([
+      '同じseedで再開始',
+      '新しいseedで開始',
+      '作戦選択へ',
+    ]);
+    const newSeedButton = visibleButtons.find(
+      (button) => button.textContent === '新しいseedで開始',
+    );
+    if (!newSeedButton) {
+      throw new Error('visible 新しいseedで開始 button missing');
+    }
+    expect(
+      [...appContainer.querySelectorAll<HTMLButtonElement>('.battle-victory-result-button')]
+        .some((button) => button.textContent === '同じステージで再戦' && !button.hidden),
+    ).toBe(false);
+    expect(
+      [...appContainer.querySelectorAll<HTMLButtonElement>('.battle-victory-result-button')]
+        .some((button) => button.textContent === 'ステージ選択へ' && !button.hidden),
+    ).toBe(false);
+
+    const resolveCallsBeforeNewSeed = resolveSpy.mock.calls.length;
+    const snapshotFactoryCallsBeforeNewSeed = snapshotFactorySpy.mock.calls.length;
+    const victoryFactoryCallsBeforeNewSeed = victoryResultFactorySpy.mock.calls.length;
+    const restartCallsBeforeNewSeed = restartSpy.mock.calls.length;
+    const restartAtWaveCallsBeforeNewSeed = restartAtWaveSpy.mock.calls.length;
+    const spawnCallsBeforeNewSeed = spawnWaveEnemiesSpy.mock.calls.length;
+
+    newSeedButton.click();
+
+    expect(openNewSeedSpy).toHaveBeenCalledTimes(1);
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.hasActiveOperation()).toBe(false);
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(false);
+    expect(session.shouldShowVictoryResult()).toBe(false);
+    expectVictoryOverlayVisuallyHidden(appContainer);
+    expect(overlayAfterVictory.getAttribute('aria-hidden')).toBe('true');
+    expect(appContainer.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+    expect(appContainer.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+    expect(appContainer.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+
+    const seedInputAfterNewSeed = requireInput(
+      appContainer,
+      '.problem-series-entry-seed-input',
+      'seed input after new seed restart',
+    );
+    const prepareButtonAfterNewSeed = requireButton(
+      appContainer,
+      '.problem-series-entry-prepare',
+      'prepare button after new seed restart',
+    );
+    expect(seedInputAfterNewSeed.value).toBe('');
+    expect(seedInputAfterNewSeed.value).not.toContain(NORMALIZED_FIXTURE_SEED);
+    expect(prepareButtonAfterNewSeed.disabled).toBe(true);
+
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsBeforeNewSeed);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(snapshotFactoryCallsBeforeNewSeed);
+    expect(victoryResultFactorySpy.mock.calls.length).toBe(victoryFactoryCallsBeforeNewSeed);
+    expect(restartSpy.mock.calls.length).toBe(restartCallsBeforeNewSeed);
+    expect(restartAtWaveSpy.mock.calls.length).toBe(restartAtWaveCallsBeforeNewSeed);
+    expect(spawnWaveEnemiesSpy.mock.calls.length).toBe(spawnCallsBeforeNewSeed);
+
+    const saveAfterNewSeed = structuredClone(session.getSaveState());
+    expect(saveAfterNewSeed).toEqual(saveBefore);
+    expect(computeExpSpy).toHaveBeenCalledTimes(0);
+    expect(applyRewardsSpy).toHaveBeenCalledTimes(0);
+
+    seedInputAfterNewSeed.value = RAW_FIXTURE_SEED_B;
+    seedInputAfterNewSeed.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(prepareButtonAfterNewSeed.disabled).toBe(false);
+    expect(prepareButtonAfterNewSeed.textContent).toBe('新しい作戦');
+
+    const resolveCallsBeforePrepareB = resolveSpy.mock.calls.length;
+    const snapshotFactoryCallsBeforePrepareB = snapshotFactorySpy.mock.calls.length;
+    const victoryFactoryCallsBeforePrepareB = victoryResultFactorySpy.mock.calls.length;
+    const restartCallsBeforePrepareB = restartSpy.mock.calls.length;
+    const spawnCallsBeforePrepareB = spawnWaveEnemiesSpy.mock.calls.length;
+
+    prepareButtonAfterNewSeed.click();
+
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsBeforePrepareB + 1);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(
+      snapshotFactoryCallsBeforePrepareB + 1,
+    );
+    expect(victoryResultFactorySpy.mock.calls.length).toBe(
+      victoryFactoryCallsBeforePrepareB,
+    );
+
+    const newSnapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (newSnapshot === null) {
+      throw new Error('prepared snapshot is null after fixture-b prepare');
+    }
+    expect(newSnapshot).not.toBe(oldSnapshot);
+    expect(newSnapshot.seed).toBe(NORMALIZED_FIXTURE_SEED_B);
+    expect(newSnapshot.seriesId).toBe(SERIES_B_ID);
+    expect(newSnapshot.seriesId).not.toBe(oldSnapshot.seriesId);
+    expect(newSnapshot.generatorVersion).toBe(catalogGeneratorVersion);
+    expect(newSnapshot.waves).toHaveLength(3);
+
+    expect(appContainer.querySelectorAll('.problem-series-overview-panel')).toHaveLength(1);
+    expect(appContainer.querySelectorAll('.problem-series-overview-wave')).toHaveLength(3);
+    expect(appContainer.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(appContainer.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+
+    const overviewSeedEl = appContainer.querySelector('.problem-series-overview-seed');
+    if (overviewSeedEl === null) {
+      throw new Error('overview seed element missing after fixture-b prepare');
+    }
+    expect(overviewSeedEl.textContent).toContain(NORMALIZED_FIXTURE_SEED_B);
+
+    const overviewPanel = requireElement<HTMLElement>(
+      appContainer,
+      '.problem-series-overview-panel',
+      'overview panel after fixture-b prepare',
+    );
+    const overviewText = overviewPanel.textContent ?? '';
+    for (const forbidden of FORBIDDEN_OVERVIEW_DOM_SUBSTRINGS) {
+      expect(overviewText).not.toContain(forbidden);
+    }
+
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.hasActiveOperation()).toBe(false);
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(appContainer.querySelector('.game-shell__formation')?.hidden).toBe(true);
+    expect(appContainer.querySelector('.game-shell__battle')?.hidden).toBe(true);
+
+    expect(restartSpy.mock.calls.length).toBe(restartCallsBeforePrepareB);
+    expect(spawnWaveEnemiesSpy.mock.calls.length).toBe(spawnCallsBeforePrepareB);
+
+    const saveAfterPrepareB = structuredClone(session.getSaveState());
+    expect(saveAfterPrepareB).toEqual(saveBefore);
     expect(computeExpSpy).toHaveBeenCalledTimes(0);
     expect(applyRewardsSpy).toHaveBeenCalledTimes(0);
   });
