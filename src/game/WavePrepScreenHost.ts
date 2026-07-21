@@ -15,11 +15,16 @@ import {
   createOperationPassivePrepSection,
 } from '../ui/operationPassivePrepDisplay.ts';
 import type { OperationStateReadonlyView } from './OperationState.ts';
+import { ProblemSeriesWavePrepDisclosurePanel } from '../ui/ProblemSeriesWavePrepDisclosurePanel.ts';
+import type { ProblemSeriesWavePrepDisclosureDisplay } from '../ui/problemSeriesWavePrepDisclosureViewModel.ts';
 import '../styles/wave-prep-screen.css';
 import '../styles/operation-prep-panels.css';
 
 export interface WavePrepScreenHostCallbacks {
   getOperationView: () => OperationStateReadonlyView | null;
+  getProblemSeriesDisclosureDisplay?: (
+    () => ProblemSeriesWavePrepDisclosureDisplay | null
+  );
   /** problemSeries: snapshot.allowedClassIds。fixedStage: undefined（unlockedClassIds を使用）。 */
   getAllowedClassIds?: () => readonly ClassId[] | undefined;
   getUnlockedClassIds: () => ClassId[];
@@ -52,6 +57,10 @@ export class WavePrepScreenHost {
   private slotsHost: HTMLElement | null = null;
   private stickyFooter: HTMLElement | null = null;
   private retrySection: HTMLElement | null = null;
+  private problemSeriesDisclosureHost: HTMLElement | null = null;
+  private problemSeriesDisclosurePanel:
+    | ProblemSeriesWavePrepDisclosurePanel
+    | null = null;
 
   constructor(
     private readonly host: HTMLElement,
@@ -74,6 +83,7 @@ export class WavePrepScreenHost {
   refresh(): void {
     if (!this.root || !this.slotsHost) return;
     const view = this.callbacks.getOperationView();
+    this.refreshProblemSeriesDisclosurePanel(view);
     if (!view) {
       this.statusEl!.textContent = '作戦データなし';
       this.resourceEl!.textContent = '';
@@ -98,6 +108,8 @@ export class WavePrepScreenHost {
   }
 
   destroy(): void {
+    this.problemSeriesDisclosurePanel?.destroy();
+    this.problemSeriesDisclosurePanel = null;
     this.root?.remove();
     this.root = null;
     this.statusEl = null;
@@ -105,6 +117,7 @@ export class WavePrepScreenHost {
     this.slotsHost = null;
     this.stickyFooter = null;
     this.retrySection = null;
+    this.problemSeriesDisclosureHost = null;
   }
 
   private build(): void {
@@ -125,6 +138,10 @@ export class WavePrepScreenHost {
     this.resourceEl.className = 'wave-prep-screen__resource';
 
     stickyHeader.append(title, this.statusEl, this.resourceEl);
+
+    this.problemSeriesDisclosureHost = document.createElement('div');
+    this.problemSeriesDisclosureHost.className =
+      'wave-prep-screen__problem-series-disclosure';
 
     this.slotsHost = document.createElement('div');
     this.slotsHost.className = 'wave-prep-screen__slots';
@@ -162,8 +179,40 @@ export class WavePrepScreenHost {
       this.retrySection,
     );
 
-    this.root.append(stickyHeader, this.slotsHost, this.stickyFooter);
+    this.root.append(
+      stickyHeader,
+      this.problemSeriesDisclosureHost,
+      this.slotsHost,
+      this.stickyFooter,
+    );
     this.host.replaceChildren(this.root);
+  }
+
+  private refreshProblemSeriesDisclosurePanel(
+    view: OperationStateReadonlyView | null,
+  ): void {
+    this.problemSeriesDisclosurePanel?.destroy();
+    this.problemSeriesDisclosurePanel = null;
+
+    if (!this.problemSeriesDisclosureHost) {
+      return;
+    }
+
+    if (!view) {
+      this.problemSeriesDisclosureHost.replaceChildren();
+      return;
+    }
+
+    const display = this.callbacks.getProblemSeriesDisclosureDisplay?.() ?? null;
+    if (display === null) {
+      this.problemSeriesDisclosureHost.replaceChildren();
+      return;
+    }
+
+    this.problemSeriesDisclosurePanel = new ProblemSeriesWavePrepDisclosurePanel(
+      this.problemSeriesDisclosureHost,
+      display,
+    );
   }
 
   private createRetrySection(): HTMLElement {
