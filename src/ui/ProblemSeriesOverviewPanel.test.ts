@@ -5,6 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { ProblemSeriesOverviewPanel } from './ProblemSeriesOverviewPanel.ts';
 import type { ProblemSeriesOverviewDisplay } from './problemSeriesOverviewViewModel.ts';
 
+type DeepMutable<T> =
+  T extends readonly (infer Item)[]
+    ? DeepMutable<Item>[]
+    : T extends object
+      ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
+      : T;
+
 const R12M_ALLOWED_CLASS_IDS = [
   'df_guardian',
   'at_swordsman',
@@ -12,16 +19,26 @@ const R12M_ALLOWED_CLASS_IDS = [
   'sp_cleric',
 ] as const;
 
+const WAVE_ADJUSTMENT_NOTE_TEXT =
+  'Wave間準備では、編成・CombatModule・作戦内パッシブを変更できます。';
+
 const FORBIDDEN_DOM_SUBSTRINGS = [
   'r12m_series_a',
   'r12m-v1',
+  'seriesId',
+  'generatorVersion',
   'internalProblemClass',
   'expectedFailureModes',
   'connection',
   'operationConditions',
+  'waveRelationSummary',
+  'finalWaveCompositeOf',
   'single_protection',
   '推奨編成',
   '推奨撃破順',
+  '撃破順',
+  '勝率',
+  '正解説明',
 ] as const;
 
 const FORBIDDEN_FIXTURE_SUBSTRINGS = [
@@ -139,6 +156,58 @@ function assertNonDisclosure(root: HTMLElement): void {
   }
 }
 
+function assertElementPrecedes(
+  root: ParentNode,
+  earlierSelector: string,
+  laterSelector: string,
+): void {
+  const earlierEls = root.querySelectorAll(earlierSelector);
+  const laterEls = root.querySelectorAll(laterSelector);
+  expect(earlierEls).toHaveLength(1);
+  expect(laterEls).toHaveLength(1);
+  const earlier = earlierEls[0]!;
+  const later = laterEls[0]!;
+  expect(
+    earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+}
+
+function assertEmptyOperationConditionsDom(root: ParentNode): void {
+  const conditionsSections = root.querySelectorAll('.problem-series-overview-conditions');
+  expect(conditionsSections).toHaveLength(1);
+  const conditionsSection = conditionsSections[0]!;
+
+  expect(conditionsSection.querySelector('h2')?.textContent).toBe('作戦固有条件');
+
+  const emptyEls = conditionsSection.querySelectorAll(
+    '.problem-series-overview-conditions-empty',
+  );
+  expect(emptyEls).toHaveLength(1);
+  expect(emptyEls[0]?.textContent).toBe('なし');
+
+  const conditionEls = conditionsSection.querySelectorAll(
+    '.problem-series-overview-condition',
+  );
+  expect(conditionEls).toHaveLength(0);
+
+  const waveAdjustmentNotes = root.querySelectorAll(
+    '.problem-series-overview-wave-adjustment-note',
+  );
+  expect(waveAdjustmentNotes).toHaveLength(1);
+  expect(waveAdjustmentNotes[0]?.textContent).toBe(WAVE_ADJUSTMENT_NOTE_TEXT);
+
+  assertElementPrecedes(
+    root,
+    '.problem-series-overview-conditions',
+    '.problem-series-overview-waves',
+  );
+  assertElementPrecedes(
+    root,
+    '.problem-series-overview-wave-adjustment-note',
+    '.problem-series-overview-waves',
+  );
+}
+
 describe('ProblemSeriesOverviewPanel', () => {
   it('renders all 3 waves with seed, grants, enemy groups, and scale display', () => {
     const fixture = createThreeWaveFixture();
@@ -212,6 +281,7 @@ describe('ProblemSeriesOverviewPanel', () => {
     }
 
     assertNonDisclosure(root);
+    assertEmptyOperationConditionsDom(root);
     expect(fixture).toEqual(fixtureBefore);
 
     panel.destroy();
@@ -270,5 +340,63 @@ describe('ProblemSeriesOverviewPanel', () => {
     confirmButton.click();
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ProblemSeriesOverviewPanel (focused: non-empty operationConditions)', () => {
+  it('renders each condition in order without なし or empty element', () => {
+    const baseFixture = createThreeWaveFixture();
+    const fixture: DeepMutable<ProblemSeriesOverviewDisplay> =
+      structuredClone(baseFixture);
+
+    fixture.operationConditions = ['condition one', 'condition two'];
+    const fixtureBefore = structuredClone(fixture);
+    assertFixtureUsesOnlyR12mClasses(fixture);
+
+    const host = document.createElement('div');
+    const panel = new ProblemSeriesOverviewPanel(host, fixture);
+    const roots = host.querySelectorAll('.problem-series-overview-panel');
+    expect(roots).toHaveLength(1);
+    const root = roots[0]!;
+
+    const conditionsSections = root.querySelectorAll(
+      '.problem-series-overview-conditions',
+    );
+    expect(conditionsSections).toHaveLength(1);
+    const conditionsSection = conditionsSections[0]!;
+    const conditionEls = conditionsSection.querySelectorAll(
+      '.problem-series-overview-condition',
+    );
+    expect(conditionEls).toHaveLength(2);
+    expect(conditionEls[0]?.textContent).toBe('condition one');
+    expect(conditionEls[1]?.textContent).toBe('condition two');
+
+    expect(
+      conditionsSection.querySelectorAll('.problem-series-overview-conditions-empty'),
+    ).toHaveLength(0);
+    expect(conditionsSection.textContent).not.toContain('なし');
+
+    const waveAdjustmentNotes = root.querySelectorAll(
+      '.problem-series-overview-wave-adjustment-note',
+    );
+    expect(waveAdjustmentNotes).toHaveLength(1);
+    expect(waveAdjustmentNotes[0]?.textContent).toBe(WAVE_ADJUSTMENT_NOTE_TEXT);
+
+    assertElementPrecedes(
+      root,
+      '.problem-series-overview-conditions',
+      '.problem-series-overview-waves',
+    );
+    assertElementPrecedes(
+      root,
+      '.problem-series-overview-wave-adjustment-note',
+      '.problem-series-overview-waves',
+    );
+
+    assertNonDisclosure(root);
+    expect(fixture).toEqual(fixtureBefore);
+    expect(baseFixture.operationConditions).toEqual([]);
+
+    panel.destroy();
   });
 });

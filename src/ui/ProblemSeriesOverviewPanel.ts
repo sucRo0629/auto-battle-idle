@@ -25,6 +25,14 @@ export class ProblemSeriesOverviewPanel {
     seedEl.textContent = `seed: ${display.seed}`;
     this.root.appendChild(seedEl);
 
+    this.root.appendChild(this.createConditionsSection(display.operationConditions));
+
+    const waveAdjustmentNote = document.createElement('div');
+    waveAdjustmentNote.className = 'problem-series-overview-wave-adjustment-note';
+    waveAdjustmentNote.textContent =
+      'Wave間準備では、編成・CombatModule・作戦内パッシブを変更できます。';
+    this.root.appendChild(waveAdjustmentNote);
+
     const wavesEl = document.createElement('div');
     wavesEl.className = 'problem-series-overview-waves';
 
@@ -98,6 +106,33 @@ export class ProblemSeriesOverviewPanel {
     this.root.appendChild(actions);
 
     host.appendChild(this.root);
+  }
+
+  private createConditionsSection(
+    operationConditions: readonly string[],
+  ): HTMLElement {
+    const section = document.createElement('section');
+    section.className = 'problem-series-overview-conditions';
+
+    const heading = document.createElement('h2');
+    heading.textContent = '作戦固有条件';
+    section.appendChild(heading);
+
+    if (operationConditions.length === 0) {
+      const emptyEl = document.createElement('div');
+      emptyEl.className = 'problem-series-overview-conditions-empty';
+      emptyEl.textContent = 'なし';
+      section.appendChild(emptyEl);
+    } else {
+      for (const condition of operationConditions) {
+        const conditionEl = document.createElement('div');
+        conditionEl.className = 'problem-series-overview-condition';
+        conditionEl.textContent = condition;
+        section.appendChild(conditionEl);
+      }
+    }
+
+    return section;
   }
 
   destroy(): void {

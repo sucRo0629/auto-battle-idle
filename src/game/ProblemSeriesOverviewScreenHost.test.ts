@@ -14,6 +14,8 @@ import { ProblemSeriesOverviewScreenHost } from './ProblemSeriesOverviewScreenHo
 
 const FIXTURE_SEED_A = 'fixture-a';
 const SERIES_A_ID = 'r12m_series_a';
+const WAVE_ADJUSTMENT_NOTE_TEXT =
+  'Wave間準備では、編成・CombatModule・作戦内パッシブを変更できます。';
 
 function totalEnemyGroupCount(
   waves: readonly { enemyGroups: readonly unknown[] }[],
@@ -66,6 +68,7 @@ describe('ProblemSeriesOverviewScreenHost (R12m Player unit2I1)', () => {
     const snapshot = createProblemSeriesOperationStartSnapshot(result);
     expect(snapshot.seriesId).toBe(SERIES_A_ID);
     expect(snapshot.waves).toHaveLength(3);
+    expect(snapshot.operationConditions).toEqual([]);
 
     const totalSnapshotGroups = totalEnemyGroupCount(snapshot.waves);
     expect(totalSnapshotGroups).toBeGreaterThan(0);
@@ -109,6 +112,30 @@ describe('ProblemSeriesOverviewScreenHost (R12m Player unit2I1)', () => {
 
     const panelRoots = host.querySelectorAll('.problem-series-overview-panel');
     expect(panelRoots).toHaveLength(1);
+    const panelRoot = panelRoots[0]!;
+
+    const conditionsSections = panelRoot.querySelectorAll(
+      '.problem-series-overview-conditions',
+    );
+    expect(conditionsSections).toHaveLength(1);
+    const conditionsSection = conditionsSections[0]!;
+    expect(conditionsSection.querySelector('h2')?.textContent).toBe('作戦固有条件');
+    expect(
+      conditionsSection.querySelectorAll('.problem-series-overview-conditions-empty'),
+    ).toHaveLength(1);
+    expect(
+      conditionsSection.querySelector('.problem-series-overview-conditions-empty')
+        ?.textContent,
+    ).toBe('なし');
+    expect(
+      conditionsSection.querySelectorAll('.problem-series-overview-condition'),
+    ).toHaveLength(0);
+
+    const waveAdjustmentNotes = panelRoot.querySelectorAll(
+      '.problem-series-overview-wave-adjustment-note',
+    );
+    expect(waveAdjustmentNotes).toHaveLength(1);
+    expect(waveAdjustmentNotes[0]?.textContent).toBe(WAVE_ADJUSTMENT_NOTE_TEXT);
 
     const waveEls = host.querySelectorAll('.problem-series-overview-wave');
     expect(waveEls).toHaveLength(3);
@@ -167,6 +194,119 @@ describe('ProblemSeriesOverviewScreenHost (R12m Player unit2I1)', () => {
     expect(onBack.mock.calls.length).toBe(onBackBeforeDestroy);
     expect(onConfirm.mock.calls.length).toBe(onConfirmBeforeDestroy);
 
+    host.remove();
+  });
+
+  it('fixture-a production resolver: non-empty operationConditions reach overview DOM', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    expect(loaded.data.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+
+    const gameData = loaded.data;
+    const catalog = gameData.problemSeriesCatalog;
+    const result = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_A);
+    expect(result.series.seriesId).toBe(SERIES_A_ID);
+
+    const operationConditions = ['condition one', 'condition two'];
+    const resultWithConditions = {
+      ...result,
+      series: {
+        ...result.series,
+        operationConditions,
+      },
+    };
+
+    const snapshot = createProblemSeriesOperationStartSnapshot(resultWithConditions);
+    expect(snapshot.seriesId).toBe(SERIES_A_ID);
+    expect(snapshot.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
+    expect(snapshot.waves).toHaveLength(3);
+
+    const totalSnapshotGroups = totalEnemyGroupCount(snapshot.waves);
+    expect(totalSnapshotGroups).toBeGreaterThan(0);
+
+    const snapshotBefore = structuredClone(snapshot);
+    const snapshotConditionsRef = snapshot.operationConditions;
+
+    const resolveSpy = vi.spyOn(seedResolveModule, 'resolveProblemSeriesFromSeed');
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+    resolveSpy.mockClear();
+    snapshotFactorySpy.mockClear();
+
+    const host = document.createElement('div');
+    host.hidden = true;
+    document.body.appendChild(host);
+
+    const getPreparedSnapshot = vi.fn(() => snapshot);
+    const screenHost = new ProblemSeriesOverviewScreenHost(host, gameData, {
+      getPreparedSnapshot,
+      onBack: vi.fn(),
+      onConfirm: vi.fn(),
+    });
+
+    screenHost.show();
+
+    expect(getPreparedSnapshot).toHaveBeenCalledTimes(1);
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(snapshotFactorySpy).not.toHaveBeenCalled();
+
+    const panelRoots = host.querySelectorAll(
+      '.problem-series-overview-panel',
+    );
+    expect(panelRoots).toHaveLength(1);
+    const panelRoot = panelRoots[0]!;
+
+    const conditionsSections = panelRoot.querySelectorAll(
+      '.problem-series-overview-conditions',
+    );
+    expect(conditionsSections).toHaveLength(1);
+    const conditionsSection = conditionsSections[0]!;
+    const conditionEls = conditionsSection.querySelectorAll(
+      '.problem-series-overview-condition',
+    );
+    expect(conditionEls).toHaveLength(2);
+    expect(conditionEls[0]?.textContent).toBe('condition one');
+    expect(conditionEls[1]?.textContent).toBe('condition two');
+    expect(
+      conditionsSection.querySelectorAll('.problem-series-overview-conditions-empty'),
+    ).toHaveLength(0);
+    expect(conditionsSection.textContent).not.toContain('なし');
+
+    const waveAdjustmentNotes = panelRoot.querySelectorAll(
+      '.problem-series-overview-wave-adjustment-note',
+    );
+    expect(waveAdjustmentNotes).toHaveLength(1);
+    expect(waveAdjustmentNotes[0]?.textContent).toBe(WAVE_ADJUSTMENT_NOTE_TEXT);
+
+    const waveEls = host.querySelectorAll('.problem-series-overview-wave');
+    expect(waveEls).toHaveLength(3);
+
+    const groupEls = host.querySelectorAll('.problem-series-overview-enemy-group');
+    expect(groupEls.length).toBeGreaterThan(0);
+    expect(groupEls).toHaveLength(totalSnapshotGroups);
+
+    expect(snapshot).toEqual(snapshotBefore);
+    expect(snapshot.operationConditions).toBe(snapshotConditionsRef);
+    expect(snapshot.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
+
+    operationConditions.push('mutated');
+    resultWithConditions.series.operationConditions.push('mutated');
+    expect(snapshot.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
+
+    screenHost.destroy();
     host.remove();
   });
 
