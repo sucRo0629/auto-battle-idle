@@ -319,8 +319,14 @@ export class GameSession {
         onRestartOperationFromWaveZero: () => this.restartOperationFromWaveZero(),
         shouldShowVictoryResult: () => this.shouldShowVictoryResult(),
         getOperationResultForDisplay: () => this.getOperationResultForDisplay(),
+        shouldShowProblemSeriesVictoryResult: () =>
+          this.shouldShowProblemSeriesVictoryResult(),
+        getProblemSeriesVictoryResultForDisplay: () =>
+          this.getProblemSeriesVictoryResultForDisplay(),
         onRematchSameStage: () => this.rematchSameStageFromResult(),
         onReturnToStageSelect: () => this.returnToStageSelectAfterVictory(),
+        onReturnToStageSelectAfterProblemSeriesVictory: () =>
+          this.returnToStageSelectAfterProblemSeriesVictory(),
         canUsePauseOperationRetry: () => this.canUsePauseOperationRetry(),
         canReturnToStageSelectFromPause: () =>
           this.canReturnToStageSelectFromPause(),

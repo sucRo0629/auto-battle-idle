@@ -109,8 +109,17 @@ export interface VerifyModeControls {
     outcome: string;
     reachedWaveIndex: number;
   } | null;
+  shouldShowProblemSeriesVictoryResult?: () => boolean;
+  getProblemSeriesVictoryResultForDisplay?: () => {
+    outcome: 'victory';
+    seed: string;
+    generatorVersion: string;
+    seriesId: string;
+    reachedWaveIndex: number;
+  } | null;
   onRematchSameStage?: () => boolean;
   onReturnToStageSelect?: () => boolean;
+  onReturnToStageSelectAfterProblemSeriesVictory?: () => boolean;
   /** Wave 戦闘中ポーズからリトライ 3 種を出せるか */
   canUsePauseOperationRetry?: () => boolean;
   canReturnToStageSelectFromPause?: () => boolean;
@@ -154,6 +163,9 @@ export class BattleView {
   private readonly defeatRetryOverlayEl: HTMLElement;
   private readonly victoryResultOverlayEl: HTMLElement;
   private readonly victoryResultSummaryEl: HTMLElement;
+  private readonly victoryResultRematchButton: HTMLButtonElement;
+  private readonly victoryResultStageSelectButton: HTMLButtonElement;
+  private readonly victoryResultProblemSeriesStageSelectButton: HTMLButtonElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
@@ -439,29 +451,37 @@ export class BattleView {
     const victoryResultActions = document.createElement("div");
     victoryResultActions.className = "battle-victory-result-actions";
 
-    const victoryResultButtons: Array<{ text: string; run: () => boolean }> = [
-      {
-        text: "同じステージで再戦",
-        run: () => this.verifyModeControls?.onRematchSameStage?.() ?? false,
-      },
-      {
-        text: "ステージ選択へ",
-        run: () => this.verifyModeControls?.onReturnToStageSelect?.() ?? false,
-      },
-    ];
-
-    for (const action of victoryResultButtons) {
+    const createVictoryResultButton = (
+      text: string,
+      run: () => boolean,
+    ): HTMLButtonElement => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "battle-victory-result-button game-ui-button";
-      button.textContent = action.text;
+      button.textContent = text;
       button.addEventListener("click", () => {
-        if (action.run()) {
+        if (run()) {
           this.syncVictoryResultOverlay();
         }
       });
       victoryResultActions.appendChild(button);
-    }
+      return button;
+    };
+
+    this.victoryResultRematchButton = createVictoryResultButton(
+      "同じステージで再戦",
+      () => this.verifyModeControls?.onRematchSameStage?.() ?? false,
+    );
+    this.victoryResultStageSelectButton = createVictoryResultButton(
+      "ステージ選択へ",
+      () => this.verifyModeControls?.onReturnToStageSelect?.() ?? false,
+    );
+    this.victoryResultProblemSeriesStageSelectButton = createVictoryResultButton(
+      "作戦選択へ",
+      () =>
+        this.verifyModeControls?.onReturnToStageSelectAfterProblemSeriesVictory?.() ??
+        false,
+    );
 
     victoryResultPlate.appendChild(victoryResultActions);
     victoryResultOverlay.appendChild(victoryResultPlate);
@@ -903,7 +923,20 @@ export class BattleView {
   }
 
   private isVictoryResultVisible(): boolean {
+    return (
+      this.isFixedStageVictoryResultVisible() ||
+      this.isProblemSeriesVictoryResultVisible()
+    );
+  }
+
+  private isFixedStageVictoryResultVisible(): boolean {
     return this.verifyModeControls?.shouldShowVictoryResult?.() === true;
+  }
+
+  private isProblemSeriesVictoryResultVisible(): boolean {
+    return (
+      this.verifyModeControls?.shouldShowProblemSeriesVictoryResult?.() === true
+    );
   }
 
   private syncDefeatRetryOverlay(): void {
@@ -922,23 +955,45 @@ export class BattleView {
   }
 
   private syncVictoryResultOverlay(): void {
-    const result = this.verifyModeControls?.getOperationResultForDisplay?.() ?? null;
-    const visible =
-      result?.outcome === 'victory' && this.isVictoryResultVisible();
+    const fixedStageResult =
+      this.verifyModeControls?.getOperationResultForDisplay?.() ?? null;
+    const problemSeriesResult =
+      this.verifyModeControls?.getProblemSeriesVictoryResultForDisplay?.() ?? null;
+    const showFixedStage =
+      fixedStageResult?.outcome === 'victory' &&
+      this.isFixedStageVictoryResultVisible();
+    const showProblemSeries =
+      problemSeriesResult?.outcome === 'victory' &&
+      this.isProblemSeriesVictoryResultVisible();
+    const visible = showFixedStage || showProblemSeries;
     this.victoryResultOverlayEl.hidden = !visible;
     this.victoryResultOverlayEl.setAttribute(
       "aria-hidden",
       visible ? "false" : "true",
     );
     if (visible) {
-      this.victoryResultSummaryEl.textContent =
-        `outcome: ${result.outcome}\nstageId: ${result.stageId}\nreachedWaveIndex: ${result.reachedWaveIndex}`;
+      if (showProblemSeries && problemSeriesResult) {
+        this.victoryResultSummaryEl.textContent =
+          `outcome: ${problemSeriesResult.outcome}\nseed: ${problemSeriesResult.seed}\ngeneratorVersion: ${problemSeriesResult.generatorVersion}\nseriesId: ${problemSeriesResult.seriesId}\nreachedWaveIndex: ${problemSeriesResult.reachedWaveIndex}`;
+        this.victoryResultRematchButton.hidden = true;
+        this.victoryResultStageSelectButton.hidden = true;
+        this.victoryResultProblemSeriesStageSelectButton.hidden = false;
+      } else if (showFixedStage && fixedStageResult) {
+        this.victoryResultSummaryEl.textContent =
+          `outcome: ${fixedStageResult.outcome}\nstageId: ${fixedStageResult.stageId}\nreachedWaveIndex: ${fixedStageResult.reachedWaveIndex}`;
+        this.victoryResultRematchButton.hidden = false;
+        this.victoryResultStageSelectButton.hidden = false;
+        this.victoryResultProblemSeriesStageSelectButton.hidden = true;
+      }
       if (!this.battlePaused) {
         this.setBattlePaused(true);
         return;
       }
     } else {
       this.victoryResultSummaryEl.textContent = '';
+      this.victoryResultRematchButton.hidden = false;
+      this.victoryResultStageSelectButton.hidden = false;
+      this.victoryResultProblemSeriesStageSelectButton.hidden = true;
     }
     this.syncPauseOverlayVisibility();
     this.syncPauseChrome();

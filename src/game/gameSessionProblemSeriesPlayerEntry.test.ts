@@ -26,10 +26,14 @@ import {
 } from '../battle/test/battleFieldSpec.harness.ts';
 import { expandEnemyGroupsList } from '../battle/enemyGroupSpawn.ts';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
+import { expectVictoryOverlayVisuallyHidden, expectVictoryOverlayVisuallyVisible } from '../ui/battleResultOverlayTestUtils.ts';
 import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
 import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
+import * as victoryResultModule from '../battle/problemSeries/victoryResult.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
+import * as stageProgressionModule from '../progression/stageProgression.ts';
+import * as victoryRewardsModule from '../progression/victoryRewards.ts';
 import { GameSession } from './GameSession.ts';
 
 const PROBLEM_SERIES_SOURCE = { kind: 'problemSeries' } as const;
@@ -111,6 +115,10 @@ function livingEnemyClassIds(engine: BattleEngine): string[] {
     .enemies.filter((enemy) => enemy.hp > 0)
     .map((enemy) => enemy.classId)
     .filter((classId): classId is string => classId !== undefined);
+}
+
+function livingEnemyCount(engine: BattleEngine): number {
+  return engine.getSnapshot().enemies.filter((enemy) => enemy.hp > 0).length;
 }
 
 function getEngineProvider(
@@ -251,6 +259,24 @@ function requireInput(
     throw new Error(`${label} not found: ${selector}`);
   }
   return input;
+}
+
+function requireElement<T extends Element>(
+  root: ParentNode,
+  selector: string,
+  label: string,
+): T {
+  const element = root.querySelector<T>(selector);
+  if (!element) {
+    throw new Error(`${label} not found: ${selector}`);
+  }
+  return element;
+}
+
+function listVisibleVictoryResultButtons(root: ParentNode): HTMLButtonElement[] {
+  return [...root.querySelectorAll<HTMLButtonElement>('.battle-victory-result-button')].filter(
+    (button) => !button.hidden,
+  );
 }
 
 describe('GameSession problem-series player entry wire (R12m Player unit2L1)', () => {
@@ -1968,5 +1994,256 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(startSpy).toHaveBeenCalled();
     expect(session.hasActiveOperation()).toBe(true);
     expect(provider()).toBe(snapshot.waves);
+  });
+
+  it('2N5: final Wave victory shows problem-series result overlay and only returns to stageSelect via 作戦選択へ', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+    const victoryResultFactorySpy = vi.spyOn(
+      victoryResultModule,
+      'createProblemSeriesVictoryResult',
+    );
+    const computeExpSpy = vi.spyOn(stageProgressionModule, 'computeStageExpReward');
+    const applyRewardsSpy = vi.spyOn(victoryRewardsModule, 'applyVictoryRewards');
+
+    session = createSession();
+
+    const returnToStageSelectSpy = vi.spyOn(
+      session,
+      'returnToStageSelectAfterProblemSeriesVictory',
+    );
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    if (provider === undefined) {
+      throw new Error('BattleEngine resolved waves provider is missing');
+    }
+    const engineInternals = engine as unknown as {
+      spawnWaveEnemies: () => void;
+    };
+    const spawnWaveEnemiesSpy = vi.spyOn(engineInternals, 'spawnWaveEnemies');
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+
+    session.start();
+
+    const saveBefore = structuredClone(session.getSaveState());
+
+    const container = getStageSelectContainer(session);
+    requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    ).click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    ).click();
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (snapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+
+    const resolveCallsAfterPrepare = resolveSpy.mock.calls.length;
+    const factoryCallsAfterPrepare = snapshotFactorySpy.mock.calls.length;
+    expect(resolveCallsAfterPrepare).toBe(1);
+    expect(factoryCallsAfterPrepare).toBe(1);
+    expect(victoryResultFactorySpy).not.toHaveBeenCalled();
+    expect(computeExpSpy).toHaveBeenCalledTimes(0);
+    expect(applyRewardsSpy).toHaveBeenCalledTimes(0);
+
+    requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    ).click();
+
+    const appContainer = getGameAppContainer();
+    requireButton(
+      appContainer,
+      '.skill-menu-return-to-battle-button',
+      'formation confirm button',
+    ).click();
+
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(1);
+    expect(session.getCurrentScreen()).toBe('battle');
+
+    waitForEngagedViaSession(session, engine);
+    advanceSessionToWavePrepAfterKill(session, engine, spawnWaveEnemiesSpy);
+    requireButton(
+      appContainer,
+      '.wave-prep-screen__confirm',
+      'Wave 1 prep confirm button',
+    ).click();
+
+    expect(startNextWaveSpy).toHaveBeenCalledTimes(1);
+    waitForEngagedViaSession(session, engine);
+    advanceSessionToWavePrepAfterKill(session, engine, spawnWaveEnemiesSpy);
+    requireButton(
+      appContainer,
+      '.wave-prep-screen__confirm',
+      'Wave 2 prep confirm button',
+    ).click();
+
+    expect(startNextWaveSpy).toHaveBeenCalledTimes(2);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(3);
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(engine.getSnapshot().waveIndex).toBe(2);
+    expect(engine.getSnapshot().phase).not.toBe('victory');
+    expect(engine.getSnapshot().awaitingNextWave).toBe(false);
+    expect(livingEnemyCount(engine)).toBeGreaterThan(0);
+    expectVictoryOverlayVisuallyHidden(appContainer);
+    expect(computeExpSpy).toHaveBeenCalledTimes(0);
+    expect(applyRewardsSpy).toHaveBeenCalledTimes(0);
+
+    const overlayBeforeVictory = requireElement<HTMLElement>(
+      appContainer,
+      '.battle-victory-result-overlay',
+      'victory result overlay',
+    );
+    expect(overlayBeforeVictory.getAttribute('aria-hidden')).toBe('true');
+
+    const battleHostBeforeVictory = requireElement<HTMLElement>(
+      appContainer,
+      '.game-shell__battle',
+      'battle host',
+    );
+    expect(battleHostBeforeVictory.hidden).toBe(false);
+
+    killAllEnemies(engine);
+    for (let i = 0; i < MAX_WAVE_PREP_TICKS; i++) {
+      tickSession(session, 1);
+      if (engine.getSnapshot().phase === 'victory') {
+        break;
+      }
+      if (engine.getSnapshot().phase === 'defeat') {
+        throw new Error('battle ended in defeat instead of final victory');
+      }
+    }
+
+    expect(engine.getSnapshot().phase).toBe('victory');
+    expect(engine.getSnapshot().waveIndex).toBe(2);
+    expect(livingEnemyCount(engine)).toBe(0);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+
+    const problemSeriesResult = session.getProblemSeriesVictoryResult();
+    if (problemSeriesResult === null) {
+      throw new Error('problem series victory result is null after final victory');
+    }
+    expect(problemSeriesResult).toEqual({
+      outcome: 'victory',
+      seed: NORMALIZED_FIXTURE_SEED,
+      generatorVersion: snapshot.generatorVersion,
+      seriesId: snapshot.seriesId,
+      reachedWaveIndex: 2,
+    });
+    expect(session.getOperationResult()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(true);
+    expect(session.shouldShowVictoryResult()).toBe(false);
+    expect(provider()).toBeNull();
+    expect(victoryResultFactorySpy).toHaveBeenCalledTimes(1);
+
+    const saveAfterVictory = structuredClone(session.getSaveState());
+    expect(saveAfterVictory).toEqual(saveBefore);
+    expect(computeExpSpy).toHaveBeenCalledTimes(0);
+    expect(applyRewardsSpy).toHaveBeenCalledTimes(0);
+
+    expectVictoryOverlayVisuallyVisible(appContainer);
+    const overlayAfterVictory = requireElement<HTMLElement>(
+      appContainer,
+      '.battle-victory-result-overlay',
+      'victory result overlay',
+    );
+    expect(overlayAfterVictory.getAttribute('aria-hidden')).toBe('false');
+
+    const summary = requireElement<HTMLElement>(
+      appContainer,
+      '.battle-victory-result-summary',
+      'victory result summary',
+    );
+    expect(summary.textContent).toContain('outcome: victory');
+    expect(summary.textContent).toContain(`seed: ${NORMALIZED_FIXTURE_SEED}`);
+    expect(summary.textContent).toContain(
+      `generatorVersion: ${snapshot.generatorVersion}`,
+    );
+    expect(summary.textContent).toContain(`seriesId: ${snapshot.seriesId}`);
+    expect(summary.textContent).toContain('reachedWaveIndex: 2');
+    expect(summary.textContent).not.toContain('stageId:');
+
+    const visibleButtons = listVisibleVictoryResultButtons(appContainer);
+    expect(visibleButtons).toHaveLength(1);
+    expect(visibleButtons[0]?.textContent).toBe('作戦選択へ');
+    expect(
+      [...appContainer.querySelectorAll<HTMLButtonElement>('.battle-victory-result-button')]
+        .some((button) => button.textContent === '同じステージで再戦' && !button.hidden),
+    ).toBe(false);
+
+    const returnButton = visibleButtons[0];
+    if (!returnButton) {
+      throw new Error('visible 作戦選択へ button missing');
+    }
+
+    const resolveCallsBeforeReturn = resolveSpy.mock.calls.length;
+    const snapshotFactoryCallsBeforeReturn = snapshotFactorySpy.mock.calls.length;
+    const victoryFactoryCallsBeforeReturn = victoryResultFactorySpy.mock.calls.length;
+
+    returnButton.click();
+
+    expect(returnToStageSelectSpy).toHaveBeenCalledTimes(1);
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(false);
+    expect(session.shouldShowVictoryResult()).toBe(false);
+    expectVictoryOverlayVisuallyHidden(appContainer);
+    expect(overlayAfterVictory.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      appContainer.querySelectorAll('.stage-selection-panel').length,
+    ).toBe(1);
+    expect(requireElement<HTMLElement>(
+      appContainer,
+      '.game-shell__stage-select',
+      'stage select host',
+    ).hidden).toBe(false);
+    expect(requireElement<HTMLElement>(
+      appContainer,
+      '.game-shell__battle',
+      'battle host',
+    ).hidden).toBe(true);
+
+    const saveAfterReturn = structuredClone(session.getSaveState());
+    expect(saveAfterReturn).toEqual(saveBefore);
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsBeforeReturn);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(
+      snapshotFactoryCallsBeforeReturn,
+    );
+    expect(victoryResultFactorySpy.mock.calls.length).toBe(
+      victoryFactoryCallsBeforeReturn,
+    );
+    expect(computeExpSpy).toHaveBeenCalledTimes(0);
+    expect(applyRewardsSpy).toHaveBeenCalledTimes(0);
   });
 });
