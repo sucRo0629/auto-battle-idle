@@ -5,6 +5,7 @@ export interface StageSelectionScreenHostCallbacks {
   getCurrentStageId: () => string;
   getClearedStageIds?: () => readonly string[];
   onSortie: (stageId: string) => void;
+  onOpenMainOperation?: () => void;
 }
 
 /** Mounts StageSelectionPanel on the stage-selection screen host (`stageSelectHost` / screen `'stageSelect'`). */
@@ -26,7 +27,11 @@ export class StageSelectionScreenHost {
       this.panel = new StageSelectionPanel(
         this.host,
         this.gameData,
-        { onSortie: (stageId) => this.callbacks.onSortie(stageId) },
+        {
+          onSortie: (stageId) => this.callbacks.onSortie(stageId),
+          onOpenMainOperation: () =>
+            this.callbacks.onOpenMainOperation?.(),
+        },
         {
           initialStageId: currentStageId,
           showFirstPlayGuidance: this.showFirstPlayGuidance,

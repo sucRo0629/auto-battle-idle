@@ -150,4 +150,75 @@ describe('StageSelectionScreenHost', () => {
 
     screenHost.destroy();
   });
+
+  it('forwards main operation click to onOpenMainOperation without sortie or navigation side effects', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const currentStageId = 'demo_ch1_05';
+    const onSortie = vi.fn();
+    const onOpenMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => currentStageId,
+      onSortie,
+      onOpenMainOperation,
+    });
+
+    screenHost.show();
+
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
+    expect(host.querySelectorAll('.stage-selection-main-operation')).toHaveLength(1);
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(0);
+    expect(onSortie).toHaveBeenCalledTimes(0);
+
+    const selectedBefore = host.querySelector<HTMLElement>(
+      '.stage-selection-list-item[aria-selected="true"]',
+    );
+    expect(selectedBefore).not.toBeNull();
+
+    const mainButton = host.querySelector<HTMLButtonElement>(
+      '.stage-selection-main-operation',
+    );
+    mainButton?.click();
+
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+    expect(onSortie).toHaveBeenCalledTimes(0);
+
+    const selectedAfter = host.querySelector<HTMLElement>(
+      '.stage-selection-list-item[aria-selected="true"]',
+    );
+    expect(selectedAfter).toBe(selectedBefore);
+
+    expect(document.querySelector('.problem-series-entry-panel')).toBeNull();
+    expect(document.querySelector('.problem-series-overview-panel')).toBeNull();
+    expect(document.querySelector('.battle-view')).toBeNull();
+
+    const sortieButton = host.querySelector<HTMLButtonElement>(
+      '.stage-selection-sortie',
+    );
+    sortieButton?.click();
+
+    expect(onSortie).toHaveBeenCalledTimes(1);
+    expect(onSortie).toHaveBeenCalledWith(currentStageId);
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+
+    const omissionHost = document.createElement('div');
+    document.body.appendChild(omissionHost);
+    const omissionScreenHost = new StageSelectionScreenHost(omissionHost, gameData, {
+      getCurrentStageId: () => 'demo_ch1_01',
+      onSortie: vi.fn(),
+    });
+    omissionScreenHost.show();
+    const omissionMainButton = omissionHost.querySelector<HTMLButtonElement>(
+      '.stage-selection-main-operation',
+    );
+    expect(() => omissionMainButton?.click()).not.toThrow();
+
+    screenHost.destroy();
+    omissionScreenHost.destroy();
+    host.remove();
+    omissionHost.remove();
+  });
 });
