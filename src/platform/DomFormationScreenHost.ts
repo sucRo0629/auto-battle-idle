@@ -36,6 +36,7 @@ export class DomFormationScreenHost implements MenuHost {
         initialView,
         isVerifyMode: this.context.isVerifyMode,
         getFormationReturnOptions: this.context.getFormationReturnOptions,
+        getFormationAllowedClassIds: this.context.getFormationAllowedClassIds,
       },
     );
   }

@@ -25,6 +25,8 @@ export interface MetaMenuOverlayOptions {
   initialView?: MetaMenuInitialView;
   isVerifyMode?: () => boolean;
   getFormationReturnOptions?: () => FormationReturnOptions | undefined;
+  /** R12m: Formation Class Select 候補の許可兵科（省略時は全 runtime 兵科） */
+  getFormationAllowedClassIds?: () => readonly ClassId[] | undefined;
 }
 
 export interface MetaMenuOverlayCallbacks {
@@ -50,6 +52,7 @@ export class MetaMenuOverlay {
   private readonly directPartyEntry: boolean;
   private readonly isVerifyMode: () => boolean;
   private readonly getFormationReturnOptions?: () => FormationReturnOptions | undefined;
+  private readonly getFormationAllowedClassIds?: () => readonly ClassId[] | undefined;
   private readonly unsubscribeLocale: () => void;
 
   constructor(
@@ -67,6 +70,7 @@ export class MetaMenuOverlay {
     this.directPartyEntry = initialView === "party";
     this.isVerifyMode = options.isVerifyMode ?? (() => false);
     this.getFormationReturnOptions = options.getFormationReturnOptions;
+    this.getFormationAllowedClassIds = options.getFormationAllowedClassIds;
 
     this.root = document.createElement("div");
     const overlayClasses = ["meta-menu-overlay"];
@@ -266,6 +270,7 @@ export class MetaMenuOverlay {
       },
       {
         isVerifyMode: this.isVerifyMode,
+        allowedClassIds: this.getFormationAllowedClassIds?.(),
         returnToBattle:
           this.presentation === "formation-screen" && this.directPartyEntry
             ? {

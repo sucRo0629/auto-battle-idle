@@ -35,6 +35,8 @@ export interface MenuHostContext {
   resolveFormationCloseScreen?: () => GameScreen;
   /** R7d: formation フッター戻りボタンの上書き（省略時は戦闘へ戻る） */
   getFormationReturnOptions?: () => FormationReturnOptions | undefined;
+  /** R12m: Formation Class Select 候補の許可兵科（省略時は全 runtime 兵科） */
+  getFormationAllowedClassIds?: () => readonly ClassId[] | undefined;
 }
 
 export interface MenuHost {
