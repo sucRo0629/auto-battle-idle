@@ -965,6 +965,48 @@ export class GameSession {
     return true;
   }
 
+  /**
+   * R12m 2P2: 問題系列最終勝利結果から新 seed 入力画面へ遷移する。
+   * seed 自動生成・resolver / snapshot 生成 / BattleEngine restart は行わない。
+   */
+  openNewSeedProblemSeriesEntryFromVictory(): boolean {
+    if (!this.shouldShowProblemSeriesVictoryResult()) {
+      return false;
+    }
+
+    const result = this.problemSeriesVictoryResult;
+    if (result === null) {
+      return false;
+    }
+
+    if (this.hasActiveOperation()) {
+      return false;
+    }
+
+    if (this.operationCheckpoint !== null) {
+      return false;
+    }
+
+    if (this.problemSeriesOperationStartSnapshot !== null) {
+      return false;
+    }
+
+    this.setGameScreen('stageSelect');
+
+    if (!this.stageSelectionHost.showMainOperationEntry()) {
+      this.setGameScreen('battle');
+      this.view.setBattlePaused(true);
+      this.view.refreshVictoryResultOverlay();
+      return false;
+    }
+
+    this.problemSeriesVictoryResult = null;
+    this.wavePrepSuspended = false;
+    this.view.setBattlePaused(false);
+    this.view.refreshVictoryResultOverlay();
+    return true;
+  }
+
   isVerifyMode(): boolean {
     return this.verifyMode;
   }

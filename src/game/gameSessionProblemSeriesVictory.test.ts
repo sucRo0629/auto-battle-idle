@@ -7,6 +7,7 @@
  * 正式な結果画面・Player 入口は対象外（fixedStage 回帰除く）。
  *
  * R12m Player 作業単位2O2: 同 seed 再準備 GameSession API。
+ * R12m Player 作業単位2P2: 新 seed 入力へ遷移する GameSession API。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -888,5 +889,200 @@ describe('GameSession prepareSameSeedProblemSeriesFromVictory (R12m Player unit2
     expect(restartAtWaveSpy).not.toHaveBeenCalled();
     expect(session.getSaveState()).toEqual(saveBefore);
     expect(oldSnapshot.seed).toBe(FIXTURE_SEED_A);
+  });
+});
+
+describe('GameSession openNewSeedProblemSeriesEntryFromVictory (R12m Player unit2P2)', () => {
+  let session: GameSession | null = null;
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockCanvas2d();
+    setVerifyModeEnabled(false);
+  });
+
+  afterEach(() => {
+    session?.destroy();
+    session = null;
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('production final victory → new seed entry without resolver or snapshot factory', () => {
+    const victoryResultSpy = vi.spyOn(
+      victoryResultModule,
+      'createProblemSeriesVictoryResult',
+    );
+    const computeExpSpy = vi.spyOn(stageProgressionModule, 'computeStageExpReward');
+    const applyRewardsSpy = vi.spyOn(victoryRewardsModule, 'applyVictoryRewards');
+
+    const reached = reachProblemSeriesFinalVictory();
+    session = reached.session;
+    const { oldSnapshot, engine, resolveSpy, createSpy } = reached;
+
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const spawnWaveEnemiesSpy = vi.spyOn(
+      engine as unknown as { spawnWaveEnemies: () => void },
+      'spawnWaveEnemies',
+    );
+
+    const saveBefore = structuredClone(session.getSaveState());
+    const appContainer = getGameAppContainer();
+
+    expectVictoryOverlayVisuallyVisible(appContainer);
+    expect(session.view.isBattlePaused()).toBe(true);
+    expect(session.getProblemSeriesVictoryResult()).not.toBeNull();
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(true);
+
+    const victoryFactoryCallsBefore = victoryResultSpy.mock.calls.length;
+    const resolveCallsBefore = resolveSpy.mock.calls.length;
+    const createCallsBefore = createSpy.mock.calls.length;
+    const computeExpCallsBefore = computeExpSpy.mock.calls.length;
+    const applyRewardsCallsBefore = applyRewardsSpy.mock.calls.length;
+
+    const opened = session.openNewSeedProblemSeriesEntryFromVictory();
+
+    expect(opened).toBe(true);
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsBefore);
+    expect(createSpy.mock.calls.length).toBe(createCallsBefore);
+    expect(victoryResultSpy.mock.calls.length).toBe(victoryFactoryCallsBefore);
+    expect(computeExpSpy.mock.calls.length).toBe(computeExpCallsBefore);
+    expect(applyRewardsSpy.mock.calls.length).toBe(applyRewardsCallsBefore);
+
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(false);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.hasActiveOperation()).toBe(false);
+    expectVictoryOverlayVisuallyHidden(appContainer);
+
+    expect(appContainer.querySelector('.game-shell__formation')?.hidden).toBe(true);
+    expect(appContainer.querySelector('.game-shell__battle')?.hidden).toBe(true);
+    expect(appContainer.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+    expect(appContainer.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+    expect(appContainer.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+
+    const seedInput = appContainer.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    const prepareButton = appContainer.querySelector(
+      '.problem-series-entry-prepare',
+    ) as HTMLButtonElement;
+
+    expect(seedInput).not.toBeNull();
+    expect(seedInput.value).toBe('');
+    expect(seedInput.value).not.toContain(oldSnapshot.seed);
+    expect(prepareButton.disabled).toBe(true);
+
+    expect(restartSpy).not.toHaveBeenCalled();
+    expect(restartAtWaveSpy).not.toHaveBeenCalled();
+    expect(spawnWaveEnemiesSpy).not.toHaveBeenCalled();
+
+    expect(session.getSaveState()).toEqual(saveBefore);
+    assertSaveDoesNotEmbedProblemSeries(session.getSaveState());
+  });
+
+  it('rolls back when showMainOperationEntry fails', () => {
+    const reached = reachProblemSeriesFinalVictory();
+    session = reached.session;
+    const { engine, resolveSpy, createSpy } = reached;
+
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const saveBefore = structuredClone(session.getSaveState());
+    const appContainer = getGameAppContainer();
+    const victoryResultBefore = session.getProblemSeriesVictoryResult();
+
+    const resolveCallsBefore = resolveSpy.mock.calls.length;
+    const createCallsBefore = createSpy.mock.calls.length;
+
+    vi.spyOn(getStageSelectionHost(session), 'showMainOperationEntry').mockReturnValue(
+      false,
+    );
+
+    expect(session.openNewSeedProblemSeriesEntryFromVictory()).toBe(false);
+
+    expect(session.getProblemSeriesVictoryResult()).toEqual(victoryResultBefore);
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(true);
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.view.isBattlePaused()).toBe(true);
+    expectVictoryOverlayVisuallyVisible(appContainer);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsBefore);
+    expect(createSpy.mock.calls.length).toBe(createCallsBefore);
+    expect(restartSpy).not.toHaveBeenCalled();
+    expect(restartAtWaveSpy).not.toHaveBeenCalled();
+    expect(session.getSaveState()).toEqual(saveBefore);
+  });
+
+  it('returns false without mutation when problem series victory result is absent', () => {
+    session = createSession();
+    const resolveSpy = vi.spyOn(seedResolveModule, 'resolveProblemSeriesFromSeed');
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+    const saveBefore = structuredClone(session.getSaveState());
+
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.openNewSeedProblemSeriesEntryFromVictory()).toBe(false);
+
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(session.getSaveState()).toEqual(saveBefore);
+  });
+
+  it('returns false and keeps fixed-stage victory result when only fixed Stage result exists', () => {
+    const fixedStageFinalWaveIndex = getFixedStageFinalWaveIndex(FIXED_STAGE_ID);
+    session = createSession();
+    const engine = getEngine(session);
+
+    const resolveSpy = vi.spyOn(seedResolveModule, 'resolveProblemSeriesFromSeed');
+    const createSpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    sortieToStage(session, FIXED_STAGE_ID);
+    session.start();
+    engine.restartBattleAtWave(0);
+    setGameScreen(session, 'battle');
+
+    reachFixedStageVictoryThroughEngine(session, engine);
+
+    const operationResultBefore = session.getOperationResult();
+    expect(operationResultBefore).not.toBeNull();
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(false);
+
+    const saveBefore = structuredClone(session.getSaveState());
+
+    expect(session.openNewSeedProblemSeriesEntryFromVictory()).toBe(false);
+
+    expect(session.getOperationResult()).toEqual(operationResultBefore);
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(session.getSaveState()).toEqual(saveBefore);
+
+    expect(engine.getSnapshot().waveIndex).toBe(fixedStageFinalWaveIndex);
+    session.destroy();
+    session = null;
   });
 });
