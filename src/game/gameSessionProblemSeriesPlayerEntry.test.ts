@@ -58,6 +58,7 @@ function mockCanvas2d(): void {
     fill: vi.fn(),
     stroke: vi.fn(),
     fillText: vi.fn(),
+    strokeText: vi.fn(),
     measureText: vi.fn(() => ({ width: 0 })),
     save: vi.fn(),
     restore: vi.fn(),
@@ -1356,6 +1357,307 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(session.shouldShowVictoryResult()).toBe(false);
     expect(restartSpy).not.toHaveBeenCalled();
     expect(startSpy).toHaveBeenCalled();
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(provider()).toBe(snapshot.waves);
+  });
+
+  it('2M5: Wave 1 clear from acquired passive → Wave 2 prep with maintained passive and grant', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+
+    const sortieSpy = vi.spyOn(
+      session as unknown as { handleStageSortie: (stageId: string) => void },
+      'handleStageSortie',
+    );
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    if (provider === undefined) {
+      throw new Error('BattleEngine resolved waves provider is missing');
+    }
+    const engineInternals = engine as unknown as {
+      spawnWaveEnemies: () => void;
+    };
+    const spawnWaveEnemiesSpy = vi.spyOn(engineInternals, 'spawnWaveEnemies');
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const startSpy = vi.spyOn(engine, 'startBattle');
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+
+    session.start();
+
+    const saveBefore = structuredClone(session.getSaveState());
+    const currentStageIdBefore = saveBefore.stageProgress.currentStageId;
+    const clearedStageIdsBefore = [...(saveBefore.stageProgress.clearedStageIds ?? [])];
+
+    const container = getStageSelectContainer(session);
+
+    const mainButton = requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    );
+    mainButton.click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    const prepareButton = requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (snapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+
+    const resolveCallsAfterPrepare = resolveSpy.mock.calls.length;
+    const factoryCallsAfterPrepare = snapshotFactorySpy.mock.calls.length;
+    expect(resolveCallsAfterPrepare).toBe(1);
+    expect(factoryCallsAfterPrepare).toBe(1);
+
+    const confirmButton = requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    );
+    confirmButton.click();
+
+    const appContainer = getGameAppContainer();
+    const returnButton = requireButton(
+      appContainer,
+      '.skill-menu-return-to-battle-button',
+      'formation confirm button',
+    );
+    returnButton.click();
+
+    expect(restartAtWaveSpy).toHaveBeenCalledTimes(1);
+    expect(restartAtWaveSpy).toHaveBeenCalledWith(0);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(1);
+
+    const wave1 = snapshot.waves[1];
+    const wave2 = snapshot.waves[2];
+    if (wave1 === undefined || wave2 === undefined) {
+      throw new Error('prepared snapshot missing Wave 1 or Wave 2');
+    }
+
+    const expectedWave1ClassIds = expandWaveExpectedClassIds(snapshot, 1);
+    const wave1PrepResourceGrant = wave1.prepResourceGrant;
+    const wave2PrepResourceGrant = wave2.prepResourceGrant;
+
+    // Wave 0 engage → clear → Wave 1 prep
+    waitForEngagedViaSession(session, engine);
+    advanceSessionToWavePrepAfterKill(session, engine, spawnWaveEnemiesSpy);
+
+    // Acquire one passive on Slot 0
+    const unspentBeforeAcquire = session.getOperationUnspentResource();
+    const slot0Candidates = [...session.getOperationPassiveCandidates(0)];
+    const selectedPassiveId = slot0Candidates.find((passiveId) => {
+      const cost = session!.resolveOperationPassiveAcquireCostForSlot(0, passiveId);
+      return Number.isInteger(cost) && cost > 0 && cost <= unspentBeforeAcquire;
+    });
+    if (!selectedPassiveId) {
+      throw new Error(
+        'Slot 0 has no affordable operation passive candidate for current resource',
+      );
+    }
+    const selectedPassiveCost = session.resolveOperationPassiveAcquireCostForSlot(
+      0,
+      selectedPassiveId,
+    );
+
+    const slot0RowBeforeAcquire = appContainer.querySelectorAll('.wave-prep-screen__slot')[0];
+    if (!slot0RowBeforeAcquire) {
+      throw new Error('wave prep slot 0 row not found');
+    }
+    const selectedCardSelector = `.operation-passive-prep__candidate[data-passive-id="${selectedPassiveId}"]`;
+    const selectedAcquireButton = slot0RowBeforeAcquire.querySelector<HTMLButtonElement>(
+      `${selectedCardSelector} .operation-passive-prep__acquire`,
+    );
+    if (!selectedAcquireButton) {
+      throw new Error('selected passive acquire button not found');
+    }
+    selectedAcquireButton.click();
+
+    expect(session.getOperationAcquiredPassiveIds(0)).toEqual([selectedPassiveId]);
+    const unspentAfterAcquire = unspentBeforeAcquire - selectedPassiveCost;
+    expect(session.getOperationUnspentResource()).toBe(unspentAfterAcquire);
+
+    // WavePrep confirm → Wave 1 battle
+    const wavePrepConfirmButton = requireButton(
+      appContainer,
+      '.wave-prep-screen__confirm',
+      'wave prep confirm button',
+    );
+    wavePrepConfirmButton.click();
+
+    expect(startNextWaveSpy).toHaveBeenCalledTimes(1);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(2);
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(engine.getSnapshot().waveIndex).toBe(1);
+    expect(livingEnemyClassIds(engine)).toEqual(expectedWave1ClassIds);
+
+    // === Wave 1 戦闘中 assertions (1–11) ===
+    // 1. screen battle
+    expect(session.getCurrentScreen()).toBe('battle');
+    // 2. engine waveIndex 1
+    expect(engine.getSnapshot().waveIndex).toBe(1);
+    // 3. 生存敵 snapshot Wave 1 期待値一致
+    expect(livingEnemyClassIds(engine)).toEqual(expectedWave1ClassIds);
+    // 4. source problemSeries
+    const opDuringWave1 = session.getOperationState();
+    if (opDuringWave1 === null) {
+      throw new Error('operation state is null during Wave 1 battle');
+    }
+    expect(opDuringWave1.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    // 5. currentWaveIndex = 1
+    expect(opDuringWave1.currentWaveIndex).toBe(1);
+    // 6. clearedWaveCount = 1
+    expect(opDuringWave1.clearedWaveCount).toBe(1);
+    // 7. Slot 0 acquired
+    expect(session.getOperationAcquiredPassiveIds(0)).toEqual([selectedPassiveId]);
+    // 8. other slots empty
+    for (let slotIndex = 1; slotIndex < 4; slotIndex += 1) {
+      expect(session.getOperationAcquiredPassiveIds(slotIndex)).toEqual([]);
+    }
+    // 9. 残ポイント = wave1 grant - cost
+    expect(session.getOperationUnspentResource()).toBe(unspentAfterAcquire);
+    // 10. checkpoint
+    const checkpointDuringWave1 = session.getOperationCheckpoint();
+    if (checkpointDuringWave1 === null) {
+      throw new Error('checkpoint is null during Wave 1');
+    }
+    expect(checkpointDuringWave1.acquiredOperationPassives).toEqual([
+      { slotIndex: 0, passiveIds: [selectedPassiveId] },
+    ]);
+    expect(checkpointDuringWave1.unspentResource).toBe(unspentAfterAcquire);
+    // 11. Wave 2 grant > 0
+    expect(wave2PrepResourceGrant).toBeGreaterThan(0);
+
+    // === Wave 1 engage then kill ===
+    waitForEngagedViaSession(session, engine);
+    expect(engine.getSnapshot().engaged).toBe(true);
+
+    const spawnCallsBeforeWave1Kill = spawnWaveEnemiesSpy.mock.calls.length;
+
+    // 12. production tick → waveCleared
+    killAllEnemies(engine);
+    let reachedWavePrep = false;
+    for (let i = 0; i < MAX_WAVE_PREP_TICKS; i++) {
+      tickSession(session, 1);
+      if (session.getCurrentScreen() === 'wavePrep') {
+        reachedWavePrep = true;
+        break;
+      }
+      const snap = engine.getSnapshot();
+      if (snap.phase === 'victory' || snap.phase === 'defeat') {
+        throw new Error(
+          `battle ended (${snap.phase}) before Wave 2 prep; waveIndex=${snap.waveIndex}; awaitingNextWave=${snap.awaitingNextWave}`,
+        );
+      }
+    }
+    if (!reachedWavePrep) {
+      throw new Error('Wave 2 prep not reached within tick limit');
+    }
+
+    // === Wave 1 クリア後 assertions (13–34) ===
+    // 13. screen wavePrep
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    // 14. engine awaitingNextWave
+    expect(engine.getSnapshot().awaitingNextWave).toBe(true);
+    // 15. engine waveIndex 1
+    expect(engine.getSnapshot().waveIndex).toBe(1);
+    // 16. OperationState active
+    const opAfterWave1Clear = session.getOperationState();
+    if (opAfterWave1Clear === null) {
+      throw new Error('operation state is null after Wave 1 clear');
+    }
+    expect(opAfterWave1Clear.isActive).toBe(true);
+    // 17. source problemSeries
+    expect(opAfterWave1Clear.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    // 18. currentWaveIndex = 1
+    expect(opAfterWave1Clear.currentWaveIndex).toBe(1);
+    // 19. clearedWaveCount = 2
+    expect(opAfterWave1Clear.clearedWaveCount).toBe(2);
+    // 20. isWavePrepEditable = true
+    expect(opAfterWave1Clear.isWavePrepEditable).toBe(true);
+    // 21. Slot 0 maintained
+    expect(session.getOperationAcquiredPassiveIds(0)).toEqual([selectedPassiveId]);
+    // 22. other slots still empty
+    for (let slotIndex = 1; slotIndex < 4; slotIndex += 1) {
+      expect(session.getOperationAcquiredPassiveIds(slotIndex)).toEqual([]);
+    }
+    // 23. 残ポイント = Wave 1 開始時残 + Wave 2 grant
+    const expectedUnspentAfterWave2Grant = unspentAfterAcquire + wave2PrepResourceGrant;
+    expect(session.getOperationUnspentResource()).toBe(expectedUnspentAfterWave2Grant);
+    // 24. Wave 2 grant !== 0
+    expect(wave2PrepResourceGrant).not.toBe(0);
+    // 25. grant added exactly once (resource = previous + one grant)
+    expect(session.getOperationUnspentResource()).toBe(
+      unspentAfterAcquire + wave2PrepResourceGrant,
+    );
+    // 26. prepared snapshot same reference
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
+    // 27. Wave 2 enemies not spawned yet
+    expect(livingEnemyClassIds(engine)).toHaveLength(0);
+    // 28. no additional spawnWaveEnemies call
+    expect(spawnWaveEnemiesSpy.mock.calls.length).toBe(spawnCallsBeforeWave1Kill);
+    // 29. living enemies 0
+    expect(livingEnemyClassIds(engine)).toHaveLength(0);
+    // 30. not final victory
+    expect(engine.getSnapshot().phase).not.toBe('victory');
+    // 31. OperationResult null
+    expect(session.getOperationResult()).toBeNull();
+    // 32. resolver/snapshot factory not re-run
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsAfterPrepare);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(factoryCallsAfterPrepare);
+    // 33. currentStageId / clearedStageIds unchanged
+    const saveAfter = session.getSaveState();
+    expect(saveAfter.stageProgress.currentStageId).toBe(currentStageIdBefore);
+    expect([...(saveAfter.stageProgress.clearedStageIds ?? [])]).toEqual(
+      clearedStageIdsBefore,
+    );
+    // 34. fixed stage sortie not reached
+    expect(sortieSpy).not.toHaveBeenCalled();
+
+    // === WavePrep UI assertions (35–40) ===
+    // 35. .wave-prep-screen 1個
+    expect(appContainer.querySelectorAll('.wave-prep-screen')).toHaveLength(1);
+    // 36. .wave-prep-screen__slot 4件
+    expect(appContainer.querySelectorAll('.wave-prep-screen__slot')).toHaveLength(4);
+    // 37. .wave-prep-screen__confirm exists
+    expect(appContainer.querySelector('.wave-prep-screen__confirm')).not.toBeNull();
+    // 38. Slot 0 acquired card
+    const slot0Row = appContainer.querySelectorAll('.wave-prep-screen__slot')[0];
+    if (!slot0Row) {
+      throw new Error('wave prep slot 0 row not found after Wave 1 clear');
+    }
+    const acquiredCardAfter = slot0Row.querySelector<HTMLElement>(
+      `${selectedCardSelector}[data-acquired="true"]`,
+    );
+    expect(acquiredCardAfter).not.toBeNull();
+    // 39. resource display contains current unspent
+    const resourceEl = appContainer.querySelector('.wave-prep-screen__resource');
+    expect(resourceEl).not.toBeNull();
+    expect(resourceEl!.textContent).toContain(String(expectedUnspentAfterWave2Grant));
+    // 40. WavePrep confirm NOT clicked (no Wave 2 start)
+    expect(startNextWaveSpy).toHaveBeenCalledTimes(1);
+    expect(restartSpy).not.toHaveBeenCalled();
     expect(session.hasActiveOperation()).toBe(true);
     expect(provider()).toBe(snapshot.waves);
   });
