@@ -6,6 +6,7 @@
  * 公開型は OperationCheckpointSnapshot と同様の TypeScript deep-readonly 境界。
  */
 
+import type { ClassId } from '../types.ts';
 import type { ResolveProblemSeriesResult } from './seedResolve.ts';
 import {
   toProblemSeriesBattleWaves,
@@ -37,6 +38,7 @@ export interface ProblemSeriesOperationStartSnapshot {
   readonly seed: string;
   readonly generatorVersion: string;
   readonly seriesId: string;
+  readonly allowedClassIds: readonly ClassId[];
   readonly waves: readonly ProblemSeriesOperationStartWave[];
 }
 
@@ -52,6 +54,7 @@ export function createProblemSeriesOperationStartSnapshot(
     seed: result.seed,
     generatorVersion: result.generatorVersion,
     seriesId: result.series.seriesId,
+    allowedClassIds: [...result.series.allowedClassIds],
     waves: toProblemSeriesBattleWaves(result.series),
   };
 }

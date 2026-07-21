@@ -26,7 +26,6 @@ const FORBIDDEN_SNAPSHOT_KEYS = [
   'waveRelationSummary',
   'finalWaveCompositeOf',
   'operationConditions',
-  'allowedClassIds',
   'enemies',
   'party',
   'selectedCombatModuleIds',
@@ -50,7 +49,7 @@ function expectSnapshotShapeOnly(
   snapshot: ProblemSeriesOperationStartSnapshot,
 ): void {
   expect(Object.keys(snapshot).sort()).toEqual(
-    ['generatorVersion', 'seed', 'seriesId', 'waves'].sort(),
+    ['allowedClassIds', 'generatorVersion', 'seed', 'seriesId', 'waves'].sort(),
   );
   for (const forbidden of FORBIDDEN_SNAPSHOT_KEYS) {
     expect(snapshot).not.toHaveProperty(forbidden);
@@ -70,6 +69,18 @@ function expectSnapshotShapeOnly(
  * production A/B 全 group で非空 Module ID が保持され、入力系列と一致することを固定する。
  * group 件数 0 では成功しない。
  */
+function expectAllowedClassIdsMatchSeries(
+  snapshot: ProblemSeriesOperationStartSnapshot,
+  series: ProblemSeriesDef,
+): void {
+  expect(snapshot.allowedClassIds).toEqual(series.allowedClassIds);
+  expect(snapshot.allowedClassIds.length).toBeGreaterThan(0);
+  for (const classId of snapshot.allowedClassIds) {
+    expect(classId.length).toBeGreaterThan(0);
+  }
+  expect(snapshot.allowedClassIds).not.toBe(series.allowedClassIds);
+}
+
 function expectSelectedCombatModuleIdsMatchSeries(
   snapshot: ProblemSeriesOperationStartSnapshot,
   series: ProblemSeriesDef,
@@ -113,6 +124,15 @@ function resolveFromProduction(
 }
 
 describe('R12m createProblemSeriesOperationStartSnapshot (pure factory)', () => {
+  it('snapshot requires readonly allowedClassIds: readonly ClassId[]', () => {
+    expectTypeOf<
+      ProblemSeriesOperationStartSnapshot['allowedClassIds']
+    >().toEqualTypeOf<readonly string[]>();
+    expectTypeOf<ProblemSeriesOperationStartSnapshot>().toMatchTypeOf<{
+      readonly allowedClassIds: readonly string[];
+    }>();
+  });
+
   it('snapshot enemy group requires readonly selectedCombatModuleId: string', () => {
     expectTypeOf<
       ProblemSeriesOperationStartEnemyGroup['selectedCombatModuleId']
@@ -151,8 +171,10 @@ describe('R12m createProblemSeriesOperationStartSnapshot (pure factory)', () => 
     expect(snapshot.generatorVersion).toBe(catalog.generatorVersion);
     expect(snapshot.seriesId).toBe(result.series.seriesId);
     expect(snapshot.seriesId).toBe('r12m_series_a');
+    expect(snapshot.allowedClassIds).toEqual(result.series.allowedClassIds);
     expect(snapshot.waves).toEqual(expectedWaves);
     expectSnapshotShapeOnly(snapshot);
+    expectAllowedClassIdsMatchSeries(snapshot, result.series);
     expectSelectedCombatModuleIdsMatchSeries(snapshot, result.series);
   });
 
@@ -169,8 +191,10 @@ describe('R12m createProblemSeriesOperationStartSnapshot (pure factory)', () => 
     expect(snapshot.generatorVersion).toBe(catalog.generatorVersion);
     expect(snapshot.seriesId).toBe(result.series.seriesId);
     expect(snapshot.seriesId).toBe('r12m_series_b');
+    expect(snapshot.allowedClassIds).toEqual(result.series.allowedClassIds);
     expect(snapshot.waves).toEqual(expectedWaves);
     expectSnapshotShapeOnly(snapshot);
+    expectAllowedClassIdsMatchSeries(snapshot, result.series);
     expectSelectedCombatModuleIdsMatchSeries(snapshot, result.series);
   });
 
@@ -202,6 +226,8 @@ describe('R12m createProblemSeriesOperationStartSnapshot (pure factory)', () => 
     );
 
     result.series.waves[0]!.prepResourceGrant = 999;
+    result.series.allowedClassIds.push('mutated_class');
+    result.series.allowedClassIds[0] = 'mutated_class';
     result.series.waves[0]!.enemyGroups[0]!.count = 99;
     result.series.waves[0]!.enemyGroups[0]!.classId = 'at_swordsman';
     result.series.waves[0]!.enemyGroups[0]!.selectedCombatModuleId =
@@ -218,6 +244,7 @@ describe('R12m createProblemSeriesOperationStartSnapshot (pure factory)', () => 
     });
 
     expect(snapshot).toEqual(snapshotBefore);
+    expect(snapshot.allowedClassIds).toEqual(snapshotBefore.allowedClassIds);
     expect(snapshot.waves).toHaveLength(3);
     expect(snapshot.waves[0]!.prepResourceGrant).toBe(
       snapshotBefore.waves[0]!.prepResourceGrant,
