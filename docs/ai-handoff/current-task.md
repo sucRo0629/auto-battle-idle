@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12m 作業単位 1B / 1C Backend 完了**（catalog / seed resolver / production load / validation + 選出済み系列の作戦 runtime 接続）。Player 未完了。R12m Phase 全体は未完了。**公式次は R12m Player 作業単位 2A — 入口・画面状態・全3 Wave 概要開示境界の実装前調査**。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない）。正本 handoff は **§105.27**。
+- **新ロードマップ現在地:** **R12m 1B / 1C Backend 完了** + **Player production DOM 自動経路成立**（happy-dom。実ブラウザ未確認）。2Q1 監査で production 不足（Wave 間 §21.5 開示・4 兵科 Player 編成制限）。R12m Phase 全体は未完了。**公式次は R12m 実ブラウザ確認**。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない）。正本 handoff は **§105.28**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12m Player 作業単位 2A**（入口・画面状態・全3 Wave 概要開示境界の read-only 調査）→ 以降の R12m Player 作業単位 → R12n → R12o → R13。
+- **次の再開タスク:** **R12m 実ブラウザ確認**（系列 A 完走・結果・同 seed / 新 seed 再開始の手動確認）→ 2Q1 残件の実装判断 → R12n → R12o → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -9385,3 +9385,117 @@ Save には上記 identity・waves・OperationState・checkpoint を保存しな
 **R12m Player 作業単位 2A — 入口・画面状態・全3 Wave 概要開示境界の実装前調査**
 
 2A は read-only 調査であり、Player UI を一括実装する作業ではない。
+
+## §105.28 R12m 作業単位 2R1 — 現在地の文書同期（2026-07-21）
+
+**状態:** **R12m 作業単位 2R1 文書同期完了**。production 実装変更なし。R12m 1B / 1C Backend 完了 + **Player production DOM 自動経路成立**（happy-dom。実ブラウザ未確認）。**R12m Player 未完了。R12m Phase 未完了。**
+
+### 現在地
+
+| 観点 | 判定 |
+| ---- | ---- |
+| R12m 1B Backend | **完了** |
+| R12m 1C Backend | **完了** |
+| R12m Player production DOM | **自動経路成立**（happy-dom）。実ブラウザ未確認 |
+| R12m 2Q1 自動ゲート監査 | **production 不足あり** / **テスト証拠不足あり** — 自動ゲート成立ではない |
+| R12m Phase | **未完了** |
+| R12n / R12o / R13 | 未着手 / 未着手 / 開始条件未達 |
+
+### 実装済み production 経路
+
+**Backend（1B / 1C）**
+
+- 問題系列 catalog / `generatorVersion` / seed normalize / FNV-1a deterministic 選出 / 系列 A・B
+- 3 Wave validation / 4 兵科制限 / CombatModule 相互参照 / class pool 所属検証
+- load / normalize / round-trip / Editor 保存前 validation
+- 解決済み Wave 変換 / 作戦開始 snapshot / BattleEngine resolved-waves provider
+- OperationSource 分離 / OperationState / checkpoint / retry / abort / final victory
+- fixed Stage 分離 / Save 非統合
+
+**Player production DOM 自動経路（happy-dom・実ブラウザ未確認）**
+
+- 固定クエスト入口 / メイン攻略入口 / seed 入力 / 全 3 Wave 概要 / 正解を直接教えない開示 / 概要 confirm / 初期 formation
+- Wave 0 戦闘 / Wave 1 準備・戦闘 / Wave 2 準備・戦闘
+- 作戦内パッシブ取得 / 作戦ポイント / Wave 間引継ぎ / 最終勝利
+- 問題系列専用結果 overlay / 同 seed 再開始 / 新 seed 開始 / 作戦選択へ
+- fixture-a → 系列 A、fixture-b → 系列 B。同 seed 再現・新 seed 系列差
+
+### 状態遷移（§21.6 整合）
+
+| 操作 | seed／系列 | 作戦内進行 | snapshot／result |
+| ---- | ---------- | ---------- | ---------------- |
+| 現在 Wave 再試行 | 維持 | checkpoint 復元 | 開始 snapshot 維持 |
+| 準備へ戻る | 維持 | 現 Wave 準備を再編集 | 開始 snapshot 維持 |
+| Wave 1 から再開始 | 維持 | パッシブ・資源・進行初期化 | 同系列 snapshot 維持または再準備 |
+| 最終勝利 | 結果 identity へ退避 | OperationState／checkpoint／取得物消去 | 開始 snapshot 消去、結果保持 |
+| 同 seed 再開始 | 同 seed で再選出 | 新作戦として初期化 | 新 snapshot → 全 3 Wave 概要 |
+| 新 seed 開始 | 旧系列破棄 | 新作戦として初期化 | 空 seed 入力 → 選出 → 新 snapshot |
+| 作戦選択へ | 旧系列破棄 | 作戦内状態なし | 結果消去 |
+| 中断 | 現系列破棄 | 作戦内取得物消去 | 開始 snapshot 消去。結果は保持しない |
+
+### 固定 Stage 分離
+
+- 問題系列を `StageDef` / `stages.json` へ混ぜていない。仮 `stageId` なし
+- 問題系列結果は seed / generatorVersion / seriesId。固定 Stage 結果は stageId
+- 問題系列勝利で fixed Stage EXP / 報酬を呼ばない。EXP・恒久数値成長は R12m 新仕様へ継承しない
+- Save へ問題系列 identity・作戦途中状態を保存しない
+
+### focused test 証拠（production 責務対応）
+
+| 責務 | 主要テスト |
+| ---- | ---------- |
+| 問題系列 catalog / seed | `problemSeriesCatalog.test.ts` |
+| snapshot / resolved waves | `operationStartSnapshot.test.ts`, `toBattleWaves.test.ts` |
+| GameSession 開始 / Wave 数 / grant | `gameSessionProblemSeriesOperationStart.test.ts`, `gameSessionProblemSeriesOperationWaveCount.test.ts`, `gameSessionProblemSeriesPrepResourceGrant.test.ts` |
+| retry / abort | `gameSessionProblemSeriesRetryPreservation.test.ts`, `gameSessionProblemSeriesAbort.test.ts` |
+| 最終勝利結果 | `victoryResult.test.ts`, `gameSessionProblemSeriesVictory.test.ts` |
+| Stage selection / 入口 wire | `stageSelectionWire.test.ts`, `ProblemSeriesEntryScreenHost.test.ts`, `ProblemSeriesOverviewScreenHost.test.ts` |
+| Player 入口 → 系列 A 最終結果 | `gameSessionProblemSeriesPlayerEntry.test.ts` |
+| 同 seed 再開始 | PlayerEntry `2O3` / `gameSessionProblemSeriesVictory.test.ts`（2O2） |
+| fixture-b 系列 B 概要 | `overviewViewModel.test.ts`, PlayerEntry `2P3` |
+| fixed Stage 回帰 | `stageSelectionWire.test.ts`, `gameSessionVictoryResult.test.ts` |
+
+**直近確認（合算しない）**
+
+| 作業単位 | ファイル数 | 結果 |
+| -------- | ---------- | ---- |
+| 2P3 関連 | 6 | **66 tests 成功** |
+| 2O3 関連 | 5 | **53 tests 成功** |
+| 2P2 関連 | 4 | **50 tests 成功** |
+| 2O2 関連 | 4 | **41 tests 成功** |
+
+### 既知の失敗
+
+**`BattleView.test.ts`**
+
+- 単独実行: **11 tests 失敗**
+- 最初のエラー: `Cannot set properties of undefined (setting 'uiMessageKey')` — `BattleView.ts` の pause action button 生成時
+- 新しい問題系列結果分岐へ到達する前に停止
+- 変更前比較なし。`pre-existing` とは断定しない
+- R12m 差分で fixture 補修しなかった
+
+### 2Q1 監査残件（production 不足）
+
+- Wave 間 §21.5 開示（次 Wave 敵情報・前 Wave 差分・残り Wave 概要・作戦固有条件 UI）
+- 4 兵科 Player 編成制限 / unlock 遮断
+- 系列 B の Wave 0–2 Player DOM 縦切りなし
+- `operationRetry.test.ts` は problemSeries 非対象
+
+### 未確認
+
+- 実ブラウザ
+- フルスイート最新完走
+- repository 全体の型検査
+- R12n 数値調整
+- R12o 手元成立判定
+- R13 面白さ評価
+
+### 次の正式な単一作業単位
+
+**R12m 実ブラウザ確認** — 系列 A（`fixture-a`）で作戦選択→概要→3 Wave 完走→結果→同 seed / 新 seed 再開始まで手動確認。§21.5 Wave 間開示不足と 4 兵科編成可否を実画面で記録する。
+
+### スコープ外
+
+- R12n 数値調整 / R12o 手元成立 / R13 評価
+- コード・データ・テスト変更（本 2R1 は文書同期のみ）
+- `BattleView.test.ts` の fixture 補修（別作業単位）

@@ -1680,13 +1680,16 @@ Wave 間準備の表示責務。
 | Wave 敗北 | 出撃試行終了。問題系列とクリア済み Wave は維持。再試行または準備へ戻れる |
 | 中断 | 現系列を破棄。敗北結果として終了。作戦内取得物は作戦外へ持ち出さない |
 
-| 操作 | 問題系列 | 進行 | 作戦内状態 |
-| ---- | -------- | ---- | ---------- |
-| 現在 Wave を同設定で再試行 | 同じ seed | クリア済み Wave 維持 | Wave 開始チェックポイントへ復元。作戦ポイントは再付与しない |
-| 現在 Wave の準備へ戻る | 同じ seed | クリア済み Wave 維持 | 編成・Module・取得判断を変更可能 |
-| Wave 1 から再開始 | 同じ seed | 全 Wave 未クリアへ戻す | パッシブ・資源・進行を初期化 |
-| 別の攻略を開始 | 新 seed | 新しい問題系列 | 全作戦内状態を初期化 |
-| 中断 | 現系列を破棄 | 敗北結果として終了 | 作戦外へ持ち出さない |
+| 操作 | seed／系列 | 作戦内進行 | snapshot／result |
+| ---- | ---------- | ---------- | ---------------- |
+| 現在 Wave を同設定で再試行 | 維持 | checkpoint 復元。クリア済み Wave 維持。作戦ポイントは再付与しない | 開始 snapshot 維持 |
+| 現在 Wave の準備へ戻る | 維持 | 現 Wave 準備を再編集。クリア済み Wave 維持 | 開始 snapshot 維持 |
+| Wave 1 から再開始 | 維持 | パッシブ・資源・進行を初期化。全 Wave 未クリアへ戻す | 同系列 snapshot 維持または再準備 |
+| 最終 Wave 勝利 | 結果 identity へ退避 | OperationState／checkpoint／作戦内取得物を消去 | 開始 snapshot 消去。`problemSeriesVictoryResult` を保持 |
+| 同 seed 再開始（最終勝利後） | 同 seed で再選出 | 新作戦として初期化 | 新 snapshot → 全 3 Wave 概要 |
+| 新 seed 開始（最終勝利後） | 旧系列破棄 | 新作戦として初期化 | 空 seed 入力 → 選出 → 新 snapshot |
+| 作戦選択へ（最終勝利後） | 旧系列破棄 | 作戦内状態なし | 結果消去 |
+| 中断 | 現系列破棄 | 作戦内取得物消去。敗北結果として終了 | 開始 snapshot 消去。結果は保持しない |
 
 既存チェックポイントと二重付与防止を維持する（[§8](#8-wave-開始チェックポイント)）。UI 入口は [§9](#9-リトライ導線r7-接続) と整合させる。
 
@@ -1805,8 +1808,22 @@ R12m は本節の上位構造と R12l の 4 兵科パッシブを接続し、次
 - seed 選出: `src/battle/problemSeries/seedResolve.ts`（FNV-1a 32-bit。汎用 PRNG / shuffle なし）
 - parse / validate / normalize: `src/battle/data/problemSeriesCatalog.ts`
 - catalog 追加・選出規則変更時は `generatorVersion` を変更する
-- Editor API / UI は未実装（JSON と runtime 型は同一形状を維持）
-- BattleEngine / OperationState / Player 入口は後続作業単位
+- Editor 保存前 validation: editor API payload 経路（Editor UI 本体は未実装。JSON と runtime 型は同一形状を維持）
+
+#### 実装注記（R12m 作業単位 1C — runtime ownership）
+
+- seed / generatorVersion / seriesId / 解決済み 3 Wave は **GameSession 作戦開始 snapshot のみ**が保持
+- OperationState / checkpoint は `{ kind: 'problemSeries' }` のみ。Save へ identity・作戦途中状態を保存しない
+- 解決済み Wave 変換 → BattleEngine resolved-waves provider → Wave 数 / enemyGroups / CombatModule / prepResourceGrant
+- retry / abort / final victory 接続済み。固定 Stage 報酬（EXP 等）経路は問題系列勝利で呼ばない
+
+#### 実装注記（R12m Player — happy-dom production DOM 自動経路）
+
+- 固定クエスト入口 + メイン攻略入口 + seed 入力 + 全 3 Wave 概要 + 概要 confirm + 初期 formation + Wave 0〜2 進行 + 作戦内パッシブ + 作戦ポイント + Wave 間引継ぎ + 最終勝利 + 問題系列結果 overlay + 同 seed / 新 seed / 作戦選択へ
+- fixture-a → 系列 A、fixture-b → 系列 B。同 seed 再現・新 seed 系列差
+- 問題系列を `StageDef` / `stages.json` へ混ぜていない。仮 `stageId` なし。結果は seed / generatorVersion / seriesId を保持（固定 Stage 結果は stageId）
+- **happy-dom production DOM テストまで確認。実ブラウザ未確認**
+- 2Q1 監査（2026-07-21）: Wave 間 §21.5 開示・4 兵科 Player 編成制限に production 不足。R12m Player / Phase 未完了
 
 ### 21.12 R12k 完了条件（設計）
 
