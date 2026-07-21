@@ -14,6 +14,7 @@ const SERIES_A_ID = 'r12m_series_a';
 const SERIES_B_ID = 'r12m_series_b';
 const GENERATOR_VERSION = 'r12m-v1';
 const UNKNOWN_CLASS_ID = 'r12m_unknown_class';
+const UNKNOWN_MODULE_ID = 'r12m_unknown_combat_module';
 
 const SERIES_A_INTERNAL_CLASS_STRINGS = [
   'single_protection',
@@ -297,6 +298,115 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
 
     expect(core).toEqual(coreSnapshotBefore);
     expect(core.waves[0]!.enemyGroups[0]!.classId).toBe(originalFirstGroup.classId);
+  });
+
+  it('fixture-a: unknown combatModuleId is rejected without displayName fallback', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    expect(loaded.data.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+
+    const gameData = loaded.data;
+    const catalog = gameData.problemSeriesCatalog;
+    const result = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_A);
+    expect(result.series.seriesId).toBe(SERIES_A_ID);
+
+    const snapshot = createProblemSeriesOperationStartSnapshot(result);
+    const core = createProblemSeriesOverviewCore(snapshot);
+    expect(core.waves).toHaveLength(3);
+
+    const totalCoreGroups = core.waves.reduce(
+      (sum, wave) => sum + wave.enemyGroups.length,
+      0,
+    );
+    expect(totalCoreGroups).toBeGreaterThan(0);
+    expect(core.waves[0]!.enemyGroups.length).toBeGreaterThan(0);
+
+    const originalFirstGroup = core.waves[0]!.enemyGroups[0]!;
+    expect(originalFirstGroup.selectedCombatModuleId.length).toBeGreaterThan(0);
+    expect(gameData.combatModuleRegistry[UNKNOWN_MODULE_ID]).toBeUndefined();
+    expect(
+      gameData.classRegistry[originalFirstGroup.classId as keyof typeof gameData.classRegistry],
+    ).toBeDefined();
+
+    const coreSnapshotBefore = {
+      seed: core.seed,
+      waves: core.waves.map((wave) => ({
+        waveNumber: wave.waveNumber,
+        prepResourceGrant: wave.prepResourceGrant,
+        enemyGroups: wave.enemyGroups.map((group) => ({
+          classId: group.classId,
+          count: group.count,
+          selectedCombatModuleId: group.selectedCombatModuleId,
+        })),
+      })),
+    };
+
+    const corruptedCore = {
+      seed: core.seed,
+      waves: core.waves.map((wave, waveIndex) => ({
+        waveNumber: wave.waveNumber,
+        prepResourceGrant: wave.prepResourceGrant,
+        enemyGroups: wave.enemyGroups.map((group, groupIndex) =>
+          waveIndex === 0 && groupIndex === 0
+            ? {
+                classId: group.classId,
+                count: group.count,
+                selectedCombatModuleId: UNKNOWN_MODULE_ID,
+              }
+            : {
+                classId: group.classId,
+                count: group.count,
+                selectedCombatModuleId: group.selectedCombatModuleId,
+              },
+        ),
+      })),
+    };
+
+    expect(corruptedCore.waves[0]!.enemyGroups[0]!.selectedCombatModuleId).toBe(UNKNOWN_MODULE_ID);
+    expect(corruptedCore.waves[0]!.enemyGroups[0]!.classId).toBe(originalFirstGroup.classId);
+    expect(corruptedCore.waves[0]!.enemyGroups[0]!.classId.length).toBeGreaterThan(0);
+
+    for (let waveIndex = 0; waveIndex < corruptedCore.waves.length; waveIndex++) {
+      const corruptedWave = corruptedCore.waves[waveIndex]!;
+      const originalWave = core.waves[waveIndex]!;
+      for (let groupIndex = 0; groupIndex < corruptedWave.enemyGroups.length; groupIndex++) {
+        const corruptedGroup = corruptedWave.enemyGroups[groupIndex]!;
+        const originalGroup = originalWave.enemyGroups[groupIndex]!;
+        if (waveIndex === 0 && groupIndex === 0) {
+          expect(corruptedGroup.selectedCombatModuleId).toBe(UNKNOWN_MODULE_ID);
+          expect(corruptedGroup.classId).toBe(originalGroup.classId);
+          continue;
+        }
+        expect(corruptedGroup.selectedCombatModuleId).toBe(originalGroup.selectedCombatModuleId);
+        expect(corruptedGroup.selectedCombatModuleId).not.toBe(UNKNOWN_MODULE_ID);
+        expect(corruptedGroup.classId).toBe(originalGroup.classId);
+      }
+    }
+
+    expect(core.waves[0]!.enemyGroups[0]!.selectedCombatModuleId).toBe(
+      originalFirstGroup.selectedCombatModuleId,
+    );
+    expect(core.waves[0]!.enemyGroups[0]!.selectedCombatModuleId).not.toBe(UNKNOWN_MODULE_ID);
+    expect(core).toEqual(coreSnapshotBefore);
+
+    let thrown: unknown;
+    try {
+      createProblemSeriesOverviewNamed(corruptedCore, gameData);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    const message = (thrown as Error).message;
+    expect(message).toContain('unknown combatModuleId');
+    expect(message).toContain(UNKNOWN_MODULE_ID);
+    // throw するため unknown ID を combatModuleDisplayName へ fallback しない
+
+    expect(core).toEqual(coreSnapshotBefore);
+    expect(core.waves[0]!.enemyGroups[0]!.selectedCombatModuleId).toBe(
+      originalFirstGroup.selectedCombatModuleId,
+    );
   });
 });
 
