@@ -13,6 +13,7 @@ import { expandEnemyGroupsList } from '../battle/enemyGroupSpawn.ts';
 import * as operationStartSnapshotModule from '../battle/problemSeries/operationStartSnapshot.ts';
 import type { ProblemSeriesOperationStartSnapshot } from '../battle/problemSeries/operationStartSnapshot.ts';
 import * as seedResolveModule from '../battle/problemSeries/seedResolve.ts';
+import * as victoryResultModule from '../battle/problemSeries/victoryResult.ts';
 import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import {
   killAllEnemies,
@@ -326,6 +327,10 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
 
     const computeExpSpy = vi.spyOn(stageProgressionModule, 'computeStageExpReward');
     const applyRewardsSpy = vi.spyOn(victoryRewardsModule, 'applyVictoryRewards');
+    const victoryResultSpy = vi.spyOn(
+      victoryResultModule,
+      'createProblemSeriesVictoryResult',
+    );
 
     expect(prepared.seriesId).toBe('r12m_series_a');
     expect(prepared.waves).toHaveLength(SERIES_A_WAVE_COUNT);
@@ -333,6 +338,7 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(session.getOperationState()?.isActive).toBe(true);
     expect(session.hasOperationCheckpoint()).toBe(true);
     expect(getEngineProvider(engine)!()).toBe(prepared.waves);
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
 
     assertLivingEnemies(engine);
     const wave0Expected = expandWaveExpectations(prepared.waves, 0);
@@ -374,6 +380,30 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(engine.getSnapshot().phase).toBe('victory');
     expect(engine.getSnapshot().waveIndex).toBe(2);
 
+    const resultFirst = session.getProblemSeriesVictoryResult();
+    const resultSecond = session.getProblemSeriesVictoryResult();
+    expect(resultFirst).not.toBeNull();
+    expect(resultSecond).not.toBeNull();
+    expect(resultFirst).toEqual(resultSecond);
+    expect(resultFirst).not.toBe(resultSecond);
+    expect(resultFirst).toEqual({
+      outcome: 'victory',
+      seed: prepared.seed,
+      generatorVersion: prepared.generatorVersion,
+      seriesId: prepared.seriesId,
+      reachedWaveIndex: 2,
+    });
+    (resultFirst as Record<string, unknown>).seed = 'tampered-seed';
+    const resultAfterTamper = session.getProblemSeriesVictoryResult();
+    expect(resultAfterTamper).not.toBeNull();
+    expect(resultAfterTamper).toEqual({
+      outcome: 'victory',
+      seed: prepared.seed,
+      generatorVersion: prepared.generatorVersion,
+      seriesId: prepared.seriesId,
+      reachedWaveIndex: 2,
+    });
+
     expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
     expect(getEngineProvider(engine)!()).toBeNull();
     expect(session.getOperationState()).toBeNull();
@@ -388,6 +418,7 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(session.getSaveState()).toEqual(saveBeforeVictory);
     assertSaveDoesNotEmbedProblemSeries(session.getSaveState());
 
+    expect(victoryResultSpy).toHaveBeenCalledTimes(1);
     expect(computeExpSpy).not.toHaveBeenCalled();
     expect(applyRewardsSpy).not.toHaveBeenCalled();
     expect(resolveSpy).not.toHaveBeenCalled();
@@ -438,6 +469,7 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(engine.getSnapshot().waveIndex).toBe(fixedStageFinalWaveIndex);
     expect(engine.getSnapshot().waveIndex).not.toBe(SERIES_A_WAVE_COUNT - 1);
 
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
     expect(session.getOperationResult()).toEqual({
       stageId: FIXED_STAGE_ID,
       outcome: 'victory',
@@ -473,6 +505,7 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(() => invokeHandleVictory(session)).toThrow(/snapshot/i);
     expect(() => invokeHandleVictory(session)).toThrow(/欠落/);
 
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
     expect(session.getOperationResult()).toBeNull();
     expect(computeExpSpy).not.toHaveBeenCalled();
     expect(applyRewardsSpy).not.toHaveBeenCalled();

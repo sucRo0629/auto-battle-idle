@@ -76,6 +76,10 @@ import {
   type ProblemSeriesOperationStartSnapshot,
 } from '../battle/problemSeries/operationStartSnapshot.ts';
 import { resolveProblemSeriesFromSeed } from '../battle/problemSeries/seedResolve.ts';
+import {
+  createProblemSeriesVictoryResult,
+  type ProblemSeriesVictoryResult,
+} from '../battle/problemSeries/victoryResult.ts';
 import type { ResolvedWavesCombatInput } from '../battle/resolvedWaveCombatInput.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import { WavePrepScreenHost } from './WavePrepScreenHost.ts';
@@ -96,6 +100,18 @@ const ALLOWED_SIMULATION_SPEEDS: readonly SimulationSpeed[] = [1, 2, 4];
 
 function isSimulationSpeed(value: number): value is SimulationSpeed {
   return (ALLOWED_SIMULATION_SPEEDS as readonly number[]).includes(value);
+}
+
+function cloneProblemSeriesVictoryResult(
+  result: ProblemSeriesVictoryResult,
+): ProblemSeriesVictoryResult {
+  return {
+    outcome: result.outcome,
+    seed: result.seed,
+    generatorVersion: result.generatorVersion,
+    seriesId: result.seriesId,
+    reachedWaveIndex: result.reachedWaveIndex,
+  };
 }
 
 export class GameSession {
@@ -133,6 +149,8 @@ export class GameSession {
    */
   private problemSeriesOperationStartSnapshot: ProblemSeriesOperationStartSnapshot | null =
     null;
+  /** R12m 2N3: 問題系列最終勝利時に確定する結果（メモリのみ・Save 非統合） */
+  private problemSeriesVictoryResult: ProblemSeriesVictoryResult | null = null;
   /** R6i: checkpoint 再戦中は onBattlefieldReload による Wave 進行巻き戻しを抑止 */
   private suppressOperationWaveReload = false;
   /** R7b: battle simulation 倍率（Save 非永続・初期 1 倍） */
@@ -513,6 +531,13 @@ export class GameSession {
   getOperationResult(): OperationResult | null {
     return this.operationResult
       ? cloneOperationResult(this.operationResult)
+      : null;
+  }
+
+  /** R12m 2N3: 問題系列の確定済み最終勝利結果（未確定時は null） */
+  getProblemSeriesVictoryResult(): ProblemSeriesVictoryResult | null {
+    return this.problemSeriesVictoryResult
+      ? cloneProblemSeriesVictoryResult(this.problemSeriesVictoryResult)
       : null;
   }
 
@@ -1448,6 +1473,7 @@ export class GameSession {
         );
       }
 
+      const victoryResult = createProblemSeriesVictoryResult(snapshot);
       const waveCount = snapshot.waves.length;
       const finalWaveIndex = Math.max(0, waveCount - 1);
 
@@ -1457,6 +1483,7 @@ export class GameSession {
       }
 
       this.clearProblemSeriesOperationStartSnapshot();
+      this.problemSeriesVictoryResult = victoryResult;
       this.view.setBattlePaused(true);
       this.view.refreshVictoryResultOverlay();
       return;
