@@ -541,6 +541,36 @@ export class GameSession {
       : null;
   }
 
+  /** R12m 2N4: verify OFF の battle 画面で問題系列最終勝利結果 UI を表示するか */
+  shouldShowProblemSeriesVictoryResult(): boolean {
+    return (
+      !this.verifyMode &&
+      this.currentScreen === 'battle' &&
+      this.problemSeriesVictoryResult?.outcome === 'victory'
+    );
+  }
+
+  /** R12m 2N4: 問題系列結果 UI 表示用の最小フィールド防御コピー */
+  getProblemSeriesVictoryResultForDisplay(): {
+    outcome: 'victory';
+    seed: string;
+    generatorVersion: string;
+    seriesId: string;
+    reachedWaveIndex: number;
+  } | null {
+    const result = this.getProblemSeriesVictoryResult();
+    if (result === null) {
+      return null;
+    }
+    return {
+      outcome: result.outcome,
+      seed: result.seed,
+      generatorVersion: result.generatorVersion,
+      seriesId: result.seriesId,
+      reachedWaveIndex: result.reachedWaveIndex,
+    };
+  }
+
   /** R6f: 有効な checkpoint が存在するか */
   hasOperationCheckpoint(): boolean {
     return this.operationCheckpoint !== null;
@@ -844,6 +874,18 @@ export class GameSession {
 
     this.wavePrepSuspended = false;
     this.clearOperationResult();
+    this.view.setBattlePaused(false);
+    this.setGameScreen('stageSelect');
+    this.view.refreshVictoryResultOverlay();
+    return true;
+  }
+
+  /** R12m 2N4: 問題系列結果 UI から作戦選択へ戻る。 */
+  returnToStageSelectAfterProblemSeriesVictory(): boolean {
+    if (!this.shouldShowProblemSeriesVictoryResult()) return false;
+
+    this.problemSeriesVictoryResult = null;
+    this.wavePrepSuspended = false;
     this.view.setBattlePaused(false);
     this.setGameScreen('stageSelect');
     this.view.refreshVictoryResultOverlay();

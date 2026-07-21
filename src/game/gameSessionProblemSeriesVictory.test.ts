@@ -339,6 +339,13 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(session.hasOperationCheckpoint()).toBe(true);
     expect(getEngineProvider(engine)!()).toBe(prepared.waves);
     expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(false);
+    expect(session.getProblemSeriesVictoryResultForDisplay()).toBeNull();
+    expect(session.returnToStageSelectAfterProblemSeriesVictory()).toBe(false);
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
+    expect(session.getOperationState()?.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(session.getOperationCheckpoint()?.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
 
     assertLivingEnemies(engine);
     const wave0Expected = expandWaveExpectations(prepared.waves, 0);
@@ -382,10 +389,16 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
 
     const resultFirst = session.getProblemSeriesVictoryResult();
     const resultSecond = session.getProblemSeriesVictoryResult();
+    const displayFirst = session.getProblemSeriesVictoryResultForDisplay();
+    const displaySecond = session.getProblemSeriesVictoryResultForDisplay();
     expect(resultFirst).not.toBeNull();
     expect(resultSecond).not.toBeNull();
+    expect(displayFirst).not.toBeNull();
+    expect(displaySecond).not.toBeNull();
     expect(resultFirst).toEqual(resultSecond);
     expect(resultFirst).not.toBe(resultSecond);
+    expect(displayFirst).toEqual(displaySecond);
+    expect(displayFirst).not.toBe(displaySecond);
     expect(resultFirst).toEqual({
       outcome: 'victory',
       seed: prepared.seed,
@@ -393,10 +406,28 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
       seriesId: prepared.seriesId,
       reachedWaveIndex: 2,
     });
+    expect(displayFirst).toEqual({
+      outcome: 'victory',
+      seed: prepared.seed,
+      generatorVersion: prepared.generatorVersion,
+      seriesId: prepared.seriesId,
+      reachedWaveIndex: 2,
+    });
+    expect(displayFirst).not.toHaveProperty('stageId');
     (resultFirst as Record<string, unknown>).seed = 'tampered-seed';
+    (displayFirst as Record<string, unknown>).seriesId = 'tampered-series';
     const resultAfterTamper = session.getProblemSeriesVictoryResult();
+    const displayAfterTamper = session.getProblemSeriesVictoryResultForDisplay();
     expect(resultAfterTamper).not.toBeNull();
+    expect(displayAfterTamper).not.toBeNull();
     expect(resultAfterTamper).toEqual({
+      outcome: 'victory',
+      seed: prepared.seed,
+      generatorVersion: prepared.generatorVersion,
+      seriesId: prepared.seriesId,
+      reachedWaveIndex: 2,
+    });
+    expect(displayAfterTamper).toEqual({
       outcome: 'victory',
       seed: prepared.seed,
       generatorVersion: prepared.generatorVersion,
@@ -414,6 +445,7 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
 
     expect(session.getOperationResult()).toBeNull();
     expect(session.shouldShowVictoryResult()).toBe(false);
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(true);
 
     expect(session.getSaveState()).toEqual(saveBeforeVictory);
     assertSaveDoesNotEmbedProblemSeries(session.getSaveState());
@@ -423,6 +455,23 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(applyRewardsSpy).not.toHaveBeenCalled();
     expect(resolveSpy).not.toHaveBeenCalled();
     expect(createSpy).not.toHaveBeenCalled();
+
+    victoryResultSpy.mockClear();
+    const saveBeforeReturn = structuredClone(session.getSaveState());
+    expect(session.returnToStageSelectAfterProblemSeriesVictory()).toBe(true);
+    expect(session.getCurrentScreen()).toBe('stageSelect');
+    expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.getProblemSeriesVictoryResultForDisplay()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(false);
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBeNull();
+    expect(session.getOperationState()).toBeNull();
+    expect(session.getOperationCheckpoint()).toBeNull();
+    expect(session.getSaveState()).toEqual(saveBeforeReturn);
+    assertSaveDoesNotEmbedProblemSeries(session.getSaveState());
+    expect(victoryResultSpy).not.toHaveBeenCalled();
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(session.returnToStageSelectAfterProblemSeriesVictory()).toBe(false);
   });
 
   it('fixedStage source with retained snapshot uses fixed-stage victory path and OperationResult', () => {
@@ -470,6 +519,9 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(engine.getSnapshot().waveIndex).not.toBe(SERIES_A_WAVE_COUNT - 1);
 
     expect(session.getProblemSeriesVictoryResult()).toBeNull();
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(false);
+    expect(session.getProblemSeriesVictoryResultForDisplay()).toBeNull();
+    expect(session.returnToStageSelectAfterProblemSeriesVictory()).toBe(false);
     expect(session.getOperationResult()).toEqual({
       stageId: FIXED_STAGE_ID,
       outcome: 'victory',
@@ -484,6 +536,48 @@ describe('GameSession problem series final victory teardown (R12m 1C unit13 / 14
     expect(createSpy).not.toHaveBeenCalled();
 
     session.destroy();
+  });
+
+  it('verify mode keeps problem series result hidden even when a victory result is held', () => {
+    context = bootProblemSeriesOperation();
+    const { session, prepared } = context;
+    const engine = getEngine(session);
+
+    advanceThroughWavePrep(session, engine, prepared, 0);
+    reachAwaitingNextWaveAfterKill(engine);
+    expect(session.confirmWavePrepAndStartNextWave()).toBe(true);
+    expect(session.getCurrentScreen()).toBe('battle');
+
+    reachVictoryAfterKill(engine);
+
+    expect(session.getProblemSeriesVictoryResult()).toEqual({
+      outcome: 'victory',
+      seed: prepared.seed,
+      generatorVersion: prepared.generatorVersion,
+      seriesId: prepared.seriesId,
+      reachedWaveIndex: 2,
+    });
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(true);
+
+    session.setVerifyMode(true);
+
+    expect(session.isVerifyMode()).toBe(true);
+    expect(session.getProblemSeriesVictoryResult()).toEqual({
+      outcome: 'victory',
+      seed: prepared.seed,
+      generatorVersion: prepared.generatorVersion,
+      seriesId: prepared.seriesId,
+      reachedWaveIndex: 2,
+    });
+    expect(session.getProblemSeriesVictoryResultForDisplay()).toEqual({
+      outcome: 'victory',
+      seed: prepared.seed,
+      generatorVersion: prepared.generatorVersion,
+      seriesId: prepared.seriesId,
+      reachedWaveIndex: 2,
+    });
+    expect(session.shouldShowProblemSeriesVictoryResult()).toBe(false);
+    expect(session.returnToStageSelectAfterProblemSeriesVictory()).toBe(false);
   });
 
   it('problemSeries source with missing snapshot throws on handleVictory without fixed-stage fallback', () => {
