@@ -1,0 +1,189 @@
+@import './game-ui-chrome.css';
+
+/* R12m Player 2W1 - initial 3-Wave overview layout (readability + viewport fit only). */
+
+.problem-series-overview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  width: min(84rem, calc(100% - 2rem));
+  max-width: 84rem;
+  max-height: min(52rem, calc(100vh - 2rem));
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+  overflow: hidden;
+  color: var(--app-text);
+  font-family: var(--font-ui, inherit);
+}
+
+.problem-series-overview-panel.game-panel-surface,
+.problem-series-overview-panel {
+  border: var(--game-panel-border);
+  border-radius: 0;
+  background: var(--game-panel-bg);
+  box-shadow:
+    inset 0 1px 0 var(--game-bevel-light),
+    inset 0 -1px 0 var(--game-bevel-dark);
+}
+
+.problem-series-overview-panel > :not(.problem-series-overview-waves) {
+  flex-shrink: 0;
+}
+
+.problem-series-overview-panel > h1 {
+  margin: 0;
+  font-family: var(--font-heading, inherit);
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.problem-series-overview-seed,
+.problem-series-overview-wave-adjustment-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.problem-series-overview-conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.problem-series-overview-conditions > h2 {
+  margin: 0;
+  font-family: var(--font-heading, inherit);
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.problem-series-overview-condition,
+.problem-series-overview-conditions-empty {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.problem-series-overview-waves {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-content: start;
+  padding: 0.15rem 0.1rem;
+}
+
+.problem-series-overview-wave {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: var(--game-panel-border);
+  border-radius: 0;
+  background: var(--game-slot-bg);
+  box-shadow: inset 0 1px 0 var(--game-bevel-light);
+}
+
+.problem-series-overview-wave > h2 {
+  margin: 0;
+  font-family: var(--font-heading, inherit);
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.problem-series-overview-wave-grant {
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.92;
+}
+
+.problem-series-overview-enemy-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.problem-series-overview-enemy-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  background: rgba(8, 10, 18, 0.55);
+}
+
+.problem-series-overview-enemy-class,
+.problem-series-overview-enemy-count,
+.problem-series-overview-enemy-module,
+.problem-series-overview-enemy-scale {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.problem-series-overview-enemy-class {
+  font-weight: 700;
+}
+
+.problem-series-overview-enemy-module {
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+.problem-series-overview-enemy-scale {
+  font-size: 12px;
+  opacity: 0.88;
+}
+
+.problem-series-overview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  flex-shrink: 0;
+  padding-top: 0.25rem;
+}
+
+.problem-series-overview-back,
+.problem-series-overview-confirm {
+  padding: 8px 16px;
+  border: var(--game-panel-border);
+  border-radius: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(38, 44, 58, 0.95) 0%,
+    rgba(22, 26, 38, 0.95) 100%
+  );
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 var(--game-bevel-light),
+    0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.problem-series-overview-confirm {
+  border-color: rgba(74, 144, 217, 0.85);
+  background: linear-gradient(
+    180deg,
+    rgba(58, 98, 148, 0.95) 0%,
+    rgba(36, 68, 108, 0.95) 100%
+  );
+}
+
+@media (max-width: 959px) {
+  .problem-series-overview-waves {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

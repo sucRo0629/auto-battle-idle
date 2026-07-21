@@ -1,3 +1,4 @@
+import '../styles/problem-series-overview-panel.css';
 import type { ProblemSeriesOverviewDisplay } from './problemSeriesOverviewViewModel.ts';
 
 export interface ProblemSeriesOverviewPanelCallbacks {
