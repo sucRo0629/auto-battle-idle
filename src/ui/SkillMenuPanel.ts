@@ -73,11 +73,19 @@ const ATTACKER_SUB_ROLES: AttackerSubRole[] = [
   "caster",
 ];
 
-export function getClassSelectionVisibleClassIds(gameData: GameData): ClassId[] {
-  return sortClassIdsByListOrder(
+export function getClassSelectionVisibleClassIds(
+  gameData: GameData,
+  allowedClassIds?: readonly ClassId[],
+): ClassId[] {
+  const runtimeVisible = sortClassIdsByListOrder(
     Object.keys(gameData.classRegistry),
     gameData.classOrder,
   );
+  if (allowedClassIds === undefined) {
+    return runtimeVisible;
+  }
+  const allowedSet = new Set(allowedClassIds);
+  return runtimeVisible.filter((classId) => allowedSet.has(classId));
 }
 
 function roleLabel(role: Role): string {
@@ -124,6 +132,8 @@ export interface SkillMenuPanelOptions {
   isVerifyMode?: () => boolean;
   /** Formation Screen: 左ペイン最下部フッターの補助導線 */
   returnToBattle?: SkillMenuPanelReturnToBattleOptions;
+  /** 指定時は Class Select 候補と初期選択を許可兵科のみへ制限。未指定時は全 runtime 兵科。 */
+  allowedClassIds?: readonly ClassId[];
 }
 
 export class SkillMenuPanel {
@@ -149,6 +159,8 @@ export class SkillMenuPanel {
   private readonly unsubscribeLocale: () => void;
   private readonly draftParty: PartySlotState[];
   private readonly isVerifyMode: () => boolean;
+  /** null = 許可リスト未指定（全 runtime 兵科）。空 Set = 候補 0 件。 */
+  private readonly allowedClassIdsSet: ReadonlySet<ClassId> | null;
   private selectedClassIds: ClassId[];
   private focusedClassId: ClassId | null = null;
   /** pointerdown 時点の focus。focusin→click で誤解除しないための gesture 判定。 */
@@ -169,6 +181,10 @@ export class SkillMenuPanel {
     options: SkillMenuPanelOptions = {}
   ) {
     this.isVerifyMode = options.isVerifyMode ?? (() => false);
+    this.allowedClassIdsSet =
+      options.allowedClassIds !== undefined
+        ? new Set(options.allowedClassIds)
+        : null;
     this.draftParty = Array.from({ length: PARTY_SLOT_COUNT }, (_, index) => {
       const member = sourceParty[index];
       return member
@@ -181,7 +197,11 @@ export class SkillMenuPanel {
     });
     this.selectedClassIds = this.draftParty
       .flatMap((member) => (member ? [member.classId] : []))
+      .filter((classId) => this.isAllowedClassId(classId))
       .slice(0, 4);
+    if (this.allowedClassIdsSet !== null) {
+      this.syncDraftPartyToSelection();
+    }
     this.focusedClassId =
       this.selectedClassIds[0] ?? this.getPickerVisibleClassIds()[0] ?? null;
 
@@ -375,8 +395,24 @@ export class SkillMenuPanel {
     this.returnToBattleButton.disabled = !this.canReturnToBattle();
   }
 
+  private isAllowedClassId(classId: ClassId): boolean {
+    if (this.allowedClassIdsSet === null) {
+      return true;
+    }
+    return (
+      this.allowedClassIdsSet.has(classId) &&
+      this.gameData.classRegistry[classId] !== undefined
+    );
+  }
+
   private getPickerVisibleClassIds(): ClassId[] {
-    return getClassSelectionVisibleClassIds(this.gameData);
+    if (this.allowedClassIdsSet === null) {
+      return getClassSelectionVisibleClassIds(this.gameData);
+    }
+    return getClassSelectionVisibleClassIds(
+      this.gameData,
+      [...this.allowedClassIdsSet],
+    );
   }
 
   /** Hidden formation must not mutate save party (stage-select overlay, etc.). */

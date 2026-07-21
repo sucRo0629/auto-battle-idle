@@ -85,4 +85,66 @@ describe('game class selection list', () => {
       expect(visible).toContain(classId);
     }
   });
+
+  it('filters visible classes to allowedClassIds intersection', () => {
+    const gameData = loadGameData();
+    expect(gameData.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+    const allowedClassIds = gameData.problemSeriesCatalog.series[0]!.allowedClassIds;
+    expect(allowedClassIds).toHaveLength(4);
+
+    const visible = getClassSelectionVisibleClassIds(gameData, allowedClassIds);
+    expect(visible).toHaveLength(4);
+    for (const classId of allowedClassIds) {
+      expect(visible).toContain(classId);
+    }
+  });
+
+  it('returns empty list for empty allowedClassIds without runtime fallback', () => {
+    const gameData = loadGameData();
+    const allRuntime = getClassSelectionVisibleClassIds(gameData);
+    expect(allRuntime.length).toBeGreaterThan(0);
+
+    const visible = getClassSelectionVisibleClassIds(gameData, []);
+    expect(visible).toEqual([]);
+  });
+
+  it('ignores unknown IDs in allowedClassIds', () => {
+    const gameData = loadGameData();
+    const allowedClassIds = gameData.problemSeriesCatalog.series[0]!.allowedClassIds;
+    const unknownId = 'test_unknown_class_for_filter';
+
+    const visible = getClassSelectionVisibleClassIds(gameData, [
+      ...allowedClassIds,
+      unknownId,
+    ]);
+    expect(visible).toHaveLength(allowedClassIds.length);
+    expect(visible).not.toContain(unknownId);
+  });
+
+  it('does not duplicate classes when allowedClassIds has duplicate entries', () => {
+    const gameData = loadGameData();
+    const allowedClassIds = gameData.problemSeriesCatalog.series[0]!.allowedClassIds;
+    const duplicatedFirst = allowedClassIds[0]!;
+
+    const visible = getClassSelectionVisibleClassIds(gameData, [
+      duplicatedFirst,
+      duplicatedFirst,
+      ...allowedClassIds.slice(1),
+    ]);
+    expect(visible.filter((classId) => classId === duplicatedFirst)).toHaveLength(1);
+    expect(visible).toHaveLength(allowedClassIds.length);
+  });
+
+  it('preserves classOrder sort instead of allowedClassIds array order', () => {
+    const gameData = loadGameData();
+    const allowedClassIds = gameData.problemSeriesCatalog.series[0]!.allowedClassIds;
+    const reversed = [...allowedClassIds].reverse();
+
+    const byReversedInput = getClassSelectionVisibleClassIds(gameData, reversed);
+    const byCanonicalInput = getClassSelectionVisibleClassIds(
+      gameData,
+      allowedClassIds,
+    );
+    expect(byReversedInput).toEqual(byCanonicalInput);
+  });
 });
