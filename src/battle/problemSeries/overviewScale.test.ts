@@ -86,3 +86,38 @@ describe('R12m createProblemSeriesOverviewScale (fixture-a production path)', ()
     expect(snapshot).toEqual(snapshotBefore);
   });
 });
+
+describe('R12m createProblemSeriesOverviewScale (explicit hp/atk scale)', () => {
+  it('keeps explicit hp/atk scales and defaults unspecified def/res to 1', () => {
+    // Technical fixture values reused from toBattleWaves.test.ts (not balance values).
+    const input = {
+      hpScale: 1.5,
+      atkScale: 2,
+    };
+    const inputBefore = structuredClone(input);
+
+    const first = createProblemSeriesOverviewScale(input);
+    const second = createProblemSeriesOverviewScale(input);
+
+    expect(first).toEqual({
+      hpScale: 1.5,
+      atkScale: 2,
+      defScale: 1,
+      resScale: 1,
+      hasDifference: true,
+    });
+    // Explicit hp/atk must be kept as-is (no recalculation / rounding).
+    expect(first.hpScale).toBe(1.5);
+    expect(first.atkScale).toBe(2);
+    // Unspecified def/res default to 1 only.
+    expect(first.defScale).toBe(1);
+    expect(first.resScale).toBe(1);
+    expect(first.hasDifference).toBe(true);
+    expect(Object.keys(first).sort()).toEqual([...SCALE_OUTPUT_KEYS]);
+    expect(Object.keys(first)).toHaveLength(5);
+
+    expect(input).toEqual(inputBefore);
+    expect(second).not.toBe(first);
+    expect(second).toEqual(first);
+  });
+});
