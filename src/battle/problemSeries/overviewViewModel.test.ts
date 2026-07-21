@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { tryLoadGameData } from '../data/loadGameData.ts';
 import { createProblemSeriesOperationStartSnapshot } from './operationStartSnapshot.ts';
+import { createProblemSeriesOverviewScale } from './overviewScale.ts';
 import {
   createProblemSeriesOverviewCore,
   type ProblemSeriesOverviewCore,
@@ -83,7 +84,10 @@ function expectOverviewShapeOnly(overview: ProblemSeriesOverviewCore): void {
 
     for (const group of wave.enemyGroups) {
       expect(Object.keys(group).sort()).toEqual(
-        ['classId', 'count', 'selectedCombatModuleId'].sort(),
+        ['classId', 'count', 'scale', 'selectedCombatModuleId'].sort(),
+      );
+      expect(Object.keys(group.scale).sort()).toEqual(
+        ['atkScale', 'defScale', 'hasDifference', 'hpScale', 'resScale'].sort(),
       );
       for (const forbidden of FORBIDDEN_OVERVIEW_KEYS) {
         expect(group).not.toHaveProperty(forbidden);
@@ -145,12 +149,17 @@ describe('R12m createProblemSeriesOverviewCore (fixture-a production path)', () 
           snapshotGroup.selectedCombatModuleId,
         );
         expect(overviewGroup.selectedCombatModuleId.length).toBeGreaterThan(0);
+        expect(overviewGroup.scale).toBeDefined();
+        expect(overviewGroup.scale).toEqual(
+          createProblemSeriesOverviewScale(snapshotGroup),
+        );
       }
     }
     expect(totalOverviewGroups).toBeGreaterThan(0);
     expect(totalOverviewGroups).toBe(totalSnapshotGroups);
 
     expect(overview.waves).not.toBe(snapshot.waves);
+    const seenScaleObjects = new Set<object>();
     for (let waveIndex = 0; waveIndex < snapshot.waves.length; waveIndex++) {
       expect(overview.waves[waveIndex]).not.toBe(snapshot.waves[waveIndex]);
       expect(overview.waves[waveIndex]!.enemyGroups).not.toBe(
@@ -158,11 +167,15 @@ describe('R12m createProblemSeriesOverviewCore (fixture-a production path)', () 
       );
       const groupCount = snapshot.waves[waveIndex]!.enemyGroups.length;
       for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
-        expect(overview.waves[waveIndex]!.enemyGroups[groupIndex]).not.toBe(
+        const overviewGroup = overview.waves[waveIndex]!.enemyGroups[groupIndex]!;
+        expect(overviewGroup).not.toBe(
           snapshot.waves[waveIndex]!.enemyGroups[groupIndex],
         );
+        expect(seenScaleObjects.has(overviewGroup.scale)).toBe(false);
+        seenScaleObjects.add(overviewGroup.scale);
       }
     }
+    expect(seenScaleObjects.size).toBe(totalOverviewGroups);
 
     expectOverviewShapeOnly(overview);
 
@@ -228,12 +241,17 @@ describe('R12m createProblemSeriesOverviewCore (fixture-b production path)', () 
           snapshotGroup.selectedCombatModuleId,
         );
         expect(overviewGroup.selectedCombatModuleId.length).toBeGreaterThan(0);
+        expect(overviewGroup.scale).toBeDefined();
+        expect(overviewGroup.scale).toEqual(
+          createProblemSeriesOverviewScale(snapshotGroup),
+        );
       }
     }
     expect(totalOverviewGroups).toBeGreaterThan(0);
     expect(totalOverviewGroups).toBe(totalSnapshotGroups);
 
     expect(overview.waves).not.toBe(snapshot.waves);
+    const seenScaleObjects = new Set<object>();
     for (let waveIndex = 0; waveIndex < snapshot.waves.length; waveIndex++) {
       expect(overview.waves[waveIndex]).not.toBe(snapshot.waves[waveIndex]);
       expect(overview.waves[waveIndex]!.enemyGroups).not.toBe(
@@ -241,11 +259,15 @@ describe('R12m createProblemSeriesOverviewCore (fixture-b production path)', () 
       );
       const groupCount = snapshot.waves[waveIndex]!.enemyGroups.length;
       for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
-        expect(overview.waves[waveIndex]!.enemyGroups[groupIndex]).not.toBe(
+        const overviewGroup = overview.waves[waveIndex]!.enemyGroups[groupIndex]!;
+        expect(overviewGroup).not.toBe(
           snapshot.waves[waveIndex]!.enemyGroups[groupIndex],
         );
+        expect(seenScaleObjects.has(overviewGroup.scale)).toBe(false);
+        seenScaleObjects.add(overviewGroup.scale);
       }
     }
+    expect(seenScaleObjects.size).toBe(totalOverviewGroups);
 
     expectOverviewShapeOnly(overview);
 

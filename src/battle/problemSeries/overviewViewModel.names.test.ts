@@ -230,6 +230,7 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
           classId: group.classId,
           count: group.count,
           selectedCombatModuleId: group.selectedCombatModuleId,
+          scale: { ...group.scale },
         })),
       })),
     };
@@ -245,11 +246,13 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
                 classId: UNKNOWN_CLASS_ID,
                 count: group.count,
                 selectedCombatModuleId: group.selectedCombatModuleId,
+                scale: { ...group.scale },
               }
             : {
                 classId: group.classId,
                 count: group.count,
                 selectedCombatModuleId: group.selectedCombatModuleId,
+                scale: { ...group.scale },
               },
         ),
       })),
@@ -269,6 +272,8 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
       for (let groupIndex = 0; groupIndex < corruptedWave.enemyGroups.length; groupIndex++) {
         const corruptedGroup = corruptedWave.enemyGroups[groupIndex]!;
         const originalGroup = originalWave.enemyGroups[groupIndex]!;
+        expect(corruptedGroup.scale).toEqual(originalGroup.scale);
+        expect(corruptedGroup.scale).not.toBe(originalGroup.scale);
         if (waveIndex === 0 && groupIndex === 0) {
           expect(corruptedGroup.classId).toBe(UNKNOWN_CLASS_ID);
           expect(corruptedGroup.selectedCombatModuleId).toBe(originalGroup.selectedCombatModuleId);
@@ -339,6 +344,7 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
           classId: group.classId,
           count: group.count,
           selectedCombatModuleId: group.selectedCombatModuleId,
+          scale: { ...group.scale },
         })),
       })),
     };
@@ -354,11 +360,13 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
                 classId: group.classId,
                 count: group.count,
                 selectedCombatModuleId: UNKNOWN_MODULE_ID,
+                scale: { ...group.scale },
               }
             : {
                 classId: group.classId,
                 count: group.count,
                 selectedCombatModuleId: group.selectedCombatModuleId,
+                scale: { ...group.scale },
               },
         ),
       })),
@@ -374,6 +382,8 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
       for (let groupIndex = 0; groupIndex < corruptedWave.enemyGroups.length; groupIndex++) {
         const corruptedGroup = corruptedWave.enemyGroups[groupIndex]!;
         const originalGroup = originalWave.enemyGroups[groupIndex]!;
+        expect(corruptedGroup.scale).toEqual(originalGroup.scale);
+        expect(corruptedGroup.scale).not.toBe(originalGroup.scale);
         if (waveIndex === 0 && groupIndex === 0) {
           expect(corruptedGroup.selectedCombatModuleId).toBe(UNKNOWN_MODULE_ID);
           expect(corruptedGroup.classId).toBe(originalGroup.classId);

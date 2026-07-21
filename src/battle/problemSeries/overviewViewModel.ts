@@ -2,16 +2,22 @@
  * R12m Player 概要表示コア（純粋 view model）。
  *
  * 作戦開始スナップショットから Player 概要表示の土台となる readonly 構造を生成する。
- * scale・作戦固有条件・catalog 参照は後続作業単位の責務。
+ * 各敵 group の scale は createProblemSeriesOverviewScale で正規化し core へ保持する。
+ * 作戦固有条件・catalog 参照は後続作業単位の責務。
  */
 
 import type { GameData } from '../types.ts';
 import type { ProblemSeriesOperationStartSnapshot } from './operationStartSnapshot.ts';
+import {
+  createProblemSeriesOverviewScale,
+  type ProblemSeriesOverviewScale,
+} from './overviewScale.ts';
 
 export interface ProblemSeriesOverviewEnemyGroupCore {
   readonly classId: string;
   readonly count: number;
   readonly selectedCombatModuleId: string;
+  readonly scale: ProblemSeriesOverviewScale;
 }
 
 export interface ProblemSeriesOverviewWaveCore {
@@ -51,6 +57,7 @@ function toOverviewEnemyGroupCore(
     classId: group.classId,
     count: group.count,
     selectedCombatModuleId: group.selectedCombatModuleId,
+    scale: createProblemSeriesOverviewScale(group),
   };
 }
 
