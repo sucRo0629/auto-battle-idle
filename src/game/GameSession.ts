@@ -71,6 +71,7 @@ import {
   tryGetFixedStageIdFromSource,
   type OperationSource,
 } from './operationSource.ts';
+import { createProblemSeriesInitialParty } from '../battle/problemSeries/initialParty.ts';
 import {
   createProblemSeriesOperationStartSnapshot,
   type ProblemSeriesOperationStartSnapshot,
@@ -1970,10 +1971,33 @@ export class GameSession {
     this.clearOperationResult();
     this.clearOperationCheckpoint();
     const clonedSource = cloneOperationSource(source);
+
+    let party: PartySlotState[];
+    let moduleSelection: PartyCombatModuleSelection;
+
+    if (clonedSource.kind === 'problemSeries') {
+      const snapshot = this.problemSeriesOperationStartSnapshot;
+      if (snapshot === null) {
+        console.warn(
+          '[operation] problemSeries requires operation start snapshot; operation not started',
+        );
+        this.clearOperation();
+        return false;
+      }
+      party = createProblemSeriesInitialParty(
+        snapshot.allowedClassIds,
+        this.gameData,
+      );
+      moduleSelection = new PartyCombatModuleSelection();
+    } else {
+      party = this.save.party;
+      moduleSelection = this.preOperationModuleSelection;
+    }
+
     const next = OperationState.begin({
       source: clonedSource,
-      party: this.save.party,
-      moduleSelection: this.preOperationModuleSelection,
+      party,
+      moduleSelection,
       initialWaveIndex,
     });
     if (next === null) {

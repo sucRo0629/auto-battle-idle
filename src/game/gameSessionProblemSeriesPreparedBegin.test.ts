@@ -329,7 +329,7 @@ describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)'
     expect(engine.getSnapshot()).toEqual(battleSnapshotBeforeBegin);
   });
 
-  it('2B6: rejects begin when save party has duplicate classId; resolver/factory 0; state unchanged', () => {
+  it('2B6: duplicate save party does not block problemSeries begin; OperationState uses snapshot party', () => {
     const resolveSpy = vi.spyOn(
       seedResolveModule,
       'resolveProblemSeriesFromSeed',
@@ -367,21 +367,28 @@ describe('GameSession.beginPreparedProblemSeriesOperation (R12m Player unit2B1)'
     expect(provider()).toBeNull();
 
     const saveBeforeBegin = structuredClone(session.getSaveState());
-    const battleSnapshotBeforeBegin = engine.getSnapshot();
 
     resolveSpy.mockClear();
     createSpy.mockClear();
 
     const returned = session.beginPreparedProblemSeriesOperation();
 
-    expect(returned).toBeNull();
+    expect(returned).toBe(prepared);
     expect(resolveSpy).not.toHaveBeenCalled();
     expect(createSpy).not.toHaveBeenCalled();
     expect(session.getProblemSeriesOperationStartSnapshot()).toBe(prepared);
-    expect(session.getOperationState()).toBeNull();
-    expect(session.getOperationCheckpoint()).toBeNull();
-    expect(provider()).toBeNull();
-    expect(engine.getSnapshot()).toEqual(battleSnapshotBeforeBegin);
+    expect(session.hasActiveOperation()).toBe(true);
+    expect(session.getOperationState()?.source).toEqual(PROBLEM_SERIES_SOURCE);
+
+    const operationParty = session.getOperationState()!.party;
+    expect(operationParty).toHaveLength(4);
+    const operationClassIds = operationParty.map((slot) => {
+      expect(slot).not.toBeNull();
+      return slot!.classId;
+    });
+    expect(operationClassIds).toEqual([...prepared.allowedClassIds]);
+    expect(new Set(operationClassIds).size).toBe(4);
+
     expect(session.getSaveState()).toEqual(saveBeforeBegin);
 
     const serialized = JSON.stringify(session.getSaveState());
