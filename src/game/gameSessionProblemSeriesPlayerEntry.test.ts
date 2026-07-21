@@ -9,6 +9,8 @@
  * R12m Player 作業単位2M1: formation 確定から problemSeries Wave 0 戦闘へ接続する。
  *
  * R12m Player 作業単位2M2: 系列A Wave 0 クリアから Wave 1 準備（WavePrep）への production 回帰。
+ *
+ * R12m Player 作業単位2M3: WavePrep 確定から系列A Wave 1 戦闘への production 回帰。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
@@ -913,6 +915,206 @@ describe('GameSession problem-series player entry wire (R12m Player unit2L1)', (
     expect(restartSpy).not.toHaveBeenCalled();
     expect(startSpy).toHaveBeenCalled();
     expect(startNextWaveSpy).not.toHaveBeenCalled();
+    expect(provider()).toBe(snapshot.waves);
+  });
+
+  it('2M3: stageSelect DOM → formation confirm → Wave 0 clear → WavePrep confirm → Wave 1 battle', () => {
+    const resolveSpy = vi.spyOn(
+      seedResolveModule,
+      'resolveProblemSeriesFromSeed',
+    );
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    session = createSession();
+
+    const sortieSpy = vi.spyOn(
+      session as unknown as { handleStageSortie: (stageId: string) => void },
+      'handleStageSortie',
+    );
+    const engine = getEngine(session);
+    const provider = getEngineProvider(engine);
+    if (provider === undefined) {
+      throw new Error('BattleEngine resolved waves provider is missing');
+    }
+    const engineInternals = engine as unknown as {
+      spawnWaveEnemies: () => void;
+    };
+    const spawnWaveEnemiesSpy = vi.spyOn(engineInternals, 'spawnWaveEnemies');
+    const restartSpy = vi.spyOn(engine, 'restartBattle');
+    const restartAtWaveSpy = vi.spyOn(engine, 'restartBattleAtWave');
+    const startSpy = vi.spyOn(engine, 'startBattle');
+    const startNextWaveSpy = vi.spyOn(engine, 'startNextWave');
+
+    session.start();
+
+    const saveBefore = structuredClone(session.getSaveState());
+    const currentStageIdBefore = saveBefore.stageProgress.currentStageId;
+    const clearedStageIdsBefore = [...(saveBefore.stageProgress.clearedStageIds ?? [])];
+
+    const container = getStageSelectContainer(session);
+
+    const mainButton = requireButton(
+      container,
+      '.stage-selection-main-operation',
+      'main operation button',
+    );
+    mainButton.click();
+
+    const seedInput = requireInput(
+      container,
+      '.problem-series-entry-seed-input',
+      'seed input',
+    );
+    const prepareButton = requireButton(
+      container,
+      '.problem-series-entry-prepare',
+      'prepare button',
+    );
+
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    const snapshot = session.getProblemSeriesOperationStartSnapshot();
+    if (snapshot === null) {
+      throw new Error('prepared snapshot is null after Prepare');
+    }
+
+    const resolveCallsAfterPrepare = resolveSpy.mock.calls.length;
+    const factoryCallsAfterPrepare = snapshotFactorySpy.mock.calls.length;
+    expect(resolveCallsAfterPrepare).toBe(1);
+    expect(factoryCallsAfterPrepare).toBe(1);
+
+    const confirmButton = requireButton(
+      container,
+      '.problem-series-overview-confirm',
+      'overview confirm button',
+    );
+    confirmButton.click();
+
+    const appContainer = getGameAppContainer();
+    const returnButton = requireButton(
+      appContainer,
+      '.skill-menu-return-to-battle-button',
+      'formation confirm button',
+    );
+    returnButton.click();
+
+    expect(restartAtWaveSpy).toHaveBeenCalledTimes(1);
+    expect(restartAtWaveSpy).toHaveBeenCalledWith(0);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(1);
+
+    const wave1 = snapshot.waves[1];
+    if (wave1 === undefined) {
+      throw new Error('prepared snapshot missing Wave 1');
+    }
+
+    const expectedWave0ClassIds = expandWave0ExpectedClassIds(snapshot);
+    const expectedWave1ClassIds = expandWaveExpectedClassIds(snapshot, 1);
+    const expectedWave2ClassIds = expandWaveExpectedClassIds(snapshot, 2);
+    const wave1PrepResourceGrant = wave1.prepResourceGrant;
+
+    waitForEngagedViaSession(session, engine);
+    killAllEnemies(engine);
+    advanceSessionToWavePrepAfterKill(session, engine, spawnWaveEnemiesSpy);
+
+    // WavePrep 確定前 (1–13)
+    expect(session.getProblemSeriesOperationStartSnapshot()).not.toBeNull();
+    expect(snapshot.waves).toHaveLength(3);
+    expect(expectedWave1ClassIds.length).toBeGreaterThan(0);
+    expect(session.getCurrentScreen()).toBe('wavePrep');
+    expect(engine.getSnapshot().awaitingNextWave).toBe(true);
+    expect(engine.getSnapshot().waveIndex).toBe(0);
+
+    const operationBeforeConfirm = session.getOperationState();
+    if (operationBeforeConfirm === null) {
+      throw new Error('operation state is null before WavePrep confirm');
+    }
+    expect(operationBeforeConfirm.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(operationBeforeConfirm.source)).toEqual(['kind']);
+    expect(operationBeforeConfirm.currentWaveIndex).toBe(0);
+    expect(operationBeforeConfirm.clearedWaveCount).toBe(1);
+    expect(operationBeforeConfirm.isWavePrepEditable).toBe(true);
+    expect(wave1PrepResourceGrant).toBeGreaterThan(0);
+    expect(session.getOperationUnspentResource()).toBe(wave1PrepResourceGrant);
+
+    const wavePrepConfirmButton = requireButton(
+      appContainer,
+      '.wave-prep-screen__confirm',
+      'wave prep confirm button',
+    );
+    expect(wavePrepConfirmButton.disabled).toBe(false);
+
+    expect(livingEnemyClassIds(engine)).toHaveLength(0);
+    expect(livingEnemyClassIds(engine)).not.toEqual(expectedWave1ClassIds);
+
+    // WavePrep 確定操作 (14–18)
+    wavePrepConfirmButton.click();
+
+    expect(startNextWaveSpy).toHaveBeenCalledTimes(1);
+    expect(spawnWaveEnemiesSpy).toHaveBeenCalledTimes(2);
+    expect(restartAtWaveSpy).toHaveBeenCalledTimes(1);
+    expect(resolveSpy.mock.calls.length).toBe(resolveCallsAfterPrepare);
+    expect(snapshotFactorySpy.mock.calls.length).toBe(factoryCallsAfterPrepare);
+
+    // Wave 1 開始後 (19–38)
+    expect(session.getCurrentScreen()).toBe('battle');
+
+    const battleHost = appContainer.querySelector('.game-shell__battle');
+    if (battleHost === null) {
+      throw new Error('battle host not found');
+    }
+    expect(battleHost.hidden).toBe(false);
+    expect(appContainer.querySelector('.game-shell__wave-prep')?.hidden).toBe(true);
+    expect(appContainer.querySelector('.game-shell__formation')?.hidden).toBe(true);
+    expect(appContainer.querySelector('.game-shell__stage-select')?.hidden).toBe(true);
+
+    expect(engine.getSnapshot().waveIndex).toBe(1);
+    expect(engine.getSnapshot().awaitingNextWave).toBe(false);
+
+    const livingAfterWave1Start = livingEnemyClassIds(engine);
+    expect(livingAfterWave1Start.length).toBeGreaterThan(0);
+    expect(livingAfterWave1Start).toEqual(expectedWave1ClassIds);
+    expect(livingAfterWave1Start).not.toEqual(expectedWave0ClassIds);
+
+    const operationAfterWave1Start = session.getOperationState();
+    if (operationAfterWave1Start === null) {
+      throw new Error('operation state is null after Wave 1 start');
+    }
+    expect(operationAfterWave1Start.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(operationAfterWave1Start.source)).toEqual(['kind']);
+    expect(operationAfterWave1Start.currentWaveIndex).toBe(1);
+    expect(operationAfterWave1Start.clearedWaveCount).toBe(1);
+    expect(operationAfterWave1Start.isWavePrepEditable).toBe(false);
+
+    const checkpointAfterWave1Start = session.getOperationCheckpoint();
+    if (checkpointAfterWave1Start === null) {
+      throw new Error('operation checkpoint is null after Wave 1 start');
+    }
+    expect(checkpointAfterWave1Start.source).toStrictEqual(PROBLEM_SERIES_SOURCE);
+    expect(Object.keys(checkpointAfterWave1Start.source)).toEqual(['kind']);
+    expect(checkpointAfterWave1Start.currentWaveIndex).toBe(1);
+
+    expect(session.getProblemSeriesOperationStartSnapshot()).toBe(snapshot);
+    expect(session.getOperationUnspentResource()).toBe(wave1PrepResourceGrant);
+
+    expect(livingAfterWave1Start).not.toEqual(expectedWave2ClassIds);
+
+    const saveAfter = session.getSaveState();
+    expect(saveAfter.stageProgress.currentStageId).toBe(currentStageIdBefore);
+    expect([...(saveAfter.stageProgress.clearedStageIds ?? [])]).toEqual(
+      clearedStageIdsBefore,
+    );
+
+    expect(sortieSpy).not.toHaveBeenCalled();
+    expect(restartSpy).not.toHaveBeenCalled();
+    expect(startSpy).toHaveBeenCalled();
+    expect(session.getOperationResult()).toBeNull();
+    expect(engine.getSnapshot().phase).not.toBe('victory');
+    expect(session.hasActiveOperation()).toBe(true);
     expect(provider()).toBe(snapshot.waves);
   });
 });
