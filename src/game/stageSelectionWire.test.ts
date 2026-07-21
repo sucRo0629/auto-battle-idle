@@ -13,6 +13,9 @@ import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import { STAGE_FIRST_PLAY_GUIDANCE_CLASS } from '../ui/stageDetailDom.ts';
 
+const RAW_FIXTURE_SEED = '  fixture-a  ';
+const NORMALIZED_FIXTURE_SEED = 'fixture-a';
+
 const passiveModules = import.meta.glob<PassiveSkillDef[]>(
   '../../data/skills/passives/*.json',
   { eager: true, import: 'default' },
@@ -151,7 +154,7 @@ describe('StageSelectionScreenHost', () => {
     screenHost.destroy();
   });
 
-  it('forwards main operation click to onOpenMainOperation without sortie or navigation side effects', () => {
+  it('wires fixedStages → mainEntry → seed prepare → back → fixed sortie substate', () => {
     const gameData = loadDemoGameDataForTest();
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -159,25 +162,34 @@ describe('StageSelectionScreenHost', () => {
     const currentStageId = 'demo_ch1_05';
     const onSortie = vi.fn();
     const onOpenMainOperation = vi.fn();
+    const onPrepareMainOperation = vi.fn();
 
     const screenHost = new StageSelectionScreenHost(host, gameData, {
       getCurrentStageId: () => currentStageId,
       onSortie,
       onOpenMainOperation,
+      onPrepareMainOperation,
     });
 
+    const fixedChild = host.querySelector('.stage-selection-fixed-host') as HTMLElement;
+    const entryChild = host.querySelector('.problem-series-entry-screen-host') as HTMLElement;
+
+    // --- initial fixed ---
     screenHost.show();
 
+    expect(host.hidden).toBe(false);
+    expect(fixedChild.hidden).toBe(false);
+    expect(entryChild.hidden).toBe(true);
     expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
-    expect(host.querySelectorAll('.stage-selection-main-operation')).toHaveLength(1);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(host.querySelector('.stage-selection-list-item--selected')?.textContent).toBe(
+      '炎と刃',
+    );
     expect(onOpenMainOperation).toHaveBeenCalledTimes(0);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(0);
     expect(onSortie).toHaveBeenCalledTimes(0);
 
-    const selectedBefore = host.querySelector<HTMLElement>(
-      '.stage-selection-list-item[aria-selected="true"]',
-    );
-    expect(selectedBefore).not.toBeNull();
-
+    // --- main button click ---
     const mainButton = host.querySelector<HTMLButtonElement>(
       '.stage-selection-main-operation',
     );
@@ -185,16 +197,53 @@ describe('StageSelectionScreenHost', () => {
 
     expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
     expect(onSortie).toHaveBeenCalledTimes(0);
-
-    const selectedAfter = host.querySelector<HTMLElement>(
-      '.stage-selection-list-item[aria-selected="true"]',
-    );
-    expect(selectedAfter).toBe(selectedBefore);
-
-    expect(document.querySelector('.problem-series-entry-panel')).toBeNull();
+    expect(fixedChild.hidden).toBe(true);
+    expect(entryChild.hidden).toBe(false);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
     expect(document.querySelector('.problem-series-overview-panel')).toBeNull();
     expect(document.querySelector('.battle-view')).toBeNull();
 
+    // --- seed prepare ---
+    const seedInput = host.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    const prepareButton = host.querySelector(
+      '.problem-series-entry-prepare',
+    ) as HTMLButtonElement;
+
+    seedInput.value = RAW_FIXTURE_SEED;
+    seedInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(prepareButton.disabled).toBe(false);
+
+    prepareButton.click();
+
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(1);
+    expect(onPrepareMainOperation).toHaveBeenCalledWith(NORMALIZED_FIXTURE_SEED);
+    expect(onPrepareMainOperation.mock.calls[0]?.[0]).not.toBe(RAW_FIXTURE_SEED);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+    expect(onSortie).toHaveBeenCalledTimes(0);
+
+    // --- back ---
+    const backButton = host.querySelector<HTMLButtonElement>(
+      '.problem-series-entry-back',
+    );
+    backButton?.click();
+
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
+    expect(fixedChild.hidden).toBe(false);
+    expect(entryChild.hidden).toBe(true);
+    expect(host.querySelector('.stage-selection-list-item--selected')?.textContent).toBe(
+      '炎と刃',
+    );
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(1);
+    expect(onSortie).toHaveBeenCalledTimes(0);
+
+    // --- fixed sortie ---
     const sortieButton = host.querySelector<HTMLButtonElement>(
       '.stage-selection-sortie',
     );
@@ -203,7 +252,9 @@ describe('StageSelectionScreenHost', () => {
     expect(onSortie).toHaveBeenCalledTimes(1);
     expect(onSortie).toHaveBeenCalledWith(currentStageId);
     expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(1);
 
+    // --- callback omission ---
     const omissionHost = document.createElement('div');
     document.body.appendChild(omissionHost);
     const omissionScreenHost = new StageSelectionScreenHost(omissionHost, gameData, {
@@ -211,12 +262,51 @@ describe('StageSelectionScreenHost', () => {
       onSortie: vi.fn(),
     });
     omissionScreenHost.show();
+
     const omissionMainButton = omissionHost.querySelector<HTMLButtonElement>(
       '.stage-selection-main-operation',
     );
     expect(() => omissionMainButton?.click()).not.toThrow();
 
+    const omissionSeedInput = omissionHost.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    const omissionPrepareButton = omissionHost.querySelector(
+      '.problem-series-entry-prepare',
+    ) as HTMLButtonElement;
+    omissionSeedInput.value = NORMALIZED_FIXTURE_SEED;
+    omissionSeedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(() => omissionPrepareButton?.click()).not.toThrow();
+
+    const omissionBackButton = omissionHost.querySelector<HTMLButtonElement>(
+      '.problem-series-entry-back',
+    );
+    expect(() => omissionBackButton?.click()).not.toThrow();
+
+    // --- destroy ownership boundary ---
+    const existingChild = document.createElement('p');
+    existingChild.textContent = 'existing-host-child';
+    host.insertBefore(existingChild, host.firstChild);
+
+    const callbackCountsBeforeDestroy = {
+      onOpenMainOperation: onOpenMainOperation.mock.calls.length,
+      onPrepareMainOperation: onPrepareMainOperation.mock.calls.length,
+      onSortie: onSortie.mock.calls.length,
+    };
+
     screenHost.destroy();
+
+    expect(host.querySelector('.stage-selection-fixed-host')).toBeNull();
+    expect(host.querySelector('.problem-series-entry-screen-host')).toBeNull();
+    expect(host.querySelector('p')?.textContent).toBe('existing-host-child');
+    expect(onOpenMainOperation.mock.calls.length).toBe(
+      callbackCountsBeforeDestroy.onOpenMainOperation,
+    );
+    expect(onPrepareMainOperation.mock.calls.length).toBe(
+      callbackCountsBeforeDestroy.onPrepareMainOperation,
+    );
+    expect(onSortie.mock.calls.length).toBe(callbackCountsBeforeDestroy.onSortie);
+
     omissionScreenHost.destroy();
     host.remove();
     omissionHost.remove();
