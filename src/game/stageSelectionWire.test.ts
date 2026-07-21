@@ -61,6 +61,17 @@ function loadDemoGameDataForTest(): GameData {
   };
 }
 
+function createProductionPreparedSnapshot(
+  gameData: GameData,
+  normalizedSeed: string = NORMALIZED_FIXTURE_SEED,
+): ProblemSeriesOperationStartSnapshot {
+  const resolved = resolveProblemSeriesFromSeed(
+    gameData.problemSeriesCatalog,
+    normalizedSeed,
+  );
+  return createProblemSeriesOperationStartSnapshot(resolved);
+}
+
 describe('StageSelectionScreenHost', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -500,6 +511,183 @@ describe('StageSelectionScreenHost', () => {
     );
     expect(onSortie.mock.calls.length).toBe(callbackCountsBeforeDestroy.onSortie);
 
+    host.remove();
+  });
+
+  it('showPreparedMainOperationOverview opens overview from prepared snapshot without prepare (R12m unit2O1)', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const preparedSnapshot = createProductionPreparedSnapshot(gameData);
+    const snapshotBefore = structuredClone(preparedSnapshot);
+
+    const onPrepareMainOperation = vi.fn();
+    const getPreparedProblemSeriesOperationStartSnapshot = vi.fn(
+      () => preparedSnapshot,
+    );
+    const onBackFromMainOperationOverview = vi.fn();
+    const onConfirmMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_05',
+      onSortie: vi.fn(),
+      onPrepareMainOperation,
+      getPreparedProblemSeriesOperationStartSnapshot,
+      onBackFromMainOperationOverview,
+      onConfirmMainOperation,
+    });
+
+    const fixedChild = host.querySelector('.stage-selection-fixed-host') as HTMLElement;
+    const entryChild = host.querySelector('.problem-series-entry-screen-host') as HTMLElement;
+    const overviewChild = host.querySelector(
+      '.problem-series-overview-screen-host',
+    ) as HTMLElement;
+
+    screenHost.show();
+
+    expect(fixedChild.hidden).toBe(false);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
+
+    const result = screenHost.showPreparedMainOperationOverview();
+
+    expect(result).toBe(true);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(0);
+    expect(getPreparedProblemSeriesOperationStartSnapshot).toHaveBeenCalled();
+
+    expect(fixedChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+    expect(entryChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(overviewChild.hidden).toBe(false);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(1);
+
+    const seedEl = host.querySelector('.problem-series-overview-seed');
+    expect(seedEl).not.toBeNull();
+    expect(seedEl?.textContent).toContain(NORMALIZED_FIXTURE_SEED);
+
+    const waveEls = host.querySelectorAll('.problem-series-overview-wave');
+    expect(waveEls).toHaveLength(3);
+
+    const groupEls = host.querySelectorAll('.problem-series-overview-enemy-group');
+    expect(groupEls.length).toBeGreaterThan(0);
+
+    const confirmButton = host.querySelector<HTMLButtonElement>(
+      '.problem-series-overview-confirm',
+    );
+    const backButton = host.querySelector<HTMLButtonElement>(
+      '.problem-series-overview-back',
+    );
+    expect(confirmButton).not.toBeNull();
+    expect(backButton).not.toBeNull();
+
+    confirmButton!.click();
+    expect(onConfirmMainOperation).toHaveBeenCalledTimes(1);
+
+    backButton!.click();
+    expect(onBackFromMainOperationOverview).toHaveBeenCalledTimes(1);
+
+    expect(preparedSnapshot).toEqual(snapshotBefore);
+    expect(preparedSnapshot.seed).toBe(NORMALIZED_FIXTURE_SEED);
+
+    screenHost.destroy();
+    host.remove();
+  });
+
+  it('showPreparedMainOperationOverview returns false when prepared snapshot is missing (R12m unit2O1)', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const onPrepareMainOperation = vi.fn();
+    const getPreparedProblemSeriesOperationStartSnapshot = vi.fn(() => null);
+    const onBackFromMainOperationOverview = vi.fn();
+    const onConfirmMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_05',
+      onSortie: vi.fn(),
+      onPrepareMainOperation,
+      getPreparedProblemSeriesOperationStartSnapshot,
+      onBackFromMainOperationOverview,
+      onConfirmMainOperation,
+    });
+
+    const fixedChild = host.querySelector('.stage-selection-fixed-host') as HTMLElement;
+    const entryChild = host.querySelector('.problem-series-entry-screen-host') as HTMLElement;
+    const overviewChild = host.querySelector(
+      '.problem-series-overview-screen-host',
+    ) as HTMLElement;
+
+    screenHost.show();
+
+    const result = screenHost.showPreparedMainOperationOverview();
+
+    expect(result).toBe(false);
+    expect(fixedChild.hidden).toBe(false);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
+    expect(entryChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(overviewChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(0);
+    expect(onConfirmMainOperation).toHaveBeenCalledTimes(0);
+    expect(onBackFromMainOperationOverview).toHaveBeenCalledTimes(0);
+
+    screenHost.destroy();
+    host.remove();
+  });
+
+  it('showPreparedMainOperationOverview returns false when host is hidden (R12m unit2O1)', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const preparedSnapshot = createProductionPreparedSnapshot(gameData);
+
+    const onPrepareMainOperation = vi.fn();
+    const getPreparedProblemSeriesOperationStartSnapshot = vi.fn(
+      () => preparedSnapshot,
+    );
+    const onBackFromMainOperationOverview = vi.fn();
+    const onConfirmMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_05',
+      onSortie: vi.fn(),
+      onPrepareMainOperation,
+      getPreparedProblemSeriesOperationStartSnapshot,
+      onBackFromMainOperationOverview,
+      onConfirmMainOperation,
+    });
+
+    const fixedChild = host.querySelector('.stage-selection-fixed-host') as HTMLElement;
+    const entryChild = host.querySelector('.problem-series-entry-screen-host') as HTMLElement;
+    const overviewChild = host.querySelector(
+      '.problem-series-overview-screen-host',
+    ) as HTMLElement;
+
+    screenHost.show();
+    screenHost.hide();
+
+    expect(host.hidden).toBe(true);
+
+    const result = screenHost.showPreparedMainOperationOverview();
+
+    expect(result).toBe(false);
+    expect(host.hidden).toBe(true);
+    expect(fixedChild.hidden).toBe(false);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
+    expect(entryChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(overviewChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(0);
+    expect(getPreparedProblemSeriesOperationStartSnapshot).toHaveBeenCalledTimes(0);
+    expect(onConfirmMainOperation).toHaveBeenCalledTimes(0);
+    expect(onBackFromMainOperationOverview).toHaveBeenCalledTimes(0);
+
+    screenHost.destroy();
     host.remove();
   });
 });

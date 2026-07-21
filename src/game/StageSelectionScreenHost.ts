@@ -76,6 +76,40 @@ export class StageSelectionScreenHost {
     this.host.hidden = true;
   }
 
+  /**
+   * Shows the main-operation overview from an already-prepared snapshot (no seed re-resolve).
+   * Returns false without changing visible substate or DOM when prerequisites are not met.
+   */
+  showPreparedMainOperationOverview(): boolean {
+    if (this.host.hidden) {
+      return false;
+    }
+
+    const getPreparedSnapshot =
+      this.callbacks.getPreparedProblemSeriesOperationStartSnapshot;
+    if (!getPreparedSnapshot) {
+      return false;
+    }
+
+    const snapshot = getPreparedSnapshot();
+    if (snapshot === null) {
+      return false;
+    }
+
+    this.panel?.destroy();
+    this.panel = null;
+    this.fixedChildHost.hidden = true;
+
+    this.entryScreenHost?.destroy();
+    this.entryScreenHost = null;
+    this.entryChildHost.hidden = true;
+
+    this.showMainOperationOverviewFromPreparedSnapshot(getPreparedSnapshot, {
+      recreateOverviewHost: true,
+    });
+    return true;
+  }
+
   destroy(): void {
     this.panel?.destroy();
     this.panel = null;
@@ -139,6 +173,23 @@ export class StageSelectionScreenHost {
       return;
     }
 
+    this.showMainOperationOverviewFromPreparedSnapshot(getPreparedSnapshot);
+
+    this.entryScreenHost?.destroy();
+    this.entryScreenHost = null;
+    this.entryChildHost.hidden = true;
+    this.fixedChildHost.hidden = true;
+  }
+
+  private showMainOperationOverviewFromPreparedSnapshot(
+    getPreparedSnapshot: () => ProblemSeriesOperationStartSnapshot | null,
+    options?: { recreateOverviewHost?: boolean },
+  ): void {
+    if (options?.recreateOverviewHost) {
+      this.overviewScreenHost?.destroy();
+      this.overviewScreenHost = null;
+    }
+
     if (!this.overviewScreenHost) {
       this.overviewScreenHost = new ProblemSeriesOverviewScreenHost(
         this.overviewChildHost,
@@ -151,11 +202,7 @@ export class StageSelectionScreenHost {
       );
     }
     this.overviewScreenHost.show();
-
-    this.entryScreenHost?.destroy();
-    this.entryScreenHost = null;
-    this.entryChildHost.hidden = true;
-    this.fixedChildHost.hidden = true;
+    this.overviewChildHost.hidden = false;
     this.substate = 'mainOverview';
   }
 
