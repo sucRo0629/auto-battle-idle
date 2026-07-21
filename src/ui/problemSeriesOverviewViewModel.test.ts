@@ -55,7 +55,6 @@ const FORBIDDEN_DISPLAY_JSON_SUBSTRINGS = [
   'internalProblemClass',
   'expectedFailureModes',
   'connection',
-  'operationConditions',
   '推奨編成',
   '推奨撃破順',
 ] as const;
@@ -66,12 +65,37 @@ const FORBIDDEN_DISPLAY_B_JSON_SUBSTRINGS = [
   'internalProblemClass',
   'expectedFailureModes',
   'connection',
-  'operationConditions',
   'concentrated_pressure',
   'scattered_pressure',
   'concentrated_scattered_simultaneous_pressure',
   '推奨編成',
   '推奨撃破順',
+] as const;
+
+const ALLOWED_DISPLAY_TOP_LEVEL_KEYS = [
+  'seed',
+  'operationConditions',
+  'waves',
+] as const;
+
+const FORBIDDEN_DISPLAY_TOP_LEVEL_KEYS = [
+  'seriesId',
+  'generatorVersion',
+  'allowedClassIds',
+  'internalProblemClass',
+  'expectedFailureModes',
+  'connection',
+  'waveLinks',
+  'waveRelationSummary',
+  'finalWaveCompositeOf',
+  'stageId',
+  'party',
+  'checkpoint',
+  'Save',
+  '推奨編成',
+  '撃破順',
+  '勝率',
+  '正解説明',
 ] as const;
 
 type ProblemSeriesOverviewDisplayProductionPath = {
@@ -91,7 +115,10 @@ function runProblemSeriesOverviewDisplayProductionPath(
   const snapshot = createProblemSeriesOperationStartSnapshot(result);
   const core = createProblemSeriesOverviewCore(snapshot);
   const named = createProblemSeriesOverviewNamed(core, gameData);
-  const display = createProblemSeriesOverviewDisplay(named);
+  const display = createProblemSeriesOverviewDisplay(
+    named,
+    snapshot.operationConditions,
+  );
   const totalNamedGroups = named.waves.reduce(
     (sum, wave) => sum + wave.enemyGroups.length,
     0,
@@ -103,6 +130,14 @@ function runProblemSeriesOverviewDisplayProductionPath(
     display,
     totalNamedGroups,
   };
+}
+
+function assertDisplayTopLevelContract(display: ProblemSeriesOverviewDisplay): void {
+  expect(Object.keys(display).sort()).toEqual([...ALLOWED_DISPLAY_TOP_LEVEL_KEYS].sort());
+  expect(Object.keys(display)).toHaveLength(ALLOWED_DISPLAY_TOP_LEVEL_KEYS.length);
+  for (const key of FORBIDDEN_DISPLAY_TOP_LEVEL_KEYS) {
+    expect(Object.prototype.hasOwnProperty.call(display, key)).toBe(false);
+  }
 }
 
 function projectDisplayWavesForComparison(display: ProblemSeriesOverviewDisplay) {
@@ -284,6 +319,7 @@ describe('R12m createProblemSeriesOverviewDisplay (fixture-a production path)', 
 
     const snapshot = createProblemSeriesOperationStartSnapshot(result);
     expect(snapshot.waves).toHaveLength(3);
+    expect(snapshot.operationConditions).toEqual([]);
 
     const core = createProblemSeriesOverviewCore(snapshot);
     const named = createProblemSeriesOverviewNamed(core, gameData);
@@ -299,13 +335,17 @@ describe('R12m createProblemSeriesOverviewDisplay (fixture-a production path)', 
     const totalNamedGroups = namedGroupRefs.length;
     expect(totalNamedGroups).toBeGreaterThan(0);
 
-    const display = createProblemSeriesOverviewDisplay(named);
+    const display = createProblemSeriesOverviewDisplay(
+      named,
+      snapshot.operationConditions,
+    );
 
     expect(display.seed).toBe('fixture-a');
+    expect(display.operationConditions).toEqual([]);
     expect(display.waves).toHaveLength(3);
     expect(display.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
 
-    expect(Object.keys(display).sort()).toEqual(['seed', 'waves']);
+    assertDisplayTopLevelContract(display);
 
     const totalDisplayGroups = display.waves.reduce(
       (sum, wave) => sum + wave.enemyGroups.length,
@@ -420,10 +460,17 @@ describe('R12m createProblemSeriesOverviewDisplay (fixture-a vs fixture-b produc
 
     expect(pathA.display.seed).toBe(FIXTURE_SEED_A);
     expect(pathB.display.seed).toBe(FIXTURE_SEED_B);
+    expect(pathA.display.operationConditions).toEqual([]);
+    expect(pathB.display.operationConditions).toEqual([]);
+    expect(pathA.snapshot.operationConditions).toEqual([]);
+    expect(pathB.snapshot.operationConditions).toEqual([]);
     expect(pathA.display.waves).toHaveLength(3);
     expect(pathB.display.waves).toHaveLength(3);
     expect(pathA.display.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
     expect(pathB.display.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
+
+    assertDisplayTopLevelContract(pathA.display);
+    assertDisplayTopLevelContract(pathB.display);
 
     expect(pathA.totalNamedGroups).toBeGreaterThan(0);
     expect(pathB.totalNamedGroups).toBeGreaterThan(0);
@@ -497,12 +544,16 @@ describe('R12m createProblemSeriesOverviewDisplayFromSnapshot (fixture-a product
 
     const expectedCore = createProblemSeriesOverviewCore(snapshot);
     const expectedNamed = createProblemSeriesOverviewNamed(expectedCore, gameData);
-    const expectedDisplay = createProblemSeriesOverviewDisplay(expectedNamed);
+    const expectedDisplay = createProblemSeriesOverviewDisplay(
+      expectedNamed,
+      snapshot.operationConditions,
+    );
 
     expect(actualDisplay).toEqual(expectedDisplay);
     expect(actualDisplay).not.toBe(expectedDisplay);
 
     expect(actualDisplay.seed).toBe('fixture-a');
+    expect(actualDisplay.operationConditions).toEqual([]);
     expect(actualDisplay.waves).toHaveLength(3);
     expect(actualDisplay.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
 
@@ -545,7 +596,7 @@ describe('R12m createProblemSeriesOverviewDisplayFromSnapshot (fixture-a product
     expect(inspectedNonSharedGroupCount).toBe(totalSnapshotGroups);
     expect(inspectedNonSharedGroupCount).toBe(totalDisplayGroups);
 
-    expect(Object.keys(actualDisplay).sort()).toEqual(['seed', 'waves']);
+    assertDisplayTopLevelContract(actualDisplay);
 
     const json = JSON.stringify(actualDisplay);
     for (const forbidden of FORBIDDEN_DISPLAY_JSON_SUBSTRINGS) {
@@ -575,5 +626,101 @@ describe('R12m createProblemSeriesOverviewDisplayFromSnapshot (fixture-a product
         snapshot.waves[waveIndex]!.enemyGroups,
       );
     }
+  });
+});
+
+describe('R12m createProblemSeriesOverviewDisplay operationConditions', () => {
+  it('copies non-empty operationConditions without sharing array reference', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+    expect(loaded.data.problemSeriesCatalog.series.length).toBeGreaterThan(0);
+
+    const gameData = loaded.data;
+    const catalog = gameData.problemSeriesCatalog;
+    const result = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_A);
+    expect(result.series.seriesId).toBe(SERIES_A_ID);
+
+    const operationConditions = ['condition one', 'condition two'];
+    const resultWithConditions = {
+      ...result,
+      series: {
+        ...result.series,
+        operationConditions,
+      },
+    };
+
+    const snapshot = createProblemSeriesOperationStartSnapshot(resultWithConditions);
+    const snapshotBefore = structuredClone(snapshot);
+    const snapshotConditionsRef = snapshot.operationConditions;
+
+    const core = createProblemSeriesOverviewCore(snapshot);
+    const named = createProblemSeriesOverviewNamed(core, gameData);
+    const display = createProblemSeriesOverviewDisplay(
+      named,
+      snapshot.operationConditions,
+    );
+
+    expect(display.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
+    expect(display.operationConditions).not.toBe(snapshot.operationConditions);
+    expect(display.operationConditions).not.toBe(operationConditions);
+
+    operationConditions.push('mutated');
+    resultWithConditions.series.operationConditions.push('mutated');
+
+    expect(display.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
+    expect(snapshot.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
+    expect(snapshot).toEqual(snapshotBefore);
+    expect(snapshot.operationConditions).toBe(snapshotConditionsRef);
+
+    assertDisplayTopLevelContract(display);
+  });
+
+  it('createProblemSeriesOverviewDisplayFromSnapshot passes snapshot operationConditions', () => {
+    const loaded = tryLoadGameData();
+    if (!loaded.ok) {
+      throw new Error(loaded.error);
+    }
+
+    const gameData = loaded.data;
+    const catalog = gameData.problemSeriesCatalog;
+    const result = resolveProblemSeriesFromSeed(catalog, FIXTURE_SEED_A);
+    expect(result.series.seriesId).toBe(SERIES_A_ID);
+
+    const operationConditions = ['condition one', 'condition two'];
+    const resultWithConditions = {
+      ...result,
+      series: {
+        ...result.series,
+        operationConditions,
+      },
+    };
+
+    const snapshot = createProblemSeriesOperationStartSnapshot(resultWithConditions);
+    const snapshotBefore = structuredClone(snapshot);
+
+    const display = createProblemSeriesOverviewDisplayFromSnapshot(
+      snapshot,
+      gameData,
+    );
+
+    expect(display.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
+    expect(display.operationConditions).not.toBe(snapshot.operationConditions);
+    expect(snapshot).toEqual(snapshotBefore);
+
+    assertDisplayTopLevelContract(display);
   });
 });

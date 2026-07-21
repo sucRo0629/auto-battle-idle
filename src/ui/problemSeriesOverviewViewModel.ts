@@ -32,6 +32,7 @@ export interface ProblemSeriesOverviewWaveDisplay {
 
 export interface ProblemSeriesOverviewDisplay {
   readonly seed: string;
+  readonly operationConditions: readonly string[];
   readonly waves: readonly ProblemSeriesOverviewWaveDisplay[];
 }
 
@@ -60,9 +61,11 @@ export function createProblemSeriesOverviewEnemyGroupDisplay(
  */
 export function createProblemSeriesOverviewDisplay(
   named: ProblemSeriesOverviewNamed,
+  operationConditions: readonly string[],
 ): ProblemSeriesOverviewDisplay {
   return {
     seed: named.seed,
+    operationConditions: [...operationConditions],
     waves: named.waves.map((wave) => ({
       waveNumber: wave.waveNumber,
       prepResourceGrant: wave.prepResourceGrant,
@@ -84,5 +87,5 @@ export function createProblemSeriesOverviewDisplayFromSnapshot(
 ): ProblemSeriesOverviewDisplay {
   const core = createProblemSeriesOverviewCore(snapshot);
   const named = createProblemSeriesOverviewNamed(core, gameData);
-  return createProblemSeriesOverviewDisplay(named);
+  return createProblemSeriesOverviewDisplay(named, snapshot.operationConditions);
 }

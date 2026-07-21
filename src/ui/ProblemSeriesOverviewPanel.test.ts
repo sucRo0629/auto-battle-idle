@@ -40,6 +40,7 @@ const NON_STANDARD_SCALE_SUMMARY = ' (hp×1.5 atk×2)';
 function createThreeWaveFixture(): ProblemSeriesOverviewDisplay {
   return {
     seed: 'fixture-a',
+    operationConditions: [],
     waves: [
       {
         waveNumber: 1,
