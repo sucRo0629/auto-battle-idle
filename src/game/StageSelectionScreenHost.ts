@@ -77,6 +77,19 @@ export class StageSelectionScreenHost {
   }
 
   /**
+   * Opens the main-operation seed entry screen with an empty seed input.
+   * Returns false without changing DOM or callbacks when the host is hidden.
+   */
+  showMainOperationEntry(): boolean {
+    if (this.host.hidden) {
+      return false;
+    }
+
+    this.openMainOperationEntry();
+    return true;
+  }
+
+  /**
    * Shows the main-operation overview from an already-prepared snapshot (no seed re-resolve).
    * Returns false without changing visible substate or DOM when prerequisites are not met.
    */
@@ -142,17 +155,22 @@ export class StageSelectionScreenHost {
   }
 
   private handleOpenMainOperation(): void {
+    this.openMainOperationEntry();
+  }
+
+  private openMainOperationEntry(): void {
     this.panel?.destroy();
     this.panel = null;
     this.fixedChildHost.hidden = true;
+
     this.overviewScreenHost?.destroy();
     this.overviewScreenHost = null;
     this.overviewChildHost.hidden = true;
 
-    if (!this.entryScreenHost) {
-      this.entryScreenHost = this.createEntryScreenHost();
-    }
+    this.entryScreenHost?.destroy();
+    this.entryScreenHost = this.createEntryScreenHost();
     this.entryScreenHost.show();
+    this.entryChildHost.hidden = false;
     this.substate = 'mainEntry';
     this.callbacks.onOpenMainOperation?.();
   }

@@ -690,4 +690,202 @@ describe('StageSelectionScreenHost', () => {
     screenHost.destroy();
     host.remove();
   });
+
+  it('showMainOperationEntry opens empty seed entry from fixed stages (R12m unit2P1)', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const resolveSpy = vi.spyOn(seedResolveModule, 'resolveProblemSeriesFromSeed');
+    const snapshotFactorySpy = vi.spyOn(
+      operationStartSnapshotModule,
+      'createProblemSeriesOperationStartSnapshot',
+    );
+
+    const onOpenMainOperation = vi.fn();
+    const onPrepareMainOperation = vi.fn();
+    const getPreparedProblemSeriesOperationStartSnapshot = vi.fn(() => null);
+    const onBackFromMainOperationOverview = vi.fn();
+    const onConfirmMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_05',
+      onSortie: vi.fn(),
+      onOpenMainOperation,
+      onPrepareMainOperation,
+      getPreparedProblemSeriesOperationStartSnapshot,
+      onBackFromMainOperationOverview,
+      onConfirmMainOperation,
+    });
+
+    const fixedChild = host.querySelector('.stage-selection-fixed-host') as HTMLElement;
+    const entryChild = host.querySelector('.problem-series-entry-screen-host') as HTMLElement;
+
+    screenHost.show();
+
+    const result = screenHost.showMainOperationEntry();
+
+    expect(result).toBe(true);
+    expect(fixedChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(0);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+    expect(entryChild.hidden).toBe(false);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+
+    const seedInput = host.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    const prepareButton = host.querySelector(
+      '.problem-series-entry-prepare',
+    ) as HTMLButtonElement;
+    const errorEl = host.querySelector('.problem-series-entry-seed-error');
+
+    expect(seedInput).not.toBeNull();
+    expect(seedInput.value).toBe('');
+    expect(prepareButton.disabled).toBe(true);
+    expect(errorEl?.textContent).toBe('seedを入力してください');
+
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(0);
+    expect(getPreparedProblemSeriesOperationStartSnapshot).toHaveBeenCalledTimes(0);
+    expect(onBackFromMainOperationOverview).toHaveBeenCalledTimes(0);
+    expect(onConfirmMainOperation).toHaveBeenCalledTimes(0);
+    expect(resolveSpy).toHaveBeenCalledTimes(0);
+    expect(snapshotFactorySpy).toHaveBeenCalledTimes(0);
+
+    screenHost.destroy();
+    host.remove();
+  });
+
+  it('showMainOperationEntry resets seed after returning to fixed stages (R12m unit2P1)', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const onOpenMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_05',
+      onSortie: vi.fn(),
+      onOpenMainOperation,
+    });
+
+    screenHost.show();
+    expect(screenHost.showMainOperationEntry()).toBe(true);
+
+    const firstSeedInput = host.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    firstSeedInput.value = NORMALIZED_FIXTURE_SEED;
+    firstSeedInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const backButton = host.querySelector<HTMLButtonElement>(
+      '.problem-series-entry-back',
+    )!;
+    backButton.click();
+
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+
+    expect(screenHost.showMainOperationEntry()).toBe(true);
+
+    const secondSeedInput = host.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    const prepareButton = host.querySelector(
+      '.problem-series-entry-prepare',
+    ) as HTMLButtonElement;
+    const errorEl = host.querySelector('.problem-series-entry-seed-error');
+
+    expect(secondSeedInput).not.toBe(firstSeedInput);
+    expect(secondSeedInput.value).toBe('');
+    expect(prepareButton.disabled).toBe(true);
+    expect(errorEl?.textContent).toBe('seedを入力してください');
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(2);
+
+    screenHost.destroy();
+    host.remove();
+  });
+
+  it('showMainOperationEntry returns false when host is hidden (R12m unit2P1)', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const onOpenMainOperation = vi.fn();
+    const onPrepareMainOperation = vi.fn();
+    const getPreparedProblemSeriesOperationStartSnapshot = vi.fn(() => null);
+    const onBackFromMainOperationOverview = vi.fn();
+    const onConfirmMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_05',
+      onSortie: vi.fn(),
+      onOpenMainOperation,
+      onPrepareMainOperation,
+      getPreparedProblemSeriesOperationStartSnapshot,
+      onBackFromMainOperationOverview,
+      onConfirmMainOperation,
+    });
+
+    const fixedChild = host.querySelector('.stage-selection-fixed-host') as HTMLElement;
+    const entryChild = host.querySelector('.problem-series-entry-screen-host') as HTMLElement;
+    const overviewChild = host.querySelector(
+      '.problem-series-overview-screen-host',
+    ) as HTMLElement;
+
+    screenHost.show();
+    screenHost.hide();
+
+    const result = screenHost.showMainOperationEntry();
+
+    expect(result).toBe(false);
+    expect(host.hidden).toBe(true);
+    expect(fixedChild.hidden).toBe(false);
+    expect(host.querySelectorAll('.stage-selection-panel')).toHaveLength(1);
+    expect(entryChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(0);
+    expect(overviewChild.hidden).toBe(true);
+    expect(host.querySelectorAll('.problem-series-overview-panel')).toHaveLength(0);
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(0);
+    expect(onPrepareMainOperation).toHaveBeenCalledTimes(0);
+    expect(getPreparedProblemSeriesOperationStartSnapshot).toHaveBeenCalledTimes(0);
+    expect(onBackFromMainOperationOverview).toHaveBeenCalledTimes(0);
+    expect(onConfirmMainOperation).toHaveBeenCalledTimes(0);
+
+    screenHost.destroy();
+    host.remove();
+  });
+
+  it('main operation button opens entry with empty seed (R12m unit2P1 regression)', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+
+    const onOpenMainOperation = vi.fn();
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_05',
+      onSortie: vi.fn(),
+      onOpenMainOperation,
+    });
+
+    screenHost.show();
+
+    const mainButton = host.querySelector<HTMLButtonElement>(
+      '.stage-selection-main-operation',
+    )!;
+    mainButton.click();
+
+    expect(host.querySelectorAll('.problem-series-entry-panel')).toHaveLength(1);
+
+    const seedInput = host.querySelector(
+      '.problem-series-entry-seed-input',
+    ) as HTMLInputElement;
+    expect(seedInput.value).toBe('');
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+
+    screenHost.destroy();
+    host.remove();
+  });
 });
