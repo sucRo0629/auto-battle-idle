@@ -15,4 +15,20 @@ describe('R12m createProblemSeriesOverviewScale → formatEnemyGroupScaleSummary
     });
     expect(formatEnemyGroupScaleSummary(scale)).toBe('');
   });
+
+  it('non-standard hp/atk from createProblemSeriesOverviewScale yields scale summary', () => {
+    const scale = createProblemSeriesOverviewScale({
+      hpScale: 1.5,
+      atkScale: 2,
+    });
+
+    expect(scale).toEqual({
+      hpScale: 1.5,
+      atkScale: 2,
+      defScale: 1,
+      resScale: 1,
+      hasDifference: true,
+    });
+    expect(formatEnemyGroupScaleSummary(scale)).toBe(' (hp×1.5 atk×2)');
+  });
 });
