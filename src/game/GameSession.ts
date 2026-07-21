@@ -180,6 +180,12 @@ export class GameSession {
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
         getClearedStageIds: () => this.save.stageProgress.clearedStageIds ?? [],
         onSortie: (stageId) => this.handleStageSortie(stageId),
+        onPrepareMainOperation: (normalizedSeed) =>
+          this.prepareProblemSeriesOperationStart(normalizedSeed),
+        getPreparedProblemSeriesOperationStartSnapshot: () =>
+          this.getProblemSeriesOperationStartSnapshot(),
+        onBackFromMainOperationOverview: () =>
+          this.discardPreparedProblemSeriesSnapshot(),
       },
       !this.verifyMode,
     );
