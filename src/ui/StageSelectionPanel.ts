@@ -11,6 +11,7 @@ import {
 
 export interface StageSelectionPanelCallbacks {
   onSortie?: (stageId: string) => void;
+  onOpenMainOperation?: () => void;
 }
 
 export interface StageSelectionPanelOptions {
@@ -49,6 +50,16 @@ export class StageSelectionPanel {
     title.className = STAGE_SELECTION_PANEL_TITLE_CLASS;
     title.textContent = STAGE_SELECTION_PANEL_TITLE_JA;
     this.root.appendChild(title);
+
+    const mainOperationButton = document.createElement('button');
+    mainOperationButton.type = 'button';
+    mainOperationButton.className =
+      'game-ui-button stage-selection-main-operation';
+    mainOperationButton.textContent = 'メイン攻略';
+    mainOperationButton.addEventListener('click', () => {
+      this.callbacks.onOpenMainOperation?.();
+    });
+    this.root.appendChild(mainOperationButton);
 
     if (this.showFirstPlayGuidance) {
       const guidance = document.createElement('p');

@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import classesJson from '../../data/classes.json';
 import enemiesJson from '../../data/enemies.json';
 import partiesJson from '../../data/parties.json';
@@ -92,9 +92,9 @@ describe('StageSelectionPanel first-play guidance', () => {
 
     const guidance = host.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`);
     expect(guidance?.textContent).toBe(FIRST_PLAY_GUIDANCE_JA);
-    expect(guidance?.previousElementSibling?.className).toContain(
-      STAGE_SELECTION_PANEL_TITLE_CLASS,
-    );
+    expect(guidance?.previousElementSibling?.classList.contains(
+      'stage-selection-main-operation',
+    )).toBe(true);
 
     panel.destroy();
   });
@@ -168,6 +168,79 @@ describe('StageSelectionPanel formationHintJa', () => {
     expect(host.querySelector(`.${STAGE_DETAIL_FORMATION_HINT_CLASS}`)).toBeNull();
 
     panel.destroy();
+  });
+});
+
+describe('StageSelectionPanel main operation entry', () => {
+  it('calls onOpenMainOperation without changing selection or sortie', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+    const onOpenMainOperation = vi.fn();
+    const onSortie = vi.fn();
+
+    const panel = new StageSelectionPanel(
+      host,
+      gameData,
+      { onOpenMainOperation, onSortie },
+      { initialStageId: 'demo_ch1_05', showFirstPlayGuidance: true },
+    );
+
+    const title = host.querySelector(`.${STAGE_SELECTION_PANEL_TITLE_CLASS}`);
+    expect(title).not.toBeNull();
+
+    const mainButtons = host.querySelectorAll('.stage-selection-main-operation');
+    expect(mainButtons).toHaveLength(1);
+    const mainButton = mainButtons[0];
+    expect(mainButton).toBeInstanceOf(HTMLButtonElement);
+    expect((mainButton as HTMLButtonElement).type).toBe('button');
+    expect(mainButton?.textContent).toBe('メイン攻略');
+
+    const guidance = host.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`);
+    expect(guidance).not.toBeNull();
+    expect(guidance?.classList.contains(STAGE_FIRST_PLAY_GUIDANCE_CLASS)).toBe(
+      true,
+    );
+
+    const body = host.querySelector('.stage-selection-panel-body');
+    expect(body).not.toBeNull();
+
+    expect(title?.nextElementSibling).toBe(mainButton);
+    expect(mainButton?.nextElementSibling).toBe(guidance);
+    expect(guidance?.nextElementSibling).toBe(body);
+
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(0);
+    expect(onSortie).toHaveBeenCalledTimes(0);
+
+    const selectedBeforeMainClick = panel.getSelectedStageId();
+    (mainButton as HTMLButtonElement).click();
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+    expect(onSortie).toHaveBeenCalledTimes(0);
+    expect(panel.getSelectedStageId()).toBe(selectedBeforeMainClick);
+
+    expect(host.querySelector('.problem-series-entry-panel')).toBeNull();
+    expect(host.querySelector('.problem-series-overview-panel')).toBeNull();
+    expect(host.querySelector('.battle-view')).toBeNull();
+
+    const sortieButton = host.querySelector('.stage-selection-sortie');
+    expect(sortieButton).toBeInstanceOf(HTMLButtonElement);
+    (sortieButton as HTMLButtonElement).click();
+    expect(onSortie).toHaveBeenCalledTimes(1);
+    expect(onSortie).toHaveBeenCalledWith('demo_ch1_05');
+    expect(onOpenMainOperation).toHaveBeenCalledTimes(1);
+
+    panel.destroy();
+
+    const callbackLessHost = document.createElement('div');
+    const callbackLessPanel = new StageSelectionPanel(callbackLessHost, gameData);
+    const callbackLessMainButton = callbackLessHost.querySelector(
+      '.stage-selection-main-operation',
+    );
+    expect(callbackLessMainButton).toBeInstanceOf(HTMLButtonElement);
+    expect(() => {
+      (callbackLessMainButton as HTMLButtonElement).click();
+    }).not.toThrow();
+
+    callbackLessPanel.destroy();
   });
 });
 
