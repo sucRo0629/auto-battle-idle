@@ -5,10 +5,14 @@
  * 変換する純粋関数。文章結合や React は後続作業単位の責務。
  */
 
-import type {
-  ProblemSeriesOverviewNamed,
-  ProblemSeriesOverviewNamedEnemyGroup,
+import type { ProblemSeriesOperationStartSnapshot } from '../battle/problemSeries/operationStartSnapshot.ts';
+import {
+  createProblemSeriesOverviewCore,
+  createProblemSeriesOverviewNamed,
+  type ProblemSeriesOverviewNamed,
+  type ProblemSeriesOverviewNamedEnemyGroup,
 } from '../battle/problemSeries/overviewViewModel.ts';
+import type { GameData } from '../battle/types.ts';
 import { formatEnemyGroupScaleSummary } from './stageEnemyCompositionPreview.ts';
 
 export interface ProblemSeriesOverviewEnemyGroupDisplay {
@@ -67,4 +71,18 @@ export function createProblemSeriesOverviewDisplay(
       ),
     })),
   };
+}
+
+/**
+ * 作戦開始スナップショットと GameData から Player 概要向けの全 Wave 表示データを生成する。
+ * core → named → display の既存 production 変換を順に再利用する。
+ * resolver / snapshot factory は呼ばず、seed からの再選出も行わない。
+ */
+export function createProblemSeriesOverviewDisplayFromSnapshot(
+  snapshot: ProblemSeriesOperationStartSnapshot,
+  gameData: Pick<GameData, 'classRegistry' | 'combatModuleRegistry'>,
+): ProblemSeriesOverviewDisplay {
+  const core = createProblemSeriesOverviewCore(snapshot);
+  const named = createProblemSeriesOverviewNamed(core, gameData);
+  return createProblemSeriesOverviewDisplay(named);
 }
