@@ -110,6 +110,59 @@ describe('ProblemSeriesEntryPanel', () => {
     }).not.toThrow();
   });
 
+  it('calls onBack without validation and leaves input, error, and prepare state unchanged', () => {
+    const host = document.createElement('div');
+    const onPrepare = vi.fn();
+    const onBack = vi.fn();
+    const normalizeSpy = vi.spyOn(seedResolveModule, 'normalizeProblemSeriesSeed');
+
+    new ProblemSeriesEntryPanel(host, { onPrepare, onBack });
+
+    const root = host.querySelector('.problem-series-entry-panel')!;
+    const backButtons = root.querySelectorAll('.problem-series-entry-back');
+    expect(backButtons).toHaveLength(1);
+    const backButton = backButtons[0];
+    expect(backButton).toBeInstanceOf(HTMLButtonElement);
+    expect(backButton.type).toBe('button');
+    expect(backButton.textContent).toBe('戻る');
+    expect(backButton.disabled).toBe(false);
+
+    const input = root.querySelector('.problem-series-entry-seed-input') as HTMLInputElement;
+    const prepareButton = root.querySelector('.problem-series-entry-prepare') as HTMLButtonElement;
+    const errorEl = root.querySelector('.problem-series-entry-seed-error');
+
+    expect(onBack).toHaveBeenCalledTimes(0);
+    expect(onPrepare).toHaveBeenCalledTimes(0);
+
+    const normalizeCallsBeforeBack = normalizeSpy.mock.calls.length;
+    backButton.click();
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onPrepare).toHaveBeenCalledTimes(0);
+    expect(normalizeSpy.mock.calls.length).toBe(normalizeCallsBeforeBack);
+    expect(input.value).toBe('');
+    expect(errorEl!.textContent).toBe('seedを入力してください');
+    expect(prepareButton.disabled).toBe(true);
+
+    input.value = '  fixture-a  ';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    prepareButton.click();
+
+    expect(onPrepare).toHaveBeenCalledTimes(1);
+    expect(onPrepare).toHaveBeenCalledWith('fixture-a');
+    expect(onBack).toHaveBeenCalledTimes(1);
+
+    const omittedHost = document.createElement('div');
+    expect(() => {
+      const omittedPanel = new ProblemSeriesEntryPanel(omittedHost);
+      const omittedBackButton = omittedHost.querySelector(
+        '.problem-series-entry-back',
+      ) as HTMLButtonElement;
+      omittedBackButton.click();
+      omittedPanel.destroy();
+    }).not.toThrow();
+  });
+
   it('destroy removes only the panel root and does not call onPrepare', () => {
     const host = document.createElement('div');
     const existing = document.createElement('p');

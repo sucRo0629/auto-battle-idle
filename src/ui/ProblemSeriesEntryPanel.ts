@@ -2,6 +2,7 @@ import { normalizeProblemSeriesSeed } from '../battle/problemSeries/seedResolve.
 
 export interface ProblemSeriesEntryPanelCallbacks {
   onPrepare?: (normalizedSeed: string) => void;
+  onBack?: () => void;
 }
 
 export class ProblemSeriesEntryPanel {
@@ -42,6 +43,15 @@ export class ProblemSeriesEntryPanel {
     this.errorEl.className = 'problem-series-entry-seed-error';
     this.errorEl.textContent = 'seedを入力してください';
     this.root.appendChild(this.errorEl);
+
+    const backButton = document.createElement('button');
+    backButton.type = 'button';
+    backButton.className = 'problem-series-entry-back';
+    backButton.textContent = '戻る';
+    backButton.addEventListener('click', () => {
+      this.callbacks.onBack?.();
+    });
+    this.root.appendChild(backButton);
 
     this.prepareButton = document.createElement('button');
     this.prepareButton.type = 'button';
