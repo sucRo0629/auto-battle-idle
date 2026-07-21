@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ProblemSeriesOverviewPanel } from './ProblemSeriesOverviewPanel.ts';
 import type { ProblemSeriesOverviewDisplay } from './problemSeriesOverviewViewModel.ts';
 
@@ -233,5 +233,41 @@ describe('ProblemSeriesOverviewPanel', () => {
     expect(host.querySelector('.problem-series-overview-panel')).toBeNull();
     expect(host.contains(existing)).toBe(true);
     expect(existing.textContent).toBe('existing-host-child');
+  });
+
+  it('invokes onBack and onConfirm when action buttons are clicked', () => {
+    const fixture = createThreeWaveFixture();
+    assertFixtureUsesOnlyR12mClasses(fixture);
+    const host = document.createElement('div');
+    const onBack = vi.fn();
+    const onConfirm = vi.fn();
+
+    new ProblemSeriesOverviewPanel(host, fixture, { onBack, onConfirm });
+
+    const backButtons = host.querySelectorAll('.problem-series-overview-back');
+    expect(backButtons).toHaveLength(1);
+    const confirmButtons = host.querySelectorAll('.problem-series-overview-confirm');
+    expect(confirmButtons).toHaveLength(1);
+
+    const backButton = backButtons[0]!;
+    const confirmButton = confirmButtons[0]!;
+
+    expect(backButton).toBeInstanceOf(HTMLButtonElement);
+    expect(confirmButton).toBeInstanceOf(HTMLButtonElement);
+    expect(backButton.type).toBe('button');
+    expect(confirmButton.type).toBe('button');
+    expect(backButton.textContent).toBe('戻る');
+    expect(confirmButton.textContent).toBe('初期準備へ');
+
+    expect(onBack).toHaveBeenCalledTimes(0);
+    expect(onConfirm).toHaveBeenCalledTimes(0);
+
+    backButton.click();
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledTimes(0);
+
+    confirmButton.click();
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 });

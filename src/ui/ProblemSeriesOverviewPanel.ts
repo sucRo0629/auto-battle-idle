@@ -1,11 +1,17 @@
 import type { ProblemSeriesOverviewDisplay } from './problemSeriesOverviewViewModel.ts';
 
+export interface ProblemSeriesOverviewPanelCallbacks {
+  onBack?: () => void;
+  onConfirm?: () => void;
+}
+
 export class ProblemSeriesOverviewPanel {
   private readonly root: HTMLElement;
 
   constructor(
     host: HTMLElement,
     display: ProblemSeriesOverviewDisplay,
+    callbacks: ProblemSeriesOverviewPanelCallbacks = {},
   ) {
     this.root = document.createElement('div');
     this.root.className = 'problem-series-overview-panel';
@@ -72,6 +78,25 @@ export class ProblemSeriesOverviewPanel {
     }
 
     this.root.appendChild(wavesEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'problem-series-overview-actions';
+
+    const backButton = document.createElement('button');
+    backButton.type = 'button';
+    backButton.className = 'problem-series-overview-back';
+    backButton.textContent = '戻る';
+    backButton.addEventListener('click', () => callbacks.onBack?.());
+
+    const confirmButton = document.createElement('button');
+    confirmButton.type = 'button';
+    confirmButton.className = 'problem-series-overview-confirm';
+    confirmButton.textContent = '初期準備へ';
+    confirmButton.addEventListener('click', () => callbacks.onConfirm?.());
+
+    actions.append(backButton, confirmButton);
+    this.root.appendChild(actions);
+
     host.appendChild(this.root);
   }
 
