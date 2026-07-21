@@ -25,7 +25,6 @@ const FORBIDDEN_SNAPSHOT_KEYS = [
   'waveLinks',
   'waveRelationSummary',
   'finalWaveCompositeOf',
-  'operationConditions',
   'enemies',
   'party',
   'selectedCombatModuleIds',
@@ -49,7 +48,14 @@ function expectSnapshotShapeOnly(
   snapshot: ProblemSeriesOperationStartSnapshot,
 ): void {
   expect(Object.keys(snapshot).sort()).toEqual(
-    ['allowedClassIds', 'generatorVersion', 'seed', 'seriesId', 'waves'].sort(),
+    [
+      'allowedClassIds',
+      'generatorVersion',
+      'operationConditions',
+      'seed',
+      'seriesId',
+      'waves',
+    ].sort(),
   );
   for (const forbidden of FORBIDDEN_SNAPSHOT_KEYS) {
     expect(snapshot).not.toHaveProperty(forbidden);
@@ -133,6 +139,15 @@ describe('R12m createProblemSeriesOperationStartSnapshot (pure factory)', () => 
     }>();
   });
 
+  it('snapshot requires readonly operationConditions: readonly string[]', () => {
+    expectTypeOf<
+      ProblemSeriesOperationStartSnapshot['operationConditions']
+    >().toEqualTypeOf<readonly string[]>();
+    expectTypeOf<ProblemSeriesOperationStartSnapshot>().toMatchTypeOf<{
+      readonly operationConditions: readonly string[];
+    }>();
+  });
+
   it('snapshot enemy group requires readonly selectedCombatModuleId: string', () => {
     expectTypeOf<
       ProblemSeriesOperationStartEnemyGroup['selectedCombatModuleId']
@@ -172,6 +187,10 @@ describe('R12m createProblemSeriesOperationStartSnapshot (pure factory)', () => 
     expect(snapshot.seriesId).toBe(result.series.seriesId);
     expect(snapshot.seriesId).toBe('r12m_series_a');
     expect(snapshot.allowedClassIds).toEqual(result.series.allowedClassIds);
+    expect(snapshot.operationConditions).toEqual([]);
+    expect(snapshot.operationConditions).toEqual(
+      result.series.operationConditions,
+    );
     expect(snapshot.waves).toEqual(expectedWaves);
     expectSnapshotShapeOnly(snapshot);
     expectAllowedClassIdsMatchSeries(snapshot, result.series);
@@ -192,10 +211,47 @@ describe('R12m createProblemSeriesOperationStartSnapshot (pure factory)', () => 
     expect(snapshot.seriesId).toBe(result.series.seriesId);
     expect(snapshot.seriesId).toBe('r12m_series_b');
     expect(snapshot.allowedClassIds).toEqual(result.series.allowedClassIds);
+    expect(snapshot.operationConditions).toEqual([]);
+    expect(snapshot.operationConditions).toEqual(
+      result.series.operationConditions,
+    );
     expect(snapshot.waves).toEqual(expectedWaves);
     expectSnapshotShapeOnly(snapshot);
     expectAllowedClassIdsMatchSeries(snapshot, result.series);
     expectSelectedCombatModuleIdsMatchSeries(snapshot, result.series);
+  });
+
+  it('copies operationConditions without sharing array reference', () => {
+    const { result } = resolveFromProduction(FIXTURE_SEED_A);
+    const operationConditions = ['condition one', 'condition two'];
+    const resultWithConditions = {
+      ...result,
+      series: {
+        ...result.series,
+        operationConditions,
+      },
+    };
+
+    const snapshot = createProblemSeriesOperationStartSnapshot(
+      resultWithConditions,
+    );
+
+    expect(snapshot.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
+    expect(snapshot.operationConditions).not.toBe(operationConditions);
+    expect(snapshot.operationConditions).not.toBe(
+      resultWithConditions.series.operationConditions,
+    );
+
+    operationConditions.push('mutated');
+    resultWithConditions.series.operationConditions.push('mutated');
+
+    expect(snapshot.operationConditions).toEqual([
+      'condition one',
+      'condition two',
+    ]);
   });
 
   it('uses resolver normalized seed (trim) without recomputing selection', () => {

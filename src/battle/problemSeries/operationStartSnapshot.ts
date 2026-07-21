@@ -39,6 +39,7 @@ export interface ProblemSeriesOperationStartSnapshot {
   readonly generatorVersion: string;
   readonly seriesId: string;
   readonly allowedClassIds: readonly ClassId[];
+  readonly operationConditions: readonly string[];
   readonly waves: readonly ProblemSeriesOperationStartWave[];
 }
 
@@ -55,6 +56,7 @@ export function createProblemSeriesOperationStartSnapshot(
     generatorVersion: result.generatorVersion,
     seriesId: result.series.seriesId,
     allowedClassIds: [...result.series.allowedClassIds],
+    operationConditions: [...result.series.operationConditions],
     waves: toProblemSeriesBattleWaves(result.series),
   };
 }
