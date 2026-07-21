@@ -88,8 +88,12 @@ function expectNamedOverviewShapeOnly(named: ProblemSeriesOverviewNamed): void {
           'classId',
           'combatModuleDisplayName',
           'count',
+          'scale',
           'selectedCombatModuleId',
         ].sort(),
+      );
+      expect(Object.keys(group.scale).sort()).toEqual(
+        ['atkScale', 'defScale', 'hasDifference', 'hpScale', 'resScale'].sort(),
       );
       for (const forbidden of FORBIDDEN_NAMED_KEYS) {
         expect(group).not.toHaveProperty(forbidden);
@@ -136,6 +140,7 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
     expect(named.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
 
     let totalNamedGroups = 0;
+    const seenNamedScaleObjects = new Set<object>();
     for (let waveIndex = 0; waveIndex < core.waves.length; waveIndex++) {
       const coreWave = core.waves[waveIndex]!;
       const namedWave = named.waves[waveIndex]!;
@@ -165,10 +170,16 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-a production path)', ()
         expect(namedGroup.combatModuleDisplayName).toBe(
           gameData.combatModuleRegistry[coreGroup.selectedCombatModuleId]!.displayName,
         );
+
+        expect(namedGroup.scale).toEqual(coreGroup.scale);
+        expect(namedGroup.scale).not.toBe(coreGroup.scale);
+        expect(seenNamedScaleObjects.has(namedGroup.scale)).toBe(false);
+        seenNamedScaleObjects.add(namedGroup.scale);
       }
     }
     expect(totalNamedGroups).toBeGreaterThan(0);
     expect(totalNamedGroups).toBe(totalCoreGroups);
+    expect(seenNamedScaleObjects.size).toBe(totalNamedGroups);
 
     expect(named.waves).not.toBe(core.waves);
     for (let waveIndex = 0; waveIndex < core.waves.length; waveIndex++) {
@@ -458,6 +469,7 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-b production path)', ()
     expect(named.waves.map((wave) => wave.waveNumber)).toEqual([1, 2, 3]);
 
     let totalNamedGroups = 0;
+    const seenNamedScaleObjects = new Set<object>();
     for (let waveIndex = 0; waveIndex < core.waves.length; waveIndex++) {
       const coreWave = core.waves[waveIndex]!;
       const namedWave = named.waves[waveIndex]!;
@@ -487,10 +499,16 @@ describe('R12m createProblemSeriesOverviewNamed (fixture-b production path)', ()
         expect(namedGroup.combatModuleDisplayName).toBe(
           gameData.combatModuleRegistry[coreGroup.selectedCombatModuleId]!.displayName,
         );
+
+        expect(namedGroup.scale).toEqual(coreGroup.scale);
+        expect(namedGroup.scale).not.toBe(coreGroup.scale);
+        expect(seenNamedScaleObjects.has(namedGroup.scale)).toBe(false);
+        seenNamedScaleObjects.add(namedGroup.scale);
       }
     }
     expect(totalNamedGroups).toBeGreaterThan(0);
     expect(totalNamedGroups).toBe(totalCoreGroups);
+    expect(seenNamedScaleObjects.size).toBe(totalNamedGroups);
 
     expect(named.waves).not.toBe(core.waves);
     for (let waveIndex = 0; waveIndex < core.waves.length; waveIndex++) {

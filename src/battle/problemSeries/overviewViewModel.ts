@@ -37,6 +37,7 @@ export interface ProblemSeriesOverviewNamedEnemyGroup {
   readonly count: number;
   readonly selectedCombatModuleId: string;
   readonly combatModuleDisplayName: string;
+  readonly scale: ProblemSeriesOverviewScale;
 }
 
 export interface ProblemSeriesOverviewNamedWave {
@@ -114,6 +115,7 @@ function toOverviewNamedEnemyGroup(
       gameData.combatModuleRegistry,
       group.selectedCombatModuleId,
     ),
+    scale: { ...group.scale },
   };
 }
 
