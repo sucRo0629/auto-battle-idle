@@ -442,6 +442,24 @@ export class GameSession {
   }
 
   /**
+   * R12m 2H1: 未開始の prepared problem-series snapshot だけを破棄する。
+   * active 作戦中（未完了 OperationState あり）は破棄せず false。
+   * snapshot がなければ false。Save / screen / BattleEngine は変更しない。
+   */
+  discardPreparedProblemSeriesSnapshot(): boolean {
+    if (this.operationState !== null && !this.operationState.isCompleted) {
+      return false;
+    }
+
+    if (this.problemSeriesOperationStartSnapshot === null) {
+      return false;
+    }
+
+    this.clearProblemSeriesOperationStartSnapshot();
+    return true;
+  }
+
+  /**
    * R12m 1C: active OperationState.source に基づき BattleEngine へ渡す解決済み Wave を返す。
    * - active なし / fixedStage: null（固定 Stage 経路）
    * - problemSeries: 保持 snapshot.waves（欠落時は例外、fallback しない）
