@@ -114,6 +114,14 @@ describe('normalizeTarget', () => {
     });
   });
 
+  it('resolveApproachTargetSpec maps kind self to enemy nearest', () => {
+    expect(resolveApproachTargetSpec({ kind: 'self' })).toEqual({
+      kind: 'distance',
+      side: 'enemy',
+      order: 'nearest',
+    });
+  });
+
   it('parses distance selfOrigin with includeSelf', () => {
     expect(
       normalizeTarget({

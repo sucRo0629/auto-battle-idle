@@ -389,6 +389,8 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 **自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。`test_ranged` も通常の attack プールとして扱う。
 
+**stance / self basic の接近写像：** CombatModule の通常行動 effect が `target: self`（鉄衛士・護法士の stance 間隔など）でも、自動接近の ChaseTarget / AttackTarget は `resolveApproachTargetSpec` により **敵対 `distance/enemy/nearest`** へ写像する。self のまま攻撃プールに自分だけ入ると射程外でも接近スキップし前線へ出ない。ally-heal / ally-barrier の専用経路は本写像の対象外。
+
 **pierce 敵向け通常攻撃の接近停止（`isPierceEnemyBasicAttack`）：** `selfOrigin` + `pierce` の敵向け通常攻撃は、接近停止の正本が「射程内に敵 1 体」ではない。停止目標 `battleX` = `getEnemyContactX() − effectiveRangePx`（`resolvePierceApproachStopBattleX` / `capOnFieldBeforeEnemyContact` と同式）。pierce basic 持ちユニットはこの停止 X に到達するまで接近を継続する。`battleX >= pierceStopX − settleEpsilon` で接近停止。過前進時は `shouldSkip` を false のまま双方向補間で `pierceStopX` へ戻す。接近目標 X も chase 個体ではなく contact 基準（`resolvePlayerChaseApproachBattleX`）。停止は contact 基準。
 
 貫通形状・ターゲット仕様は [combat.md](combat.md) の `pierce` / `selfOrigin` 節を参照。

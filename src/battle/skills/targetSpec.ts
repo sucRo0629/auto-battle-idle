@@ -524,8 +524,16 @@ export function distanceSpecIncludesSelf(spec: TargetSpec): boolean {
   );
 }
 
-/** 自動接近・接敵停止用。selfOrigin は貫通の着弾基準であり追跡対象ではない */
+/**
+ * 自動接近・接敵停止用。
+ * - enemy selfOrigin は貫通の着弾基準であり追跡対象ではない → nearest
+ * - kind:self（鉄衛士 / 護法士 stance Module 等）は攻撃プールに自分だけ入り
+ *   接近スキップし続けるため、敵対接近の既定（enemy nearest）へ写像する
+ */
 export function resolveApproachTargetSpec(spec: TargetSpec): TargetSpec {
+  if (spec.kind === "self") {
+    return { kind: "distance", side: "enemy", order: "nearest" };
+  }
   if (
     spec.kind === "distance" &&
     spec.side === "enemy" &&
