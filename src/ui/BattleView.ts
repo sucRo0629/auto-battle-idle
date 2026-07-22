@@ -12,6 +12,7 @@ import type {
   CombatantSnapshot,
   CombatantState,
   GameData,
+  PartySlotState,
   SaveGameState,
   SkillEffectDef,
 } from "../battle/types.ts";
@@ -197,6 +198,7 @@ export class BattleView {
   private lastWavePlateLabel = "";
   private readonly unsubscribeLocale: () => void;
   private readonly verifyModeControls?: VerifyModeControls;
+  private readonly getBattleParty: () => PartySlotState[];
   private battleRootResizeObserver: ResizeObserver | null = null;
 
   constructor(
@@ -205,9 +207,11 @@ export class BattleView {
     private readonly gameData: GameData,
     private readonly levelCurves: LevelCurvesConfig,
     private readonly getSave: () => SaveGameState,
-    verifyModeControls?: VerifyModeControls
+    verifyModeControls?: VerifyModeControls,
+    getBattleParty?: () => PartySlotState[],
   ) {
     this.verifyModeControls = verifyModeControls;
+    this.getBattleParty = getBattleParty ?? (() => this.getSave().party);
     this.root = document.createElement("div");
     this.root.className = "battle-view";
 
@@ -774,11 +778,6 @@ export class BattleView {
     this.unsubscribeLocale = subscribeLocaleChange(() => {
       this.refreshLocaleChrome();
       const snapshot = this.engine.getSnapshot();
-      const save = this.getSave();
-      const partyMeta = buildPartyHudMetaBySlot(
-        save.party,
-        this.gameData.classRegistry,
-      );
       this.partyHud.update(this.buildPartyHudEntriesForDisplay(snapshot));
       this.partyHud.refreshLocale();
       this.syncEnemyHudFromSnapshot(snapshot);
@@ -1124,9 +1123,9 @@ export class BattleView {
 
   private resolveMemberStatsPanelData(visualSlotIndex: number) {
     const snapshot = this.engine.getSnapshot();
-    const save = this.getSave();
+    const battleParty = this.getBattleParty();
     const partyMeta = buildPartyHudMetaBySlot(
-      save.party,
+      battleParty,
       this.gameData.classRegistry,
     );
     const hudEntry = buildPartyHudEntries(
@@ -1138,7 +1137,7 @@ export class BattleView {
 
     const partySlotIndex = hudEntry.partySlotIndex;
     const meta = partyMeta[partySlotIndex];
-    const member = save.party[partySlotIndex];
+    const member = battleParty[partySlotIndex];
     if (!meta || !member) return null;
 
     const ally = snapshot.allies.find(
@@ -1198,9 +1197,8 @@ export class BattleView {
   private buildPartyHudEntriesForDisplay(
     snapshot: BattleSnapshot,
   ): ReturnType<typeof buildPartyHudEntries> {
-    const save = this.getSave();
     const partyMeta = buildPartyHudMetaBySlot(
-      save.party,
+      this.getBattleParty(),
       this.gameData.classRegistry,
     );
     const entries = buildPartyHudEntries(

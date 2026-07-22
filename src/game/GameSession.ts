@@ -363,6 +363,7 @@ export class GameSession {
           this.cycleSimulationSpeed();
         },
       },
+      () => this.resolveBattleParty(),
     );
     this.menuHost = createMenuHost({
       gameData,
