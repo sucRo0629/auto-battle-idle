@@ -164,6 +164,7 @@ export class PartyHudPanel {
   private lastDetailFrame: PartyHudDetailFrame | null = null;
   private hoverHighlightUnitId: string | null = null;
   private hoveredFieldLinkSlotIndex: number | null = null;
+  private panelHidden = false;
   private readonly layout: PartyHudPanelLayout;
   private readonly unsubscribeStatusIconsReady: () => void;
 
@@ -206,6 +207,7 @@ export class PartyHudPanel {
 
     root.appendChild(slotsBody);
     parent.appendChild(root);
+    root.hidden = this.panelHidden;
 
     this.slotsBody.addEventListener('scroll', () => {
       this.options.floatingTooltip?.reposition();
@@ -233,6 +235,14 @@ export class PartyHudPanel {
 
   getMode(): PartyHudPanelMode {
     return this.mode;
+  }
+
+  setHidden(hidden: boolean): void {
+    if (this.panelHidden === hidden) return;
+    this.panelHidden = hidden;
+    if (this.root) {
+      this.root.hidden = hidden;
+    }
   }
 
   refreshLocale(): void {

@@ -57,6 +57,21 @@ describe('party-hud-overlay.css allyCard layout regression', () => {
     expect(css).toMatch(/\.party-hud-card--combat-module[\s\S]*--hud-recast-grid-h:\s*0px/);
   });
 
+  it('hides party HUD root when [hidden] despite display:grid/flex mode rules', () => {
+    const battleViewCss = readFileSync(
+      resolve(import.meta.dirname, '../styles/battle-view.css'),
+      'utf8',
+    );
+    const rootHiddenBlock = battleViewCss.match(
+      /\.party-hud-panel\[hidden\]\s*\{([^}]*)\}/,
+    );
+    expect(rootHiddenBlock).not.toBeNull();
+    expect(rootHiddenBlock![1]).toMatch(/display:\s*none\s*!important/);
+    // Do not accept a different [hidden] selector (e.g. recast-grid) as this contract.
+    expect(rootHiddenBlock![0]).toMatch(/^\.party-hud-panel\[hidden\]/);
+    expect(rootHiddenBlock![0]).not.toMatch(/recast-grid/);
+  });
+
   it('lays out overlay damage bars as icon, fill, and value on one row', () => {
     expect(css).toMatch(
       /\.party-hud-panel--overlay \.party-hud-detail-damage \.party-stats-damage-bar[\s\S]*grid-template-columns:\s*12px minmax\(0,\s*1fr\) auto/,

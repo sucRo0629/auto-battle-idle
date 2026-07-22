@@ -986,6 +986,11 @@
   overflow: visible;
 }
 
+/* Root hidden must beat display:grid and mode display:flex (detail/overlay). */
+.party-hud-panel[hidden] {
+  display: none !important;
+}
+
 .party-hud-slot {
   position: relative;
   display: flex;

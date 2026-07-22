@@ -1039,6 +1039,14 @@ R6b の仮 Wave 開始・R6i の最小 retry と同列。**正式 UI**（Save �
 
 実装：`GameSession.ts`（`getSimulationSpeed` / `cycleSimulationSpeed`）、`BattleView.ts`（Speed ボタン）、`gameSessionSimulationSpeed.test.ts`。
 
+### 8.11.1b 作戦結果 overlay 表示中の味方 party HUD
+
+| 項目 | 方針 |
+| ---- | ---- |
+| 問題系列 最終勝利 overlay | OperationState 即時消去後に Save 編成へフォールバックする味方 party HUD 全体を非表示（背景に誤編成を見せない） |
+| 固定 Stage 勝利 overlay | 味方 party HUD は従来どおり表示 |
+| 敵 HUD・戦場・結果 overlay | 変更しない（維持） |
+
 ### 8.11.2 敵 group クリック展開（観察 UI — Phase 4 Task 2）
 
 一時停止中に敵 HUD の group を観察しやすくするため、**クリックのみ**でカード束を個体カードへ展開する。hover では展開しない（§8.10.2 の `hoverHighlight` のみ）。

@@ -988,6 +988,7 @@ export class BattleView {
     const showProblemSeries =
       problemSeriesResult?.outcome === 'victory' &&
       this.isProblemSeriesVictoryResultVisible();
+    this.partyHud.setHidden(showProblemSeries);
     const visible = showFixedStage || showProblemSeries;
     this.victoryResultOverlayEl.hidden = !visible;
     this.victoryResultOverlayEl.setAttribute(
