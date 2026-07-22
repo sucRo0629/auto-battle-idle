@@ -83,6 +83,9 @@ import {
 } from "./battleHoverHighlight.ts";
 import { BattleTargetIndicatorTracker } from "./battleTargetIndicator.ts";
 
+/** Active OperationState.source.kind for battle HUD plates (null = no active op). */
+export type BattleHudOperationSourceKind = "fixedStage" | "problemSeries";
+
 export interface VerifyModeControls {
   isVerifyMode: () => boolean;
   onVerifyModeChange: (enabled: boolean) => void;
@@ -199,6 +202,9 @@ export class BattleView {
   private readonly unsubscribeLocale: () => void;
   private readonly verifyModeControls?: VerifyModeControls;
   private readonly getBattleParty: () => PartySlotState[];
+  private readonly getActiveOperationSourceKind:
+    | (() => BattleHudOperationSourceKind | null)
+    | undefined;
   private battleRootResizeObserver: ResizeObserver | null = null;
 
   constructor(
@@ -209,9 +215,11 @@ export class BattleView {
     private readonly getSave: () => SaveGameState,
     verifyModeControls?: VerifyModeControls,
     getBattleParty?: () => PartySlotState[],
+    getActiveOperationSourceKind?: () => BattleHudOperationSourceKind | null,
   ) {
     this.verifyModeControls = verifyModeControls;
     this.getBattleParty = getBattleParty ?? (() => this.getSave().party);
+    this.getActiveOperationSourceKind = getActiveOperationSourceKind;
     this.root = document.createElement("div");
     this.root.className = "battle-view";
 
@@ -1645,7 +1653,13 @@ export class BattleView {
     const stageId = stage?.id ?? save.stageProgress.currentStageId;
     const waveNum = snapshot.waveIndex + 1;
     const waveTotal = snapshot.waveCount;
-    const stagePlateLabel = t("battle.stagePlate", { stage: stageId });
+    // R12m 2X3: problemSeries battles omit fixed-stage STAGE plate; wave plate stays.
+    // Missing callback keeps legacy fixed-stage label for unit fixtures.
+    const activeSourceKind = this.getActiveOperationSourceKind?.() ?? null;
+    const stagePlateLabel =
+      activeSourceKind === "problemSeries"
+        ? ""
+        : t("battle.stagePlate", { stage: stageId });
     const wavePlateLabel = t("battle.wavePlate", {
       current: waveNum,
       total: waveTotal,

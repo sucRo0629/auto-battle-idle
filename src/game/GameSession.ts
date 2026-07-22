@@ -364,6 +364,7 @@ export class GameSession {
         },
       },
       () => this.resolveBattleParty(),
+      () => this.getOperationState()?.source.kind ?? null,
     );
     this.menuHost = createMenuHost({
       gameData,
