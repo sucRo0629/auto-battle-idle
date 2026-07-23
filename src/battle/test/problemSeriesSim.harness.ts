@@ -13,6 +13,7 @@ import { createProblemSeriesInitialParty } from '../problemSeries/initialParty.t
 import { resolveProblemSeriesFromSeed } from '../problemSeries/seedResolve.ts';
 import {
   toProblemSeriesBattleWaves,
+  type ProblemSeriesBattleEnemyGroup,
   type ProblemSeriesBattleWave,
 } from '../problemSeries/toBattleWaves.ts';
 import { StageDamageStatsTracker } from '../stageDamageStats.ts';
@@ -67,6 +68,22 @@ export interface ProblemSeriesSimWavePlan {
   readonly passiveAcquisitions?: readonly ProblemSeriesSimWavePassiveAcquire[];
 }
 
+/** test-only。解決済み Wave を BattleEngine 投入前に差し替える文脈。 */
+export interface ProblemSeriesSimResolvedWaveTransformContext {
+  readonly seriesId: string;
+  readonly problemSeriesSeed: string;
+  readonly generatorVersion: string;
+}
+
+/**
+ * test-only。`toProblemSeriesBattleWaves` 直後の解決済み Wave を返す。
+ * 未指定時は production 経路（変換なし）のまま。
+ */
+export type ProblemSeriesSimResolvedWaveTransform = (
+  waves: readonly ProblemSeriesBattleWave[],
+  context: ProblemSeriesSimResolvedWaveTransformContext,
+) => ProblemSeriesBattleWave[];
+
 export interface ProblemSeriesSimInput {
   readonly problemSeriesSeed: string;
   /** 問題系列選出 seed とは別。戦闘中 Math.random 置換用。 */
@@ -78,6 +95,308 @@ export interface ProblemSeriesSimInput {
   readonly slots?: readonly ProblemSeriesSimSlotPlan[];
   /** Wave index 0..2。Wave 勝利後に次 Wave 分だけ適用。 */
   readonly wavePlans?: readonly (ProblemSeriesSimWavePlan | undefined)[];
+  /**
+   * test-only。指定時のみ解決済み Wave を差し替える。
+   * 省略時は production の `toProblemSeriesBattleWaves` 結果をそのまま使う。
+   */
+  readonly transformResolvedBattleWaves?: ProblemSeriesSimResolvedWaveTransform;
+  /**
+   * test-only。最終 snapshot から不変な生存敵診断だけを受け取る任意 callback。
+   * 省略時は呼ばれず、戻り値・正規化・production 相当経路は変えない。
+   * `ProblemSeriesSimResult` / baseline JSON には含めない。
+   */
+  readonly onFinalEnemyDiagnostic?: ProblemSeriesSimOnFinalEnemyDiagnostic;
+  /**
+   * test-only。`onDamageApplied` 内から read-only 診断値だけを通知する。
+   * 可変 `CombatantState` は外へ渡さない。省略時は未呼び出し・Result 不変。
+   */
+  readonly onCombatFlowDamage?: ProblemSeriesSimOnCombatFlowDamage;
+  /**
+   * test-only。`onHealRecorded` 内から read-only 診断値だけを通知する。
+   * skillId 等の現行 callback に無い項目は推測しない。省略時は Result 不変。
+   */
+  readonly onCombatFlowHeal?: ProblemSeriesSimOnCombatFlowHeal;
+  /**
+   * test-only。各 `engine.tick` 後の snapshot から、alive 単位の不変コピーだけを通知する。
+   * production snapshot / 可変配列自体は外へ渡さない。省略時は Result 不変。
+   */
+  readonly onTickStateDiagnostic?: ProblemSeriesSimOnTickStateDiagnostic;
+  /**
+   * test-only。`onCombatActionExecuted` から read-only 診断値だけを通知する。
+   * 既存 damage/heal / StageDamageStats / Result は置換しない。省略時は Result 不変。
+   */
+  readonly onCombatActionDiagnostic?: ProblemSeriesSimOnCombatActionDiagnostic;
+}
+
+/** test-only。最終 snapshot 上の生存敵 1 体分（推測フィールドなし）。 */
+export interface ProblemSeriesSimSurvivingEnemyDiagnostic {
+  readonly id: string;
+  readonly name: string;
+  readonly classId: string;
+  readonly hp: number;
+  readonly maxHp: number;
+  readonly baseMaxHp: number;
+  readonly barrierHp: number;
+  readonly atk: number;
+  readonly def: number;
+  readonly res: number;
+  readonly basicSkillId: string;
+}
+
+/**
+ * test-only。最終 snapshot + 対応 Wave 入力の診断値。
+ * Result / baseline を汚染しない外付け口。
+ */
+export interface ProblemSeriesSimFinalEnemyDiagnostic {
+  readonly finalWaveIndex: number;
+  readonly phase: string;
+  readonly outcome: ProblemSeriesSimBattleOutcome;
+  readonly survivingEnemies: readonly ProblemSeriesSimSurvivingEnemyDiagnostic[];
+  readonly finalWaveEnemyInputs: ProblemSeriesBattleWave;
+}
+
+export type ProblemSeriesSimOnFinalEnemyDiagnostic = (
+  diagnostic: ProblemSeriesSimFinalEnemyDiagnostic,
+) => void;
+
+/** test-only。combat-flow 診断用の単位スナップ（CombatantState 非共有）。 */
+export interface ProblemSeriesSimCombatFlowUnitDiagnostic {
+  readonly id: string;
+  readonly classId: string;
+  readonly isEnemy: boolean;
+  /** 味方かつ取得可能なときのみ。 */
+  readonly partySlotIndex?: number;
+}
+
+/** test-only。damage 適用時の不変診断イベント。 */
+export interface ProblemSeriesSimCombatFlowDamageEvent {
+  readonly waveIndex: number;
+  readonly battleTimeSec: number;
+  readonly actor: ProblemSeriesSimCombatFlowUnitDiagnostic;
+  readonly target: ProblemSeriesSimCombatFlowUnitDiagnostic;
+  readonly amount: number;
+  readonly hpDamage: number;
+  readonly barrierDamage: number;
+  readonly lethal: boolean;
+  readonly sourceKind: string;
+  readonly skillId: string;
+  readonly slotKind: string;
+}
+
+/** test-only。heal 記録時の不変診断イベント（現行 callback 供給値のみ）。 */
+export interface ProblemSeriesSimCombatFlowHealEvent {
+  readonly waveIndex: number;
+  readonly battleTimeSec: number;
+  readonly actor: ProblemSeriesSimCombatFlowUnitDiagnostic;
+  readonly target: ProblemSeriesSimCombatFlowUnitDiagnostic;
+  readonly amount: number;
+}
+
+export type ProblemSeriesSimOnCombatFlowDamage = (
+  event: ProblemSeriesSimCombatFlowDamageEvent,
+) => void;
+
+export type ProblemSeriesSimOnCombatFlowHeal = (
+  event: ProblemSeriesSimCombatFlowHealEvent,
+) => void;
+
+/** test-only。tick 診断用の alive 単位（snapshot 供給値の不変コピー）。 */
+export interface ProblemSeriesSimTickAliveUnitDiagnostic {
+  readonly id: string;
+  readonly classId: string;
+  readonly hp: number;
+  readonly maxHp: number;
+  readonly barrierHp: number;
+  readonly atk: number;
+  readonly battleX: number;
+  readonly effectiveRangePx: number;
+  readonly bodyAnimMarching: boolean;
+  readonly basicSkillId: string;
+  /** 味方のみ。 */
+  readonly partySlotIndex?: number;
+  /** 味方のみ。snapshot に存在する場合。 */
+  readonly useLocked?: boolean;
+}
+
+/** test-only。各 tick 後の状態診断（可変 snapshot 非共有）。 */
+export interface ProblemSeriesSimTickStateDiagnostic {
+  readonly waveIndex: number;
+  readonly battleTimeSec: number;
+  readonly phase: string;
+  readonly runtimePhase: string;
+  readonly engaged: boolean;
+  readonly allies: readonly ProblemSeriesSimTickAliveUnitDiagnostic[];
+  readonly enemies: readonly ProblemSeriesSimTickAliveUnitDiagnostic[];
+}
+
+/** test-only。戦闘アクション実行時の不変診断。 */
+export interface ProblemSeriesSimCombatActionDiagnostic {
+  readonly waveIndex: number;
+  readonly battleTimeSec: number;
+  readonly actor: {
+    readonly id: string;
+    readonly classId: string;
+    readonly isEnemy: boolean;
+    readonly partySlotIndex?: number;
+    readonly hp: number;
+    readonly battleX: number;
+  };
+  readonly slotKind: string;
+  readonly skillId: string;
+}
+
+export type ProblemSeriesSimOnTickStateDiagnostic = (
+  state: ProblemSeriesSimTickStateDiagnostic,
+) => void;
+
+export type ProblemSeriesSimOnCombatActionDiagnostic = (
+  event: ProblemSeriesSimCombatActionDiagnostic,
+) => void;
+
+/** R12n 1F — 系列A Wave2 鉄衛士 hpScale 感度の対象境界（test-only）。 */
+export const SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET = {
+  seriesId: 'r12m_series_a',
+  waveIndex: 1,
+  classId: 'df_guardian' as const,
+  expectedGuardianGroupCount: 2,
+} as const;
+
+/** R12n 1J — 系列A Wave3 魔術師 atkScale 感度の対象境界（test-only）。 */
+export const SERIES_A_WAVE3_SORCERER_ATK_SCALE_TARGET = {
+  seriesId: 'r12m_series_a',
+  waveIndex: 2,
+  classId: 'at_sorcerer' as const,
+  expectedSorcererGroupCount: 1,
+  expectedCount: 1,
+} as const;
+
+function cloneProblemSeriesBattleWaves(
+  waves: readonly ProblemSeriesBattleWave[],
+): ProblemSeriesBattleWave[] {
+  return waves.map((wave) => ({
+    prepResourceGrant: wave.prepResourceGrant,
+    enemyGroups: wave.enemyGroups.map((group) => ({ ...group })),
+  }));
+}
+
+/**
+ * test-only。系列 A Wave 2（index 1）の `df_guardian` 2 group の `hpScale` だけを差し替える。
+ * `hpScale === 1` は production 相当（プロパティ省略）へ戻す。
+ * 対象外 series / 人数不一致は fail-closed。
+ */
+export function createSeriesAWave2GuardianHpScaleTransform(
+  hpScale: number,
+): ProblemSeriesSimResolvedWaveTransform {
+  if (!Number.isFinite(hpScale) || hpScale <= 0) {
+    throw new Error(
+      `series A Wave2 guardian hpScale must be a finite number > 0, got ${String(hpScale)}`,
+    );
+  }
+  return (waves, context) => {
+    if (context.seriesId !== SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET.seriesId) {
+      throw new Error(
+        `createSeriesAWave2GuardianHpScaleTransform refuses seriesId "${context.seriesId}"`,
+      );
+    }
+    if (waves.length !== 3) {
+      throw new Error(
+        `expected 3 resolved waves for series A hpScale transform, got ${waves.length}`,
+      );
+    }
+    const cloned = cloneProblemSeriesBattleWaves(waves);
+    const waveIndex = SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET.waveIndex;
+    const wave = cloned[waveIndex];
+    if (wave === undefined) {
+      throw new Error(`missing resolved wave at index ${waveIndex}`);
+    }
+    let touchedGuardians = 0;
+    wave.enemyGroups = wave.enemyGroups.map((group) => {
+      if (group.classId !== SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET.classId) {
+        return group;
+      }
+      touchedGuardians += 1;
+      const next: ProblemSeriesBattleEnemyGroup = { ...group };
+      if (hpScale === 1) {
+        delete next.hpScale;
+      } else {
+        next.hpScale = hpScale;
+      }
+      return next;
+    });
+    if (
+      touchedGuardians !==
+      SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET.expectedGuardianGroupCount
+    ) {
+      throw new Error(
+        `expected ${SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET.expectedGuardianGroupCount} ` +
+          `df_guardian groups on Wave ${waveIndex}, touched ${touchedGuardians}`,
+      );
+    }
+    return cloned;
+  };
+}
+
+/**
+ * test-only。系列 A Wave 3（index 2）の `at_sorcerer` 1 group の `atkScale` だけを差し替える。
+ * `atkScale === 1` は production 相当（プロパティ省略）へ戻す。
+ * 対象外 series / group 欠落・重複 / count 不一致は fail-closed。
+ */
+export function createSeriesAWave3SorcererAtkScaleTransform(
+  atkScale: number,
+): ProblemSeriesSimResolvedWaveTransform {
+  if (!Number.isFinite(atkScale) || atkScale <= 0) {
+    throw new Error(
+      `series A Wave3 sorcerer atkScale must be a finite number > 0, got ${String(atkScale)}`,
+    );
+  }
+  return (waves, context) => {
+    if (context.seriesId !== SERIES_A_WAVE3_SORCERER_ATK_SCALE_TARGET.seriesId) {
+      throw new Error(
+        `createSeriesAWave3SorcererAtkScaleTransform refuses seriesId "${context.seriesId}"`,
+      );
+    }
+    if (waves.length !== 3) {
+      throw new Error(
+        `expected 3 resolved waves for series A atkScale transform, got ${waves.length}`,
+      );
+    }
+    const cloned = cloneProblemSeriesBattleWaves(waves);
+    const waveIndex = SERIES_A_WAVE3_SORCERER_ATK_SCALE_TARGET.waveIndex;
+    const wave = cloned[waveIndex];
+    if (wave === undefined) {
+      throw new Error(`missing resolved wave at index ${waveIndex}`);
+    }
+    let touchedSorcerers = 0;
+    wave.enemyGroups = wave.enemyGroups.map((group) => {
+      if (group.classId !== SERIES_A_WAVE3_SORCERER_ATK_SCALE_TARGET.classId) {
+        return group;
+      }
+      touchedSorcerers += 1;
+      if (group.count !== SERIES_A_WAVE3_SORCERER_ATK_SCALE_TARGET.expectedCount) {
+        throw new Error(
+          `expected at_sorcerer count ${SERIES_A_WAVE3_SORCERER_ATK_SCALE_TARGET.expectedCount} ` +
+            `on Wave ${waveIndex}, got ${group.count}`,
+        );
+      }
+      const next: ProblemSeriesBattleEnemyGroup = { ...group };
+      if (atkScale === 1) {
+        delete next.atkScale;
+      } else {
+        next.atkScale = atkScale;
+      }
+      return next;
+    });
+    if (
+      touchedSorcerers !==
+      SERIES_A_WAVE3_SORCERER_ATK_SCALE_TARGET.expectedSorcererGroupCount
+    ) {
+      throw new Error(
+        `expected ${SERIES_A_WAVE3_SORCERER_ATK_SCALE_TARGET.expectedSorcererGroupCount} ` +
+          `at_sorcerer groups on Wave ${waveIndex}, touched ${touchedSorcerers}`,
+      );
+    }
+    return cloned;
+  };
 }
 
 export interface ProblemSeriesSimSlotMetrics {
@@ -139,6 +458,168 @@ function assertFiniteNumber(value: number, label: string): number {
     throw new Error(`expected finite number for ${label}, got ${String(value)}`);
   }
   return value;
+}
+
+/** test-only。可変 CombatantState を共有せず、診断用の浅い不変コピーを作る。 */
+function toCombatFlowUnitDiagnostic(
+  unit: {
+    id: string;
+    classId?: string;
+    isEnemy: boolean;
+    partySlotIndex?: number;
+  },
+): ProblemSeriesSimCombatFlowUnitDiagnostic {
+  const base: ProblemSeriesSimCombatFlowUnitDiagnostic = {
+    id: unit.id,
+    classId: unit.classId ?? '',
+    isEnemy: unit.isEnemy,
+  };
+  if (!unit.isEnemy && typeof unit.partySlotIndex === 'number') {
+    return { ...base, partySlotIndex: unit.partySlotIndex };
+  }
+  return base;
+}
+
+/** test-only。alive snapshot 単位の不変コピー。 */
+function toTickAliveUnitDiagnostic(unit: {
+  id: string;
+  classId?: string;
+  hp: number;
+  maxHp: number;
+  barrierHp: number;
+  atk: number;
+  battleX: number;
+  effectiveRangePx: number;
+  bodyAnimMarching: boolean;
+  basicSkillId?: string;
+  isEnemy: boolean;
+  partySlotIndex?: number;
+  useLocked?: boolean;
+}): ProblemSeriesSimTickAliveUnitDiagnostic {
+  const base: ProblemSeriesSimTickAliveUnitDiagnostic = {
+    id: unit.id,
+    classId: unit.classId ?? '',
+    hp: assertFiniteNumber(unit.hp, 'tickAlive.hp'),
+    maxHp: assertFiniteNumber(unit.maxHp, 'tickAlive.maxHp'),
+    barrierHp: assertFiniteNumber(unit.barrierHp, 'tickAlive.barrierHp'),
+    atk: assertFiniteNumber(unit.atk, 'tickAlive.atk'),
+    battleX: assertFiniteNumber(unit.battleX, 'tickAlive.battleX'),
+    effectiveRangePx: assertFiniteNumber(
+      unit.effectiveRangePx,
+      'tickAlive.effectiveRangePx',
+    ),
+    bodyAnimMarching: unit.bodyAnimMarching === true,
+    basicSkillId: unit.basicSkillId ?? '',
+  };
+  if (unit.isEnemy) {
+    return base;
+  }
+  const ally: ProblemSeriesSimTickAliveUnitDiagnostic = {
+    ...base,
+    ...(typeof unit.partySlotIndex === 'number'
+      ? { partySlotIndex: unit.partySlotIndex }
+      : {}),
+    ...(typeof unit.useLocked === 'boolean' ? { useLocked: unit.useLocked } : {}),
+  };
+  return ally;
+}
+
+function toTickStateDiagnostic(
+  snap: {
+    waveIndex: number;
+    phase: string;
+    runtimePhase: string;
+    engaged: boolean;
+    allies: readonly {
+      id: string;
+      classId?: string;
+      hp: number;
+      maxHp: number;
+      barrierHp: number;
+      atk: number;
+      battleX: number;
+      effectiveRangePx: number;
+      bodyAnimMarching: boolean;
+      basicSkillId?: string;
+      isEnemy: boolean;
+      partySlotIndex?: number;
+      useLocked?: boolean;
+    }[];
+    enemies: readonly {
+      id: string;
+      classId?: string;
+      hp: number;
+      maxHp: number;
+      barrierHp: number;
+      atk: number;
+      battleX: number;
+      effectiveRangePx: number;
+      bodyAnimMarching: boolean;
+      basicSkillId?: string;
+      isEnemy: boolean;
+      partySlotIndex?: number;
+      useLocked?: boolean;
+    }[];
+  },
+  battleTimeSec: number,
+): ProblemSeriesSimTickStateDiagnostic {
+  return {
+    waveIndex: assertFiniteNumber(snap.waveIndex, 'tickState.waveIndex'),
+    battleTimeSec: assertFiniteNumber(battleTimeSec, 'tickState.battleTimeSec'),
+    phase: String(snap.phase),
+    runtimePhase: String(snap.runtimePhase),
+    engaged: snap.engaged === true,
+    allies: snap.allies
+      .filter((unit) => unit.hp > 0)
+      .map((unit) => toTickAliveUnitDiagnostic(unit)),
+    enemies: snap.enemies
+      .filter((unit) => unit.hp > 0)
+      .map((unit) => toTickAliveUnitDiagnostic(unit)),
+  };
+}
+
+function toCombatActionDiagnostic(
+  actor: {
+    id: string;
+    classId?: string;
+    isEnemy: boolean;
+    partySlotIndex?: number;
+    hp: number;
+    battleX: number;
+  },
+  info: { slotKind: string; skillId: string },
+  waveIndex: number,
+  battleTimeSec: number,
+): ProblemSeriesSimCombatActionDiagnostic {
+  const actorCopy: ProblemSeriesSimCombatActionDiagnostic['actor'] = {
+    id: actor.id,
+    classId: actor.classId ?? '',
+    isEnemy: actor.isEnemy,
+    hp: assertFiniteNumber(actor.hp, 'combatAction.actor.hp'),
+    battleX: assertFiniteNumber(actor.battleX, 'combatAction.actor.battleX'),
+  };
+  if (!actor.isEnemy && typeof actor.partySlotIndex === 'number') {
+    return {
+      waveIndex: assertFiniteNumber(waveIndex, 'combatAction.waveIndex'),
+      battleTimeSec: assertFiniteNumber(
+        battleTimeSec,
+        'combatAction.battleTimeSec',
+      ),
+      actor: { ...actorCopy, partySlotIndex: actor.partySlotIndex },
+      slotKind: String(info.slotKind),
+      skillId: String(info.skillId),
+    };
+  }
+  return {
+    waveIndex: assertFiniteNumber(waveIndex, 'combatAction.waveIndex'),
+    battleTimeSec: assertFiniteNumber(
+      battleTimeSec,
+      'combatAction.battleTimeSec',
+    ),
+    actor: actorCopy,
+    slotKind: String(info.slotKind),
+    skillId: String(info.skillId),
+  };
 }
 
 function normalizeBattleRngSeed(seed: string | number): string {
@@ -479,10 +960,24 @@ export function runProblemSeriesSim(
     catalog,
     input.problemSeriesSeed,
   );
-  const battleWaves = toProblemSeriesBattleWaves(resolved.series);
+  const productionBattleWaves = toProblemSeriesBattleWaves(resolved.series);
+  if (productionBattleWaves.length !== 3) {
+    throw new Error(
+      `expected 3 battle waves, got ${productionBattleWaves.length} for ${resolved.series.seriesId}`,
+    );
+  }
+
+  const battleWaves =
+    input.transformResolvedBattleWaves === undefined
+      ? productionBattleWaves
+      : input.transformResolvedBattleWaves(productionBattleWaves, {
+          seriesId: resolved.series.seriesId,
+          problemSeriesSeed: resolved.seed,
+          generatorVersion: resolved.generatorVersion,
+        });
   if (battleWaves.length !== 3) {
     throw new Error(
-      `expected 3 battle waves, got ${battleWaves.length} for ${resolved.series.seriesId}`,
+      `expected 3 battle waves after transform, got ${battleWaves.length} for ${resolved.series.seriesId}`,
     );
   }
 
@@ -551,9 +1046,65 @@ export function runProblemSeriesSim(
             meta,
             engine.getBattleTimeSec(),
           );
+          if (input.onCombatFlowDamage !== undefined) {
+            if (meta?.event === undefined) {
+              throw new Error(
+                'combat-flow damage diagnostic requires meta.event; refusing empty success',
+              );
+            }
+            const event = meta.event;
+            const snap = engine.getSnapshot();
+            input.onCombatFlowDamage({
+              waveIndex: snap.waveIndex,
+              battleTimeSec: assertFiniteNumber(
+                engine.getBattleTimeSec(),
+                'combatFlow.battleTimeSec',
+              ),
+              actor: toCombatFlowUnitDiagnostic(actor),
+              target: toCombatFlowUnitDiagnostic(target),
+              amount: assertFiniteNumber(amount, 'combatFlow.amount'),
+              hpDamage: assertFiniteNumber(event.hpDamage, 'combatFlow.hpDamage'),
+              barrierDamage: assertFiniteNumber(
+                event.barrierDamage,
+                'combatFlow.barrierDamage',
+              ),
+              lethal: event.lethal === true,
+              sourceKind: String(event.sourceKind),
+              skillId: typeof event.skillId === 'string' ? event.skillId : '',
+              slotKind:
+                typeof event.slotKind === 'string' ? event.slotKind : '',
+            });
+          }
         },
-        onHealRecorded: (actor, _target, amount) => {
+        onHealRecorded: (actor, target, amount) => {
           stageDamageStats.recordHeal(actor, amount);
+          if (input.onCombatFlowHeal !== undefined) {
+            const snap = engine.getSnapshot();
+            input.onCombatFlowHeal({
+              waveIndex: snap.waveIndex,
+              battleTimeSec: assertFiniteNumber(
+                engine.getBattleTimeSec(),
+                'combatFlowHeal.battleTimeSec',
+              ),
+              actor: toCombatFlowUnitDiagnostic(actor),
+              target: toCombatFlowUnitDiagnostic(target),
+              amount: assertFiniteNumber(amount, 'combatFlowHeal.amount'),
+            });
+          }
+        },
+        onCombatActionExecuted: (actor, info) => {
+          if (input.onCombatActionDiagnostic === undefined) {
+            return;
+          }
+          const snap = engine.getSnapshot();
+          input.onCombatActionDiagnostic(
+            toCombatActionDiagnostic(
+              actor,
+              info,
+              snap.waveIndex,
+              engine.getBattleTimeSec(),
+            ),
+          );
         },
         getSelectedCombatModuleId: (slotIndex) =>
           runtime.moduleBySlot[slotIndex],
@@ -582,6 +1133,11 @@ export function runProblemSeriesSim(
       tickCount += 1;
 
       const snap = engine.getSnapshot();
+      if (input.onTickStateDiagnostic !== undefined) {
+        input.onTickStateDiagnostic(
+          toTickStateDiagnostic(snap, engine.getBattleTimeSec()),
+        );
+      }
       if (snap.awaitingNextWave) {
         const current = waveTimelines[waveTimelines.length - 1];
         if (current && current.result === 'open') {
@@ -691,6 +1247,49 @@ export function runProblemSeriesSim(
       };
     });
 
+    const survivingEnemySnapshots = finalSnap.enemies.filter(
+      (enemy) => enemy.hp > 0,
+    );
+    const enemyWaveInputs = battleWaves.map((wave) => ({
+      prepResourceGrant: wave.prepResourceGrant,
+      enemyGroups: wave.enemyGroups.map((group) => ({ ...group })),
+    }));
+
+    // test-only 診断口。省略時は未到達・未呼び出しのまま Result を変えない。
+    if (input.onFinalEnemyDiagnostic !== undefined) {
+      const finalWave = enemyWaveInputs[finalSnap.waveIndex];
+      if (finalWave === undefined) {
+        throw new Error(
+          `missing enemyWaveInputs for finalWaveIndex=${finalSnap.waveIndex}`,
+        );
+      }
+      const survivingEnemies: ProblemSeriesSimSurvivingEnemyDiagnostic[] =
+        survivingEnemySnapshots.map((enemy) => ({
+          id: enemy.id,
+          name: enemy.name,
+          // snapshot 供給値のみ。無い項目は推測補完せず空文字（呼び出し側で fail-closed）。
+          classId: enemy.classId ?? '',
+          hp: assertFiniteNumber(enemy.hp, 'survivor.hp'),
+          maxHp: assertFiniteNumber(enemy.maxHp, 'survivor.maxHp'),
+          baseMaxHp: assertFiniteNumber(enemy.baseMaxHp, 'survivor.baseMaxHp'),
+          barrierHp: assertFiniteNumber(enemy.barrierHp, 'survivor.barrierHp'),
+          atk: assertFiniteNumber(enemy.atk, 'survivor.atk'),
+          def: assertFiniteNumber(enemy.def, 'survivor.def'),
+          res: assertFiniteNumber(enemy.res, 'survivor.res'),
+          basicSkillId: enemy.basicSkillId ?? '',
+        }));
+      input.onFinalEnemyDiagnostic({
+        finalWaveIndex: finalSnap.waveIndex,
+        phase: String(phase),
+        outcome,
+        survivingEnemies,
+        finalWaveEnemyInputs: {
+          prepResourceGrant: finalWave.prepResourceGrant,
+          enemyGroups: finalWave.enemyGroups.map((group) => ({ ...group })),
+        },
+      });
+    }
+
     return {
       problemSeriesSeed: resolved.seed,
       generatorVersion: resolved.generatorVersion,
@@ -702,7 +1301,7 @@ export function runProblemSeriesSim(
       durationSec: tickCount * TICK_DT,
       waves,
       survivingAllies: alliesAlive.length,
-      survivingEnemies: finalSnap.enemies.filter((enemy) => enemy.hp > 0).length,
+      survivingEnemies: survivingEnemySnapshots.length,
       totalRemainingAllyHp: alliesAlive.reduce((sum, ally) => sum + ally.hp, 0),
       totalMaxAllyHp: finalSnap.allies.reduce((sum, ally) => sum + ally.maxHp, 0),
       totalRemainingEnemyHp: finalSnap.enemies.reduce(
@@ -714,10 +1313,7 @@ export function runProblemSeriesSim(
       acquiredPassivesBySlot: runtime.passivesBySlot.map((ids) => [...ids]),
       resourceLedger: runtime.resourceLedger.map((entry) => ({ ...entry })),
       timedOut,
-      enemyWaveInputs: battleWaves.map((wave) => ({
-        prepResourceGrant: wave.prepResourceGrant,
-        enemyGroups: wave.enemyGroups.map((group) => ({ ...group })),
-      })),
+      enemyWaveInputs,
     };
   } finally {
     Math.random = originalRandom;
