@@ -1,0 +1,1995 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-23",
+  "sourceHead": "88a470090442e83dfdc61542074d7e5e318b2d89",
+  "problemSeriesSeed": "fixture-b",
+  "generatorVersion": "r12m-v1",
+  "seriesId": "r12m_series_b",
+  "purpose": "合否閾値・勝率・優劣判定ではない変更前characterization",
+  "maxTicks": 90000,
+  "cases": [
+    {
+      "buildId": "no-spend-control",
+      "battleRngSeed": "r12n-1d-b-01",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-01",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {},
+          {}
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-01",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4480,
+        "durationSec": 74.66666666666667,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4480,
+            "startSec": 43.266666666666666,
+            "endSec": 74.66666666666667,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 4,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 491,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 420,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 476,
+            "damageTaken": 249,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 533,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 177
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_single_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [],
+          [],
+          [],
+          []
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 0,
+            "remainingResource": 12
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 0,
+            "remainingResource": 24
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "buildId": "no-spend-control",
+      "battleRngSeed": "r12n-1d-b-02",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-02",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {},
+          {}
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-02",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4480,
+        "durationSec": 74.66666666666667,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4480,
+            "startSec": 43.266666666666666,
+            "endSec": 74.66666666666667,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 4,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 491,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 419,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 476,
+            "damageTaken": 249,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 533,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 177
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_single_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [],
+          [],
+          [],
+          []
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 0,
+            "remainingResource": 12
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 0,
+            "remainingResource": 24
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "buildId": "no-spend-control",
+      "battleRngSeed": "r12n-1d-b-03",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-03",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {},
+          {}
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-03",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4480,
+        "durationSec": 74.66666666666667,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4480,
+            "startSec": 43.266666666666666,
+            "endSec": 74.66666666666667,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 4,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 491,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 418,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 476,
+            "damageTaken": 249,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 533,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 177
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_single_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [],
+          [],
+          [],
+          []
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 0,
+            "remainingResource": 12
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 0,
+            "remainingResource": 24
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "buildId": "single-mend-24",
+      "battleRngSeed": "r12n-1d-b-01",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-01",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_fortress_stance"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_block_rate_up"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_frontline_maintenance"
+              }
+            ]
+          },
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_passive_3"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_heal_amount_up"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_interval_reduction"
+              }
+            ]
+          }
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-01",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4480,
+        "durationSec": 74.66666666666667,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4480,
+            "startSec": 43.266666666666666,
+            "endSec": 74.66666666666667,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 4,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 519,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 420,
+            "healingDealt": 30
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 476,
+            "damageTaken": 249,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 533,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 185
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_single_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [
+            "df_guardian_op_fortress_stance",
+            "df_guardian_op_block_rate_up",
+            "df_guardian_op_frontline_maintenance"
+          ],
+          [],
+          [],
+          [
+            "sp_cleric_passive_3",
+            "sp_cleric_op_heal_amount_up",
+            "sp_cleric_op_interval_reduction"
+          ]
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "buildId": "single-mend-24",
+      "battleRngSeed": "r12n-1d-b-02",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-02",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_fortress_stance"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_block_rate_up"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_frontline_maintenance"
+              }
+            ]
+          },
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_passive_3"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_heal_amount_up"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_interval_reduction"
+              }
+            ]
+          }
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-02",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4480,
+        "durationSec": 74.66666666666667,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4480,
+            "startSec": 43.266666666666666,
+            "endSec": 74.66666666666667,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 4,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 509,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 419,
+            "healingDealt": 10
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 476,
+            "damageTaken": 249,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 533,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 185
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_single_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [
+            "df_guardian_op_fortress_stance",
+            "df_guardian_op_block_rate_up",
+            "df_guardian_op_frontline_maintenance"
+          ],
+          [],
+          [],
+          [
+            "sp_cleric_passive_3",
+            "sp_cleric_op_heal_amount_up",
+            "sp_cleric_op_interval_reduction"
+          ]
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "buildId": "single-mend-24",
+      "battleRngSeed": "r12n-1d-b-03",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-03",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_fortress_stance"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_block_rate_up"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_frontline_maintenance"
+              }
+            ]
+          },
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_passive_3"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_heal_amount_up"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_interval_reduction"
+              }
+            ]
+          }
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-03",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4480,
+        "durationSec": 74.66666666666667,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4480,
+            "startSec": 43.266666666666666,
+            "endSec": 74.66666666666667,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 4,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 499,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 418,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 476,
+            "damageTaken": 249,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 533,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 185
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_single_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [
+            "df_guardian_op_fortress_stance",
+            "df_guardian_op_block_rate_up",
+            "df_guardian_op_frontline_maintenance"
+          ],
+          [],
+          [],
+          [
+            "sp_cleric_passive_3",
+            "sp_cleric_op_heal_amount_up",
+            "sp_cleric_op_interval_reduction"
+          ]
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "buildId": "party-mend-24",
+      "battleRngSeed": "r12n-1d-b-01",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-01",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {
+            "moduleChanges": [
+              {
+                "slotIndex": 3,
+                "combatModuleId": "sp_cleric_mod_party_mend"
+              }
+            ],
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_fortress_stance"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_block_rate_up"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_frontline_maintenance"
+              }
+            ]
+          },
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_passive_3"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_heal_amount_up"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_interval_reduction"
+              }
+            ]
+          }
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-01",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4909,
+        "durationSec": 81.81666666666666,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4909,
+            "startSec": 43.266666666666666,
+            "endSec": 81.81666666666666,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 3,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 464,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 420,
+            "healingDealt": 30
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 391,
+            "damageTaken": 247,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 648,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 117
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_party_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [
+            "df_guardian_op_fortress_stance",
+            "df_guardian_op_block_rate_up",
+            "df_guardian_op_frontline_maintenance"
+          ],
+          [],
+          [],
+          [
+            "sp_cleric_passive_3",
+            "sp_cleric_op_heal_amount_up",
+            "sp_cleric_op_interval_reduction"
+          ]
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "buildId": "party-mend-24",
+      "battleRngSeed": "r12n-1d-b-02",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-02",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {
+            "moduleChanges": [
+              {
+                "slotIndex": 3,
+                "combatModuleId": "sp_cleric_mod_party_mend"
+              }
+            ],
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_fortress_stance"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_block_rate_up"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_frontline_maintenance"
+              }
+            ]
+          },
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_passive_3"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_heal_amount_up"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_interval_reduction"
+              }
+            ]
+          }
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-02",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4909,
+        "durationSec": 81.81666666666666,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4909,
+            "startSec": 43.266666666666666,
+            "endSec": 81.81666666666666,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 3,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 454,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 419,
+            "healingDealt": 10
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 391,
+            "damageTaken": 247,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 648,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 117
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_party_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [
+            "df_guardian_op_fortress_stance",
+            "df_guardian_op_block_rate_up",
+            "df_guardian_op_frontline_maintenance"
+          ],
+          [],
+          [],
+          [
+            "sp_cleric_passive_3",
+            "sp_cleric_op_heal_amount_up",
+            "sp_cleric_op_interval_reduction"
+          ]
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "buildId": "party-mend-24",
+      "battleRngSeed": "r12n-1d-b-03",
+      "input": {
+        "problemSeriesSeed": "fixture-b",
+        "battleRngSeed": "r12n-1d-b-03",
+        "maxTicks": 90000,
+        "slots": [
+          {
+            "classId": "df_guardian",
+            "initialCombatModuleId": "df_guardian_mod_nearest_strike"
+          },
+          {
+            "classId": "at_swordsman",
+            "initialCombatModuleId": "at_swordsman_mod_single_slash"
+          },
+          {
+            "classId": "at_sorcerer",
+            "initialCombatModuleId": "at_sorcerer_mod_focus"
+          },
+          {
+            "classId": "sp_cleric",
+            "initialCombatModuleId": "sp_cleric_mod_single_mend"
+          }
+        ],
+        "wavePlans": [
+          {},
+          {
+            "moduleChanges": [
+              {
+                "slotIndex": 3,
+                "combatModuleId": "sp_cleric_mod_party_mend"
+              }
+            ],
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_fortress_stance"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_block_rate_up"
+              },
+              {
+                "slotIndex": 0,
+                "passiveId": "df_guardian_op_frontline_maintenance"
+              }
+            ]
+          },
+          {
+            "passiveAcquisitions": [
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_passive_3"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_heal_amount_up"
+              },
+              {
+                "slotIndex": 3,
+                "passiveId": "sp_cleric_op_interval_reduction"
+              }
+            ]
+          }
+        ]
+      },
+      "result": {
+        "problemSeriesSeed": "fixture-b",
+        "generatorVersion": "r12m-v1",
+        "seriesId": "r12m_series_b",
+        "battleRngSeed": "r12n-1d-b-03",
+        "outcome": "victory",
+        "finalWaveIndex": 2,
+        "tickCount": 4909,
+        "durationSec": 81.81666666666666,
+        "waves": [
+          {
+            "waveIndex": 0,
+            "startTick": 0,
+            "endTick": 1298,
+            "startSec": 0,
+            "endSec": 21.633333333333333,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 1,
+            "startTick": 1298,
+            "endTick": 2596,
+            "startSec": 21.633333333333333,
+            "endSec": 43.266666666666666,
+            "result": "cleared"
+          },
+          {
+            "waveIndex": 2,
+            "startTick": 2596,
+            "endTick": 4909,
+            "startSec": 43.266666666666666,
+            "endSec": 81.81666666666666,
+            "result": "cleared"
+          }
+        ],
+        "survivingAllies": 3,
+        "survivingEnemies": 0,
+        "totalRemainingAllyHp": 444,
+        "totalMaxAllyHp": 755,
+        "totalRemainingEnemyHp": 0,
+        "slotStats": [
+          {
+            "slotIndex": 0,
+            "classId": "df_guardian",
+            "damageDealt": 0,
+            "damageTaken": 418,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 1,
+            "classId": "at_swordsman",
+            "damageDealt": 391,
+            "damageTaken": 247,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 2,
+            "classId": "at_sorcerer",
+            "damageDealt": 648,
+            "damageTaken": 0,
+            "healingDealt": 0
+          },
+          {
+            "slotIndex": 3,
+            "classId": "sp_cleric",
+            "damageDealt": 0,
+            "damageTaken": 0,
+            "healingDealt": 117
+          }
+        ],
+        "appliedCombatModuleIdBySlot": [
+          "df_guardian_mod_nearest_strike",
+          "at_swordsman_mod_single_slash",
+          "at_sorcerer_mod_focus",
+          "sp_cleric_mod_party_mend"
+        ],
+        "acquiredPassivesBySlot": [
+          [
+            "df_guardian_op_fortress_stance",
+            "df_guardian_op_block_rate_up",
+            "df_guardian_op_frontline_maintenance"
+          ],
+          [],
+          [],
+          [
+            "sp_cleric_passive_3",
+            "sp_cleric_op_heal_amount_up",
+            "sp_cleric_op_interval_reduction"
+          ]
+        ],
+        "resourceLedger": [
+          {
+            "waveIndex": 0,
+            "grantAmount": 0,
+            "spentAmount": 0,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 1,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          },
+          {
+            "waveIndex": 2,
+            "grantAmount": 12,
+            "spentAmount": 12,
+            "remainingResource": 0
+          }
+        ],
+        "timedOut": false,
+        "enemyWaveInputs": [
+          {
+            "prepResourceGrant": 0,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_focus"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              }
+            ]
+          },
+          {
+            "prepResourceGrant": 12,
+            "enemyGroups": [
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_single_slash"
+              },
+              {
+                "classId": "at_swordsman",
+                "count": 1,
+                "selectedCombatModuleId": "at_swordsman_mod_pierce_slash"
+              },
+              {
+                "classId": "at_sorcerer",
+                "count": 1,
+                "selectedCombatModuleId": "at_sorcerer_mod_chain"
+              },
+              {
+                "classId": "sp_cleric",
+                "count": 1,
+                "selectedCombatModuleId": "sp_cleric_mod_single_mend"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
