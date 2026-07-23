@@ -1840,6 +1840,69 @@ R12m は本節の上位構造と R12l の 4 兵科パッシブを接続し、次
 11. 固定問題の複数解と、問題自体の反復供給を混同していない
 12. R13 開始条件が R12o Player 完了のまま維持されている
 
+### 21.13 R12n 強度比較の 4 検出語（候補）
+
+本節は **R12n 作業単位 1E** で固定した、問題系列比較 harness 上の **候補検出**の操作定義である。実装は `src/battle/test/problemSeriesBalanceSignals.ts`（test-only）。候補の検出は **自動不合格・真の唯一解・R12n Backend／Player／Phase 完了**を意味しない。秒数閾値・近似差・勝率・平均は用いない。旧表現「即死」は現行 R12n 定義では **即全滅候補**へ置き換える（過去記録内の歴史的表現は無理に書き換えない）。
+
+#### Coverage（検出の前提）
+
+同一問題系列 identity（`problemSeriesSeed` / `generatorVersion` / `seriesId`）と標準 `maxTicks = 90000` の下で、次を満たす case 集合だけを評価する。
+
+- 3 構築以上 × 共通する 3 件以上の固定 battle RNG seed
+- `buildId × battleRngSeed` の完全な矩形 coverage（欠落・重複なし）
+- 入力と結果の identity／battle RNG seed 一致
+- 非有限数など signature 比較不能な値がないこと
+
+上記を満たさない入力、系列 identity 混在、`maxTicks` 不一致、timeout 三条件の矛盾は **fail-closed で拒否**する（黙って分類しない）。
+
+#### 1. 即全滅候補
+
+```text
+outcome === "defeat" && finalWaveIndex === 0
+```
+
+- Wave 1 で敗北し、最初の資源付き Wave 間準備へ到達できない case
+- 秒数閾値は設けない
+- Wave 2／3 で味方全滅した case は含めない
+
+#### 2. 無限膠着候補
+
+```text
+outcome === "timeout" && timedOut === true && tickCount === input.maxTicks
+```
+
+- R12n baseline の標準 `maxTicks` は 90000
+- 三条件の一部だけが成立する矛盾データは候補扱いせず入力エラーとする
+
+#### 3. 選択無効候補
+
+同一問題系列・同一固定 RNG seed 集合で比較する 2 構築について、次が **全固定 seed** で成立する pair。
+
+- 各対応 seed で、実適用 Module／passive の signature が異なる
+- 各対応 seed で、戦闘指標 signature が完全一致する
+
+**実適用 choice signature:** `appliedCombatModuleIdBySlot` と `acquiredPassivesBySlot`（slot 対応を維持。passive は slot 内を辞書順にした canonical 表現だが、重複取得は失わない）。
+
+**戦闘指標 signature:** `outcome`、`finalWaveIndex`、`tickCount`、`durationSec`、`waves`、`survivingAllies`、`survivingEnemies`、`totalRemainingAllyHp`、`totalMaxAllyHp`、`totalRemainingEnemyHp`、`slotStats`、`timedOut` の完全一致。
+
+**含めない:** planned だけが異なり未到達のため実適用 choice が同じ case、`resourceLedger`、入力 identity、敵入力、近似一致。
+
+#### 4. 単一正解化候補
+
+- 3 構築以上 × 共通 3 seed 以上の矩形 coverage
+- 構築ごとの実適用 choice の seed 別 signature 列が相互に異なる
+- ちょうど 1 構築だけが全固定 seed で `victory`
+- 他の全構築は全固定 seed で非 `victory`（mixed outcome の構築は条件不成立）
+
+これは固定 case 集合上の候補検出であり、勝率・面白さ・真の唯一解の断定ではない。
+
+#### 現行 baseline 観測（変更前 characterization）
+
+- 系列 A: 3 構築 × 3 seed（9 case）。現行観測では全件 Wave 2 敗北。4 候補配列は空
+- 系列 B: 3 構築 × 3 seed（9 case）。現行観測では全件勝利。4 候補配列は空
+
+候補なしは強度合格や R12n 完了を意味しない。数値本調は未着手。
+
 ---
 
 ## 関連ドキュメント

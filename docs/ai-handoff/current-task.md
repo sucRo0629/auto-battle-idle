@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12m Backend / Player / Phase 完了**。公式次は **R12n**（未着手）。R12o / R13 未着手。R13 開始条件は **R12o Player 完了**のまま。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない — 本判定は変更しない）。正本 handoff は **§105.29**。
+- **新ロードマップ現在地:** **R12m Backend / Player / Phase 完了**。公式次は **R12n**（Backend / Player / Phase 未完了。1A〜1E まで。数値本調未着手）。R12o / R13 未着手。R13 開始条件は **R12o Player 完了**のまま。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない — 本判定は変更しない）。正本 handoff は **§105.31**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12n**（新構造後の数値強度調整）→ R12o → R13。
+- **次の再開タスク:** **R12n**（新構造後の数値強度調整・未完了）→ R12o → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -9640,11 +9640,11 @@ R12l 作業当時の「cost 20 は今回外」、R12m 完了記録、過去の P
 
 ### 次の正式な単一作業単位
 
-**R12n 作業単位 1B** — 比較 harness 骨格。
+**R12n の数値変更前の検出結果監査、または所有者別の数値調整単位**（1E 時点では内容を固定しない。複数所有者の同時変更はしない）。
 
 ### 未完了・未着手
 
-- R12n Backend／Player／Phase: **未完了**
+- R12n Backend／Player／Phase: **未完了**（1A〜1E まで。数値本調未着手）
 - R12o／R13: **未着手**（R13 開始条件は R12o Player 完了のまま）
 
 ### スコープ外（本 1A-R1）
@@ -9658,3 +9658,60 @@ R12l 作業当時の「cost 20 は今回外」、R12m 完了記録、過去の P
 - `planning-rules.md` の追加編集
 - commit／stage
 - 次作業（1B）への着手
+
+---
+
+## §105.31 R12n 作業単位 1B〜1E — harness・baseline・4 検出語
+
+**状態（2026-07-23・作業単位 1E）:** **R12n Backend / Player / Phase は未完了**。開始 HEAD は `1e96fde93e4ba3c084bd858a883ae28ce198e67a`（1D コミット済み・working tree clean）。baseline JSON 内 `sourceHead` は `88a470090442e83dfdc61542074d7e5e318b2d89` のまま（書き換えない）。数値本調・cost 20・1F 以降は未着手。
+
+### 1B — 比較 harness 骨格
+
+- `src/battle/test/problemSeriesSim.harness.ts`
+- `src/battle/problemSeriesBalance.harness.test.ts`
+- production 経路（loadGameData → catalog → seed resolve → waves → BattleEngine）の決定論比較骨格
+- 合否閾値・数値調整なし
+
+### 1C — 系列 A 変更前 baseline
+
+- `src/battle/test/baselines/r12n-series-a-before.json`
+- `src/battle/problemSeriesBalance.seriesA.baseline.test.ts`
+- SHA256: `2c6e6ad212bfaffb3259613d2d15a39a7910f7b7ba0474240f72cedd5c49062c`
+- coverage: 3 構築 × 3 seed（9 case）。現行観測は全件 Wave 2 敗北
+
+### 1D — 系列 B 変更前 baseline
+
+- `src/battle/test/baselines/r12n-series-b-before.json`
+- `src/battle/problemSeriesBalance.seriesB.baseline.test.ts`
+- SHA256: `b575d9830b57bce29c3fc2d13ebb8db7044ee592d3363aae1bf457b0d7e1d47c`
+- coverage: 3 構築 × 3 seed（9 case）。現行観測は全件勝利
+
+### 1E — 4 検出語の正本化と検出器接続
+
+- 正本: [operation-loop.md §21.13](../spec/operation-loop.md#2113-r12n-強度比較の-4-検出語候補)
+- 実装: `src/battle/test/problemSeriesBalanceSignals.ts`
+- 試験: `src/battle/problemSeriesBalance.signals.test.ts`
+- 承認済み定義: 即全滅候補 / 無限膠着候補 / 選択無効候補 / 単一正解化候補（いずれも候補であり自動不合格ではない）
+- synthetic 発火試験で各候補の発火・非発火・fail-closed を固定
+- 系列 A/B baseline を読み取り専用で接続。coverage 9=3×3 を assert。現行では 4 候補配列はいずれも空
+- **候補なし ≠ 強度合格 / Player 完了 / Backend 完了 / R12n 完了**
+- baseline JSON・既存 harness／baseline test・production／data は未変更
+
+### 現行候補検出結果（1E）
+
+| 系列 | case / build / seed | 即全滅 | 無限膠着 | 選択無効 pair | 単一正解化 |
+| ---- | ------------------- | ------ | -------- | ------------- | ---------- |
+| A | 9 / 3 / 3 | 空 | 空 | 空 | 空 |
+| B | 9 / 3 / 3 | 空 | 空 | 空 | 空 |
+
+### 次
+
+数値変更前の検出結果監査、または所有者別の調整単位。複数所有者を同時に変更しない。1E では次作業の内容を定義しない。
+
+### 検証（1E / 1E-R1）
+
+- `npm test -- src/battle/problemSeriesBalance.signals.test.ts` — **35 tests** 通過（1E-R1: coverage件数明示・timeout矛盾6形・勝者0/2境界・identity境界を追加）
+- 併せて harness / seriesA / seriesB / signals — **4 files / 60 tests** 通過
+- `git diff --check` — 問題なし
+- `npm run build`（`tsc && vite build`）— exit 2。1E 追加ファイルへの error なし。開始 HEAD `1e96fde` との `tsc` 出力比較で同一（本差分由来ではない）。vite 段階未到達
+- baseline SHA 不変を再確認済み
