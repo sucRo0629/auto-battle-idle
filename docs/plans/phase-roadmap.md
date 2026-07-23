@@ -2,9 +2,9 @@
 
 Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本書の正本は R0〜R13** とする。ゲームルールの現行 spec は [spec](../spec/README.md) を参照するが、**旧仕様と新方針の差分は R1 以降の設計 Phase で順次 spec へ反映する**（本書では方針のみ記載）。
 
-**直近目標:** システム縦切り（R5〜R11）の上に、固定 Stage 1 本ではなく、**繰り返すたびに異なる問題と構築判断が生まれるメイン試作**を成立させる（R12）。R12k で **シード付き・作者設計の線形 3 Wave 問題系列**を採用確定。R12l（4兵科パッシブ再編・旧仕様隔離 Backend）の次は **R12m**（系列 A/B の反復試作）→ R12n → R12o の後に「繰り返し遊びたいか」を人間が評価する（R13）。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R13 完了後**に再開する。
+**直近目標:** システム縦切り（R5〜R11）の上に、固定 Stage 1 本ではなく、**繰り返すたびに異なる問題と構築判断が生まれるメイン試作**を成立させる（R12）。R12k で **シード付き・作者設計の線形 3 Wave 問題系列**を採用確定。R12l（4兵科パッシブ再編・旧仕様隔離。Backend 完了 / Player 部分完了のまま）を経て **R12m**（系列 A/B の反復試作）は完了済み。公式次は **R12n** → R12o の後に「繰り返し遊びたいか」を人間が評価する（R13。開始条件は **R12o Player 完了**）。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は **R13 完了後**に再開する。
 
-**現在地:** **R12m 1B / 1C Backend 完了** + **Player production DOM 自動経路成立**（happy-dom。実ブラウザ未確認）。2Q1 監査で production 不足（Wave 間 §21.5 開示・4 兵科 Player 編成制限）。R12m Phase 全体は未完了。**公式次は R12m 実ブラウザ確認**（系列 A 完走・結果・同 seed / 新 seed 再開始の手動確認）。R12n / R12o / R13 開始条件未達。R12l は unit3 Backend 隔離完了（Player は部分のみ）。正本: [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)。handoff: [current-task.md §105.28](../ai-handoff/current-task.md)。
+**現在地:** **R12m Backend / Player / Phase 完了**。**公式次は R12n**（未着手）。R12o / R13 未着手。R13 開始条件は **R12o Player 完了**のまま。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない）。正本: [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)。handoff: [current-task.md §105.29](../ai-handoff/current-task.md)。
 
 ---
 
@@ -42,7 +42,7 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R9.6** | 作戦準備 Player UI — CombatModule（R9.6-A）・作戦内パッシブ（R9.6-B）の選択（**試作・Player 完了用**。製品 polish ではない） | 完了（表示 metadata + 回帰） | **完了** | R9.5c Backend |
 | **R10** | 新仕様 2 Wave 以上の試作と反復評価 — 「繰り返し遊びたいか」を判断 | **完了**（`r10_prototype` + 統合） | **構造のみ**（§95）。**遊べる試作 / 反復評価は未達** | 再判定 |
 | **R11** | システム縦切り — 効果範囲新仕様・作戦専用パッシブ枠・資源/積み上げコスト・基礎ステ極端化 | **完了**（a〜d） | **システム Player のみ**。**ゲームとしてのプレイアビリティは未達** | 再判定 |
-| **R12** | 試作をゲームにする — 敵問題・能力・データ縦切りに加え、**メイン反復構造、4兵科パッシブ再編、反復試作、再調整、手元成立**まで行う | R12a〜j は固定 Stage 技術縦切り。R12k〜o を追加 | R12a〜j だけでは反復可能なゲームの成立証明にならない | **R12m 進行中** |
+| **R12** | 試作をゲームにする — 敵問題・能力・データ縦切りに加え、**メイン反復構造、4兵科パッシブ再編、反復試作、再調整、手元成立**まで行う | R12a〜j は固定 Stage 技術縦切り。R12k〜o を追加 | R12a〜j だけでは反復可能なゲームの成立証明にならない | **R12m 完了。現在地 R12n 未着手** |
 | **R13** | 反復評価 — 「繰り返し遊びたいか」を判断（本来の R10 評価） | **R12o 後** | **R12o 後** | 未着手 |
 
 | R11 分割 | ゴール | 状態 |
@@ -65,8 +65,8 @@ Backend 完了だけの場合は「縦切り成立」「Backend 完了」と記�
 | **R12i** | **数値強度調整**（scale / grant / stackStep / 基礎ステ等） | **Backend初回完了 / Player未判定** — cost `1 / 10 / 20`・grant `[0, 12, 12]`・stackStep `1`。敵scale等は据え置き |
 | **R12j** | 固定 Stage の手元プレイ成立ゲート（旧計画） | **判定無効 / 未完了** — 一部経路の実画面クリアは技術記録として維持。旧パッシブと反復構造欠落のためゲーム全体の成立根拠にしない |
 | **R12k** | **メイン反復構造の設計** — seed 付き作者設計 3 Wave 問題系列、固定クエスト分離、情報開示、再試行、系列 A/B | **完了**（doc / 設計） |
-| **R12l** | **R5対象4兵科のパッシブ・旧active再編** — 各兵科 本体1 + cost 1×3 / 10×2、全候補表示（cost 20 は今回外） | **unit3 Backend 完了 / Player 部分完了**（happy-dom。実ブラウザ未確認。Phase Player 完了ではない）。次 **R12m** |
-| **R12m** | **4兵科だけの反復可能メイン試作** — 系列 A（突破→複数処理）と系列 B（集中被害→分散被害）の 2 問題系列 | **1B / 1C Backend 完了** + **Player production DOM 自動経路成立**（happy-dom。実ブラウザ未確認）。2Q1 production 不足あり。Phase 未完了。実ブラウザ確認待ち。R12n / R12o 未着手 |
+| **R12l** | **R5対象4兵科のパッシブ・旧active再編** — 各兵科 本体1 + cost 1×3 / 10×2、全候補表示（cost 20 は今回外） | **unit3 Backend 完了 / Player 部分完了**（happy-dom。実ブラウザ未確認。Phase Player 完了ではない） |
+| **R12m** | **4兵科だけの反復可能メイン試作** — 系列 A（突破→複数処理）と系列 B（集中被害→分散被害）の 2 問題系列 | **Backend / Player / Phase 完了**（実装 HEAD `3f4d628`）。公式次 **R12n**。R12n / R12o 未着手 |
 | **R12n** | **新構造後の数値強度調整** | 未着手 |
 | **R12o** | **反復試作の手元プレイ成立ゲート** — 評価可能なゲームになったか | 未着手 |
 
@@ -1078,7 +1078,7 @@ Backend 完了だけでは R10 完了としない → **評価記録は §95.5**
 
 ## R12 — 試作をゲームにする（データ再設計）
 
-**状態:** **R12m 進行中** — 1B / 1C Backend 完了 + Player production DOM 自動経路成立（happy-dom。実ブラウザ未確認）。2Q1 監査で production 不足あり。R12m Phase 未完了。R12n / R12o 未着手。R13 開始条件未達。R12l unit3 Backend 隔離完了（Player 部分のみ）。R12j 成立判定は無効 / 未完了のまま。反復可能なゲームとしての成立ゲートは **R12o**、反復評価は **R13**（開始条件は R12o Player 完了）。正本: [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)。handoff: [current-task.md §105.28](../ai-handoff/current-task.md)。
+**状態:** **R12m Backend / Player / Phase 完了**。**現在地は R12n 未着手**（公式次 R12n）。R12o 未着手。R13 開始条件未達（開始条件は **R12o Player 完了**のまま）。R12l unit3 Backend 隔離完了（Player 部分のみ）。R12j 成立判定は無効 / 未完了のまま。反復可能なゲームとしての成立ゲートは **R12o**、反復評価は **R13**。正本: [operation-loop.md §21](../spec/operation-loop.md#21-メイン反復構造r12k)。handoff: [current-task.md §105.29](../ai-handoff/current-task.md)。
 
 **全体ゴール:** 機能がある状態から、**プレースホルダー素材のままで「敵問題を編成・方式・パッシブで解く」ゲームとして成立**させる。製品 polish・正式画像は含めない。
 
@@ -1405,7 +1405,7 @@ R12a 敵問題・戦術目標の基本定義（完了）
 
 **今回 scope 外:** cost 20、前提 / 排他 / 同兵科 cost 逓増、候補のランダム非表示。`fixedCostByPassiveId` を正本にし、4兵科の新 path では `unlockLevel` を使わない。
 
-初期試作では候補をランダムに隠さず、**全候補を表示**して効果と取得判断を検証する。方向承認後の拡張目標は cost 1 が 5〜10、cost 10 が 2〜5、cost 20 は必要なら後続フェーズで再検討する。残り11兵科への展開は、4兵科の方向承認後に別フェーズで行う。
+初期試作では候補をランダムに隠さず、**全候補を表示**して効果と取得判断を検証する。方向承認後の拡張目標は cost 1 が 5〜10、cost 10 が 2〜5 とする。cost 20 は R12n では採用せず、将来の名前付き Phase へ送り、現時点で実装予定とはしない。残り11兵科への展開は、4兵科の方向承認後に別フェーズで行う。
 
 **Backend 完了:** 効果、担当レイヤ、Moduleとの関係、cost、再利用元 / 廃止理由、名称を一覧化し、Lv 解放へ依存しないデータとして validate / authoring 可能。
 
@@ -1415,15 +1415,15 @@ R12a 敵問題・戦術目標の基本定義（完了）
 
 **ゴール:** R12k の上位構造と R12l のパッシブを、R5対象4兵科だけで一周できる最小プレイへ接続する。`r12_prototype` 1本の固定内容を再生するだけでは完了しない。**系列 A（単壁突破→複数処理）と系列 B（集中被害→分散被害）の 2 問題系列**を実装する（[operation-loop.md §21.10](../spec/operation-loop.md#2110-r12m用の-2-問題系列概念例)）。
 
-**状態（2026-07-21・作業単位 2R1 文書同期）:**
+**状態（2026-07-22・作業単位 2W3E1 文書同期）:**
 
 | 層 | 判定 |
 | -- | ---- |
 | **Backend（1B / 1C）** | **完了** — catalog / seed / load / validation + 選出済み系列の GameSession / OperationState / BattleEngine 接続 |
-| **Player production DOM** | **自動経路成立**（happy-dom）。入口→概要→3 Wave 完走→結果→同 seed / 新 seed 再開始まで。実ブラウザ未確認 |
-| **2Q1 自動ゲート監査** | production 不足あり（Wave 間 §21.5 開示・4 兵科 Player 編成制限）。テスト証拠不足あり（`BattleView.test.ts` 11 失敗等） |
-| **Phase 全体** | **未完了** |
-| **R12n / R12o / R13** | 未着手 / 未着手 / 開始条件未達 |
+| **Player** | **完了** — happy-dom production DOM + 実ブラウザ証拠（系列 A 完走・同 seed / 新 seed・fixed Stage `2` 分離回帰含む） |
+| **2Q1 監査不足（履歴）** | Wave 間 §21.5 開示・4 兵科 Player 編成制限・問題系列 HUD / 銘板 / 勝利 overlay HUD 分離は **解消済み**（当時は不足として記録） |
+| **Phase 全体** | **完了** |
+| **R12n / R12o / R13** | 未着手 / 未着手 / 開始条件未達（R12o Player 完了後） |
 
 **Backend 完了（実装済み）:**
 
@@ -1431,23 +1431,23 @@ R12a 敵問題・戦術目標の基本定義（完了）
 - load / normalize / round-trip / Editor 保存前 validation / 解決済み Wave 変換 / 作戦開始 snapshot / BattleEngine resolved-waves provider
 - OperationSource 分離 / OperationState / checkpoint / retry / abort / final victory / fixed Stage 分離 / Save 非統合
 
-**Player production DOM 自動経路（happy-dom・実ブラウザ未確認）:**
+**Player 完了（実装済み + 実ブラウザ確認済み）:**
 
-- 固定クエスト入口 / メイン攻略入口 / seed 入力 / 全 3 Wave 概要 / 正解を直接教えない開示 / 概要 confirm / 初期 formation
-- Wave 0 戦闘 / Wave 1 準備・戦闘 / Wave 2 準備・戦闘 / 作戦内パッシブ取得 / 作戦ポイント / Wave 間引継ぎ / 最終勝利
-- 問題系列専用結果 overlay / 同 seed 再開始 / 新 seed 開始 / 作戦選択へ
-- fixture-a → 系列 A、fixture-b → 系列 B。同 seed 再現・新 seed 系列差
+- 固定クエスト入口 / メイン攻略入口 / seed 入力 / 全 3 Wave 概要 / 正解を直接教えない開示 / 概要 confirm / 初期 formation（鉄衛士・剣術士・魔術師・療養師）
+- Wave 間 §21.5 開示（独立 scroll）/ 作戦内パッシブ取得 / 作戦ポイント / Module・編成の Wave 間維持 / 最終勝利
+- 問題系列専用結果 overlay / 同 seed 再開始（`fixture-a`→系列 A）/ 新 seed 開始（空 seed→`fixture-b`→系列 B 概要）
+- 問題系列戦闘 HUD は OperationState 所有・固定 Stage 銘板なし・勝利 overlay 中 party HUD 非表示（`3f4d628`）
+- Player 完了条件: `fixture-a`/`fixture-b` で系列 A/B の敵兵科・人数・CombatModule 差が開始前 3 Wave 概要から判読可能
 
-**固定 Stage 分離（実装済み）:**
+**固定 Stage 分離（実装済み + 回帰確認済み）:**
 
 - 問題系列を `StageDef` / `stages.json` へ混ぜていない。仮 `stageId` なし
 - 問題系列結果は seed / generatorVersion / seriesId。固定 Stage 結果は stageId
 - 問題系列勝利で fixed Stage EXP / 報酬を呼ばない。EXP・恒久数値成長は R12m 新仕様へ継承しない
 - Save へ問題系列 identity・作戦途中状態を保存しない
+- fixed Stage `2` 自然勝利 overlay では Save 編成 party HUD を従来どおり表示
 
-**Player 完了（Phase 条件・未達）:** 複数回開始して、提示問題・取得判断・有効編成のいずれかが実際に変わり、その差を開始前 / 選択前情報から読める。**実ブラウザ確認待ち。** 2Q1 で Wave 間 §21.5 開示・4 兵科 Player 編成制限が未達。
-
-**公式次:** **R12m 実ブラウザ確認** — 系列 A（`fixture-a`）で作戦選択→概要→3 Wave 完走→結果→同 seed / 新 seed 再開始まで手動確認。
+**公式次:** **R12n** — 新構造後の数値強度調整（未着手）。
 
 ### R12n — 新構造後の数値強度調整
 
@@ -1455,7 +1455,7 @@ R12a 敵問題・戦術目標の基本定義（完了）
 
 **Backend 完了:** 複数 seed / 問題系列で、即死・無限膠着・選択無効・単一正解化を検出できる比較と回帰がある。
 
-**Player 完了:** cost 1 の積み重ね、cost 10 の中核、滅多に取れない cost 20 の最終形が、それぞれ異なる判断として成立する。
+**Player 完了条件（未達・測定前）:** cost 1 の複数取得による積み重ねと cost 10 の中核投資が、資源配分・効果・取得タイミングの異なる判断として成立すること。cost 20 は R12n 対象外。必要なら将来の名前付き Phase で、ユーザー承認後のみ再検討する。
 
 ### R12o — 反復試作の手元プレイ成立ゲート
 
@@ -1586,8 +1586,8 @@ R13 反復評価「繰り返し遊びたいか」
 - **R9.6**・**R9b〜h / R9f** は完了（成立済み）
 - R10 は構造のみ。さらに、反復性を生む実装より先に反復評価を置いたことが同根の計画不具合だった
 - **R11** はシステム縦切り完了。固定 Stage の R12j 結果だけではプレイアビリティ完了にしない
-- **R12m 進行中** — 1B / 1C Backend 完了 + Player production DOM 自動経路成立（happy-dom。実ブラウザ未確認）。2Q1 production 不足あり。Phase 未完了
-- 正式順序は **R12k（完了）→ R12l（Backend 隔離済 / Player 部分）→ R12m（進行中）→ R12n → R12o → R13**
+- **R12m 完了** — Backend / Player / Phase 完了（実装 HEAD `3f4d628`）。**現在地は R12n 未着手**
+- 正式順序は **R12k（完了）→ R12l（Backend 隔離済 / Player 部分）→ R12m（完了）→ R12n（未着手）→ R12o → R13**
 - R12o までは反復評価可能なゲームとして未成立。R13 で初めて「繰り返し遊びたいか」を判定する（開始条件は R12o Player 完了）
 - **戦場移動 legacy cleanup** は R13 完了後を推奨 — [battle-movement-unification-remaining.md](battle-movement-unification-remaining.md)
 

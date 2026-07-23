@@ -9,9 +9,9 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12m 1B / 1C Backend 完了** + **Player production DOM 自動経路成立**（happy-dom。実ブラウザ未確認）。2Q1 監査で production 不足（Wave 間 §21.5 開示・4 兵科 Player 編成制限）。R12m Phase 全体は未完了。**公式次は R12m 実ブラウザ確認**。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない）。正本 handoff は **§105.28**。
+- **新ロードマップ現在地:** **R12m Backend / Player / Phase 完了**。公式次は **R12n**（未着手）。R12o / R13 未着手。R13 開始条件は **R12o Player 完了**のまま。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない — 本判定は変更しない）。正本 handoff は **§105.29**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
-- **次の再開タスク:** **R12m 実ブラウザ確認**（系列 A 完走・結果・同 seed / 新 seed 再開始の手動確認）→ 2Q1 残件の実装判断 → R12n → R12o → R13。
+- **次の再開タスク:** **R12n**（新構造後の数値強度調整）→ R12o → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
@@ -9499,3 +9499,162 @@ Save には上記 identity・waves・OperationState・checkpoint を保存しな
 - R12n 数値調整 / R12o 手元成立 / R13 評価
 - コード・データ・テスト変更（本 2R1 は文書同期のみ）
 - `BattleView.test.ts` の fixture 補修（別作業単位）
+
+## §105.29 R12m 作業単位 2W3E1 — Player／Phase完了の文書同期（2026-07-22）
+
+**状態:** **R12m Backend / Player / Phase 完了**。production code / data / test / CSS / `operation-loop.md` 仕様本文は本作業で変更していない。実装 HEAD は **`3f4d628`**（問題系列勝利 overlay 中の party HUD 非表示）。**公式次は R12n**。R12n / R12o / R13 は未着手。R13 開始条件は R12o Player 完了のまま。R12l Player 部分完了の既存判定は変更しない。
+
+### 判定
+
+| 層 | 判定 |
+| -- | ---- |
+| R12m Backend（1B / 1C） | **完了** |
+| R12m Player | **完了**（happy-dom production DOM + 実ブラウザ証拠） |
+| R12m Phase | **完了** |
+| 公式次 | **R12n** |
+| R12n / R12o / R13 | 未着手 / 未着手 / 開始条件未達（R12o Player 完了後） |
+| R12l Player | **部分完了のまま**（Phase Player 完了ではない） |
+
+### Player 完了の根拠（提示問題差）
+
+「複数回開始して、提示問題・取得判断・有効編成のいずれかが実際に変わり、その差を開始前／選択前情報から読める」を、次で満たした。
+
+| 根拠 | 内容 |
+| ---- | ---- |
+| seed → 系列 | `fixture-a` → `r12m_series_a`、`fixture-b` → `r12m_series_b` |
+| 提示差 | 両系列の敵兵科・人数・CombatModule 構成が異なる |
+| 開始前可読 | 両方とも戦闘開始前の全 3 Wave 概要で差を読める |
+| 同 seed | `fixture-a` は系列 A を再現 |
+| 新 seed | 空 seed 入口から `fixture-b` 入力で系列 B 概要へ切替 |
+
+「繰り返し遊びたいか」評価・数値強度調整・手元成立は R12m に混ぜない（→ R13 / R12n / R12o）。
+
+### 2Q1 不足の解消（履歴）
+
+2Q1 時点の production 不足は、後続 Player 実装と実ブラウザ確認で解消済み。
+
+| 項目 | 状態 |
+| ---- | ---- |
+| Wave 間 §21.5 開示 | **解消済み** |
+| 問題系列 Player 編成の対象 4 兵科制限 | **解消済み** |
+| 問題系列戦闘 HUD の OperationState 所有 | **解消済み** |
+| 問題系列で固定 Stage 銘板を表示しない | **解消済み** |
+| 問題系列最終勝利 overlay で Save 編成 HUD を見せない | **解消済み**（`3f4d628`） |
+| fixed Stage 勝利では party HUD を従来どおり表示 | **解消済み**（Stage `2` 自然勝利） |
+
+### 実装コミット
+
+- **`3f4d628`** — 問題系列勝利 overlay 中の party HUD 非表示（本 Phase 完了文書同期時点の HEAD）
+
+### automated verification（本 2W3E1 文書同期後・個別実行）
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npx vitest run src/game/gameSessionProblemSeriesVictoryPartyHudHidden.test.ts` | **4 passed** |
+| `npx vitest run src/game/gameSessionProblemSeriesBattleHudParty.test.ts` | **4 passed** |
+| `npx vitest run src/game/gameSessionProblemSeriesVictory.test.ts` | **14 passed** |
+| `npx vitest run src/game/gameSessionProblemSeriesPlayerEntry.test.ts` | **13 passed** |
+| `npx vitest run src/game/gameSessionVictoryResult.test.ts` | **12 passed** |
+| `npx vitest run src/ui/partyHudOverlayCss.test.ts` | **9 passed** |
+| `npm run build:full` | **成功**（SkillEditorStep duplicate case 警告あり・既存表示） |
+| `git diff --check` | **成功** |
+
+保証範囲: 問題系列 victory / battle HUD / Player entry / fixed Stage victory / party HUD CSS の focused 群と full build / whitespace check。フルスイート・repository 全体型検査は未実施。production / test 修正は行っていない。
+
+### 実ブラウザ作業単位と主要証拠
+
+環境共通: full / verify OFF / headful Puppeteer / 1280×720 / DPR 1。証拠はリポジトリ外 Desktop キャプチャ（本作業では再取得しない）。
+
+| 作業単位 | 主要確認 |
+| -------- | -------- |
+| 2W3A / 2X2 系 | `fixture-a`／系列 A の全 3 Wave 概要。初期編成は鉄衛士・剣術士・魔術師・療養師 |
+| 2W1 / 2W2 / 2W3B 系 | Wave 2／Wave 3 準備の §21.5 開示と独立 scroll。作戦内パッシブ／資源／Module／編成の Wave 間維持 |
+| 2X4 / 2W3C1 系 | Wave 3 戦闘の対象 4 兵科 HUD。固定 Stage 銘板なし |
+| 2W3C4 / 2W3C5C-R2 | 自然勝利結果 identity（`victory` / `fixture-a` / `r12m-v1` / `r12m_series_a` / `reachedWaveIndex: 2`）。最終勝利時 OperationState／checkpoint／取得物消去。問題系列勝利 overlay 中 party HUD 非表示（`display:none`） |
+| 2W3D1-R2 | 同 seed 再開始で `fixture-a`／系列 A 全 3 Wave 概要を再現 |
+| 2W3D2 | 新 seed 入口の空 seed → `fixture-b`／系列 B 概要。系列 A と B の提示問題差を開始前に判読可能 |
+| 2W3D3-R1 | fixed Stage `2` 自然勝利 overlay で Save 編成 party HUD を維持 |
+| 各最終成功 run | console error/warning/pageerror **0/0/0**。正常な 1280×720 PNG。実ブラウザ作業によるリポジトリ差分なし（終了時 working tree clean） |
+
+**系列 A 全 3 Wave 概要（開始前）:** Wave1 鉄衛士×1（物理堅守）／療養師×1（緊急単体回復）／魔術師×1（収束）。Wave2 鉄衛士×1（物理堅守）＋鉄衛士×1（不屈）／療養師×1（分散回復）／魔術師×1（連鎖）。Wave3 鉄衛士×1（不屈）／剣術士×1（前線分担）／療養師×1（分散回復）／魔術師×1（連鎖）。
+
+**系列 B 全 3 Wave 概要（開始前）:** Wave1 剣術士×1（正面集中）／魔術師×1（収束）。Wave2 剣術士×1（前線分担）／魔術師×1（連鎖）。Wave3 剣術士×1（正面集中）＋剣術士×1（前線分担）／魔術師×1（連鎖）／療養師×1（緊急単体回復）。
+
+### fixed Stage 分離回帰
+
+- 問題系列勝利: seed / generatorVersion / seriesId。stageId なし。Save 編成 HUD は勝利 overlay 中非表示
+- fixed Stage `2` 勝利: stageId `2`。`problemSeriesVictoryResult` なし。party HUD 可視維持
+
+### 未確認範囲
+
+- R12n 数値強度調整
+- R12o 手元プレイ成立判定
+- R13「繰り返し遊びたいか」評価
+- 系列 B の全 3 Wave 自然完走（概要差・入口切替まで確認。B 完走は R12m Player 完了条件に含めない）
+- フルスイート最新完走・repository 全体の型検査（本作業の必須検証外）
+- `BattleView.test.ts` 既知失敗の整理（別作業単位）
+
+### 次の正式な単一作業単位
+
+**R12n** — 新構造後の数値強度調整（未着手）。
+
+### スコープ外（本 2W3E1）
+
+- production code / data / test / CSS / `operation-loop.md` 変更
+- R12n 実装開始 / R12o / R13 開始
+- R12l Player 完了への判定変更
+- commit / stage
+
+## §105.30 R12n 作業単位 1A — 数値調整境界・現行値・検証基盤監査
+
+**状態（2026-07-23・作業単位 1A-R1 文書同期）:** **R12n Backend / Player / Phase は未完了**。本節は 1A の read-only 監査結果と、cost 20 不採用のユーザー決定を記録する。production code / data / test / CSS は変更していない。`planning-rules.md` の既存差分は本作業で触っていない。
+
+### 1A 監査（read-only）
+
+- 1A は read-only 監査。比較 harness・数値変更・cost 20 候補設計は行っていない
+- 問題系列向け比較 harness は未整備
+- Backend 完了条件の 4 検出語（即死・無限膠着・選択無効・単一正解化）に、操作定義・閾値がない
+- 現行 catalog は cost 1／10 のみ
+- cost 20 候補 ID・効果設計・data は存在しない
+- `fixedCostByPassiveId` 自体は任意の正整数を扱えるため、cost 値 20 だけなら schema 制約ではない
+- 新規効果を作る場合だけ runtime / schema / editor 等の追加責務が発生し得る
+- 問題系列選出は seed で決定論的
+- 戦闘効果には `Math.random` があり、比較 harness では別途制御または試行規則が必要
+
+### ユーザー決定（cost 20 境界）— §105.19 付近の旧案との差
+
+| 項目 | §105.19 付近の旧案（履歴・書き換えない） | 現行決定（本節） |
+| ---- | ---------------------------------------- | ---------------- |
+| cost 帯 | cost 1／10／20 を想定 | **R12n では cost 1／10 のみ** |
+| cost 20 | 最終形・滅多に取れなくてよい | **R12n では導入しない。候補も新設しない** |
+| 再検討 | 方向確認後の拡張目標に含めていた | **将来の名前付き Phase で、ユーザー承認後のみ** |
+| R12n 内 | （当時未定義） | **暗黙に復活させない** |
+
+R12l 作業当時の「cost 20 は今回外」、R12m 完了記録、過去の Phase 状態表は履歴として維持する。
+
+### R12n Player 条件の文書同期
+
+- R12n Player 条件は、cost 1 の複数取得による積み重ねと cost 10 の中核投資が、資源配分・効果・取得タイミングの異なる判断として成立することへ修正した（`phase-roadmap.md`）
+- 測定前のため、R12n Player 完了とは書かない
+- cost 20 は R12n 対象外。将来の名前付き Phase へ送る
+
+### 次の正式な単一作業単位
+
+**R12n 作業単位 1B** — 比較 harness 骨格。
+
+### 未完了・未着手
+
+- R12n Backend／Player／Phase: **未完了**
+- R12o／R13: **未着手**（R13 開始条件は R12o Player 完了のまま）
+
+### スコープ外（本 1A-R1）
+
+- production code／data／test／CSS 変更
+- cost 20 候補の設計・追加
+- 比較 harness 実装
+- 数値変更
+- R12n 完了宣言
+- R12o／R13 開始
+- `planning-rules.md` の追加編集
+- commit／stage
+- 次作業（1B）への着手
