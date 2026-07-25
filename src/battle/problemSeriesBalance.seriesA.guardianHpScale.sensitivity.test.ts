@@ -1,10 +1,11 @@
 /**
- * R12n 1F / 1F-R1 — 系列A Wave 2 鉄衛士 hpScale 感度比較（test-only）。
+ * R12n 1F / 1F-R1 / 1M — 系列A Wave 2 鉄衛士 hpScale 感度比較と production default 回帰。
  *
- * production / catalog / baseline / harness は変更しない（1F の transform 経路を再利用）。
- * 勝率・平均・近似閾値への集約や「合格 scale」断定はしない。
- * 観測点 1.00 / 0.95 / 0.90 / 0.85 / 0.80 / 0.75 / 0.70 / 0.65 / 0.60
- * × 既存 3 構築 × 3 seed = 81 case。
+ * 1M: production catalog は Wave2 guardian 2 group に `hpScale=0.75` を採用。
+ * baseline JSON / SHA は変更前証拠として不変。
+ * `hpScale=1.00` は変更前 baseline 再現、`hpScale=0.75` は production 採用値と一致する観測点。
+ * 9 scale × 9 case の感度比較履歴は維持する（勝率・平均・近似閾値への集約や自動合格断定はしない）。
+ * 候補検出は自動不合格・強度合格ではない。
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -45,15 +46,23 @@ const PROBLEM_SERIES_SEED = 'fixture-a';
 const GENERATOR_VERSION = 'r12m-v1';
 const SERIES_ID = 'r12m_series_a';
 
-/** 1F + 1F-R1 統合観測点。近似閾値・自動採用基準ではない。 */
+/** 1M production 採用値（数値正本は catalog JSON）。 */
+const PRODUCTION_GUARDIAN_HP_SCALE = 0.75;
+/** 変更前 baseline 再現（プロパティ省略相当）。 */
+const BEFORE_CHANGE_GUARDIAN_HP_SCALE = 1.0;
+
+/** 1F + 1F-R1 統合観測点。近似閾値・自動採用基準ではない。0.75 は production 採用値と一致。 */
 const HP_SCALE_POINTS = [
   1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6,
 ] as const;
 
+const BUILD_NO_SPEND = 'no-spend-control';
+const BUILD_KNOWN_ATTACK = 'known-attack-24';
+const BUILD_ALTERNATE_CORE = 'alternate-core-24';
 const BUILD_IDS = [
-  'no-spend-control',
-  'known-attack-24',
-  'alternate-core-24',
+  BUILD_NO_SPEND,
+  BUILD_KNOWN_ATTACK,
+  BUILD_ALTERNATE_CORE,
 ] as const;
 
 const BATTLE_RNG_SEEDS = [
@@ -108,6 +117,12 @@ const baselineBPath = resolve(
   'test/baselines/r12n-series-b-before.json',
 );
 
+const transformContext = {
+  seriesId: SERIES_ID,
+  problemSeriesSeed: PROBLEM_SERIES_SEED,
+  generatorVersion: GENERATOR_VERSION,
+} as const;
+
 function sha256Hex(buffer: Buffer): string {
   return createHash('sha256').update(buffer).digest('hex');
 }
@@ -152,6 +167,7 @@ function groupIdentityWithoutHpScale(
 
 /**
  * transform が Wave2 鉄衛士 2 group の hpScale 以外を変えていないことを deep 比較で固定。
+ * production が既に 0.75 を持つ場合でも、transform 出力の境界だけを見る。
  */
 function assertTransformTouchesOnlyWave2GuardianHpScale(
   production: readonly ProblemSeriesBattleWave[],
@@ -196,6 +212,49 @@ function assertTransformTouchesOnlyWave2GuardianHpScale(
       SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET.expectedGuardianGroupCount,
     );
   }
+}
+
+/**
+ * production Wave 構造: Wave2 guardian のみ hpScale=0.75。それ以外は変更前構造と同一。
+ */
+function assertProductionGuardianHpScaleOnly(
+  production: readonly ProblemSeriesBattleWave[],
+): void {
+  const beforeChange = createSeriesAWave2GuardianHpScaleTransform(
+    BEFORE_CHANGE_GUARDIAN_HP_SCALE,
+  )(production, transformContext);
+
+  expect(production).toHaveLength(3);
+  expect(beforeChange).toHaveLength(3);
+
+  expect(production[0]).toEqual(beforeChange[0]);
+  expect(production[2]).toEqual(beforeChange[2]);
+
+  const prodWave2 = production[1]!;
+  const beforeWave2 = beforeChange[1]!;
+  expect(prodWave2.prepResourceGrant).toBe(beforeWave2.prepResourceGrant);
+  expect(prodWave2.enemyGroups).toHaveLength(beforeWave2.enemyGroups.length);
+
+  let guardianCount = 0;
+  for (let i = 0; i < beforeWave2.enemyGroups.length; i++) {
+    const prodGroup = prodWave2.enemyGroups[i]!;
+    const beforeGroup = beforeWave2.enemyGroups[i]!;
+    if (prodGroup.classId === SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET.classId) {
+      guardianCount += 1;
+      expect(prodGroup.hpScale).toBe(PRODUCTION_GUARDIAN_HP_SCALE);
+      expect(groupIdentityWithoutHpScale(prodGroup)).toEqual(
+        groupIdentityWithoutHpScale(beforeGroup),
+      );
+      expect(Object.prototype.hasOwnProperty.call(beforeGroup, 'hpScale')).toBe(
+        false,
+      );
+    } else {
+      expect(prodGroup).toEqual(beforeGroup);
+    }
+  }
+  expect(guardianCount).toBe(
+    SERIES_A_WAVE2_GUARDIAN_HP_SCALE_TARGET.expectedGuardianGroupCount,
+  );
 }
 
 function wave3PlannedPassiveIds(
@@ -267,11 +326,7 @@ async function runSensitivityForHpScale(
   readonly report: ProblemSeriesBalanceSignalReport;
 }> {
   const transform = createSeriesAWave2GuardianHpScaleTransform(hpScale);
-  const transformedPreview = transform(productionWaves, {
-    seriesId: SERIES_ID,
-    problemSeriesSeed: PROBLEM_SERIES_SEED,
-    generatorVersion: GENERATOR_VERSION,
-  });
+  const transformedPreview = transform(productionWaves, transformContext);
   assertTransformTouchesOnlyWave2GuardianHpScale(
     productionWaves,
     transformedPreview,
@@ -306,7 +361,8 @@ async function runSensitivityForHpScale(
       hpScale,
     );
 
-    if (hpScale === 1) {
+    // hpScale=1.00 は変更前 baseline 再現として維持
+    if (hpScale === BEFORE_CHANGE_GUARDIAN_HP_SCALE) {
       expect(normalizeProblemSeriesSimResultForCompare(result)).toBe(
         normalizeProblemSeriesSimResultForCompare(baselineCase.result),
       );
@@ -396,7 +452,54 @@ function assertBaselineCoverage(baseline: SeriesABaselineFile): void {
   expect(baselinePairKeys.size).toBe(9);
 }
 
-describe('R12n 1F/1F-R1 series A Wave2 guardian hpScale sensitivity (test-only)', () => {
+function assertProductionDefaultBuildOutcomes(
+  buildId: string,
+  result: ProblemSeriesSimResult,
+  wavePlans: readonly (ProblemSeriesSimWavePlan | undefined)[],
+): void {
+  const wave3Planned = wave3PlannedPassiveIds(wavePlans);
+  const acquired = allAcquiredPassiveIds(result);
+  const reachedWave3 = result.finalWaveIndex >= 2;
+  const wave3PlannedApplied =
+    wave3Planned.length > 0 &&
+    reachedWave3 &&
+    wave3Planned.every((id) => acquired.includes(id));
+
+  expect(result.acquiredPassivesBySlot).toEqual(
+    expectedAcquiredPassivesBySlot(wavePlans, result.finalWaveIndex),
+  );
+  expect(result.appliedCombatModuleIdBySlot).toHaveLength(PARTY_SLOT_COUNT);
+  expect(result.slotStats).toHaveLength(PARTY_SLOT_COUNT);
+  expect(result.resourceLedger.length).toBe(result.finalWaveIndex + 1);
+
+  if (buildId === BUILD_NO_SPEND) {
+    expect(result.outcome).toBe('defeat');
+    expect(result.finalWaveIndex).toBe(1);
+    expect(reachedWave3).toBe(false);
+    expect(wave3PlannedApplied).toBe(false);
+    for (const passiveId of wave3Planned) {
+      expect(acquired.includes(passiveId)).toBe(false);
+    }
+  }
+
+  if (buildId === BUILD_KNOWN_ATTACK) {
+    expect(result.outcome).toBe('victory');
+    expect(result.finalWaveIndex).toBe(2);
+    expect(reachedWave3).toBe(true);
+    expect(wave3PlannedApplied).toBe(true);
+    expect(wave3Planned.length).toBeGreaterThan(0);
+  }
+
+  if (buildId === BUILD_ALTERNATE_CORE) {
+    expect(result.outcome).toBe('defeat');
+    expect(result.finalWaveIndex).toBe(2);
+    expect(reachedWave3).toBe(true);
+    expect(wave3PlannedApplied).toBe(true);
+    expect(wave3Planned.length).toBeGreaterThan(0);
+  }
+}
+
+describe('R12n 1F/1F-R1/1M series A Wave2 guardian hpScale sensitivity + production default', () => {
   // scale ごとに分割（長時間単一 it は vitest worker RPC timeout を誘発するため）
   for (const hpScale of HP_SCALE_POINTS) {
     it(
@@ -415,7 +518,7 @@ describe('R12n 1F/1F-R1 series A Wave2 guardian hpScale sensitivity (test-only)'
         // 観測ログ（集約・合格断定なし）
         // eslint-disable-next-line no-console
         console.log(
-          `1F hpScale=${hpScale} signals: 即全滅=${formatSignalRefs(report.immediatePartyWipeCandidates)}; 無限膠着=${formatSignalRefs(report.stalemateCandidates)}; 選択無効=${formatIneffectivePairs(report.ineffectiveChoiceCandidatePairs)}; 単一正解化=${report.singleSolutionCandidateBuildIds.length === 0 ? '(empty)' : report.singleSolutionCandidateBuildIds.join(',')}`,
+          `1F/1M hpScale=${hpScale} signals: 即全滅=${formatSignalRefs(report.immediatePartyWipeCandidates)}; 無限膠着=${formatSignalRefs(report.stalemateCandidates)}; 選択無効=${formatIneffectivePairs(report.ineffectiveChoiceCandidatePairs)}; 単一正解化=${report.singleSolutionCandidateBuildIds.length === 0 ? '(empty)' : report.singleSolutionCandidateBuildIds.join(',')}`,
         );
         for (const row of rows) {
           // eslint-disable-next-line no-console
@@ -441,32 +544,90 @@ describe('R12n 1F/1F-R1 series A Wave2 guardian hpScale sensitivity (test-only)'
     );
   }
 
-  it('observes exactly 9 scale points without declaring any as production-ready', () => {
-    // 観測点の固定のみ。近似閾値・自動採用ではない。
+  it('observes exactly 9 scale points; 0.75 is production-adopted observation point', () => {
+    // 観測点の固定。近似閾値・自動採用ではない。0.75 は 1M production 採用値と一致する。
     expect(HP_SCALE_POINTS).toEqual([
       1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6,
     ]);
     expect(HP_SCALE_POINTS).toHaveLength(9);
+    expect(HP_SCALE_POINTS).toContain(PRODUCTION_GUARDIAN_HP_SCALE);
+    expect(HP_SCALE_POINTS).toContain(BEFORE_CHANGE_GUARDIAN_HP_SCALE);
     expect(BUILD_IDS).toHaveLength(3);
     expect(BATTLE_RNG_SEEDS).toHaveLength(3);
     expect(9 * 3 * 3).toBe(81);
   });
 
-  it('default runProblemSeriesSim path without transform stays production-equivalent to baseline case', () => {
-    const baseline = loadBaselineA();
-    const sample = baseline.cases[0]!;
-    const withoutTransform = runProblemSeriesSim(sample.input);
-    expect(normalizeProblemSeriesSimResultForCompare(withoutTransform)).toBe(
-      normalizeProblemSeriesSimResultForCompare(sample.result),
-    );
-    const withIdentityScale = runProblemSeriesSim({
-      ...sample.input,
-      transformResolvedBattleWaves: createSeriesAWave2GuardianHpScaleTransform(1),
-    });
-    expect(normalizeProblemSeriesSimResultForCompare(withIdentityScale)).toBe(
-      normalizeProblemSeriesSimResultForCompare(sample.result),
-    );
-  });
+  it(
+    'production default (no transform): 9-case rectangle matches explicit hpScale=0.75 and expected outcomes/signals',
+    () => {
+      assertBaselineShaUnchanged();
+      const baseline = loadBaselineA();
+      assertBaselineCoverage(baseline);
+      const productionWaves = loadProductionBattleWaves();
+      assertProductionGuardianHpScaleOnly(productionWaves);
+
+      const explicitTransform = createSeriesAWave2GuardianHpScaleTransform(
+        PRODUCTION_GUARDIAN_HP_SCALE,
+      );
+      const signalCases: ProblemSeriesBalanceSignalCase[] = [];
+      const pairKeys = new Set<string>();
+
+      for (const baselineCase of baseline.cases) {
+        const key = `${baselineCase.buildId}::${baselineCase.battleRngSeed}`;
+        expect(pairKeys.has(key)).toBe(false);
+        pairKeys.add(key);
+
+        const wavePlans = baselineCase.input.wavePlans ?? [];
+        expect(wavePlans).toHaveLength(3);
+
+        // production default 経路（transform なし）
+        const defaultResult = runProblemSeriesSim(baselineCase.input);
+        assertCaseMetricsPresent(defaultResult);
+        expect(defaultResult.battleRngSeed).toBe(baselineCase.battleRngSeed);
+        expect(defaultResult.enemyWaveInputs).toEqual(productionWaves);
+
+        // 明示 transform 0.75 と正規化完全一致（9 case すべて）
+        const explicitResult = runProblemSeriesSim({
+          ...baselineCase.input,
+          transformResolvedBattleWaves: explicitTransform,
+        });
+        expect(normalizeProblemSeriesSimResultForCompare(defaultResult)).toBe(
+          normalizeProblemSeriesSimResultForCompare(explicitResult),
+        );
+
+        assertProductionDefaultBuildOutcomes(
+          baselineCase.buildId,
+          defaultResult,
+          wavePlans,
+        );
+
+        signalCases.push({
+          buildId: baselineCase.buildId,
+          battleRngSeed: baselineCase.battleRngSeed,
+          input: baselineCase.input,
+          result: defaultResult,
+        });
+      }
+
+      expect(pairKeys.size).toBe(9);
+      expect(signalCases).toHaveLength(9);
+
+      const report = detectProblemSeriesBalanceSignals(signalCases);
+      expect(report.evaluatedCaseCount).toBe(9);
+      expect(report.evaluatedBuildCount).toBe(3);
+      expect(report.evaluatedSeedCount).toBe(3);
+      // 4 検出語（候補。強度合格・自動不合格ではない）
+      expect(report.immediatePartyWipeCandidates).toEqual([]);
+      expect(report.stalemateCandidates).toEqual([]);
+      expect(report.ineffectiveChoiceCandidatePairs).toEqual([]);
+      expect(report.singleSolutionCandidateBuildIds).toEqual([
+        BUILD_KNOWN_ATTACK,
+      ]);
+
+      assertBaselineShaUnchanged();
+    },
+    180_000,
+  );
 
   it('refuses transform on non-series-A identity (fail-closed)', () => {
     const productionWaves = loadProductionBattleWaves();

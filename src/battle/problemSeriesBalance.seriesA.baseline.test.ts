@@ -1,5 +1,10 @@
 /**
- * R12n 1C-R1 — 系列A 変更前baseline照合。
+ * R12n 1C-R1 / 1M — 系列A 変更前baselineの再現試験。
+ *
+ * `r12n-series-a-before.json` は変更前証拠として不変（SHA 維持）。
+ * production catalog は 1M で Wave2 guardian `hpScale=0.75` を採用済みのため、
+ * 再現は test-only transform `hpScale=1.00`（プロパティ省略＝変更前相当）で行う。
+ * production default が baseline と一致するという誤った assert は置かない。
  * planned cost（全Wave計画の予定費用）と applied cost（到達Waveまでの実消費）を分離して固定する。
  * 合否閾値・勝率・優劣判定には使わない。baseline JSON は読み取りのみ。
  */
@@ -10,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from './data/loadGameData.ts';
 import {
+  createSeriesAWave2GuardianHpScaleTransform,
   normalizeProblemSeriesSimResultForCompare,
   runProblemSeriesSim,
   type ProblemSeriesSimInput,
@@ -45,6 +51,9 @@ const BATTLE_RNG_SEEDS = [
 
 /** 「24点構築」= 全3 Wave 計画の予定費用合計が24。実消費済みを意味しない。 */
 const PLANNED_COST_24 = 24;
+
+/** 変更前 production 相当（Wave2 guardian hpScale 省略）。 */
+const BEFORE_CHANGE_GUARDIAN_HP_SCALE = 1.0;
 
 const KNOWN_ATTACK_PLANNED_PASSIVES = [
   'at_swordsman_passive_3',
@@ -227,7 +236,19 @@ function assertMetricsFinite(result: ProblemSeriesSimResult): void {
   }
 }
 
-describe('R12n 1C-R1 series A baseline characterization (planned vs applied)', () => {
+/** 変更前再現用。production default（0.75）経路ではない。 */
+function runBeforeChangeReproduction(
+  input: ProblemSeriesSimInput,
+): ProblemSeriesSimResult {
+  return runProblemSeriesSim({
+    ...input,
+    transformResolvedBattleWaves: createSeriesAWave2GuardianHpScaleTransform(
+      BEFORE_CHANGE_GUARDIAN_HP_SCALE,
+    ),
+  });
+}
+
+describe('R12n 1C-R1/1M series A before-change baseline reproduction (planned vs applied)', () => {
   it('loads baseline file without rewrite and matches expected SHA-256', () => {
     const raw = readBaselineRaw();
     expect(sha256Hex(raw)).toBe(EXPECTED_BASELINE_SHA256);
@@ -283,7 +304,7 @@ describe('R12n 1C-R1 series A baseline characterization (planned vs applied)', (
     }
   });
 
-  it('characterizes all 9 cases: identity, planned/applied costs, ledger, reachability', () => {
+  it('reproduces all 9 before-change cases via test-only hpScale=1.00 (not production default)', () => {
     const baseline = loadBaseline();
     expect(baseline.cases.length).toBe(9);
 
@@ -293,9 +314,13 @@ describe('R12n 1C-R1 series A baseline characterization (planned vs applied)', (
 
     const plannedByBuild = new Map<string, number>();
     const appliedByBuild = new Map<string, number>();
+    const reproducedPairKeys = new Set<string>();
 
     for (const caseEntry of baseline.cases) {
       const { buildId, battleRngSeed, input, result } = caseEntry;
+      const pairKey = `${buildId}::${battleRngSeed}`;
+      expect(reproducedPairKeys.has(pairKey)).toBe(false);
+      reproducedPairKeys.add(pairKey);
 
       expect(input.problemSeriesSeed).toBe(PROBLEM_SERIES_SEED);
       expect(input.battleRngSeed).toBe(battleRngSeed);
@@ -304,8 +329,8 @@ describe('R12n 1C-R1 series A baseline characterization (planned vs applied)', (
       expect(result.seriesId).toBe(SERIES_ID);
       expect(result.battleRngSeed).toBe(battleRngSeed);
 
-      // 完全入力の再実行が保存結果と完全一致（fail-closed: 0件スキップなし）
-      const rerun = runProblemSeriesSim(input);
+      // 変更前再現: hpScale=1.00 transform。production default(0.75)では一致しない。
+      const rerun = runBeforeChangeReproduction(input);
       expect(normalizeProblemSeriesSimResultForCompare(rerun)).toBe(
         normalizeProblemSeriesSimResultForCompare(result),
       );
@@ -395,6 +420,9 @@ describe('R12n 1C-R1 series A baseline characterization (planned vs applied)', (
         }
       }
     }
+
+    // fail-closed: 9 case すべてを再現（sample 1件だけでは成功にしない）
+    expect(reproducedPairKeys.size).toBe(9);
 
     // 構築ごとの planned/applied は seed 間で同一（生結果の意味固定）
     expect(plannedByBuild.get(BUILD_NO_SPEND)).toBe(0);

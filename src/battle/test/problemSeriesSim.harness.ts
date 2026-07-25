@@ -399,6 +399,101 @@ export function createSeriesAWave3SorcererAtkScaleTransform(
   };
 }
 
+/** R12n 1N — 系列B Wave2 chain 魔術師 atkScale 感度の対象境界（test-only）。 */
+export const SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET = {
+  seriesId: 'r12m_series_b',
+  problemSeriesSeed: 'fixture-b',
+  generatorVersion: 'r12m-v1',
+  waveIndex: 1,
+  classId: 'at_sorcerer' as const,
+  selectedCombatModuleId: 'at_sorcerer_mod_chain',
+  expectedSorcererGroupCount: 1,
+  expectedCount: 1,
+} as const;
+
+/**
+ * test-only。系列 B Wave 2（index 1）の `at_sorcerer_mod_chain` 1 group の `atkScale` だけを差し替える。
+ * `atkScale === 1` は production 相当（プロパティ省略）へ戻す。
+ * identity 不一致 / 対象欠落・重複 / 非有限・0以下は fail-closed。
+ */
+export function createSeriesBWave2SorcererAtkScaleTransform(
+  atkScale: number,
+): ProblemSeriesSimResolvedWaveTransform {
+  if (!Number.isFinite(atkScale) || atkScale <= 0) {
+    throw new Error(
+      `series B Wave2 sorcerer atkScale must be a finite number > 0, got ${String(atkScale)}`,
+    );
+  }
+  return (waves, context) => {
+    if (context.seriesId !== SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.seriesId) {
+      throw new Error(
+        `createSeriesBWave2SorcererAtkScaleTransform refuses seriesId "${context.seriesId}"`,
+      );
+    }
+    if (
+      context.problemSeriesSeed !==
+      SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.problemSeriesSeed
+    ) {
+      throw new Error(
+        `createSeriesBWave2SorcererAtkScaleTransform refuses problemSeriesSeed "${context.problemSeriesSeed}"`,
+      );
+    }
+    if (
+      context.generatorVersion !==
+      SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.generatorVersion
+    ) {
+      throw new Error(
+        `createSeriesBWave2SorcererAtkScaleTransform refuses generatorVersion "${context.generatorVersion}"`,
+      );
+    }
+    if (waves.length !== 3) {
+      throw new Error(
+        `expected 3 resolved waves for series B atkScale transform, got ${waves.length}`,
+      );
+    }
+    const cloned = cloneProblemSeriesBattleWaves(waves);
+    const waveIndex = SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.waveIndex;
+    const wave = cloned[waveIndex];
+    if (wave === undefined) {
+      throw new Error(`missing resolved wave at index ${waveIndex}`);
+    }
+    let touchedSorcerers = 0;
+    wave.enemyGroups = wave.enemyGroups.map((group) => {
+      if (
+        group.classId !== SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.classId ||
+        group.selectedCombatModuleId !==
+          SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.selectedCombatModuleId
+      ) {
+        return group;
+      }
+      touchedSorcerers += 1;
+      if (group.count !== SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.expectedCount) {
+        throw new Error(
+          `expected at_sorcerer count ${SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.expectedCount} ` +
+            `on Wave ${waveIndex}, got ${group.count}`,
+        );
+      }
+      const next: ProblemSeriesBattleEnemyGroup = { ...group };
+      if (atkScale === 1) {
+        delete next.atkScale;
+      } else {
+        next.atkScale = atkScale;
+      }
+      return next;
+    });
+    if (
+      touchedSorcerers !==
+      SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.expectedSorcererGroupCount
+    ) {
+      throw new Error(
+        `expected ${SERIES_B_WAVE2_SORCERER_ATK_SCALE_TARGET.expectedSorcererGroupCount} ` +
+          `at_sorcerer_mod_chain groups on Wave ${waveIndex}, touched ${touchedSorcerers}`,
+      );
+    }
+    return cloned;
+  };
+}
+
 export interface ProblemSeriesSimSlotMetrics {
   readonly slotIndex: number;
   readonly classId: ClassId;

@@ -9,7 +9,7 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R12m Backend / Player / Phase 完了**。公式次は **R12n**（Backend / Player / Phase 未完了。1A〜1E まで。数値本調未着手）。R12o / R13 未着手。R13 開始条件は **R12o Player 完了**のまま。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない — 本判定は変更しない）。正本 handoff は **§105.31**。
+- **新ロードマップ現在地:** **R12m Backend / Player / Phase 完了**。公式次は **R12n**（Backend / Player / Phase 未完了。1A〜1M まで。系列A Wave2 guardian `hpScale` production 採用済み。Backend/Player/Phase 完了ではない）。R12o / R13 未着手。R13 開始条件は **R12o Player 完了**のまま。R12l は unit3 Backend 隔離完了（Player は部分のみ。Phase Player 完了ではない — 本判定は変更しない）。正本 handoff は **§105.32**。
 - **R12g-c:** Backend 完了 / Player 未完了。Survival Module JSON は d1〜d4 で接続済み。Player 手元確認は d5 Player 層へ。
 - **次の再開タスク:** **R12n**（新構造後の数値強度調整・未完了）→ R12o → R13。
 - **R12g-b3 判定メモ:** `combatModuleBasicAttack.test.ts` の `module basic uses effective attackSpeed buff without attackSpeedTier` 失敗は pre-existing（R12g-b1/b2差分非依存・単独再現・非 flaky）。戻し先は **R12g-c 前後の test cleanup 小タスク**。
@@ -9715,3 +9715,49 @@ R12l 作業当時の「cost 20 は今回外」、R12m 完了記録、過去の P
 - `git diff --check` — 問題なし
 - `npm run build`（`tsc && vite build`）— exit 2。1E 追加ファイルへの error なし。開始 HEAD `1e96fde` との `tsc` 出力比較で同一（本差分由来ではない）。vite 段階未到達
 - baseline SHA 不変を再確認済み
+
+---
+
+## §105.32 R12n 作業単位 1M — 系列A Wave2 guardian `hpScale` production 採用
+
+**状態（2026-07-25・作業単位 1M）:** **R12n Backend / Player / Phase は未完了**。開始 HEAD `6fcc8fe8651539c2090f092dda14faa5ead85100`。未コミット 1L 差分（`wave3SorcererAtkScale.nonMonotonic.diagnostic.test.ts`）は保持・未変更。commit / stage なし。
+
+### 確定した変更
+
+- R12n 1M で系列 A Wave 2 の `df_guardian` 2 group へ `hpScale: 0.75` を **production 採用**（`data/problem-series-catalog.json`）
+- **単一所有者のみ**（Wave 2 guardian HP）。CombatModule / count / 他 scale / Wave 1・3 / 系列 B は未変更
+- `r12n-series-a-before.json` は変更前証拠として **不変**（SHA 維持）。baseline test は test-only `hpScale=1.00` で変更前再現
+- Wave 3 enemy sorcerer `atkScale` は **未採用**（1J〜1L は test-only 観測のまま）
+
+### 現行観測（production default・3 構築 × 3 seed）
+
+| 構築 | outcome | finalWaveIndex | Wave 3 planned |
+| ---- | ------- | -------------- | -------------- |
+| no-spend-control | 全 seed defeat | 1（Wave 3 未到達） | 未適用 |
+| known-attack-24 | 全 seed victory | 2 | 適用 |
+| alternate-core-24 | 全 seed defeat | 2 | 適用 |
+
+**4 検出語（候補。強度合格・自動不合格ではない）:**
+
+- 即全滅候補: 空
+- 無限膠着候補: 空
+- 選択無効候補: 空
+- 単一正解化候補: `known-attack-24`（§21.13 上は自動不合格ではない）
+
+### 1F〜1L の位置づけ
+
+- 1F〜1I: guardian `hpScale` 感度比較・診断証拠
+- 1J〜1L: Wave 3 sorcerer `atkScale` 感度・非単調診断（test-only。production 未採用）
+- 1L の 7 回目 / 15 発目は **現行実装観測**でありゲーム仕様ではない
+
+### 未完了
+
+- R12n Backend / Player / Phase: **未完了**
+- cost 1 / cost 10 判断の Player 成立
+- 系列 B の次調整要否
+- 次の単一所有者
+- R12o / R13
+
+### スコープ外（本 1M）
+
+- Wave 3 sorcerer `atkScale` 採用、guardian 以外の敵 scale、基礎 stat、CombatModule / passive / cost / grant、cost 20、baseline JSON 変更、production TS / schema、UI / CSS / 実ブラウザ、系列 B 数値、新規 scale・build・seed、RNG 診断、R12n 完了宣言、R12o / R13、commit / stage

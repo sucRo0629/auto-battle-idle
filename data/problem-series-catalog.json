@@ -82,11 +82,13 @@
             {
               "classId": "df_guardian",
               "count": 1,
+              "hpScale": 0.75,
               "selectedCombatModuleId": "df_guardian_mod_nearest_strike"
             },
             {
               "classId": "df_guardian",
               "count": 1,
+              "hpScale": 0.75,
               "selectedCombatModuleId": "df_guardian_mod_guard_focus"
             },
             {
