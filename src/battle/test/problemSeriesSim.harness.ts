@@ -500,6 +500,101 @@ export function createSeriesBWave2SorcererAtkScaleTransform(
   };
 }
 
+/** R12n 1O — 系列B Wave2 pierce 剣術士 atkScale 感度の対象境界（test-only）。 */
+export const SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET = {
+  seriesId: 'r12m_series_b',
+  problemSeriesSeed: 'fixture-b',
+  generatorVersion: 'r12m-v1',
+  waveIndex: 1,
+  classId: 'at_swordsman' as const,
+  selectedCombatModuleId: 'at_swordsman_mod_pierce_slash',
+  expectedSwordsmanGroupCount: 1,
+  expectedCount: 1,
+} as const;
+
+/**
+ * test-only。系列 B Wave 2（index 1）の `at_swordsman_mod_pierce_slash` 1 group の `atkScale` だけを差し替える。
+ * `atkScale === 1` は production 相当（プロパティ省略）へ戻す。
+ * identity 不一致 / 対象欠落・重複 / 非有限・0以下は fail-closed。
+ */
+export function createSeriesBWave2SwordsmanAtkScaleTransform(
+  atkScale: number,
+): ProblemSeriesSimResolvedWaveTransform {
+  if (!Number.isFinite(atkScale) || atkScale <= 0) {
+    throw new Error(
+      `series B Wave2 swordsman atkScale must be a finite number > 0, got ${String(atkScale)}`,
+    );
+  }
+  return (waves, context) => {
+    if (context.seriesId !== SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.seriesId) {
+      throw new Error(
+        `createSeriesBWave2SwordsmanAtkScaleTransform refuses seriesId "${context.seriesId}"`,
+      );
+    }
+    if (
+      context.problemSeriesSeed !==
+      SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.problemSeriesSeed
+    ) {
+      throw new Error(
+        `createSeriesBWave2SwordsmanAtkScaleTransform refuses problemSeriesSeed "${context.problemSeriesSeed}"`,
+      );
+    }
+    if (
+      context.generatorVersion !==
+      SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.generatorVersion
+    ) {
+      throw new Error(
+        `createSeriesBWave2SwordsmanAtkScaleTransform refuses generatorVersion "${context.generatorVersion}"`,
+      );
+    }
+    if (waves.length !== 3) {
+      throw new Error(
+        `expected 3 resolved waves for series B swordsman atkScale transform, got ${waves.length}`,
+      );
+    }
+    const cloned = cloneProblemSeriesBattleWaves(waves);
+    const waveIndex = SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.waveIndex;
+    const wave = cloned[waveIndex];
+    if (wave === undefined) {
+      throw new Error(`missing resolved wave at index ${waveIndex}`);
+    }
+    let touchedSwordsmen = 0;
+    wave.enemyGroups = wave.enemyGroups.map((group) => {
+      if (
+        group.classId !== SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.classId ||
+        group.selectedCombatModuleId !==
+          SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.selectedCombatModuleId
+      ) {
+        return group;
+      }
+      touchedSwordsmen += 1;
+      if (group.count !== SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.expectedCount) {
+        throw new Error(
+          `expected at_swordsman count ${SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.expectedCount} ` +
+            `on Wave ${waveIndex}, got ${group.count}`,
+        );
+      }
+      const next: ProblemSeriesBattleEnemyGroup = { ...group };
+      if (atkScale === 1) {
+        delete next.atkScale;
+      } else {
+        next.atkScale = atkScale;
+      }
+      return next;
+    });
+    if (
+      touchedSwordsmen !==
+      SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.expectedSwordsmanGroupCount
+    ) {
+      throw new Error(
+        `expected ${SERIES_B_WAVE2_SWORDSMAN_ATK_SCALE_TARGET.expectedSwordsmanGroupCount} ` +
+          `at_swordsman_mod_pierce_slash groups on Wave ${waveIndex}, touched ${touchedSwordsmen}`,
+      );
+    }
+    return cloned;
+  };
+}
+
 export interface ProblemSeriesSimSlotMetrics {
   readonly slotIndex: number;
   readonly classId: ClassId;
