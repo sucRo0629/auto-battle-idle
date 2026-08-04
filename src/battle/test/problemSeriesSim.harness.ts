@@ -9,6 +9,7 @@
 import { BattleEngine } from '../BattleEngine.ts';
 import { isValidSelectedCombatModuleId } from '../data/resolveCombatModuleBasic.ts';
 import { loadGameData } from '../data/loadGameData.ts';
+import { synthesizeCombatModuleSkill } from '../data/synthesizeCombatModuleSkill.ts';
 import { createProblemSeriesInitialParty } from '../problemSeries/initialParty.ts';
 import { resolveProblemSeriesFromSeed } from '../problemSeries/seedResolve.ts';
 import {
@@ -19,6 +20,7 @@ import {
 import { StageDamageStatsTracker } from '../stageDamageStats.ts';
 import type {
   ClassId,
+  CombatModuleDef,
   GameData,
   PartySlotState,
 } from '../types.ts';
@@ -84,6 +86,12 @@ export type ProblemSeriesSimResolvedWaveTransform = (
   context: ProblemSeriesSimResolvedWaveTransformContext,
 ) => ProblemSeriesBattleWave[];
 
+/**
+ * test-only。`loadGameData()` 直後の GameData を返す。
+ * 未指定時は production 経路（変換なし）のまま。
+ */
+export type ProblemSeriesSimGameDataTransform = (gameData: GameData) => GameData;
+
 export interface ProblemSeriesSimInput {
   readonly problemSeriesSeed: string;
   /** 問題系列選出 seed とは別。戦闘中 Math.random 置換用。 */
@@ -100,6 +108,12 @@ export interface ProblemSeriesSimInput {
    * 省略時は production の `toProblemSeriesBattleWaves` 結果をそのまま使う。
    */
   readonly transformResolvedBattleWaves?: ProblemSeriesSimResolvedWaveTransform;
+  /**
+   * test-only。`loadGameData()` 直後の GameData を差し替える。
+   * 省略時は loadGameData の返却値をそのまま既存経路へ渡す（Result / 正規化 / baseline 条件を維持）。
+   * production の loadGameData → catalog resolve → party → BattleEngine 内で実際に使われる GameData へ適用する。
+   */
+  readonly transformGameData?: ProblemSeriesSimGameDataTransform;
   /**
    * test-only。最終 snapshot から不変な生存敵診断だけを受け取る任意 callback。
    * 省略時は呼ばれず、戻り値・正規化・production 相当経路は変えない。
@@ -592,6 +606,199 @@ export function createSeriesBWave2SwordsmanAtkScaleTransform(
       );
     }
     return cloned;
+  };
+}
+
+/** R12n 1Q — 系列B Player party-mend heal atkScale 感度の対象境界（test-only）。 */
+export const SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET = {
+  moduleId: 'sp_cleric_mod_party_mend',
+  classId: 'sp_cleric' as const,
+  productionAtkScale: 0.55,
+  expectedEffectCount: 1,
+  expectedHealSubKind: 'instant' as const,
+  expectedAmountKind: 'atkBased' as const,
+  expectedTarget: {
+    kind: 'stat' as const,
+    side: 'ally' as const,
+    stat: 'hp' as const,
+    order: 'ratio' as const,
+  },
+  expectedEffectRange: {
+    form: 'single' as const,
+    applyMode: 'instant' as const,
+    hitCount: 3,
+    refillSameTargetOnShortfall: false,
+  },
+  expectedTargetShape: 'multiLock' as const,
+  expectedHitCount: 3,
+  expectedRange: 1136,
+} as const;
+
+function assertPartyMendHealStructure(
+  mod: CombatModuleDef,
+  label: string,
+): {
+  effect: CombatModuleDef['action']['effect'][number];
+  amount: NonNullable<
+    Extract<
+      CombatModuleDef['action']['effect'][number],
+      { type: 'heal' }
+    >['amount']
+  >;
+} {
+  if (mod.id !== SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.moduleId) {
+    throw new Error(
+      `${label}: expected module id ${SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.moduleId}, got "${mod.id}"`,
+    );
+  }
+  if (mod.classId !== SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.classId) {
+    throw new Error(
+      `${label}: expected classId ${SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.classId}, got "${mod.classId}"`,
+    );
+  }
+  const effects = mod.action?.effect;
+  if (!Array.isArray(effects) || effects.length !== SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedEffectCount) {
+    throw new Error(
+      `${label}: expected exactly ${SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedEffectCount} effect(s)`,
+    );
+  }
+  const effect = effects[0];
+  if (effect === undefined || effect.type !== 'heal') {
+    throw new Error(`${label}: expected single heal effect`);
+  }
+  if (effect.healSubKind !== SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedHealSubKind) {
+    throw new Error(
+      `${label}: expected healSubKind ${SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedHealSubKind}`,
+    );
+  }
+  const amount = effect.amount;
+  if (amount === undefined || amount.kind !== SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedAmountKind) {
+    throw new Error(
+      `${label}: expected amount.kind ${SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedAmountKind}`,
+    );
+  }
+  const expectedTarget = SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedTarget;
+  const target = effect.target;
+  if (
+    target === undefined ||
+    target.kind !== expectedTarget.kind ||
+    target.side !== expectedTarget.side ||
+    !('stat' in target) ||
+    target.stat !== expectedTarget.stat ||
+    !('order' in target) ||
+    target.order !== expectedTarget.order
+  ) {
+    throw new Error(`${label}: party-mend target structure mismatch`);
+  }
+  if (effect.range !== SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedRange) {
+    throw new Error(
+      `${label}: expected effect.range ${SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedRange}`,
+    );
+  }
+  const expectedRange = SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedEffectRange;
+  const effectRange = mod.action.effectRange;
+  if (
+    effectRange === undefined ||
+    effectRange.form !== expectedRange.form ||
+    effectRange.applyMode !== expectedRange.applyMode ||
+    effectRange.hitCount !== expectedRange.hitCount ||
+    effectRange.refillSameTargetOnShortfall !==
+      expectedRange.refillSameTargetOnShortfall
+  ) {
+    throw new Error(`${label}: party-mend effectRange structure mismatch`);
+  }
+  if (mod.action.targetShape !== SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedTargetShape) {
+    throw new Error(
+      `${label}: expected targetShape ${SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedTargetShape}`,
+    );
+  }
+  if (mod.action.hitCount !== SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedHitCount) {
+    throw new Error(
+      `${label}: expected action.hitCount ${SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.expectedHitCount}`,
+    );
+  }
+  return { effect, amount };
+}
+
+/**
+ * test-only。`sp_cleric_mod_party_mend` の単一 heal effect の `amount.atkScale` だけを差し替える。
+ * 所有 field は CombatModule 側。BattleEngine は合成済み `skillRegistry.actives[moduleId]` を読むため、
+ * 同値の atkScale を合成 active へもミラーする（それ以外の GameData は維持）。
+ * `atkScale === 0.55` は production default と同値（意味内容一致）。入力 GameData は破壊しない。
+ * 対象欠落・構造不一致・非有限・0以下は fail-closed。
+ */
+export function createPartyMendHealAtkScaleTransform(
+  atkScale: number,
+): ProblemSeriesSimGameDataTransform {
+  if (!Number.isFinite(atkScale) || atkScale <= 0) {
+    throw new Error(
+      `party-mend heal atkScale must be a finite number > 0, got ${String(atkScale)}`,
+    );
+  }
+  return (gameData) => {
+    const registry = gameData.combatModuleRegistry;
+    if (registry === undefined || typeof registry !== 'object') {
+      throw new Error(
+        'createPartyMendHealAtkScaleTransform: combatModuleRegistry missing',
+      );
+    }
+    const moduleId = SERIES_B_PARTY_MEND_HEAL_ATK_SCALE_TARGET.moduleId;
+    if (!Object.prototype.hasOwnProperty.call(registry, moduleId)) {
+      throw new Error(
+        `createPartyMendHealAtkScaleTransform: module "${moduleId}" missing`,
+      );
+    }
+    const original = registry[moduleId];
+    if (original === undefined) {
+      throw new Error(
+        `createPartyMendHealAtkScaleTransform: module "${moduleId}" missing`,
+      );
+    }
+    const { effect, amount } = assertPartyMendHealStructure(
+      original,
+      'createPartyMendHealAtkScaleTransform',
+    );
+
+    const nextAmount = { ...amount, atkScale };
+    const nextEffect = { ...effect, amount: nextAmount };
+    const nextAction = {
+      ...original.action,
+      effect: [nextEffect],
+    };
+    const nextModule: CombatModuleDef = {
+      ...original,
+      action: nextAction,
+    };
+    const nextRegistry: Record<string, CombatModuleDef> = {
+      ...registry,
+      [moduleId]: nextModule,
+    };
+
+    const actives = gameData.skillRegistry?.actives;
+    if (actives === undefined || typeof actives !== 'object') {
+      throw new Error(
+        'createPartyMendHealAtkScaleTransform: skillRegistry.actives missing',
+      );
+    }
+    if (!Object.prototype.hasOwnProperty.call(actives, moduleId)) {
+      throw new Error(
+        `createPartyMendHealAtkScaleTransform: synthesized active "${moduleId}" missing`,
+      );
+    }
+    const synthesized = synthesizeCombatModuleSkill(nextModule);
+    const nextActives = {
+      ...actives,
+      [moduleId]: synthesized,
+    };
+
+    return {
+      ...gameData,
+      combatModuleRegistry: nextRegistry,
+      skillRegistry: {
+        ...gameData.skillRegistry,
+        actives: nextActives,
+      },
+    };
   };
 }
 
@@ -1189,7 +1396,11 @@ export function runProblemSeriesSim(
   }
 
   const battleRngSeed = normalizeBattleRngSeed(input.battleRngSeed);
-  const gameData = loadGameData();
+  const loadedGameData = loadGameData();
+  const gameData =
+    input.transformGameData === undefined
+      ? loadedGameData
+      : input.transformGameData(loadedGameData);
   const catalog = gameData.problemSeriesCatalog;
   const resolved = resolveProblemSeriesFromSeed(
     catalog,
