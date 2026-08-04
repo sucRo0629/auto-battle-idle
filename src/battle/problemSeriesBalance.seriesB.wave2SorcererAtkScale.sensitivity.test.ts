@@ -1,9 +1,17 @@
 /**
- * R12n 1N — 系列B Wave 2 enemy sorcerer `atkScale` 感度比較（test-only）。
+ * R12n 1N / 1N-R1 / 1N-R2 / 1N-R2-R1 — 系列B Wave 2 enemy sorcerer `atkScale` 感度比較（test-only）。
  *
  * 単一所有者: 系列B Wave index 1 / at_sorcerer / at_sorcerer_mod_chain / atkScale のみ。
  * 5 scale × 3 build × 3 seed = 45 case。production 採用・勝率/平均/近似閾値・合格断定はしない。
  * 候補検出は自動不合格・強度合格・production 候補決定ではない。
+ *
+ * 1N-R1: Wave 1 Module は tick/action の runtime 観測。passive は予定空・ledger spent0・
+ * 開始 tick 味方状態・最終 Result 取得列を production 参照と突合する。
+ *
+ * 1N-R2: Wave 1 戦闘中の runtime passive identity を既存 `onTickStateDiagnostic` snapshot の
+ * `acquiredPassivesBySlot` から直接観測し、全 4 slot が空であることを固定する。
+ *
+ * 1N-R2-R1: tick diagnostic の slot コピーは欠落を空列へ正規化せず fail-closed。
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -23,6 +31,7 @@ import {
   type ProblemSeriesBalanceSignalReport,
 } from './test/problemSeriesBalanceSignals.ts';
 import {
+  copyAcquiredPassivesBySlotForTickDiagnostic,
   createSeriesBWave2SorcererAtkScaleTransform,
   normalizeProblemSeriesSimResultForCompare,
   runProblemSeriesSim,
@@ -260,6 +269,22 @@ interface Wave2FlowObs {
   readonly allyClericHealCount: number;
 }
 
+/** Wave 1 開始 tick から取れる味方状態（slot 対応。passive id は含まない）。 */
+interface Wave1StartAllyObs {
+  readonly partySlotIndex: number;
+  readonly classId: string;
+  readonly hp: number;
+  readonly maxHp: number;
+  readonly barrierHp: number;
+  readonly atk: number;
+  readonly basicSkillId: string;
+}
+
+/**
+ * Wave 1 非波及 slice。
+ * Module は tick/action の runtime 観測。planned input を applied/acquired と命名しない。
+ * runtime passive identity は tick snapshot の `acquiredPassivesBySlot` から直接観測する。
+ */
 interface Wave1InvariantSlice {
   readonly enemyWaveInput: ProblemSeriesBattleWave;
   readonly waveResult: string;
@@ -267,11 +292,17 @@ interface Wave1InvariantSlice {
   readonly endTick: number;
   readonly damageByActorTarget: Readonly<Record<string, ClassAgg>>;
   readonly healByActorTarget: Readonly<Record<string, ClassAgg>>;
+  readonly startAliveAllies: readonly Wave1StartAllyObs[];
   readonly endAliveAllies: readonly AllyHpObs[];
   readonly endAliveEnemies: readonly AllyHpObs[];
-  readonly resourceLedgerWave1: ProblemSeriesSimResult['resourceLedger'][number] | null;
-  readonly appliedCombatModuleIdBySlot: readonly string[];
-  readonly acquiredPassivesBySlot: readonly (readonly string[])[];
+  readonly resourceLedgerWave1: ProblemSeriesSimResult['resourceLedger'][number];
+  /** Wave 1 tick/action から slot 対応で観測した Module identity。 */
+  readonly observedCombatModuleIdBySlot: readonly string[];
+  /**
+   * Wave 1 全 tick の runtime 取得 passive ID 列（slot 対応）。
+   * 本所有者感度では全 4 slot が空であることが直接固定される。
+   */
+  readonly observedRuntimeAcquiredPassivesBySlot: readonly (readonly string[])[];
 }
 
 interface SensitivityCaseRow {
@@ -504,6 +535,173 @@ function lastTickForWave(
   return last;
 }
 
+function firstTickForWave(
+  tickStates: readonly ProblemSeriesSimTickStateDiagnostic[],
+  waveIndex: number,
+): ProblemSeriesSimTickStateDiagnostic | null {
+  for (const state of tickStates) {
+    if (state.waveIndex === waveIndex) return state;
+  }
+  return null;
+}
+
+function wave1StartAllySnapshot(
+  allies: readonly ProblemSeriesSimTickAliveUnitDiagnostic[],
+): Wave1StartAllyObs[] {
+  const bySlot: (Wave1StartAllyObs | undefined)[] = Array.from(
+    { length: PARTY_SLOT_COUNT },
+    () => undefined,
+  );
+  expect(allies.length).toBe(PARTY_SLOT_COUNT);
+  for (const ally of allies) {
+    expect(typeof ally.partySlotIndex).toBe('number');
+    const slotIndex = ally.partySlotIndex!;
+    expect(slotIndex).toBeGreaterThanOrEqual(0);
+    expect(slotIndex).toBeLessThan(PARTY_SLOT_COUNT);
+    expect(bySlot[slotIndex]).toBeUndefined();
+    expect(ally.classId.length).toBeGreaterThan(0);
+    expect(ally.basicSkillId.length).toBeGreaterThan(0);
+    bySlot[slotIndex] = {
+      partySlotIndex: slotIndex,
+      classId: ally.classId,
+      hp: ally.hp,
+      maxHp: ally.maxHp,
+      barrierHp: ally.barrierHp,
+      atk: ally.atk,
+      basicSkillId: ally.basicSkillId,
+    };
+  }
+  for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
+    expect(bySlot[slotIndex]).toBeDefined();
+  }
+  return bySlot as Wave1StartAllyObs[];
+}
+
+/**
+ * Wave 1 実観測 Module identity（slot 対応）。
+ * tick の basicSkillId を主証拠、action の skillId を同一 Wave 内の突合に使う。
+ * baselineCase.input.slots の予定値は使わない。
+ */
+function observeWave1CombatModuleIdBySlot(
+  tickStates: readonly ProblemSeriesSimTickStateDiagnostic[],
+  actionEvents: readonly ProblemSeriesSimCombatActionDiagnostic[],
+): string[] {
+  const bySlot: (string | undefined)[] = Array.from(
+    { length: PARTY_SLOT_COUNT },
+    () => undefined,
+  );
+  let wave1TickAllySightings = 0;
+
+  for (const state of tickStates) {
+    if (state.waveIndex !== WAVE1_INDEX) continue;
+    for (const ally of state.allies) {
+      expect(typeof ally.partySlotIndex).toBe('number');
+      const slotIndex = ally.partySlotIndex!;
+      expect(slotIndex).toBeGreaterThanOrEqual(0);
+      expect(slotIndex).toBeLessThan(PARTY_SLOT_COUNT);
+      expect(ally.basicSkillId.length).toBeGreaterThan(0);
+      wave1TickAllySightings += 1;
+      if (bySlot[slotIndex] === undefined) {
+        bySlot[slotIndex] = ally.basicSkillId;
+      } else {
+        expect(ally.basicSkillId).toBe(bySlot[slotIndex]);
+      }
+    }
+  }
+  expect(wave1TickAllySightings).toBeGreaterThan(0);
+
+  let wave1AllyActionCount = 0;
+  for (const event of actionEvents) {
+    if (event.waveIndex !== WAVE1_INDEX) continue;
+    if (event.actor.isEnemy) continue;
+    expect(typeof event.actor.partySlotIndex).toBe('number');
+    const slotIndex = event.actor.partySlotIndex!;
+    expect(slotIndex).toBeGreaterThanOrEqual(0);
+    expect(slotIndex).toBeLessThan(PARTY_SLOT_COUNT);
+    expect(event.skillId.length).toBeGreaterThan(0);
+    expect(bySlot[slotIndex]).toBeDefined();
+    expect(event.skillId).toBe(bySlot[slotIndex]);
+    wave1AllyActionCount += 1;
+  }
+  expect(wave1AllyActionCount).toBeGreaterThan(0);
+
+  for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
+    expect(bySlot[slotIndex]).toBeDefined();
+    expect(bySlot[slotIndex]!.length).toBeGreaterThan(0);
+  }
+  return bySlot as string[];
+}
+
+const WAVE1_EMPTY_RUNTIME_PASSIVES_BY_SLOT: readonly (readonly string[])[] =
+  Object.freeze(
+    Array.from({ length: PARTY_SLOT_COUNT }, () => Object.freeze([])),
+  );
+
+/**
+ * Wave 1 全 tick の runtime 取得 passive ID 列を直接観測する。
+ * slot 欠落・重複長・空 Wave 1 tick・非空列では失敗する（推測で埋めない）。
+ */
+function observeWave1RuntimeAcquiredPassivesBySlot(
+  tickStates: readonly ProblemSeriesSimTickStateDiagnostic[],
+): readonly (readonly string[])[] {
+  let wave1TickCount = 0;
+  let observed: readonly (readonly string[])[] | null = null;
+
+  for (const state of tickStates) {
+    if (state.waveIndex !== WAVE1_INDEX) continue;
+    wave1TickCount += 1;
+
+    expect(state.acquiredPassivesBySlot).toHaveLength(PARTY_SLOT_COUNT);
+    const slotSeen = new Set<number>();
+    for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
+      expect(slotSeen.has(slotIndex)).toBe(false);
+      slotSeen.add(slotIndex);
+      const ids = state.acquiredPassivesBySlot[slotIndex];
+      expect(ids).toBeDefined();
+      expect(Array.isArray(ids)).toBe(true);
+      expect(ids).toEqual([]);
+    }
+    expect(slotSeen.size).toBe(PARTY_SLOT_COUNT);
+
+    const copied = state.acquiredPassivesBySlot.map((ids) => [...ids]);
+    if (observed === null) {
+      observed = copied;
+    } else {
+      expect(copied).toEqual(observed);
+    }
+  }
+
+  expect(wave1TickCount).toBeGreaterThan(0);
+  expect(observed).not.toBeNull();
+  expect(observed).toEqual(WAVE1_EMPTY_RUNTIME_PASSIVES_BY_SLOT);
+  return observed!;
+}
+
+function assertWave1TickRuntimePassivesEmpty(
+  state: ProblemSeriesSimTickStateDiagnostic,
+): void {
+  expect(state.waveIndex).toBe(WAVE1_INDEX);
+  expect(state.acquiredPassivesBySlot).toHaveLength(PARTY_SLOT_COUNT);
+  for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
+    expect(state.acquiredPassivesBySlot[slotIndex]).toEqual([]);
+  }
+}
+
+/** 入力上の Wave 1 予定取得が空であること（applied/acquired とは呼ばない）。 */
+function assertWave1PlannedPassiveAcquisitionsEmpty(
+  wavePlans: readonly (ProblemSeriesSimWavePlan | undefined)[],
+): void {
+  expect(wavePlans).toHaveLength(3);
+  expect(wavePlans[WAVE1_INDEX]?.passiveAcquisitions ?? []).toEqual([]);
+}
+
+function assertWave1LedgerSpentZero(
+  ledger: ProblemSeriesSimResult['resourceLedger'][number],
+): void {
+  expect(ledger.waveIndex).toBe(WAVE1_INDEX);
+  expect(ledger.spentAmount).toBe(0);
+}
+
 function buildWave2Flow(
   bundle: DiagnosticBundle,
   result: ProblemSeriesSimResult,
@@ -585,10 +783,7 @@ function buildWave2Flow(
   };
 }
 
-function buildWave1Slice(
-  bundle: DiagnosticBundle,
-  baselineCase: SeriesBBaselineCase,
-): Wave1InvariantSlice {
+function buildWave1Slice(bundle: DiagnosticBundle): Wave1InvariantSlice {
   const { result } = bundle;
   const wave = result.waves.find((w) => w.waveIndex === WAVE1_INDEX);
   expect(wave).toBeDefined();
@@ -611,13 +806,42 @@ function buildWave1Slice(
       event.amount,
     );
   }
+  const firstWave1 = firstTickForWave(bundle.tickStates, WAVE1_INDEX);
+  expect(firstWave1).not.toBeNull();
   const lastWave1 = lastTickForWave(bundle.tickStates, WAVE1_INDEX);
   expect(lastWave1).not.toBeNull();
-  const wavePlans = baselineCase.input.wavePlans ?? [];
-  // Wave 1 時点: Wave 2 準備の Module 変更・Wave 2 以降 passive は含めない。
-  const modulesAtWave1 =
-    baselineCase.input.slots?.map((slot) => slot.initialCombatModuleId) ??
-    result.appliedCombatModuleIdBySlot;
+  assertWave1TickRuntimePassivesEmpty(firstWave1!);
+  assertWave1TickRuntimePassivesEmpty(lastWave1!);
+
+  const resourceLedgerWave1 = result.resourceLedger.find(
+    (e) => e.waveIndex === WAVE1_INDEX,
+  );
+  expect(resourceLedgerWave1).toBeDefined();
+  assertWave1LedgerSpentZero(resourceLedgerWave1!);
+
+  const observedCombatModuleIdBySlot = observeWave1CombatModuleIdBySlot(
+    bundle.tickStates,
+    bundle.actionEvents,
+  );
+  const observedRuntimeAcquiredPassivesBySlot =
+    observeWave1RuntimeAcquiredPassivesBySlot(bundle.tickStates);
+  expect(observedRuntimeAcquiredPassivesBySlot).toEqual(
+    WAVE1_EMPTY_RUNTIME_PASSIVES_BY_SLOT,
+  );
+  expect(firstWave1!.acquiredPassivesBySlot).toEqual(
+    observedRuntimeAcquiredPassivesBySlot,
+  );
+  expect(lastWave1!.acquiredPassivesBySlot).toEqual(
+    observedRuntimeAcquiredPassivesBySlot,
+  );
+
+  const startAliveAllies = wave1StartAllySnapshot(firstWave1!.allies);
+  for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
+    expect(startAliveAllies[slotIndex]!.basicSkillId).toBe(
+      observedCombatModuleIdBySlot[slotIndex],
+    );
+  }
+
   return {
     enemyWaveInput: result.enemyWaveInputs[WAVE1_INDEX]!,
     waveResult: wave!.result,
@@ -625,12 +849,12 @@ function buildWave1Slice(
     endTick: wave!.endTick,
     damageByActorTarget: freezeAggMap(damageMap),
     healByActorTarget: freezeAggMap(healMap),
+    startAliveAllies,
     endAliveAllies: allyHpSnapshot(lastWave1!.allies),
     endAliveEnemies: allyHpSnapshot(lastWave1!.enemies),
-    resourceLedgerWave1:
-      result.resourceLedger.find((e) => e.waveIndex === WAVE1_INDEX) ?? null,
-    appliedCombatModuleIdBySlot: modulesAtWave1,
-    acquiredPassivesBySlot: expectedAcquiredPassivesBySlot(wavePlans, WAVE1_INDEX),
+    resourceLedgerWave1: resourceLedgerWave1!,
+    observedCombatModuleIdBySlot,
+    observedRuntimeAcquiredPassivesBySlot,
   };
 }
 
@@ -758,6 +982,10 @@ async function runSensitivityForAtkScale(
   baseline: SeriesBBaselineFile,
   productionWaves: readonly ProblemSeriesBattleWave[],
   wave1ReferenceByKey: ReadonlyMap<string, Wave1InvariantSlice>,
+  productionAcquiredPassivesByKey: ReadonlyMap<
+    string,
+    readonly (readonly string[])[]
+  >,
 ): Promise<{
   readonly rows: SensitivityCaseRow[];
   readonly report: ProblemSeriesBalanceSignalReport;
@@ -797,10 +1025,13 @@ async function runSensitivityForAtkScale(
     );
 
     const wavePlans = baselineCase.input.wavePlans ?? [];
-    expect(wavePlans).toHaveLength(3);
+    assertWave1PlannedPassiveAcquisitionsEmpty(wavePlans);
     expect(result.acquiredPassivesBySlot).toEqual(
       expectedAcquiredPassivesBySlot(wavePlans, result.finalWaveIndex),
     );
+    const productionAcquired = productionAcquiredPassivesByKey.get(key);
+    expect(productionAcquired).toBeDefined();
+    expect(result.acquiredPassivesBySlot).toEqual(productionAcquired);
 
     const wave3Planned = wave3PlannedPassiveIds(wavePlans);
     const acquired = allAcquiredPassiveIds(result);
@@ -824,10 +1055,21 @@ async function runSensitivityForAtkScale(
 
     const wave2Flow = buildWave2Flow(bundle, result);
     assertWave2FlowNonEmpty(wave2Flow, reachedWave2);
-    const wave1Slice = buildWave1Slice(bundle, baselineCase);
+    const wave1Slice = buildWave1Slice(bundle);
     const referenceWave1 = wave1ReferenceByKey.get(key);
     expect(referenceWave1).toBeDefined();
     expect(wave1Slice).toEqual(referenceWave1);
+    expect(wave1Slice.observedCombatModuleIdBySlot).toEqual(
+      referenceWave1!.observedCombatModuleIdBySlot,
+    );
+    expect(wave1Slice.observedRuntimeAcquiredPassivesBySlot).toEqual(
+      referenceWave1!.observedRuntimeAcquiredPassivesBySlot,
+    );
+    expect(wave1Slice.observedRuntimeAcquiredPassivesBySlot).toEqual(
+      WAVE1_EMPTY_RUNTIME_PASSIVES_BY_SLOT,
+    );
+    expect(wave1Slice.startAliveAllies).toEqual(referenceWave1!.startAliveAllies);
+    assertWave1LedgerSpentZero(wave1Slice.resourceLedgerWave1);
 
     signalCases.push({
       buildId,
@@ -947,10 +1189,92 @@ function assertObservedAtkScaleTransition(
   }
 }
 
+describe('R12n 1N-R2-R1 tick acquiredPassivesBySlot copy fail-closed (test-only)', () => {
+  it('rejects 3-slot outer array', () => {
+    expect(() =>
+      copyAcquiredPassivesBySlotForTickDiagnostic([['a'], ['b'], ['c']]),
+    ).toThrow(/exactly 4 slots, got 3/);
+  });
+
+  it('rejects 5-slot outer array', () => {
+    expect(() =>
+      copyAcquiredPassivesBySlotForTickDiagnostic([
+        ['a'],
+        ['b'],
+        ['c'],
+        ['d'],
+        ['e'],
+      ]),
+    ).toThrow(/exactly 4 slots, got 5/);
+  });
+
+  it('rejects sparse outer array (hole at slot index)', () => {
+    const sparse = [] as (readonly string[])[];
+    sparse[0] = ['a'];
+    sparse[2] = ['c'];
+    sparse[3] = ['d'];
+    sparse.length = PARTY_SLOT_COUNT;
+    expect(() =>
+      copyAcquiredPassivesBySlotForTickDiagnostic(sparse),
+    ).toThrow(/missing slot at index 1/);
+  });
+
+  it('rejects undefined slot value', () => {
+    expect(() =>
+      copyAcquiredPassivesBySlotForTickDiagnostic([
+        ['a'],
+        undefined as unknown as readonly string[],
+        ['c'],
+        ['d'],
+      ]),
+    ).toThrow(/missing slot at index 1/);
+  });
+
+  it('rejects non-array slot value', () => {
+    expect(() =>
+      copyAcquiredPassivesBySlotForTickDiagnostic([
+        ['a'],
+        'not-array' as unknown as readonly string[],
+        ['c'],
+        ['d'],
+      ]),
+    ).toThrow(/slot 1 must be an array/);
+  });
+
+  it('lossless-copies 4 slots with duplicate passive IDs and acquisition order', () => {
+    const input: string[][] = [
+      ['p_a', 'p_a', 'p_b'],
+      [],
+      ['p_c'],
+      ['p_d', 'p_d'],
+    ];
+    const copied = copyAcquiredPassivesBySlotForTickDiagnostic(input);
+    expect(copied).toHaveLength(PARTY_SLOT_COUNT);
+    expect(copied).toEqual([
+      ['p_a', 'p_a', 'p_b'],
+      [],
+      ['p_c'],
+      ['p_d', 'p_d'],
+    ]);
+    expect(copied).not.toBe(input);
+    for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
+      expect(copied[slotIndex]).not.toBe(input[slotIndex]);
+    }
+    input[0]!.push('mutated');
+    input[2]![0] = 'mutated-c';
+    expect(copied[0]).toEqual(['p_a', 'p_a', 'p_b']);
+    expect(copied[2]).toEqual(['p_c']);
+  });
+});
+
 describe('R12n 1N series B Wave2 sorcerer atkScale sensitivity (test-only)', () => {
   let baselineCache: SeriesBBaselineFile | null = null;
   let productionWaves: ProblemSeriesBattleWave[] = [];
   const wave1ReferenceByKey = new Map<string, Wave1InvariantSlice>();
+  const productionAcquiredPassivesByKey = new Map<
+    string,
+    readonly (readonly string[])[]
+  >();
   const productionNormalizedByKey = new Map<string, string>();
   const observationByScale = new Map<
     number,
@@ -971,6 +1295,10 @@ describe('R12n 1N series B Wave2 sorcerer atkScale sensitivity (test-only)', () 
         setImmediate(resolveTick);
       });
       const key = `${baselineCase.buildId}::${baselineCase.battleRngSeed}`;
+      const wavePlans = baselineCase.input.wavePlans ?? [];
+      assertWave1PlannedPassiveAcquisitionsEmpty(wavePlans);
+
+      // 参照値は transform なし production 実行（scale=1 transform ではない）。
       const production = runInstrumentedCase(baselineCase, undefined);
       expect(normalizeProblemSeriesSimResultForCompare(production.result)).toBe(
         normalizeProblemSeriesSimResultForCompare(baselineCase.result),
@@ -979,6 +1307,20 @@ describe('R12n 1N series B Wave2 sorcerer atkScale sensitivity (test-only)', () 
         key,
         normalizeProblemSeriesSimResultForCompare(production.result),
       );
+      productionAcquiredPassivesByKey.set(
+        key,
+        production.result.acquiredPassivesBySlot.map((slot) => [...slot]),
+      );
+
+      const productionWave1 = buildWave1Slice(production);
+      expect(productionWave1.observedCombatModuleIdBySlot).toHaveLength(
+        PARTY_SLOT_COUNT,
+      );
+      expect(productionWave1.observedRuntimeAcquiredPassivesBySlot).toEqual(
+        WAVE1_EMPTY_RUNTIME_PASSIVES_BY_SLOT,
+      );
+      assertWave1LedgerSpentZero(productionWave1.resourceLedgerWave1);
+      wave1ReferenceByKey.set(key, productionWave1);
 
       const scale1 = runInstrumentedCase(
         baselineCase,
@@ -992,10 +1334,14 @@ describe('R12n 1N series B Wave2 sorcerer atkScale sensitivity (test-only)', () 
         scale1.result.enemyWaveInputs,
         1.0,
       );
-      wave1ReferenceByKey.set(key, buildWave1Slice(scale1, baselineCase));
+      expect(buildWave1Slice(scale1)).toEqual(productionWave1);
+      expect(scale1.result.acquiredPassivesBySlot).toEqual(
+        productionAcquiredPassivesByKey.get(key),
+      );
     }
     expect(productionNormalizedByKey.size).toBe(9);
     expect(wave1ReferenceByKey.size).toBe(9);
+    expect(productionAcquiredPassivesByKey.size).toBe(9);
     assertBaselineShaUnchanged();
   }, 300_000);
 
@@ -1117,6 +1463,7 @@ describe('R12n 1N series B Wave2 sorcerer atkScale sensitivity (test-only)', () 
           baselineCache!,
           productionWaves,
           wave1ReferenceByKey,
+          productionAcquiredPassivesByKey,
         );
         expect(rows).toHaveLength(9);
         observationByScale.set(atkScale, { rows, report });

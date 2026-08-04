@@ -227,6 +227,12 @@ export interface ProblemSeriesSimTickStateDiagnostic {
   readonly engaged: boolean;
   readonly allies: readonly ProblemSeriesSimTickAliveUnitDiagnostic[];
   readonly enemies: readonly ProblemSeriesSimTickAliveUnitDiagnostic[];
+  /**
+   * 味方 slot ごとの runtime 取得 passive ID 列。
+   * `runtime.passivesBySlot` の可変配列は共有しない（取得順・重複・slot 対応を維持したコピー）。
+   * 敵 unit には付けない。
+   */
+  readonly acquiredPassivesBySlot: readonly (readonly string[])[];
 }
 
 /** test-only。戦闘アクション実行時の不変診断。 */
@@ -619,6 +625,41 @@ function toTickAliveUnitDiagnostic(unit: {
   return ally;
 }
 
+/**
+ * test-only。runtime.passivesBySlot の可変配列を共有しないコピー。
+ * slot 欠落・長さ不正・非配列は空列へ正規化せず fail-closed。
+ * positional 配列のため「重複 slot」は表現不能。passive ID 重複は取得履歴として維持する。
+ */
+export function copyAcquiredPassivesBySlotForTickDiagnostic(
+  passivesBySlot: readonly (readonly string[])[],
+): readonly (readonly string[])[] {
+  if (passivesBySlot.length !== PARTY_SLOT_COUNT) {
+    throw new Error(
+      `acquiredPassivesBySlot tick diagnostic requires exactly ${PARTY_SLOT_COUNT} slots, got ${passivesBySlot.length}`,
+    );
+  }
+  const copied: string[][] = [];
+  for (let slotIndex = 0; slotIndex < PARTY_SLOT_COUNT; slotIndex++) {
+    const slotPresent = Object.prototype.hasOwnProperty.call(
+      passivesBySlot,
+      slotIndex,
+    );
+    const slot = slotPresent ? passivesBySlot[slotIndex] : undefined;
+    if (!slotPresent || slot === undefined) {
+      throw new Error(
+        `acquiredPassivesBySlot tick diagnostic missing slot at index ${slotIndex}`,
+      );
+    }
+    if (!Array.isArray(slot)) {
+      throw new Error(
+        `acquiredPassivesBySlot tick diagnostic slot ${slotIndex} must be an array, got ${String(slot)}`,
+      );
+    }
+    copied.push([...slot]);
+  }
+  return copied;
+}
+
 function toTickStateDiagnostic(
   snap: {
     waveIndex: number;
@@ -657,6 +698,7 @@ function toTickStateDiagnostic(
     }[];
   },
   battleTimeSec: number,
+  passivesBySlot: readonly (readonly string[])[],
 ): ProblemSeriesSimTickStateDiagnostic {
   return {
     waveIndex: assertFiniteNumber(snap.waveIndex, 'tickState.waveIndex'),
@@ -670,6 +712,9 @@ function toTickStateDiagnostic(
     enemies: snap.enemies
       .filter((unit) => unit.hp > 0)
       .map((unit) => toTickAliveUnitDiagnostic(unit)),
+    // 味方 slot 列のみ。敵 snapshot には付けない。
+    acquiredPassivesBySlot:
+      copyAcquiredPassivesBySlotForTickDiagnostic(passivesBySlot),
   };
 }
 
@@ -1230,7 +1275,11 @@ export function runProblemSeriesSim(
       const snap = engine.getSnapshot();
       if (input.onTickStateDiagnostic !== undefined) {
         input.onTickStateDiagnostic(
-          toTickStateDiagnostic(snap, engine.getBattleTimeSec()),
+          toTickStateDiagnostic(
+            snap,
+            engine.getBattleTimeSec(),
+            runtime.passivesBySlot,
+          ),
         );
       }
       if (snap.awaitingNextWave) {
